@@ -65,6 +65,7 @@ owners:
     - compose.yaml
     - .gitignore
     - .env.example
+    - services/api/alembic.ini
     - services/api/pyproject.toml
     - services/api/app/main.py
     - services/api/app/**/schemas.py
@@ -156,6 +157,7 @@ tasks:
   - compose.yaml
   - .gitignore
   - .env.example
+  - services/api/alembic.ini
   - services/api/app/main.py
   - services/api/pyproject.toml
   - packages/contracts/**
@@ -206,12 +208,13 @@ tasks:
   - services/api/app/db.py
   - services/api/app/models.py
   - services/api/app/types.py
+  - services/api/alembic.ini
   - services/api/migrations/**
   - services/api/app/**/schemas.py
   acceptance:
   - uv run --project services/api pytest services/api/tests/test_models.py services/api/tests/test_decision_os_invariants.py
     -q
-  - uv run --project services/api alembic upgrade head
+  - uv run --project services/api alembic -c services/api/alembic.ini upgrade head
   - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
   handoff_artifacts:
   - migration_revision
@@ -605,13 +608,14 @@ tasks:
   - services/api/app/db.py
   - services/api/app/models.py
   - services/api/app/types.py
+  - services/api/alembic.ini
   - services/api/migrations/**
   - packages/contracts/**
   - scripts/generate_contracts.ps1
   acceptance:
   - uv run --project services/api pytest services/api/tests/test_models.py services/api/tests/test_decision_os_invariants.py
     -q
-  - uv run --project services/api alembic upgrade head
+  - uv run --project services/api alembic -c services/api/alembic.ini upgrade head
   - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
   handoff_artifacts:
   - canonical_shape_report

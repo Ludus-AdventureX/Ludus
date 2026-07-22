@@ -530,6 +530,7 @@ Expected: Look V7 hash 匹配、十主题 ID 精确、前端 build 成功、Chro
 ## Task 2: 建立核心数据模型与迁移
 
 **Files:**
+- Create: `services/api/alembic.ini`
 - Create: `services/api/app/db.py`
 - Create: `services/api/app/models.py`
 - Create: `services/api/app/types.py`
@@ -1796,7 +1797,7 @@ Hackathon Prototype 的 Web 演示、5 分钟脚本、宣传录屏、截图、�
 ### Task 19A：Canonical schema、ID、Source 与迁移
 
 - Owner：Contract Lead；
-- Write scope：`services/api/app/**/schemas.py`、`services/api/app/{db.py,models.py,types.py}`、`services/api/migrations/**`、`packages/contracts/**`；
+- Write scope：`services/api/alembic.ini`、`services/api/app/**/schemas.py`、`services/api/app/{db.py,models.py,types.py}`、`services/api/migrations/**`、`packages/contracts/**`；
 - 实现：`decisionCaseId/analysisRunId`、User/Membership/Session、Source union、SystemRecommendation、SignoffPayload、Simulation replay fields、OpenAPI/types；
 - 验收：06/10/26 shape 一致、migration clean、generated contract drift clean。
 
