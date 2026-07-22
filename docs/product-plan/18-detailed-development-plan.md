@@ -557,6 +557,8 @@ def test_domain_enums_are_stable():
 
 `models.py` 建立：`users`、`workspaces`、`workspace_memberships`、`user_sessions`、`decision_subjects`、`initiatives`、`decision_cases`、`case_versions`、`dossier_entries`、`dossier_versions`、`conversations`、`messages`、`candidate_revisions`、`quick_analysis_results`、`domain_events`。Case 主生命周期只使用 `draft/scoped/ready/running/review/pending_signoff/decided/monitoring`，异常状态使用独立 `operational_status`；档案条目通过 `scope` 和可选 `decision_case_id` 区分主体长期条目与 Case-local 条目。`candidate_revisions` 是对话、分析和沙盘候选更新的唯一持久化表，不维护第二套候选表命名。
 
+`DecisionSubject.slug` is server-generated, required in reads, unique per Workspace, and immutable; it is not accepted in the create request. Composite foreign keys must enforce same-Subject consistency for Case -> Initiative, case-scoped DossierEntry, Conversation/Message, and QuickAnalysisResult -> Conversation/Case references; Workspace-only foreign keys are insufficient.
+
 所有业务表必须包含 `workspace_id`；所有唯一约束包含 `workspace_id`，例如：
 
 ```python
@@ -577,6 +579,8 @@ Expected: 迁移创建全部核心表；重复执行 upgrade 不报错。
 - [ ] **Step 5: 写约束测试**
 
 测试同一 Workspace 内 slug 冲突失败、不同 Workspace 允许相同 slug、删除 Workspace 不会静默遗留无主档案。
+
+Also reject same-Workspace cross-Subject references for Case -> Initiative, case-scoped DossierEntry, Conversation/Message, and QuickAnalysisResult.
 
 - [ ] **Step 6: 运行测试与提交**
 

@@ -251,6 +251,12 @@ class Initiative(Base):
     __tablename__ = "initiatives"
     __table_args__ = (
         UniqueConstraint("workspace_id", "id", name="uq_initiative_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_subject_id",
+            "id",
+            name="uq_initiatives_workspace_subject_id",
+        ),
         ForeignKeyConstraint(
             ["workspace_id", "decision_subject_id"],
             ["decision_subjects.workspace_id", "decision_subjects.id"],
@@ -282,6 +288,12 @@ class DecisionCase(Base):
             "decision_case_id",
             name="uq_decision_cases_workspace_id",
         ),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_subject_id",
+            "decision_case_id",
+            name="uq_decision_cases_workspace_subject_id",
+        ),
         ForeignKeyConstraint(
             ["workspace_id", "decision_subject_id"],
             ["decision_subjects.workspace_id", "decision_subjects.id"],
@@ -289,9 +301,9 @@ class DecisionCase(Base):
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            ["workspace_id", "initiative_id"],
-            ["initiatives.workspace_id", "initiatives.id"],
-            name="fk_decision_cases_workspace_initiative",
+            ["workspace_id", "decision_subject_id", "initiative_id"],
+            ["initiatives.workspace_id", "initiatives.decision_subject_id", "initiatives.id"],
+            name="fk_decision_cases_workspace_subject_initiative",
             ondelete="RESTRICT",
         ),
         CheckConstraint("current_version > 0", name="current_version_positive"),
@@ -424,9 +436,13 @@ class DossierEntry(Base):
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            ["workspace_id", "decision_case_id"],
-            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
-            name="fk_dossier_entries_workspace_case",
+            ["workspace_id", "decision_subject_id", "decision_case_id"],
+            [
+                "decision_cases.workspace_id",
+                "decision_cases.decision_subject_id",
+                "decision_cases.decision_case_id",
+            ],
+            name="fk_dossier_entries_workspace_subject_case",
             ondelete="CASCADE",
         ),
         CheckConstraint(
@@ -468,6 +484,18 @@ class Conversation(Base):
     __tablename__ = "conversations"
     __table_args__ = (
         UniqueConstraint("workspace_id", "id", name="uq_conversations_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "id",
+            "decision_subject_id",
+            name="uq_conversations_workspace_id_subject",
+        ),
+        UniqueConstraint(
+            "workspace_id",
+            "id",
+            "decision_case_id",
+            name="uq_conversations_workspace_id_case",
+        ),
         ForeignKeyConstraint(
             ["workspace_id", "decision_subject_id"],
             ["decision_subjects.workspace_id", "decision_subjects.id"],
@@ -475,9 +503,13 @@ class Conversation(Base):
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            ["workspace_id", "decision_case_id"],
-            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
-            name="fk_conversations_workspace_case",
+            ["workspace_id", "decision_subject_id", "decision_case_id"],
+            [
+                "decision_cases.workspace_id",
+                "decision_cases.decision_subject_id",
+                "decision_cases.decision_case_id",
+            ],
+            name="fk_conversations_workspace_subject_case",
             ondelete="CASCADE",
         ),
         CheckConstraint(
@@ -505,16 +537,44 @@ class Message(Base):
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
+            ["workspace_id", "conversation_id", "decision_subject_id"],
+            [
+                "conversations.workspace_id",
+                "conversations.id",
+                "conversations.decision_subject_id",
+            ],
+            name="fk_messages_workspace_conversation_subject",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "conversation_id", "decision_case_id"],
+            [
+                "conversations.workspace_id",
+                "conversations.id",
+                "conversations.decision_case_id",
+            ],
+            name="fk_messages_workspace_conversation_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
             ["workspace_id", "decision_subject_id"],
             ["decision_subjects.workspace_id", "decision_subjects.id"],
             name="fk_messages_workspace_subject",
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            ["workspace_id", "decision_case_id"],
-            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
-            name="fk_messages_workspace_case",
+            ["workspace_id", "decision_subject_id", "decision_case_id"],
+            [
+                "decision_cases.workspace_id",
+                "decision_cases.decision_subject_id",
+                "decision_cases.decision_case_id",
+            ],
+            name="fk_messages_workspace_subject_case",
             ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "decision_case_id IS NULL OR decision_subject_id IS NOT NULL",
+            name="message_case_requires_subject",
         ),
         Index(
             "ix_messages_workspace_conversation_created",
@@ -585,6 +645,16 @@ class QuickAnalysisResult(Base):
             ["workspace_id", "conversation_id"],
             ["conversations.workspace_id", "conversations.id"],
             name="fk_quick_analysis_workspace_conversation",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "conversation_id", "decision_case_id"],
+            [
+                "conversations.workspace_id",
+                "conversations.id",
+                "conversations.decision_case_id",
+            ],
+            name="fk_quick_analysis_workspace_conversation_case",
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(

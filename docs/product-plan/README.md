@@ -126,6 +126,7 @@ User / UserSession
 | [28-contract-repair-completion-audit-20260721.md](28-contract-repair-completion-audit-20260721.md) | 12 项 blocker 关闭证据、验证结果与最终开工结论 |
 | [docs/audits/strategy-analyst-recommendation-audit-20260719.md](docs/audits/strategy-analyst-recommendation-audit-20260719.md) | 专业战略分析师建议的逐项审计、资产吸收结论与分期可行性 |
 | [docs/contract-changes/CCR-20260721-003.md](docs/contract-changes/CCR-20260721-003.md) | Source/ID/DeepAnalysis/权限/Signoff/abstain/Simulation/Look V7/manifest 的 accepted 合同修复 |
+| [docs/contract-changes/CCR-20260722-004.md](docs/contract-changes/CCR-20260722-004.md) | DecisionSubject.slug and Workspace/Subject/Case same-subject integrity accepted contract repair |
 | [docs/contract-changes/CCR-20260719-002.md](docs/contract-changes/CCR-20260719-002.md) | 决策操作系统工程不变量与签署流程的 accepted canonical 变更 |
 | [docs/contract-changes/CCR-20260716-001.md](docs/contract-changes/CCR-20260716-001.md) | 自定义影响因素与即时实验预览的 accepted canonical 合同变更 |
 | [agent-work-manifest.yaml](agent-work-manifest.yaml) | Task 1–19 及 1W/14W/18A/19A–D 子切片的 owner、依赖、write scope、Gate 0 与调度规则 |

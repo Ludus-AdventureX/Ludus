@@ -2,7 +2,7 @@
 
 - 状态：canonical / accepted
 - 生效日期：2026-07-21（星期二）
-- 关联变更：`docs/contract-changes/CCR-20260719-002.md`、`docs/contract-changes/CCR-20260721-003.md`
+- 关联变更：`docs/contract-changes/CCR-20260719-002.md`、`docs/contract-changes/CCR-20260721-003.md`、`docs/contract-changes/CCR-20260722-004.md`
 - 关联审计：`docs/audits/strategy-analyst-recommendation-audit-20260719.md`
 
 ## 1. 产品身份
@@ -36,6 +36,17 @@ RawArtifact
                   → SignoffRequest
                     → DecisionRecord
 ```
+
+### 2.0 Workspace / Subject / Case aggregate consistency
+
+`Workspace` is the tenant boundary, `DecisionSubject` is the long-lived memory boundary, and `DecisionCase` is the formal decision aggregate. A reference is valid only when all supplied scope keys agree. In particular:
+
+- an Initiative referenced by a Case belongs to the Case's Subject;
+- a case-scoped DossierEntry belongs to the Case's Subject;
+- a Case-bound Conversation, Message, and QuickAnalysisResult preserve the same Subject and Case pair;
+- the service and PostgreSQL constraints must reject same-Workspace cross-Subject references, not merely cross-Workspace references.
+
+The canonical implementation uses composite unique keys and foreign keys carrying `workspace_id` plus `decision_subject_id` where the relationship requires it.
 
 ### 2.1 Source 与 Claim
 

@@ -15,6 +15,12 @@
 
 本文件定义领域语义；实现中的唯一 wire schema 是 Contract Lead 维护的 Pydantic 2 模型。FastAPI 导出的 `packages/contracts/openapi.json` 和生成的 `types.gen.ts` 都是只读派生产物。TypeScript 代码块用于说明 canonical 形状，不授权 Web 或其他 Agent 手写平行 DTO；任何字段、状态或可空性变化必须先同步本文件和 `10-api-and-events.md`，通过 CCR 后重新生成。
 
+### Subject identity and aggregate consistency
+
+`DecisionSubject.slug` is a server-generated stable key. The create request does not accept a client-provided slug; the value is returned by subject reads, is unique within a Workspace, and is immutable after creation. Renaming the display `name` must not silently change the slug.
+
+Workspace equality alone is not sufficient for nested decision references. The database and domain service must enforce the following same-Subject rules: an optional `DecisionCase.initiativeId` must reference an Initiative of the Case's `decisionSubjectId`; a case-scoped `DossierEntry` must reference a Case of the same Subject; a Case-bound `Conversation` and its `Message` rows must keep Subject and Case consistent; and a `QuickAnalysisResult.decisionCaseId` must match the Case bound to its Conversation. These checks use composite Workspace + Subject foreign keys/unique keys, and invalid combinations must be rejected before a mutation is committed.
+
 ## TypeScript 示例
 
 ```ts
@@ -112,6 +118,8 @@ export interface DecisionSubject {
   id: string;
   workspaceId: string;
   name: string;
+  /** Server-generated stable key; unique and immutable within a Workspace. */
+  slug: string;
   description?: string;
   dossierId: string;
   status: "active" | "archived";

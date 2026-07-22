@@ -165,6 +165,10 @@ POST /api/workspaces/ws_demo/connectors
 
 主体创建最小请求为 `{ "name": "球形机器人项目", "description": "硬科技产品与市场方向的长期记忆边界" }`，响应返回 `subjectId`、`dossierId` 和 `currentDossierVersion`。`GET /subjects/{subjectId}` 返回 `DecisionSubject` 与当前 `DecisionSubjectDossier`；跨 Workspace 一律按不存在返回 `404`。
 
+The client MUST NOT send `slug`; the server generates it and returns it in the `DecisionSubject` projection. The slug is unique and immutable within the Workspace, and a display-name rename never silently changes it.
+
+For every subject/case relationship (Initiative, Case, case-scoped DossierEntry, Conversation, Message, and QuickAnalysisResult), the service validates both Workspace and Subject identity before writing. Same-Workspace but cross-Subject references are rejected with `VALIDATION_FAILED` (or a not-found response when the referenced object is not visible); no partial mutation is allowed.
+
 案例列表支持 `?status=draft|scoped|ready|running|review|pending_signoff|decided|monitoring&operationalStatus=ok|blocked|needs_attention|cancelled|reopened|archived&limit=50&cursor=...`，返回 `{ "items": [{ "decisionCaseId", "title", "status", "currentVersion", "updatedAt" }], "nextCursor" }`。列表查询必须按 Workspace 限定，不能以全局查询后过滤。
 
 案例详情返回 canonical `DecisionCase`、当前确认的 `DossierVersion` 引用、`caseVersion` 和按 `06-data-model.md` 组装的 `argumentNodes: ArgumentNode[]`。`ArgumentTree` 是该投影的前端视图，不维护第二套树节点 DTO；候选确认、修改类型或否决产生新版本后，客户端重新读取该详情投影。

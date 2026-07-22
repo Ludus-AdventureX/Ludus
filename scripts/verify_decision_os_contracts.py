@@ -157,8 +157,21 @@ def check_canonical_data() -> None:
         "- Status: accepted", "- Date accepted: 2026-07-21",
         "72 小时只承诺 Hackathon Prototype Slice",
     )
+    require_text(
+        PLAN / "docs" / "contract-changes" / "CCR-20260722-004.md",
+        "- Status: accepted", "- Date accepted: 2026-07-22",
+        "Same-subject aggregate references",
+    )
     dm = read_text(PLAN / "06-data-model.md")
     inv = read_text(PLAN / "26-decision-os-invariants-and-agent-engine-contract.md")
+    require(
+        "DecisionSubject.slug" in dm and "immutable" in dm,
+        "DecisionSubject.slug contract drift",
+    )
+    require(
+        "same-Subject" in dm and "composite" in dm,
+        "same-subject aggregate contract drift",
+    )
     method_ref = (("id", False, "string"), ("version", False, "string"), ("contentHash", False, "string"))
     deep_request = (
         ("workspaceId", False, "string"), ("decisionCaseId", False, "string"),

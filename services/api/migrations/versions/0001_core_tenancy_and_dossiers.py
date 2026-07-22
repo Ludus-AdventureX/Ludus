@@ -131,6 +131,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id'], ['decision_subjects.workspace_id', 'decision_subjects.id'], name='fk_initiatives_workspace_subject', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], name=op.f('fk_initiatives_workspace_id_workspaces'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_initiatives')),
+    sa.UniqueConstraint('workspace_id', 'decision_subject_id', 'id', name='uq_initiatives_workspace_subject_id'),
     sa.UniqueConstraint('workspace_id', 'id', name='uq_initiative_workspace_id')
     )
     op.create_table('decision_cases',
@@ -162,10 +163,11 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint('current_version > 0', name=op.f('ck_decision_cases_current_version_positive')),
     sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id'], ['decision_subjects.workspace_id', 'decision_subjects.id'], name='fk_decision_cases_workspace_subject', ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['workspace_id', 'initiative_id'], ['initiatives.workspace_id', 'initiatives.id'], name='fk_decision_cases_workspace_initiative', ondelete='RESTRICT'),
+    sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id', 'initiative_id'], ['initiatives.workspace_id', 'initiatives.decision_subject_id', 'initiatives.id'], name='fk_decision_cases_workspace_subject_initiative', ondelete='RESTRICT'),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], name=op.f('fk_decision_cases_workspace_id_workspaces'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('decision_case_id', name=op.f('pk_decision_cases')),
-    sa.UniqueConstraint('workspace_id', 'decision_case_id', name='uq_decision_cases_workspace_id')
+    sa.UniqueConstraint('workspace_id', 'decision_case_id', name='uq_decision_cases_workspace_id'),
+    sa.UniqueConstraint('workspace_id', 'decision_subject_id', 'decision_case_id', name='uq_decision_cases_workspace_subject_id')
     )
     op.create_index('ix_decision_cases_workspace_status_updated', 'decision_cases', ['workspace_id', 'status', 'updated_at'], unique=False)
     op.create_table('candidate_revisions',
@@ -213,10 +215,12 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint('decision_case_id IS NULL OR decision_subject_id IS NOT NULL', name=op.f('ck_conversations_case_requires_subject')),
-    sa.ForeignKeyConstraint(['workspace_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_case_id'], name='fk_conversations_workspace_case', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_subject_id', 'decision_cases.decision_case_id'], name='fk_conversations_workspace_subject_case', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id'], ['decision_subjects.workspace_id', 'decision_subjects.id'], name='fk_conversations_workspace_subject', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], name=op.f('fk_conversations_workspace_id_workspaces'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_conversations')),
+    sa.UniqueConstraint('workspace_id', 'id', 'decision_case_id', name='uq_conversations_workspace_id_case'),
+    sa.UniqueConstraint('workspace_id', 'id', 'decision_subject_id', name='uq_conversations_workspace_id_subject'),
     sa.UniqueConstraint('workspace_id', 'id', name='uq_conversations_workspace_id')
     )
     op.create_table('dossier_entries',
@@ -233,7 +237,7 @@ def upgrade() -> None:
     sa.Column('version', sa.Integer(), server_default='1', nullable=False),
     sa.CheckConstraint("(scope = 'subject' AND decision_case_id IS NULL) OR (scope = 'case' AND decision_case_id IS NOT NULL)", name=op.f('ck_dossier_entries_scope_matches_case')),
     sa.CheckConstraint('version > 0', name=op.f('ck_dossier_entries_version_positive')),
-    sa.ForeignKeyConstraint(['workspace_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_case_id'], name='fk_dossier_entries_workspace_case', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_subject_id', 'decision_cases.decision_case_id'], name='fk_dossier_entries_workspace_subject_case', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id'], ['decision_subjects.workspace_id', 'decision_subjects.id'], name='fk_dossier_entries_workspace_subject', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], name=op.f('fk_dossier_entries_workspace_id_workspaces'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_dossier_entries')),
@@ -254,8 +258,11 @@ def upgrade() -> None:
     sa.Column('token_metadata', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
     sa.Column('cost_metadata', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb"), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint('decision_case_id IS NULL OR decision_subject_id IS NOT NULL', name=op.f('ck_messages_case_requires_subject')),
     sa.ForeignKeyConstraint(['workspace_id', 'conversation_id'], ['conversations.workspace_id', 'conversations.id'], name='fk_messages_workspace_conversation', ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['workspace_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_case_id'], name='fk_messages_workspace_case', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['workspace_id', 'conversation_id', 'decision_subject_id'], ['conversations.workspace_id', 'conversations.id', 'conversations.decision_subject_id'], name='fk_messages_workspace_conversation_subject', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['workspace_id', 'conversation_id', 'decision_case_id'], ['conversations.workspace_id', 'conversations.id', 'conversations.decision_case_id'], name='fk_messages_workspace_conversation_case', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_subject_id', 'decision_cases.decision_case_id'], name='fk_messages_workspace_subject_case', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id', 'decision_subject_id'], ['decision_subjects.workspace_id', 'decision_subjects.id'], name='fk_messages_workspace_subject', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], name=op.f('fk_messages_workspace_id_workspaces'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_messages')),
@@ -274,6 +281,7 @@ def upgrade() -> None:
     sa.Column('next_actions', postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb"), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['workspace_id', 'conversation_id'], ['conversations.workspace_id', 'conversations.id'], name='fk_quick_analysis_workspace_conversation', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['workspace_id', 'conversation_id', 'decision_case_id'], ['conversations.workspace_id', 'conversations.id', 'conversations.decision_case_id'], name='fk_quick_analysis_workspace_conversation_case', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id', 'decision_case_id'], ['decision_cases.workspace_id', 'decision_cases.decision_case_id'], name='fk_quick_analysis_workspace_case', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], name=op.f('fk_quick_analysis_results_workspace_id_workspaces'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_quick_analysis_results')),

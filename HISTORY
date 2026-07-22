@@ -347,3 +347,58 @@
 - Do not merge `codex/qa-release-task2` at 8b4eda4.
 - The branch is technically test-green but does not satisfy the project's contract-integrity and relational-integrity merge bar.
 - After the two P1 findings are resolved and the targeted regression tests plus contract checks pass, request a fresh review. No merge was performed during this review.
+
+## Work transition 2026-07-22 (Asia/Shanghai)
+
+# Work Log: idle
+
+- Last archived: 2026-07-22 (Asia/Shanghai)
+- Archive file: HISTORY
+- Archive marker: Task 2 QA Merge Approval Review / 8b4eda4
+- Next work: resolve the two P1 review findings (same-Workspace subject consistency and `DecisionSubject.slug` contract synchronization), then request a fresh review; Task 6 remains required before full Task 19A.
+- Secret policy: no credentials are stored in this file.
+
+## Archived work 2026-07-22 (Asia/Shanghai)
+
+# Current Work: Task 2 Contract Repair Follow-up
+
+- Started: 2026-07-22 (Asia/Shanghai)
+- Completed: 2026-07-22 (Asia/Shanghai)
+- Status: completed
+- Outcome: source-owner repair is ready for QA R2 on a linear descendant branch; no merge or PR was created.
+- Objective: resolve the P1 findings from the Task 2 merge review: enforce same-Workspace Subject/Case/Initiative consistency and synchronize the persisted DecisionSubject.slug field through an accepted canonical contract change.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\contract-lead
+- Canonical repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/contract-lead-task2-review-fixes
+- Base review commit: 749b65e
+- Write scope: AGENTS.md, scripts/verify_decision_os_contracts.py, services/api/app/models.py, services/api/migrations/**, docs/product-plan/**, and HEAD/HISTORY work records.
+- QA handoff: QA will add regression tests in a descendant branch after this source-owner commit.
+- Merge policy: no merge or PR creation; product owner will merge only after fresh QA approval.
+- Secret policy: do not print, copy, commit, or record credentials or API keys.
+
+## Completed in this source-owner slice
+
+- Added accepted CCR-20260722-004 for server-generated immutable DecisionSubject.slug and same-Subject aggregate integrity.
+- Synchronized 06, 10, 18, 26, README, AGENTS, and the Decision OS verifier.
+- Added composite same-Subject unique keys and foreign keys for Case -> Initiative, case-scoped DossierEntry, Conversation/Message, and QuickAnalysisResult references in the SQLAlchemy model and initial Alembic migration.
+
+## Validation completed
+
+- Python compile check: PASS.
+- Ruff on changed Python files: PASS.
+- Existing API/model suite: 14 passed with PYTHONWARNINGS=error.
+- Alembic downgrade base -> empty schema check -> upgrade head: PASS; 15 business tables and 19 enum types restored.
+- Alembic check: PASS (No new upgrade operations detected).
+- OpenAPI/TypeScript contract drift: CONTRACT_DRIFT_OK.
+- Decision OS verifier: all 7 groups PASS.
+- No credential values were printed or recorded.
+
+## Not yet verified
+
+- New QA-owned same-Workspace cross-Subject rejection tests.
+- Final combined test run and fresh independent merge approval.
+- Final changed-tree secret scan and QA branch topology review.
+
+## Next
+
+Create a descendant QA R2 branch, add the targeted rejection tests without merging, run the full gates, and report one final branch/SHA for product-owner merge.
