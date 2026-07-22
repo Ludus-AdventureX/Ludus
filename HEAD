@@ -1,8 +1,7 @@
-# Current Work: Publish Product Plan to Private GitHub
+# Work Log: idle
 
-- Started: 2026-07-22T16:10:16.2563690+08:00 (Asia/Shanghai)
-- Status: in_progress
-- Objective: vendor the authoritative decision-lab-product-plan into the Ludus repository, make repository-local references self-contained, validate contract/preflight integrity, synchronize the six lane branches, and push to the approved Private origin.
-- Source: E:\Temp\xiayu\Documents\adventure-x\decision-lab-product-plan
-- Destination: E:\Temp\xiayu\Documents\adventure-x\decision-lab\docs\product-plan
-- Constraint: copy without altering the source plan, do not include secrets or temporary artifacts, and do not force-push.
+- Last archived: 2026-07-22T16:22:07.6528544+08:00
+- Archive file: HISTORY
+- Archive marker: Publish Product Plan to Private GitHub / 3d614ca
+- Next work: accept the proven system-Chrome fallback or complete bundled Chromium acquisition, then begin Task 2/19A from the six synchronized worktrees.
+- Secret policy: no credentials are stored in this file.

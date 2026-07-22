@@ -175,3 +175,36 @@
 ## Remaining Risk
 
 - GitHub publication is complete. The remaining Gate 0 browser caveat is already recorded in the preceding archived Gate 0 validation entry: bundled Chromium acquisition is still pending, while the system-Chrome Playwright fallback is proven.
+
+
+## Archived work 2026-07-22T16:22:07.6528544+08:00
+
+# Current Work: Publish Product Plan to Private GitHub
+
+- Started: 2026-07-22T16:10:16.2563690+08:00 (Asia/Shanghai)
+- Completed: 2026-07-22T16:22:07.6528544+08:00 (Asia/Shanghai)
+- Status: completed
+- Objective: vendor the authoritative decision-lab-product-plan into the Ludus repository, make repository-local references self-contained, validate contract/preflight integrity, synchronize the six lane branches, and push to the approved Private origin.
+- Source: E:\Temp\xiayu\Documents\adventure-x\decision-lab-product-plan
+- Destination: E:\Temp\xiayu\Documents\adventure-x\decision-lab\docs\product-plan
+- Constraint: copy without altering the source plan except documented repository path/link normalization, do not include secrets or temporary artifacts, and do not force-push.
+
+## Completed
+
+- Copied all 39 source plan files into docs/product-plan.
+- Preserved the source content byte-for-byte except three documented repository-portability normalizations: the plan README canonical-location note, machine-readable manifest paths, and four cross-directory links in audit 28.
+- Updated AGENTS.md and README.md so the in-repository plan is authoritative.
+- Updated preflight.ps1 and verify_decision_os_contracts.py to prefer docs/product-plan, while retaining the sibling directory as a compatibility fallback.
+- Committed the plan publication as 3d614ca (docs: vendor product and engineering plan).
+- Fast-forwarded and pushed main plus all six codex/* lane branches to the Private origin.
+
+## Verification
+
+- Plan vendor integrity: 39 files present; only the three declared normalized files differ from the source snapshot.
+- YAML parse: 2/2 passed.
+- Markdown relative links: 55 checked, 0 broken.
+- Contract verifier loaded E:\Temp\xiayu\Documents\adventure-x\decision-lab\docs\product-plan and returned decision-os-contracts: PASS.
+- pytest health, ruff, OpenAPI/TypeScript drift and Look V7 snapshot/token checks passed.
+- Full Gate 0 preflight returned PREFLIGHT_OK using the repository-local plan.
+- Exact configured secret values and high-confidence key patterns were scanned across 162 working files and all reachable Git history; no matches.
+- No public license, repository visibility or source-plan directory was modified.
