@@ -1,7 +1,13 @@
-# Work Log: idle
+# Current Work: Task 2 Canonical Data Model and Task 19A Dependency Gate
 
-- Last archived: 2026-07-22T16:22:07.6528544+08:00
-- Archive file: HISTORY
-- Archive marker: Publish Product Plan to Private GitHub / 3d614ca
-- Next work: accept the proven system-Chrome fallback or complete bundled Chromium acquisition, then begin Task 2/19A from the six synchronized worktrees.
-- Secret policy: no credentials are stored in this file.
+- Started: 2026-07-22 (Asia/Shanghai)
+- Status: in_progress
+- Objective: implement and validate Task 2 canonical PostgreSQL data model and Alembic migration, then audit Task 19A against its Task 6 dependency without bypassing the manifest gate.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\contract-lead
+- Canonical repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/contract-lead-task2-19a
+- Product/development plan: E:\Temp\xiayu\Documents\adventure-x\decision-lab-product-plan and repository-local docs/product-plan
+- Gate 0 decision: system Chrome is accepted as the formal Playwright fallback; 6-Agent/72-hour Hackathon Prototype development may begin.
+- Current scope: Task 2 first. Task 19A depends on Task 2 and Task 6 and cannot be marked complete before both prerequisites are satisfied.
+- Merge policy: implementation may be committed and pushed to the development branch, but MUST NOT be merged without explicit product-owner approval.
+- Secret policy: do not print, copy, commit, or record values from .env.

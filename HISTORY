@@ -208,3 +208,14 @@
 - Full Gate 0 preflight returned PREFLIGHT_OK using the repository-local plan.
 - Exact configured secret values and high-confidence key patterns were scanned across 162 working files and all reachable Git history; no matches.
 - No public license, repository visibility or source-plan directory was modified.
+
+
+## Work transition 2026-07-22 (Asia/Shanghai)
+
+# Work Log: idle
+
+- Last archived: 2026-07-22T16:22:07.6528544+08:00
+- Archive file: HISTORY
+- Archive marker: Publish Product Plan to Private GitHub / 3d614ca
+- Next work: accept the proven system-Chrome fallback or complete bundled Chromium acquisition, then begin Task 2/19A from the six synchronized worktrees.
+- Secret policy: no credentials are stored in this file.
