@@ -279,3 +279,71 @@
 - DecisionSubject.slug remains an internal Task 2 persistence field until a future CCR synchronizes the wire schema.
 - Conversation, Message, and DomainEvent persistence follows the combined 05/10/18 requirements; this slice does not introduce standalone API DTOs.
 - Source union persistence, SystemRecommendation, SignoffPayload, Simulation replay fields, generated Task 19A OpenAPI/types, and full 06/10/26 runtime acceptance remain unimplemented and must not be inferred from this PASS.
+
+## Work transition 2026-07-22 (Asia/Shanghai)
+
+# Work Log: idle
+
+- Last archived: 2026-07-22 (Asia/Shanghai)
+- Archive file: HISTORY
+- Archive marker: Task 2 Model and Migration Acceptance Tests / 1801a61
+- Next work: product-owner review of codex/qa-release-task2; Task 6 must pass before full Task 19A implementation resumes.
+- Secret policy: no credentials are stored in this file.
+
+
+## Archived work 2026-07-22 (Asia/Shanghai)
+
+# Current Work: Task 2 QA Merge Approval Review
+
+- Started: 2026-07-22 (Asia/Shanghai)
+- Completed: 2026-07-22 (Asia/Shanghai)
+- Status: completed
+- Verdict: NOT APPROVED for merge at review baseline 8b4eda4.
+- Objective: independently review codex/qa-release-task2 against the repository-local product plan, Task 2 acceptance criteria, manifest dependencies, and security/quality gates without merging.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-release
+- Canonical repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch reviewed: codex/qa-release-task2
+- Review scope: all changes from main through 8b4eda4, including Task 2 implementation, QA tests, contract/tool repairs, and work records.
+- Product/development plan: E:\Temp\xiayu\Documents\adventure-x\decision-lab\docs\product-plan
+- Merge policy: no merge or PR was created; product owner remains the only merger.
+- Secret policy: no credential value was printed, copied, committed, or recorded.
+
+## Positive Results
+
+- Task 2 implementation scope matches the manifest's 15-table model target and the repository-local detailed plan at a structural level.
+- `pytest`: 14 passed with `PYTHONWARNINGS=error`.
+- Ruff: PASS.
+- Alembic upgrade -> downgrade base -> zero business tables/enums -> upgrade head: PASS; `alembic check` reported no new operations.
+- PostgreSQL 16 container: healthy; final database schema contained 15 business tables and 19 enum types at revision 0001.
+- OpenAPI/TypeScript contract drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: all 7 groups PASS.
+- Changed-tree exact configured-secret and high-confidence pattern scan: PASS; no tracked `.env` or `auth.json`.
+- `main` remained at 5cb42f9 and was not modified.
+
+## Merge-Blocking Findings
+
+### P1 — Same-Workspace cross-subject references are accepted
+
+- A direct PostgreSQL probe inserted an Initiative belonging to Subject A, then a DecisionCase belonging to Subject B referencing that Initiative; it also inserted a Case-scoped DossierEntry and Conversation whose Subject and Case belonged to different subjects in the same Workspace. The database accepted these rows (`SEMANTIC_CROSS_SUBJECT_REFERENCES_ACCEPTED`).
+- Affected model areas: `services/api/app/models.py` DecisionCase initiative FK, DossierEntry subject/case FKs and scope check, Conversation subject/case FKs, Message subject/case FKs, and related QuickAnalysis references.
+- Current constraints prove tenant equality but not aggregate/subject equality. This can mix two subjects inside one Case snapshot and corrupt downstream dossier, conversation, and analysis projections.
+- Required before approval: add composite same-subject constraints where the canonical relationship requires them, and add regression tests. At minimum cover Case->Initiative, Case-scoped DossierEntry, Conversation/Message, and QuickAnalysis Case references.
+
+### P1 — Persisted `DecisionSubject.slug` is not in the canonical schema or an accepted CCR
+
+- `services/api/app/models.py` persists and uniquely constrains `DecisionSubject.slug`; the Task 2 detailed plan also requires the slug uniqueness test.
+- Canonical `docs/product-plan/06-data-model.md` `DecisionSubject` does not define `slug`, and no accepted CCR synchronizes the field into the canonical model/API documentation. The OpenAPI drift check cannot detect this because this branch has no Pydantic/API schema for the field.
+- This violates the repository rule that field/schema changes must be synchronized across affected contracts and approved by CCR before implementation.
+- Required before approval: either remove the persistence field and its Task 2 requirement, or create/approve the CCR and update 06, 10, the detailed plan, and generated contracts as applicable. Treat it as internal-only only after the contract explicitly says so.
+
+## Secondary Contract Risks
+
+- `DomainEventActor` currently uses `user/system/worker`, while canonical `ActorType` uses `human_user/system_service/analysis_worker/fixture_provider`; standalone Message/DomainEvent shapes are also not fully defined in 06. Resolve before exposing these fields through Task 19A/API.
+- Manifest handoff artifacts (`schema_hash`, `generated_types`) are not present as a dedicated handoff record; the migration revision and drift command evidence are only in work logs.
+- Task 19A remains blocked by missing Task 6 (`services/api/app/methods`, `method-packs`, installer, and method-pack/router tests).
+
+## Approval Decision
+
+- Do not merge `codex/qa-release-task2` at 8b4eda4.
+- The branch is technically test-green but does not satisfy the project's contract-integrity and relational-integrity merge bar.
+- After the two P1 findings are resolved and the targeted regression tests plus contract checks pass, request a fresh review. No merge was performed during this review.

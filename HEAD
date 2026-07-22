@@ -2,6 +2,6 @@
 
 - Last archived: 2026-07-22 (Asia/Shanghai)
 - Archive file: HISTORY
-- Archive marker: Task 2 Model and Migration Acceptance Tests / 1801a61
-- Next work: product-owner review of codex/qa-release-task2; Task 6 must pass before full Task 19A implementation resumes.
+- Archive marker: Task 2 QA Merge Approval Review / 8b4eda4
+- Next work: resolve the two P1 review findings (same-Workspace subject consistency and `DecisionSubject.slug` contract synchronization), then request a fresh review; Task 6 remains required before full Task 19A.
 - Secret policy: no credentials are stored in this file.
