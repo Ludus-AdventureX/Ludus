@@ -1,0 +1,18 @@
+schema_version: "1.0.0"
+asset_id: <stable-id>
+asset_name: <name>
+asset_version_or_revision: <version>
+authorizing_party: <non-sensitive-name-or-reference>
+authorized_actions:
+  - reference_behavior
+  - extract_and_adapt
+  - modify
+  - redistribute
+branding_terms: <summary>
+distribution_scope: <internal-demo/private-deployment/public>
+effective_date: YYYY-MM-DD
+expiry_date: null
+approval_reference: <contract/ticket/reference>
+responsible_owner: <owner>
+upstream_license_files: []
+notes: <non-sensitive-summary>

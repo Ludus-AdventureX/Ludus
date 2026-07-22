@@ -9,6 +9,7 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import json
+import os
 import re
 import sys
 from collections import Counter
@@ -21,9 +22,11 @@ try:
 except ImportError:
     yaml = None
 
-ROOT = Path(__file__).resolve().parents[2]
-PLAN = ROOT / "decision-lab-product-plan"
-REPO = ROOT / "decision-lab"
+REPO = Path(__file__).resolve().parents[1]
+ROOT = REPO.parent
+PLAN = Path(os.getenv("DECISION_LAB_PLAN_PATH", REPO / "docs" / "product-plan")).resolve()
+if not PLAN.is_dir():
+    PLAN = ROOT / "decision-lab-product-plan"
 LOOK = ROOT / "look"
 WAYS = REPO / "ways" / "hardtech-market-direction"
 CURRENT_WAY = WAYS / "1.1.0"

@@ -1,0 +1,775 @@
+schema_version: 1.0.0
+project:
+  display_name: Ludus
+  repository_name: decision-lab
+  repository_path: .
+  plan_path: docs/product-plan
+  golden_case: spherical_robot_rescue_vs_home_service
+  default_capacity_profile: six_agent_72h
+  default_deliverable_scope: hackathon_prototype
+canonical_contracts:
+  semantic_schema: 06-data-model.md
+  api_events: 10-api-and-events.md
+  contract_generation: 22-contract-generation-and-security-plan.md
+  capacity_plan: 23-multi-agent-capacity-execution-plan.md
+  execution_detail: 18-detailed-development-plan.md
+  asset_ledger: 21-existing-asset-reuse-and-conversion.md
+  decision_os_invariants: 26-decision-os-invariants-and-agent-engine-contract.md
+  accepted_ccrs:
+  - docs/contract-changes/CCR-20260719-002.md
+  - docs/contract-changes/CCR-20260721-003.md
+  runtime_rules: AGENTS.md
+global_rules:
+- one_write_owner_per_path
+- contract_changes_require_accepted_ccr
+- generated_contracts_are_read_only
+- no_hidden_reasoning_persistence
+- no_reference_repository_runtime_dependency
+- fixture_never_impersonates_live
+- workspace_scope_on_every_repository_operation
+- qa_reports_defects_and_original_owner_fixes_source
+- no_task_closes_without_implementation_test_and_user_visible_acceptance
+- no_automatic_decided_transition
+- decision_record_append_only
+- report_requires_qualifying_run
+- agent_engine_is_not_chat_messages
+- responsibility_semantics_enforced_in_code
+- validation_v1_v9_exact_set_and_blocker_fail_closed
+contract_pipeline:
+  runtime_source: services/api/app/**/schemas.py
+  openapi_snapshot: packages/contracts/openapi.json
+  typescript_types: packages/contracts/src/types.gen.ts
+  web_client: apps/web/lib/api/client.ts
+  drift_check: powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+capacity_profiles:
+  six_agent_72h:
+    slots: 6
+    elapsed_hours: 72
+    deliverable_scope: hackathon_prototype
+    required: true
+  four_agent_108h:
+    slots: 4
+    elapsed_hours: 108
+    deliverable_scope: full_mvp
+    required: false
+  three_agent_144h:
+    slots: 3
+    elapsed_hours: 144
+    deliverable_scope: full_mvp
+    required: false
+owners:
+  contract_lead:
+    write_scope:
+    - package.json
+    - pnpm-workspace.yaml
+    - compose.yaml
+    - .gitignore
+    - .env.example
+    - services/api/pyproject.toml
+    - services/api/app/main.py
+    - services/api/app/**/schemas.py
+    - services/api/app/db.py
+    - services/api/app/models.py
+    - services/api/app/types.py
+    - services/api/migrations/**
+    - packages/contracts/**
+    - scripts/export_openapi.py
+    - scripts/generate_contracts.ps1
+    - scripts/preflight.ps1
+    - scripts/probe_deepseek.py
+    - apps/web/Dockerfile
+    - services/api/Dockerfile
+    - .github/workflows/**
+    - THIRD_PARTY_NOTICES.md
+  ways_agent_pipeline:
+    write_scope:
+    - ways/**
+    - method-packs/**
+    - services/api/app/methods/**
+    - services/api/app/agents/**
+    - services/api/app/strategic_lenses/**
+    - services/api/app/reports/**
+    - services/api/app/workers/analysis_worker.py
+    - fixtures/spherical-robot/**
+    - scripts/install_method_pack.py
+    - scripts/seed_demo.py
+    - scripts/verify_fixture.py
+    exclusions:
+    - services/api/app/**/schemas.py
+  case_api_data:
+    write_scope:
+    - services/api/app/auth/**
+    - services/api/app/tenancy/**
+    - services/api/app/subjects/**
+    - services/api/app/cases/**
+    - services/api/app/conversations/**
+    - services/api/app/evidence/**
+    - services/api/app/analyses/**
+    - services/api/app/decisions/**
+    - services/api/app/connectors/**
+    - services/api/app/files/**
+    - services/api/app/security/**
+    - docs/security-exceptions.md
+    exclusions:
+    - services/api/app/**/schemas.py
+    - services/api/app/reports/publisher.py
+  web_ux:
+    write_scope:
+    - apps/web/**
+    - design/**
+    - scripts/snapshot_look.py
+    exclusions:
+    - apps/web/components/simulation/**
+    - apps/web/tests/**
+    - apps/web/**/*.test.ts
+    - apps/web/**/*.test.tsx
+    - apps/web/playwright.config.ts
+    - apps/web/Dockerfile
+  simulation_graph:
+    write_scope:
+    - services/api/app/simulations/**
+    - apps/web/components/simulation/**
+    exclusions:
+    - services/api/app/**/schemas.py
+  qa_release:
+    write_scope:
+    - e2e/**
+    - services/api/tests/**
+    - apps/web/tests/**
+    - apps/web/**/*.test.ts
+    - apps/web/**/*.test.tsx
+    - apps/web/playwright.config.ts
+    - docs/runbooks/**
+    - docs/handoffs/**
+    - artifacts/**
+    - scripts/verify_decision_os_contracts.py
+    source_fix_policy: handoff_to_original_owner
+tasks:
+- id: task-01
+  title: Bootstrap monorepo and reproducible environment
+  owner: contract_lead
+  depends_on: []
+  plan_section: 18-detailed-development-plan.md#task-1-初始化-monorepo-与可重复环境
+  write_scope:
+  - package.json
+  - pnpm-workspace.yaml
+  - compose.yaml
+  - .gitignore
+  - .env.example
+  - services/api/app/main.py
+  - services/api/pyproject.toml
+  - packages/contracts/**
+  - scripts/preflight.ps1
+  - scripts/probe_deepseek.py
+  - scripts/export_openapi.py
+  - scripts/generate_contracts.ps1
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_health.py -q
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  handoff_artifacts:
+  - bootstrap_report
+  - openapi_snapshot
+  - generated_types
+- id: task-01w
+  title: Web UX bootstrap and immutable Look V7 snapshot
+  owner: web_ux
+  depends_on:
+  - task-01
+  plan_section: 18-detailed-development-plan.md#task-1w-webux-bootstrap-与-look-v7-设计快照
+  write_scope:
+  - apps/web/**
+  - design/**
+  - scripts/snapshot_look.py
+  forbidden_scope:
+  - apps/web/components/simulation/**
+  - apps/web/tests/**
+  - apps/web/**/*.test.ts
+  - apps/web/**/*.test.tsx
+  - apps/web/playwright.config.ts
+  - apps/web/Dockerfile
+  - look/**
+  acceptance:
+  - py -3.12 scripts/snapshot_look.py --check
+  - pnpm --dir apps/web build
+  - pnpm --dir apps/web exec playwright install chromium
+  handoff_artifacts:
+  - look_source_manifest
+  - generated_theme_tokens
+  - web_bootstrap_report
+- id: task-02
+  title: Canonical data model and migrations
+  owner: contract_lead
+  depends_on:
+  - task-01
+  plan_section: 18-detailed-development-plan.md#task-2-建立核心数据模型与迁移
+  write_scope:
+  - services/api/app/db.py
+  - services/api/app/models.py
+  - services/api/app/types.py
+  - services/api/migrations/**
+  - services/api/app/**/schemas.py
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_models.py services/api/tests/test_decision_os_invariants.py
+    -q
+  - uv run --project services/api alembic upgrade head
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  handoff_artifacts:
+  - migration_revision
+  - schema_hash
+  - generated_types
+- id: task-03
+  title: Authentication and Workspace isolation
+  owner: case_api_data
+  secondary_owner: web_ux
+  depends_on:
+  - task-01
+  - task-02
+  contract_change_owner: contract_lead
+  write_scope:
+  - services/api/app/auth/**
+  - services/api/app/tenancy/**
+  secondary_write_scope:
+  - apps/web/app/(auth)/login/**
+  - apps/web/lib/auth/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_auth.py services/api/tests/test_auth_sessions.py services/api/tests/test_workspace_isolation.py
+    -q
+  - uv run --project services/api pytest services/api/tests/test_csrf.py -q
+  handoff_artifacts:
+  - auth_contract_report
+  - cross_tenant_report
+  - csrf_report
+  plan_section: 18-detailed-development-plan.md#task-3-实现认证与-workspace-强制隔离
+- id: task-04
+  title: DecisionSubject dossier Case and version events
+  owner: case_api_data
+  secondary_owner: web_ux
+  depends_on:
+  - task-02
+  - task-03
+  write_scope:
+  - services/api/app/subjects/**
+  - services/api/app/cases/**
+  secondary_write_scope:
+  - apps/web/components/dossier/**
+  - apps/web/components/cases/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_dossier_versions.py services/api/tests/test_cases.py -q
+  handoff_artifacts:
+  - case_api_report
+  - dossier_version_report
+  plan_section: 18-detailed-development-plan.md#task-4-实现决策主体双层档案与版本事件
+- id: task-05
+  title: Daily consultation and candidate memory extraction
+  owner: case_api_data
+  depends_on:
+  - task-03
+  - task-04
+  secondary_owner: web_ux
+  write_scope:
+  - services/api/app/conversations/**
+  secondary_write_scope:
+  - apps/web/components/chat/**
+  - apps/web/components/arguments/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_memory_extractor.py services/api/tests/test_discussion.py
+    -q
+  - pnpm --dir apps/web test -- ChatComposer
+  handoff_artifacts:
+  - candidate_revision_report
+  - argument_tree_report
+  plan_section: 18-detailed-development-plan.md#task-5-实现日常问答与候选记忆提取
+- id: task-06
+  title: Validate install and publish method pack
+  owner: ways_agent_pipeline
+  depends_on:
+  - task-01
+  - task-02
+  write_scope:
+  - ways/**
+  - method-packs/**
+  - services/api/app/methods/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_method_pack.py services/api/tests/test_method_router.py services/api/tests/test_cynefin_gate.py
+    -q
+  handoff_artifacts:
+  - method_content_hash
+  - source_validation_report
+  - router_report
+  plan_section: 18-detailed-development-plan.md#task-6-验证并安装首个版本化方法论包
+- id: task-07
+  title: Agent runtime tool registry and model provider
+  owner: ways_agent_pipeline
+  depends_on:
+  - task-01
+  - task-02
+  - task-06
+  write_scope:
+  - services/api/app/agents/**
+  forbidden_scope:
+  - hermes-agent-hermes-hermes-a8a19433/**
+  - open-webui-0.10.2/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_agent_runtime.py services/api/tests/test_model_provider.py
+    -q
+  handoff_artifacts:
+  - provider_probe
+  - tool_registry_report
+  - attribution_scan
+  plan_section: 18-detailed-development-plan.md#task-7-构建轻量-agent-运行时与工具注册表
+- id: task-08
+  title: Evidence ledger and information quality gateway
+  owner: case_api_data
+  depends_on:
+  - task-02
+  - task-03
+  - task-07
+  write_scope:
+  - services/api/app/evidence/**
+  - services/api/app/connectors/providers/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_evidence_quality.py services/api/tests/test_source_traceability.py
+    -q
+  - uv run --project services/api pytest services/api/tests/test_ssrf.py -q
+  handoff_artifacts:
+  - evidence_quality_report
+  - connector_fallback_report
+  - ssrf_report
+  plan_section: 18-detailed-development-plan.md#task-8-实现证据账本与信息质量网关
+- id: task-09
+  title: Persistent AnalysisRun state machine and Worker
+  owner: case_api_data
+  depends_on:
+  - task-02
+  - task-06
+  - task-07
+  - task-08
+  secondary_owner: ways_agent_pipeline
+  write_scope:
+  - services/api/app/analyses/**
+  secondary_write_scope:
+  - services/api/app/workers/analysis_worker.py
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_analysis_state_machine.py services/api/tests/test_run_manifest.py
+    services/api/tests/test_case_lifecycle.py -q
+  handoff_artifacts:
+  - state_transition_report
+  - recovery_report
+  - cancellation_report
+  plan_section: 18-detailed-development-plan.md#task-9-实现持久化深度分析状态机与-worker
+- id: task-10
+  title: Claims synthesis critic lenses and formal quality gate
+  owner: ways_agent_pipeline
+  depends_on:
+  - task-06
+  - task-07
+  - task-08
+  - task-09
+  write_scope:
+  - services/api/app/strategic_lenses/**
+  - services/api/app/reports/**
+  - ways/hardtech-market-direction/1.1.0/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_strategic_lenses.py services/api/tests/test_quality_gate.py
+    services/api/tests/test_validation_orchestrator.py services/api/tests/test_deep_analysis_contract.py -q
+  handoff_artifacts:
+  - five_lens_report
+  - quality_gate_report
+  - exact_set_report
+  plan_section: 18-detailed-development-plan.md#task-10-实现命题综合反方与正式质量门
+- id: task-11
+  title: Look V7 shell analysis evidence and report frontend
+  owner: web_ux
+  depends_on:
+  - task-01w
+  - task-03
+  - task-04
+  - task-09
+  - task-10
+  write_scope:
+  - apps/web/app/(workspace)/cases/[decisionCaseId]/page.tsx
+  - apps/web/app/(workspace)/empty/page.tsx
+  - apps/web/components/shell/**
+  - apps/web/components/workspace/**
+  - apps/web/components/analysis/**
+  - apps/web/components/quality/**
+  - apps/web/components/report/**
+  - apps/web/lib/api/**
+  - design/**
+  - scripts/snapshot_look.py
+  forbidden_scope:
+  - packages/contracts/src/types.gen.ts
+  acceptance:
+  - pnpm --dir apps/web test
+  - pnpm --dir apps/web build
+  handoff_artifacts:
+  - report_ui_test
+  - sse_reconnect_test
+  - accessibility_snapshot
+  plan_section: 18-detailed-development-plan.md#task-11-实现-look-v7-五工作区-shell分析进度证据和报告前端
+- id: task-12
+  title: Deterministic causal simulation engine
+  owner: simulation_graph
+  depends_on:
+  - task-02
+  - task-10
+  write_scope:
+  - services/api/app/simulations/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_simulation_engine.py -q
+  handoff_artifacts:
+  - determinism_report
+  - sensitivity_report
+  - recommendation_flip_fixture
+  plan_section: 18-detailed-development-plan.md#task-12-实现纯函数因果推演与敏感性分析
+- id: task-13
+  title: Full-size sandbox interaction and graph versioning
+  owner: simulation_graph
+  depends_on:
+  - task-11
+  - task-12
+  write_scope:
+  - apps/web/components/simulation/**
+  acceptance:
+  - pnpm --dir apps/web test -- simulation
+  - pnpm --dir apps/web build
+  handoff_artifacts:
+  - graph_review_report
+  - branch_compare_report
+  - rollback_report
+  plan_section: 18-detailed-development-plan.md#task-13-实现决策用户优先的沙盘交互
+- id: task-14
+  title: Decision record and review
+  owner: case_api_data
+  depends_on:
+  - task-09
+  - task-12
+  write_scope:
+  - services/api/app/decisions/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_decision_review.py services/api/tests/test_signoff.py services/api/tests/test_decision_immutability.py
+    -q
+  handoff_artifacts:
+  - decision_roundtrip_report
+  - review_roundtrip_report
+  - structured_review_contract_report
+  plan_section: 18-detailed-development-plan.md#task-14-实现决定记录轻量跟踪与复盘
+- id: task-14w
+  title: Decision workspace signoff and review frontend
+  owner: web_ux
+  depends_on:
+  - task-11
+  - task-14
+  plan_section: 18-detailed-development-plan.md#task-14w决定与-review-前端
+  write_scope:
+  - apps/web/components/decisions/**
+  - apps/web/components/reviews/**
+  - apps/web/components/shell/CaseViewRouter.tsx
+  forbidden_scope:
+  - services/api/app/**
+  - packages/contracts/src/types.gen.ts
+  acceptance:
+  - pnpm --dir apps/web test
+  - pnpm --dir apps/web build
+  handoff_artifacts:
+  - signoff_ui_state_matrix
+  - decision_history_ui_report
+  - review_dialog_accessibility_report
+- id: task-15
+  title: HTML PDF and deterministic fixture recovery
+  owner: ways_agent_pipeline
+  depends_on:
+  - task-10
+  - task-11
+  validation_owner: qa_release
+  write_scope:
+  - services/api/app/reports/renderers/**
+  - services/api/app/reports/templates/**
+  - fixtures/spherical-robot/**
+  - scripts/seed_demo.py
+  - scripts/verify_fixture.py
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_report_and_fixture.py -q
+  - uv run --project services/api python scripts/verify_fixture.py
+  handoff_artifacts:
+  - html_snapshot
+  - pdf_hash
+  - fixture_isolation_report
+  plan_section: 18-detailed-development-plan.md#task-15-实现-htmlpdf-报告与离线降级-fixture
+- id: task-16
+  title: Security files and audited connector catalog
+  owner: case_api_data
+  depends_on:
+  - task-03
+  - task-08
+  secondary_owner: web_ux
+  contract_change_owner: contract_lead
+  write_scope:
+  - services/api/app/files/**
+  - services/api/app/connectors/**
+  - services/api/app/security/**
+  - docs/security-exceptions.md
+  secondary_write_scope:
+  - apps/web/components/files/**
+  - apps/web/components/connectors/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_security_boundaries.py services/api/tests/test_csrf.py services/api/tests/test_ssrf.py
+    services/api/tests/test_rate_limits.py -q
+  - uv run --project services/api pip-audit
+  - pnpm --dir apps/web audit --prod
+  handoff_artifacts:
+  - security_test_report
+  - dependency_audit
+  - secret_scan
+  plan_section: 18-detailed-development-plan.md#task-16-安全文件与审核连接器目录
+- id: task-17
+  title: Golden path accessibility responsive and recovery acceptance
+  owner: qa_release
+  depends_on:
+  - task-03
+  - task-05
+  - task-10
+  - task-11
+  - task-13
+  - task-14
+  - task-14w
+  - task-15
+  - task-16
+  - task-19
+  write_scope:
+  - e2e/**
+  - apps/web/playwright.config.ts
+  - docs/handoffs/**
+  forbidden_scope:
+  - apps/web/components/**
+  - services/api/app/**
+  source_fix_policy: defect_handoff_to_original_owner
+  acceptance:
+  - pnpm --dir apps/web exec playwright test
+  - pnpm --dir apps/web test
+  - pnpm --dir apps/web build
+  handoff_artifacts:
+  - golden_path_trace
+  - three_viewport_screenshots
+  - defect_handoffs
+  plan_section: 18-detailed-development-plan.md#task-17-端到端金路径可访问性和响应式验收
+- id: task-18a
+  title: Deployment packaging and CI
+  owner: contract_lead
+  depends_on:
+  - task-01
+  plan_section: 18-detailed-development-plan.md#task-18a部署封装与-ci
+  write_scope:
+  - compose.yaml
+  - apps/web/Dockerfile
+  - services/api/Dockerfile
+  - .github/workflows/**
+  - THIRD_PARTY_NOTICES.md
+  acceptance:
+  - docker compose build
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  handoff_artifacts:
+  - image_build_report
+  - ci_pipeline_digest
+  - notice_scan
+- id: task-18
+  title: Release validation demo recovery and delivery assets
+  owner: qa_release
+  depends_on:
+  - task-18a
+  - task-17
+  - task-19
+  write_scope:
+  - docs/runbooks/**
+  - docs/handoffs/**
+  - artifacts/**
+  acceptance:
+  - powershell -ExecutionPolicy Bypass -File scripts/preflight.ps1
+  - docker compose up -d
+  - pnpm --dir apps/web exec playwright test e2e/golden-path.spec.ts
+  handoff_artifacts:
+  - release_candidate_digest
+  - fresh_start_report
+  - live_fixture_rehearsal
+  - demo_asset_index
+  plan_section: 18-detailed-development-plan.md#task-18发布验证演示恢复与交付资产
+- id: task-19a
+  title: Canonical schema IDs Source session signoff and simulation fields
+  owner: contract_lead
+  depends_on:
+  - task-02
+  - task-06
+  plan_section: 18-detailed-development-plan.md#task-19acanonical-schemaidsource-与迁移
+  write_scope:
+  - services/api/app/**/schemas.py
+  - services/api/app/db.py
+  - services/api/app/models.py
+  - services/api/app/types.py
+  - services/api/migrations/**
+  - packages/contracts/**
+  - scripts/generate_contracts.ps1
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_models.py services/api/tests/test_decision_os_invariants.py
+    -q
+  - uv run --project services/api alembic upgrade head
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  handoff_artifacts:
+  - canonical_shape_report
+  - migration_revision
+  - generated_contract_digest
+- id: task-19b
+  title: Source freeze session capability lifecycle signoff and immutable Decision
+  owner: case_api_data
+  depends_on:
+  - task-03
+  - task-08
+  - task-09
+  - task-14
+  - task-19a
+  plan_section: 18-detailed-development-plan.md#task-19bsession生命周期signoff-与-append-only-decision
+  write_scope:
+  - services/api/app/auth/**
+  - services/api/app/tenancy/**
+  - services/api/app/evidence/**
+  - services/api/app/analyses/**
+  - services/api/app/decisions/**
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_source_traceability.py services/api/tests/test_auth_sessions.py
+    services/api/tests/test_case_lifecycle.py services/api/tests/test_signoff.py services/api/tests/test_decision_immutability.py
+    services/api/tests/test_no_run_no_report.py -q
+  handoff_artifacts:
+  - source_freeze_report
+  - session_revocation_report
+  - signoff_atomicity_report
+  - immutable_decision_report
+- id: task-19c
+  title: Cynefin DeepAnalysis abstain and V1-V9 validation
+  owner: ways_agent_pipeline
+  depends_on:
+  - task-06
+  - task-07
+  - task-08
+  - task-09
+  - task-10
+  - task-19a
+  plan_section: 18-detailed-development-plan.md#task-19ccynefindeepanalysisabstain-与九验证
+  write_scope:
+  - ways/hardtech-market-direction/1.1.0/**
+  - services/api/app/methods/**
+  - services/api/app/agents/**
+  - services/api/app/strategic_lenses/**
+  - services/api/app/reports/**
+  - services/api/app/workers/analysis_worker.py
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_cynefin_gate.py services/api/tests/test_deep_analysis_contract.py
+    services/api/tests/test_validation_orchestrator.py services/api/tests/test_system_abstain.py -q
+  handoff_artifacts:
+  - deep_analysis_shape_report
+  - abstain_report
+  - v1_v9_validator_report
+- id: task-19d
+  title: Decision OS hardening tests manifest validator and E2E
+  owner: qa_release
+  depends_on:
+  - task-11
+  - task-12
+  - task-13
+  - task-14w
+  - task-15
+  - task-16
+  - task-19a
+  - task-19b
+  - task-19c
+  plan_section: 18-detailed-development-plan.md#task-19d专项测试与-manifest-验证
+  write_scope:
+  - services/api/tests/**
+  - e2e/**
+  - scripts/verify_decision_os_contracts.py
+  - docs/handoffs/**
+  forbidden_scope:
+  - apps/web/components/**
+  - services/api/app/**
+  source_fix_policy: defect_handoff_to_original_owner
+  acceptance:
+  - uv run --project services/api pytest services/api/tests/test_decision_os_invariants.py services/api/tests/test_source_traceability.py
+    services/api/tests/test_signoff.py services/api/tests/test_validation_orchestrator.py services/api/tests/test_no_run_no_report.py
+    services/api/tests/test_simulation_properties.py -q
+  - py -3.12 scripts/verify_decision_os_contracts.py
+  - pnpm --dir apps/web exec playwright test e2e/signoff-and-history.spec.ts
+  handoff_artifacts:
+  - manifest_dag_scope_report
+  - contract_repair_regression_report
+  - signoff_e2e_report
+- id: task-19
+  title: Decision OS release-hardening integration gate
+  owner: qa_release
+  approval_owner: contract_lead
+  depends_on:
+  - task-19a
+  - task-19b
+  - task-19c
+  - task-19d
+  plan_section: 18-detailed-development-plan.md#task-19release-hardening-integration-gate
+  write_scope:
+  - docs/handoffs/decision-os-hardening-gate.md
+  acceptance:
+  - py -3.12 scripts/verify_decision_os_contracts.py
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  - uv run --project services/api pytest services/api/tests/test_decision_os_invariants.py services/api/tests/test_no_run_no_report.py
+    services/api/tests/test_signoff.py -q
+  handoff_artifacts:
+  - decision_os_hardening_gate_report
+scheduler_rules:
+  max_one_in_progress_per_owner: true
+  allow_parallel_when_write_scopes_disjoint: true
+  wait_for_dependencies: true
+  contract_lead_required_for_schema_changes: true
+  qa_may_not_patch_product_source: true
+  integration_interval_hours:
+    six_agent_72h: 6
+    four_agent_108h: 9
+    three_agent_144h: 12
+  terminal_states:
+  - completed
+  - blocked
+  completion_evidence_required: true
+  capacity_clock_requires: gate-0
+  validate_owner_scope_before_dispatch: true
+  reject_cross_owner_scope_overlap: true
+ownership_model:
+  cross_owner_overlap: forbidden
+  same_owner_sequential_overlap: allowed
+  task_scope_inherits_owner_exclusions: true
+  canonical_schema_owner: contract_lead
+  test_and_release_evidence_owner: qa_release
+  reserved_scopes:
+  - owner: contract_lead
+    paths:
+    - services/api/app/**/schemas.py
+  - owner: simulation_graph
+    paths:
+    - apps/web/components/simulation/**
+  - owner: qa_release
+    paths:
+    - apps/web/tests/**
+    - apps/web/**/*.test.ts
+    - apps/web/**/*.test.tsx
+    - apps/web/playwright.config.ts
+  - owner: web_ux
+    paths:
+    - design/**
+    - scripts/snapshot_look.py
+  - owner: contract_lead
+    paths:
+    - apps/web/Dockerfile
+start_gates:
+  gate-0:
+    depends_on:
+    - task-01
+    - task-01w
+    required_before_capacity_clock: true
+    checks:
+    - powershell -ExecutionPolicy Bypass -File scripts/preflight.ps1
+    - uv run --python 3.12 --project services/api python scripts/probe_deepseek.py
+    - py -3.12 scripts/snapshot_look.py --check
+    - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check

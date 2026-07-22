@@ -4,21 +4,21 @@
 
 ## Current status
 
-- **Development phase:** Gate 0 offline bootstrap
+- **Development phase:** Gate 0 validated; Task 2/19A implementation pending
 - **Repository visibility:** Private
 - **License:** No public license granted; All Rights Reserved
-- **Capacity clock:** Not started. The 6-agent/72-hour Hackathon Prototype clock begins only after Gate 0 passes.
+- **Capacity clock:** Not started. Automated Gate 0 passed; the 6-agent/72-hour clock remains conditional on accepting the proven system-Chrome Playwright fallback or acquiring bundled Chromium.
 - **Production readiness:** Not ready
 
 See [`LICENSING.md`](LICENSING.md) and [`COPYRIGHT`](COPYRIGHT) before copying, distributing, relicensing, or publishing any part of this repository.
 
-## Authoritative workspace sources
+## Authoritative repository and workspace sources
 
-In the current development workspace, the canonical sources are external sibling directories:
+The canonical product, architecture, contract, execution, and acceptance plan is now versioned inside this Private repository. Visual reference and disposable validation artifacts remain external workspace inputs:
 
-| Purpose | Local path |
+| Purpose | Path |
 |---|---|
-| Product, architecture, contract, execution, and acceptance plan | `../decision-lab-product-plan` |
+| Product, architecture, contract, execution, and acceptance plan | `docs/product-plan` |
 | Final static frontend design reference | `../look` |
 | Optional Gate 0 validation slice | `../decision-lab-G0` |
 | Final implementation repository | `.` |

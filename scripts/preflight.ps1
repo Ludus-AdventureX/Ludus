@@ -21,11 +21,16 @@ else {
 }
 $ProjectPython = Join-Path $RepositoryRoot ".venv\Scripts\python.exe"
 $WorkspaceRoot = Split-Path -Parent $RepositoryRoot
-$PlanRoot = if ([string]::IsNullOrWhiteSpace($env:DECISION_LAB_PLAN_PATH)) {
-    Join-Path $WorkspaceRoot "decision-lab-product-plan"
+$RepositoryPlanRoot = Join-Path $RepositoryRoot "docs\product-plan"
+$SiblingPlanRoot = Join-Path $WorkspaceRoot "decision-lab-product-plan"
+$PlanRoot = if (-not [string]::IsNullOrWhiteSpace($env:DECISION_LAB_PLAN_PATH)) {
+    $env:DECISION_LAB_PLAN_PATH
+}
+elseif (Test-Path -LiteralPath $RepositoryPlanRoot -PathType Container) {
+    $RepositoryPlanRoot
 }
 else {
-    $env:DECISION_LAB_PLAN_PATH
+    $SiblingPlanRoot
 }
 $LookRoot = if ([string]::IsNullOrWhiteSpace($env:DECISION_LAB_LOOK_PATH)) {
     Join-Path $WorkspaceRoot "look"
