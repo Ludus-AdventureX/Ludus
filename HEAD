@@ -1,12 +1,7 @@
-# Current Work: Task 2 Model and Migration Acceptance Tests
+# Work Log: idle
 
-- Started: 2026-07-22 (Asia/Shanghai)
-- Status: in_progress
-- Objective: add QA-owned Task 2 model and Decision OS invariant tests against Contract Lead commit 12f0e20 without modifying source-owner files.
-- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-release
-- Branch: codex/qa-release-task2
-- Base implementation: codex/contract-lead-task2-19a at 12f0e20
-- Write scope: services/api/tests/** only, plus HEAD/HISTORY work records.
-- Validation target: PostgreSQL 16 migration 0001, tenant constraints, canonical enums, session revocation shape, dossier cascade, and absence of parallel candidate/status contracts.
-- Merge policy: MUST NOT merge into main or another branch without explicit product-owner approval.
-- Secret policy: do not print, copy, commit, or record values from .env.
+- Last archived: 2026-07-22 (Asia/Shanghai)
+- Archive file: HISTORY
+- Archive marker: Task 2 Model and Migration Acceptance Tests / 1801a61
+- Next work: product-owner review of codex/qa-release-task2; Task 6 must pass before full Task 19A implementation resumes.
+- Secret policy: no credentials are stored in this file.

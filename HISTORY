@@ -236,3 +236,46 @@
 - Current scope: Task 2 first. Task 19A depends on Task 2 and Task 6 and cannot be marked complete before both prerequisites are satisfied.
 - Merge policy: implementation may be committed and pushed to the development branch, but MUST NOT be merged without explicit product-owner approval.
 - Secret policy: do not print, copy, commit, or record values from .env.
+
+
+## Archived QA work 2026-07-22 (Asia/Shanghai)
+
+# Current Work: Task 2 Model and Migration Acceptance Tests
+
+- Started: 2026-07-22 (Asia/Shanghai)
+- Completed: 2026-07-22 (Asia/Shanghai)
+- Status: completed
+- Objective: add QA-owned Task 2 model and Decision OS invariant tests against the Contract Lead implementation without modifying source-owner files.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-release
+- Branch: codex/qa-release-task2
+- Implementation baseline: codex/contract-lead-task2-19a through a6393f2, followed by QA commit 1801a61.
+- Write scope: services/api/tests/** plus HEAD/HISTORY work records.
+- Merge policy: no merge into main or another branch occurred; explicit product-owner approval remains required.
+- Secret policy: no credential value was printed, copied, committed, or recorded.
+
+## Added
+
+- Added services/api/tests/test_models.py for PostgreSQL table, tenant, cascade, membership, session, dossier, candidate-revision, and enum constraints.
+- Added services/api/tests/test_decision_os_invariants.py for canonical identifiers, lifecycle/operational-status separation, Strategic Lens IDs, and prevention of parallel candidate/status contracts.
+
+## Validation
+
+- PostgreSQL 16 container decision-lab-db-1: healthy.
+- PYTHONWARNINGS=error pytest selection: 14 passed (13 Task 2 model/invariant tests plus baseline health test).
+- Ruff over services/api: PASS.
+- Alembic upgrade -> downgrade base -> no residual business tables/enums -> upgrade head: PASS.
+- Alembic metadata drift check: No new upgrade operations detected.
+- OpenAPI/TypeScript contract drift: CONTRACT_DRIFT_OK.
+- Decision OS verifier: all 7 groups PASS (look-v7, canonical-data, structured-report-example, active-docs-and-high-risk, agent-manifest, ways-package, document-integrity).
+
+## Acceptance Result
+
+- Task 2 technical acceptance: PASS on codex/qa-release-task2.
+- Task 19A completion: BLOCKED BY DEPENDENCY, not a failed implementation. Manifest dependency task-06 is not implemented; full Task 19A remains out of scope until Task 6 passes its own gate.
+- Recommended review candidate: the stacked QA branch codex/qa-release-task2, which contains the Task 2 implementation and QA tests but no later Contract Lead log-only archival commit.
+
+## Remaining Risks / Review Notes
+
+- DecisionSubject.slug remains an internal Task 2 persistence field until a future CCR synchronizes the wire schema.
+- Conversation, Message, and DomainEvent persistence follows the combined 05/10/18 requirements; this slice does not introduce standalone API DTOs.
+- Source union persistence, SystemRecommendation, SignoffPayload, Simulation replay fields, generated Task 19A OpenAPI/types, and full 06/10/26 runtime acceptance remain unimplemented and must not be inferred from this PASS.
