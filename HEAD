@@ -1,42 +1,7 @@
-﻿# Current Work: Gate 0 Bootstrap
+# Work Log: idle
 
-- Started: 2026-07-22 (Asia/Shanghai)
-- Status: in_progress (offline bootstrap complete; external/environment gates pending)
-- Objective: Start Gate 0 for Ludus, record the commercialization/licensing strategy, synchronize AGENTS.md, connect the local repository to GitHub, and execute all safe checks that do not require unapproved installation, runtime creation, persistent services, or live provider calls.
-- Canonical repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Validation slice: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0
-- Product/development plan: E:\Temp\xiayu\Documents\adventure-x\decision-lab-product-plan
-- Static frontend reference: E:\Temp\xiayu\Documents\adventure-x\look
-- GitHub remote: https://github.com/xiayuzizhuo666/Ludus.git
-
-## Completed in this work
-
-- Added `LICENSING.md` with the current Private/All Rights Reserved policy and future Open Core candidate boundaries.
-- Added `COPYRIGHT` and root `README.md`.
-- Synchronized `AGENTS.md` with IP/licensing, public-release, environment-approval, and HEAD/HISTORY rules.
-- Initialized an independent Git repository on `main` and added the approved `origin` remote.
-- Added Task 1 offline bootstrap manifests: `package.json`, `pnpm-workspace.yaml`, `compose.yaml`, `.env.example`, `packages/contracts/package.json`, `services/api/pyproject.toml`, and the FastAPI health skeleton.
-- Added OpenAPI export, contract drift, DeepSeek capability probe, and Gate 0 preflight scripts.
-- Added Look V7 snapshot tooling and component map; generated and checked `design/look-source-manifest.json`.
-- Verified Look V7 frozen bundle hash: `c5d5d65bf62efdd14e4e3e13d1c70b92f9d6b4cdd4dbd2f652107d84d1a55e98`.
-- Ran Python AST, PowerShell parser, JSON parsing, snapshot check, and a secret-pattern scan without printing credential values.
-
-## Verification results
-
-- PASS: Git 2.45.1, Python 3.12.7, Node 22.20.0, pnpm 9.14.4, Git repository root/origin, canonical plan file presence, active Ways 1.1.0 manifest, `.gitignore` boundary, private-license boundary, Look V7 snapshot.
-- FAIL/PENDING: `uv` missing; Docker daemon unavailable; Postgres not running; Python 3.12 lacks PyYAML so the canonical verifier cannot complete; fixture seed/external/expected directories are not yet implemented; real security environment values are not loaded; six capacity worktrees are not created; OpenAPI/TypeScript generated artifacts cannot be produced before approved dependencies; Task 1W frontend/Playwright tooling is not installed.
-- Remote check: `git ls-remote` was attempted with prompts disabled and failed with a network connection reset; no push was performed.
-
-## Constraints
-
-- Final implementation lands in `decision-lab`; `decision-lab-G0` is validation-only.
-- Ask the product owner before installing `uv`, project dependencies, Playwright, creating `.venv`, pulling/starting Docker services, or running a live paid DeepSeek probe.
-- Keep the repository private and without a root software license until the public/private IP boundary is frozen.
-- Never copy credentials into Git, logs, HEAD, or HISTORY; never print secret values.
-
-## Next action after approval
-
-1. Confirm the GitHub repository is Private and choose the intended capacity profile (6/72h, 4/108h, or 3/144h).
-2. Obtain approval for `uv`, a Python 3.12 `.venv` under this repository, pnpm dependencies, Playwright Chromium, and Docker/Postgres.
-3. Install only approved dependencies, generate OpenAPI/TypeScript artifacts, build the Web/UX shell, create/validate fixture boundaries, and rerun Gate 0.
-4. Configure live provider access through the host environment only, then run the redacted DeepSeek text/thinking/strict-tool/structured-output probe.
+- Last archived: 2026-07-22T09:14:38.4399429+08:00
+- Archive file: HISTORY
+- Last commit: 92fb4af
+- Next work: continue Gate 0 only after product-owner approvals listed in the archived record.
+- Secret policy: no credentials are stored in this file.
