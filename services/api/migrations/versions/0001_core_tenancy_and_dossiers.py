@@ -308,3 +308,28 @@ def downgrade() -> None:
     op.drop_table('user_sessions')
     op.drop_table('users')
     # ### end Alembic commands ###
+
+    bind = op.get_bind()
+    enum_names = (
+        'quick_analysis_formality',
+        'message_role',
+        'dossier_scope',
+        'dossier_source_type',
+        'dossier_statement_type',
+        'entry_status',
+        'candidate_revision_status',
+        'candidate_source_type',
+        'case_operational_status',
+        'decision_lifecycle_stage',
+        'decision_type',
+        'initiative_status',
+        'workspace_membership_status',
+        'workspace_capability',
+        'workspace_role',
+        'domain_event_actor',
+        'subject_status',
+        'workspace_status',
+        'user_status',
+    )
+    for enum_name in enum_names:
+        postgresql.ENUM(name=enum_name).drop(bind, checkfirst=True)
