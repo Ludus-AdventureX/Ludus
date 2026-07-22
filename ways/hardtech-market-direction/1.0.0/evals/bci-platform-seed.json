@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "hardtech-market-direction.bci-platform-seed.v1",
+  "description": "去标识化非植入式 BCI 团队在种子期资源下选择科研工具、教育试点、医疗合作或三线平台扩张；验证规模改变性质与最小楔子纪律。",
+  "input": {
+    "workspaceId": "workspace_eval_bci_seed",
+    "caseVersion": 1,
+    "caseSnapshotHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "dossierSnapshotHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+    "requestedAnalysisLevel": "full",
+    "confirmation": {
+      "routeInputsConfirmed": true,
+      "allowedMaterialsConfirmed": true,
+      "unknownItemsConfirmed": true
+    },
+    "subject": {
+      "id": "subject_bci_seed",
+      "class": "regulated_device",
+      "stage": "working_prototype",
+      "owner": "founding_team"
+    },
+    "decision": {
+      "type": "product_market_path",
+      "question": "在 4 人团队、200-250 万元可用资金和 6 个月关键窗口下，非植入式 BCI 核心技术应优先做科研工具、教育试点、医疗合作，还是同时建设三条产品线？",
+      "deadline": "2026-09-30"
+    },
+    "switchingCost": {
+      "material": true,
+      "drivers": [
+        "三类客户的产品形态、验证协议、采购和支持体系明显不同",
+        "医疗方向涉及更长验证和责任链",
+        "教育机构采购周期可能超过当前现金窗口",
+        "多线并行需要超出当前团队容量的销售、产品和交付岗位"
+      ]
+    },
+    "goals": [
+      {"metric": "现金内验证", "target": "6 个月内完成一个可收费或可核验的强需求闭环", "weight": 0.45},
+      {"metric": "技术复用", "target": "核心采集与刺激平台保持可复用", "weight": 0.30},
+      {"metric": "选择权", "target": "不因首个市场投入锁死后续医疗或教育路径", "weight": 0.25}
+    ],
+    "constraints": [
+      {"id": "constraint_seed_budget", "text": "可用资金不超过 250 万元", "hard": true},
+      {"id": "constraint_seed_team", "text": "核心团队 4 人，无法同时配置三套销售、产品和交付体系", "hard": true},
+      {"id": "constraint_seed_window", "text": "6 个月内必须形成下一验证点", "hard": true}
+    ],
+    "options": [
+      {"id": "opt_research_tool", "name": "科研工具最小楔子"},
+      {"id": "opt_education_pilot", "name": "教育机构合作试点"},
+      {"id": "opt_medical_co_development", "name": "医疗机构联合验证"},
+      {"id": "opt_three_line_platform", "name": "教育/科研/医疗三线平台并行"}
+    ],
+    "knownFacts": [
+      "已有可工作的非植入式 BCI 原型和核心算法",
+      "当前没有成熟的三行业销售与交付团队",
+      "教育机构从试点到采购通常不是即时完成"
+    ],
+    "assumptions": [
+      {"id": "asm_seed_shared_platform", "text": "共同核心技术足以让三条产品线低成本并行"},
+      {"id": "asm_seed_education_cycle", "text": "教育试点能在 6 个月窗口内转化为回款"},
+      {"id": "asm_seed_medical_partner", "text": "医疗合作方愿意承担部分验证和合规成本"}
+    ],
+    "unknownItems": [
+      "科研用户的明确付费单位和价格",
+      "教育试点的预算持有人与采购周期",
+      "医疗合作的责任边界和验证资源"
+    ],
+    "allowedMaterials": ["公开资料", "脱敏访谈摘要", "演示财务与团队约束"],
+    "prohibitedMaterials": ["患者个人信息", "未申请专利核心参数", "真实客户合同"]
+  },
+  "expectedRoute": {
+    "matchStatus": "exact",
+    "recommendedMethodId": "hardtech-market-direction",
+    "recommendedMethodVersion": "1.0.0",
+    "formalAnalysisAllowed": true,
+    "reasonsMustInclude": ["hardtech subject", "multiple product-market paths", "material switching cost", "confirmed decision contract"],
+    "missingInputs": []
+  },
+  "mustDiscover": {
+    "criticalAssumptions": [
+      "共同技术平台不等于共享产品、采购、合规和交付体系",
+      "教育采购周期可能超过种子期现金窗口",
+      "医疗合作即使战略价值高，也可能无法在当前窗口形成现金闭环",
+      "三线并行会把有限团队分散到超过组织容量的工作流"
+    ],
+    "counterArguments": [
+      "只做科研工具可能限制长期市场想象，但可形成最快反馈和现金验证",
+      "教育需求看似明确，但预算、采购与交付责任可能使其不适合作为种子期主线",
+      "三线平台的技术复用叙事可能掩盖产品和商业系统分叉"
+    ],
+    "requiredSafetyAnchor": {
+      "ifAllWrongBecauseMustAddress": "团队把核心技术可复用误读为三条产品线可以在同一资源阶段同时成立",
+      "pseudoConvergenceChecks": ["多个方向是否共同依赖平台复用叙事", "所有建议是否默认融资能在现金耗尽前完成"]
+    }
+  },
+  "evidenceAndQualityRequirements": {
+    "minimumIndependentSources": 3,
+    "minimumPrimarySources": 1,
+    "minimumSubstantiveCounterSources": 1,
+    "coreClaimVerdictsAllowed": ["accepted", "conditional"],
+    "coreClaimsMustNotRelyOn": ["lead_only", "rejected", "L6_unverifiable"],
+    "requiredCoverage": [
+      "每条路径的具体用户、付费者和采购者",
+      "教育与医疗的采购/验证周期和现金窗口对齐",
+      "4 人团队可同时承担的产品、销售和交付工作量",
+      "科研工具最小楔子的付费和复用价值",
+      "共同平台假设与实际产品分叉"
+    ],
+    "blockingConditions": [
+      "三线并行超过团队或现金硬约束却仍被 TAM/平台叙事救回",
+      "采购周期与现金窗口未对齐",
+      "资源规模敏感性未进入建议条件",
+      "没有保留继续验证或最小楔子选项"
+    ],
+    "fullDeliveryGate": {"multiplicativeUse": "delivery_qualification_only", "notSuccessProbability": true, "blockingChecksOverrideIndex": true}
+  },
+  "strategicLensRequirements": {
+    "requiredLensTypes": ["porter_five_forces", "pre_mortem", "counterparty_response_matrix", "scenario_planning", "meadows_leverage_points"],
+    "stageOutputsMustRemainUntrusted": true,
+    "canonicalArtifactsRequired": 5,
+    "caseSpecificExpectations": [
+      "Pre-mortem 必须包含团队分散和现金窗口失效",
+      "Scenario 至少一个情景推翻三线并行",
+      "Meadows 必须识别组织容量和反馈周期，而非只增加销售投入"
+    ],
+    "focusedBoundary": "focused 不生成任何正式 lens artifact"
+  },
+  "simulationRequirements": {
+    "minimumCandidateNodes": 8,
+    "minimumCandidateEdges": 10,
+    "requiredDrivers": ["team_capacity", "cash_runway_months", "education_procurement_months", "medical_validation_months", "shared_platform_reuse"],
+    "resourceScaleFlip": {
+      "condition": "three_line_parallel_burn_and_delivery_load_exceeds_seed_budget_or_team_capacity",
+      "expectedEffect": "三线平台在当前 Charter 下触发 fatal gate；建议收窄为一个最小楔子并保留后续选择权。"
+    },
+    "forbiddenInterpretations": ["资金越多则产品线数量线性增加", "三线平台成功概率", "技术平台复用等同于商业系统复用"]
+  },
+  "forbiddenHardcodedOutcome": {
+    "forbidSuccessProbabilityField": true,
+    "forbidFixedFinalRecommendationWithoutConditions": true,
+    "note": "允许在证据充分时选择科研、教育或医疗最小楔子，但禁止无条件推荐三线并行。"
+  }
+}

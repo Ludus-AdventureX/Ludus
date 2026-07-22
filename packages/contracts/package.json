@@ -1,0 +1,16 @@
+{
+  "name": "@decision-lab/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "openapi-typescript openapi.json -o src/types.gen.ts",
+    "check": "powershell -ExecutionPolicy Bypass -File ../../scripts/generate_contracts.ps1 -Check"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0"
+  }
+}

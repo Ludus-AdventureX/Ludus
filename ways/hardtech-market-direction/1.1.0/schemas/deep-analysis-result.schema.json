@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:deep-analysis-result:1.1.0",
+  "title": "Deep Analysis Result",
+  "description": "ID/hash-only result envelope. Canonical objects are persisted first and read through Workspace/Run-scoped APIs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "analysisRunId",
+    "runManifestId",
+    "runManifestHash",
+    "judgmentSetId",
+    "dissentRecordId",
+    "draftRecommendationId",
+    "unresolvedUnknownIds",
+    "validatorResults",
+    "qualityGateResultId",
+    "provenanceHash"
+  ],
+  "properties": {
+    "analysisRunId": {
+      "$ref": "#/$defs/id"
+    },
+    "runManifestId": {
+      "$ref": "#/$defs/id"
+    },
+    "runManifestHash": {
+      "$ref": "#/$defs/hash"
+    },
+    "judgmentSetId": {
+      "$ref": "#/$defs/id"
+    },
+    "dissentRecordId": {
+      "$ref": "#/$defs/id"
+    },
+    "draftRecommendationId": {
+      "$ref": "#/$defs/id"
+    },
+    "unresolvedUnknownIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "validatorResults": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "$ref": "validator-result.schema.json"
+      }
+    },
+    "qualityGateResultId": {
+      "$ref": "#/$defs/id"
+    },
+    "provenanceHash": {
+      "$ref": "#/$defs/hash"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

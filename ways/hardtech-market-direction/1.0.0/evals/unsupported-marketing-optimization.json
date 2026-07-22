@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "hardtech-market-direction.unsupported-marketing-optimization.v1",
+  "description": "无研发、交付和高切换成本约束的 SaaS 广告投放优化不属于本方法。",
+  "input": {
+    "workspaceId": "workspace_eval_unsupported",
+    "caseVersion": 1,
+    "caseSnapshotHash": "sha256:4141414141414141414141414141414141414141414141414141414141414141",
+    "dossierSnapshotHash": "sha256:4242424242424242424242424242424242424242424242424242424242424242",
+    "requestedAnalysisLevel": "focused",
+    "confirmation": {"routeInputsConfirmed": true, "allowedMaterialsConfirmed": true, "unknownItemsConfirmed": true},
+    "subject": {"id": "subject_saas_ads", "class": "software_service", "stage": "growth", "owner": "growth_team"},
+    "decision": {"type": "campaign_optimization", "question": "下周应该把广告预算投向搜索广告还是短视频素材？", "deadline": "2026-07-21"},
+    "switchingCost": {"material": false, "drivers": []},
+    "goals": [{"metric": "获客成本", "target": "一周内降低 10%", "weight": 1.0}],
+    "constraints": [{"id": "constraint_weekly_budget", "text": "一周广告预算固定", "hard": true}],
+    "options": [
+      {"id": "opt_search_ads", "name": "搜索广告"},
+      {"id": "opt_short_video", "name": "短视频素材"}
+    ],
+    "knownFacts": ["两个渠道都可随时调整预算"],
+    "assumptions": [],
+    "unknownItems": ["下一周点击率"],
+    "allowedMaterials": ["广告平台只读数据"],
+    "prohibitedMaterials": []
+  },
+  "expectedRoute": {
+    "matchStatus": "unsupported",
+    "recommendedMethodId": null,
+    "recommendedMethodVersion": null,
+    "formalAnalysisAllowed": false,
+    "reasonsMustInclude": ["subject is not hardtech", "pure short-term marketing optimization", "no material R&D delivery or switching constraint"],
+    "missingInputs": []
+  },
+  "mustDiscover": {
+    "criticalAssumptions": [],
+    "counterArguments": [],
+    "requiredSafetyAnchor": {"mustNotRun": true}
+  },
+  "evidenceAndQualityRequirements": {
+    "minimumIndependentSources": 0,
+    "minimumPrimarySources": 0,
+    "minimumSubstantiveCounterSources": 0,
+    "coreClaimVerdictsAllowed": [],
+    "coreClaimsMustNotRelyOn": [],
+    "requiredCoverage": [],
+    "blockingConditions": ["hardtech-market-direction formal run created", "method ID invented for unsupported request"],
+    "fullDeliveryGate": {"applicable": false}
+  },
+  "strategicLensRequirements": {
+    "requiredLensTypes": [],
+    "stageOutputsMustRemainUntrusted": true,
+    "canonicalArtifactsRequired": 0,
+    "caseSpecificExpectations": [],
+    "focusedBoundary": "不得执行任何正式 lens"
+  },
+  "simulationRequirements": {
+    "minimumCandidateNodes": 0,
+    "minimumCandidateEdges": 0,
+    "requiredDrivers": [],
+    "forbiddenInterpretations": ["把广告 A/B 测试包装成硬科技战略沙盘"]
+  },
+  "forbiddenHardcodedOutcome": {
+    "forbidSuccessProbabilityField": true,
+    "forbidFixedFinalRecommendationWithoutConditions": true,
+    "note": "允许日常问答或非正式 quick；正式方法按钮保持不可用。"
+  }
+}

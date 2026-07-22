@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "hardtech-market-direction.partial-missing-decision-contract.v1",
+  "description": "机器人团队提出两个市场方向，但未确认决策期限、现金窗口和材料授权；Router 必须返回 partial。",
+  "input": {
+    "workspaceId": "workspace_eval_partial",
+    "caseVersion": 1,
+    "caseSnapshotHash": "sha256:3131313131313131313131313131313131313131313131313131313131313131",
+    "dossierSnapshotHash": "sha256:3232323232323232323232323232323232323232323232323232323232323232",
+    "requestedAnalysisLevel": "full",
+    "confirmation": {"routeInputsConfirmed": false, "allowedMaterialsConfirmed": false, "unknownItemsConfirmed": false},
+    "subject": {"id": "subject_partial_robot", "class": "robotics", "stage": "prototype", "owner": "founding_team"},
+    "decision": {"type": "market_direction", "question": "机器人应该先做仓储巡检还是园区安防？", "deadline": null},
+    "switchingCost": {"material": true, "drivers": ["传感和认证路径分叉"]},
+    "goals": [],
+    "constraints": [],
+    "options": [
+      {"id": "opt_warehouse", "name": "仓储巡检"},
+      {"id": "opt_security", "name": "园区安防"}
+    ],
+    "knownFacts": ["已有室内移动原型"],
+    "assumptions": [],
+    "unknownItems": ["现金窗口", "预算持有人", "采购周期", "安全责任"],
+    "allowedMaterials": [],
+    "prohibitedMaterials": []
+  },
+  "expectedRoute": {
+    "matchStatus": "partial",
+    "recommendedMethodId": "hardtech-market-direction",
+    "recommendedMethodVersion": "1.1.0",
+    "formalAnalysisAllowed": false,
+    "reasonsMustInclude": ["decision contract incomplete", "materials not confirmed", "deadline and hard constraints missing"],
+    "missingInputs": ["decision.deadline", "goals", "constraints", "cash.runway", "allowed_materials", "unknown_items_confirmation"]
+  },
+  "mustDiscover": {
+    "criticalAssumptions": [],
+    "counterArguments": [],
+    "requiredSafetyAnchor": {"mustNotRun": true}
+  },
+  "evidenceAndQualityRequirements": {
+    "minimumIndependentSources": 0,
+    "minimumPrimarySources": 0,
+    "minimumSubstantiveCounterSources": 0,
+    "coreClaimVerdictsAllowed": [],
+    "coreClaimsMustNotRelyOn": [],
+    "requiredCoverage": [],
+    "blockingConditions": ["formal AnalysisRun created while route is partial", "five lens outputs created before Charter confirmation"],
+    "fullDeliveryGate": {"applicable": false}
+  },
+  "strategicLensRequirements": {
+    "requiredLensTypes": [],
+    "stageOutputsMustRemainUntrusted": true,
+    "canonicalArtifactsRequired": 0,
+    "caseSpecificExpectations": [],
+    "focusedBoundary": "不得执行任何正式 lens"
+  },
+  "simulationRequirements": {
+    "minimumCandidateNodes": 0,
+    "minimumCandidateEdges": 0,
+    "requiredDrivers": [],
+    "forbiddenInterpretations": ["用通用 Prompt 冒充正式方法", "partial 仍生成正式沙盘"]
+  },
+  "forbiddenHardcodedOutcome": {
+    "forbidSuccessProbabilityField": true,
+    "forbidFixedFinalRecommendationWithoutConditions": true,
+    "note": "允许继续问答或非正式 quick；不得创建 Charter/Run/报告/lens/沙盘。"
+  }
+}

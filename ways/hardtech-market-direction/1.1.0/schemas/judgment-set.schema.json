@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:judgment-set:1.1.0",
+  "title": "Structured Judgment Set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "analysisRunId",
+    "judgments",
+    "unresolvedUnknownIds",
+    "contentHash"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "methodId": {
+      "const": "hardtech-market-direction"
+    },
+    "methodVersion": {
+      "const": "1.1.0"
+    },
+    "analysisRunId": {
+      "$ref": "#/$defs/id"
+    },
+    "judgments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/judgment"
+      }
+    },
+    "unresolvedUnknownIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "contentHash": {
+      "$ref": "#/$defs/hash"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "idArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "idArrayMinOne": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "judgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "judgmentId",
+        "judgmentType",
+        "text",
+        "optionIds",
+        "supportingClaimIds",
+        "opposingClaimIds",
+        "unknownItemIds",
+        "challengeIds",
+        "conditions",
+        "responsibility",
+        "validationStatus",
+        "contentHash"
+      ],
+      "properties": {
+        "judgmentId": {
+          "$ref": "#/$defs/id"
+        },
+        "judgmentType": {
+          "enum": [
+            "comparative_assessment",
+            "conditional_conclusion",
+            "risk_assessment",
+            "recommendation_basis"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "optionIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "supportingClaimIds": {
+          "$ref": "#/$defs/idArrayMinOne"
+        },
+        "opposingClaimIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "unknownItemIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "challengeIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "responsibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "responsibility",
+            "actorType",
+            "createdAt"
+          ],
+          "properties": {
+            "responsibility": {
+              "const": "analysis"
+            },
+            "actorType": {
+              "enum": [
+                "system_service",
+                "analysis_worker"
+              ]
+            },
+            "actorId": {
+              "$ref": "#/$defs/id"
+            },
+            "sourceAnalysisRunId": {
+              "$ref": "#/$defs/id"
+            },
+            "producerRole": {
+              "enum": [
+                "research",
+                "critic",
+                "synthesis",
+                "validation"
+              ]
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "validationStatus": {
+          "enum": [
+            "draft",
+            "accepted",
+            "blocked"
+          ]
+        },
+        "contentHash": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    }
+  }
+}

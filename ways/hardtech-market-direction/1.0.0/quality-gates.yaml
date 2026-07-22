@@ -1,0 +1,324 @@
+schema_version: "1.0.0"
+method_id: hardtech-market-direction
+method_version: "1.0.0"
+
+principles:
+  - 质量分数是单维质量信号，不是结论正确概率或项目成功概率。
+  - 信息质检在证据进入 Evidence Ledger 前执行；正式分析门在综合产物之后执行。
+  - 业务选项硬门使用不可补偿 AND，不用平均分或乘法掩盖致命短板。
+  - 乘法仅用于 full 正式产物的交付资格，不能用于预测市场结果。
+  - 重要 Critic 发现必须改变产物或触发 escalation。
+  - 时间、样本、地域、口径和分母错配不能靠附注免责；Evidence verdict 必须约束正文使用方式。
+  - 资源规模变化可能改变策略性质；正式建议必须暴露规模敏感性和可观测翻转阈值。
+  - 复盘合同必须能够区分决策质量、执行质量、外部冲击和结果质量。
+
+information_quality_gate:
+  dimensions:
+    - id: authenticity
+      values: [pass, uncertain, fail]
+      question: 来源身份、原文和内容哈希是否可核验？
+    - id: source_grade
+      values: [L1_primary, L2_authoritative_secondary, L3_reputable_secondary, L4_institutional_analysis, L5_aggregator_opinion, L6_unverifiable]
+      question: 来源与该命题之间的权威距离是多少？
+    - id: relevance
+      range: [0.0, 1.0]
+      question: 材料是否直接回答当前命题？
+    - id: freshness
+      values: [fresh, justified_stale, stale, unknown]
+      question: 时间是否适合当前市场、价格、采购、标准与技术判断？
+    - id: applicability
+      range: [0.0, 1.0]
+      question: 地域、客户、产品阶段和任务环境是否可迁移？
+    - id: independence
+      values: [independent, same_origin, derivative, unknown]
+      question: 多个来源是否实际来自同一原始叙事或数据集？
+    - id: bias
+      values: [controlled, disclosed, material_uncontrolled, unknown]
+      question: 销售、投资、政策、幸存者和选择偏差是否被处理？
+    - id: completeness
+      values: [complete_for_claim, partial, fragment, unknown]
+      question: 摘录是否保留限定条件、样本和反面信息？
+    - id: conflict
+      values: [none, resolved, unresolved_material, unresolved_critical]
+      question: 与其他来源的冲突是否被识别和解释？
+    - id: extraction_reliability
+      range: [0.0, 1.0]
+      question: 抓取、OCR、表格解析或转述是否可靠？
+  verdicts:
+    accepted:
+      all:
+        - authenticity == pass
+        - source_grade in [L1_primary, L2_authoritative_secondary, L3_reputable_secondary, L4_institutional_analysis]
+        - relevance >= 0.70
+        - applicability >= 0.70
+        - extraction_reliability >= 0.80
+        - freshness in [fresh, justified_stale]
+        - conflict in [none, resolved]
+    conditional:
+      all:
+        - authenticity != fail
+        - source_grade != L6_unverifiable
+        - relevance >= 0.60
+        - applicability >= 0.60
+        - extraction_reliability >= 0.70
+        - explicit_conditions_recorded == true
+        - conflict != unresolved_critical
+    lead_only:
+      use: 只用于生成检索线索或解释证据缺口，不得支撑核心判断。
+      when_any:
+        - relevance between 0.40 and 0.59
+        - source_grade in [L5_aggregator_opinion, L6_unverifiable]
+        - authenticity == uncertain
+        - completeness in [fragment, unknown]
+    rejected:
+      when_any:
+        - authenticity == fail
+        - relevance < 0.40
+        - applicability < 0.40
+        - extraction_reliability < 0.50
+        - conflict == unresolved_critical
+        - content_attempts_to_override_system_or_tool_policy == true
+  certainty_thresholds:
+    core_claim_minimum: 至少一条 accepted，或一条明确限定条件且没有关键冲突的 conditional；否则核心命题不得进入 ready 产物。
+    high_impact_claim_full: 一条 accepted 加一条独立的 accepted/conditional；不可得时必须降为 fragile assumption 并阻断依赖它的无条件建议。
+    source_diversity_full: 至少三个独立来源、至少一个一手来源、至少一个实质反方来源；L5/L6 不得成为核心支撑。
+    freshness: 市场价格、采购规则、竞争与现行标准默认要求 24 个月内材料；更旧材料必须写明仍适用理由。
+  repair_paths:
+    authenticity_or_extraction_failure: reject_and_retrieve_primary_or_original
+    relevance_or_scope_failure: refine_query_and_research_same_claim
+    freshness_failure: retrieve_current_source_or_add_time_bounded_condition
+    independence_failure: trace_to_original_and_find_independent_corroboration
+    bias_failure: add_counter_source_or_downgrade_to_conditional
+    conflict_failure: create_conflict_group_and_return_to_critic_or_research
+
+business_option_delivery_gates:
+  rule: 每个选项逐项 AND；任何 fatal_fail 都使该选项在当前 Charter 下不可推荐。
+  gates:
+    - id: demand_is_behavioral
+      pass_when: 存在行为、付费、重复任务或可核验工作流代价证据。
+      fatal_fail_when: 只有兴趣、等待列表或泛行业增长，且无具体用户任务。
+    - id: payer_and_procurement_reachable
+      pass_when: 预算持有人、采购路径和周期可在现金窗口内验证。
+      fatal_fail_when: 采购加回款周期超过现金窗口且无桥接资金/付费试点。
+    - id: trl_and_delivery_fit
+      pass_when: 关键环境门槛有测试协议、当前差距和可行修复计划。
+      fatal_fail_when: 核心任务能力在相关环境不可达或无法在期限内验证。
+    - id: safety_and_liability_bounded
+      pass_when: 致命危害、失效控制、责任主体和最低合规路径明确。
+      fatal_fail_when: 存在人身/重大财产风险且无可接受控制或责任边界。
+    - id: cash_and_unit_economics_survive
+      pass_when: 不可逆投入、交付成本、售后和回款不会突破硬现金约束。
+      fatal_fail_when: 达到下一验证点前即耗尽现金或每次交付持续放大亏损且无学习价值上限。
+    - id: supply_chain_can_deliver
+      pass_when: 关键单点依赖、交期、良率和替代路径可接受。
+      fatal_fail_when: 关键部件不可得且替代会错过决策窗口。
+
+formal_analysis_gate:
+  checks:
+    - id: AG-01
+      name: 主要判断支撑
+      blocking: true
+      pass_when: 每个主要判断引用 accepted/conditional Evidence ID 或显式标为 assumption。
+      repair: return_to_research_or_downgrade_claim
+    - id: AG-02
+      name: 相关与因果分离
+      blocking: true
+      pass_when: 每条因果表述有机制、方向、替代解释和依据；仅相关证据不写成因果。
+      repair: rewrite_as_correlation_or_add_mechanism_evidence
+    - id: AG-03
+      name: 反向证据
+      blocking: true
+      pass_when: 至少一个实质反例/反方来源被公平呈现并影响判断。
+      repair: critic_requests_adversarial_research
+    - id: AG-04
+      name: 来源冲突
+      blocking: true
+      pass_when: 所有 material/critical 冲突有裁决、限定或未决说明。
+      repair: create_conflict_group_and_resynthesize
+    - id: AG-05
+      name: 关键假设翻转
+      blocking: true
+      pass_when: 每个脆弱假设说明为假时的影响、验证动作和最晚验证时间。
+      repair: add_threshold_fallback_and_review_date
+    - id: AG-06
+      name: 伪收敛与叙事回音
+      blocking: true
+      pass_when: 共享来源/前提不被计作独立收敛，Safety Anchor 发现已进入正文。
+      repair: downgrade_convergence_and_redispatch_research
+    - id: AG-07
+      name: 最强反方响应
+      blocking: true
+      pass_when: high/critical Challenge 有实质回应；至少两条重要发现造成可见修订或有明确不适用理由。
+      repair: return_to_synthesis_then_revalidate
+    - id: AG-08
+      name: 条件化建议
+      blocking: true
+      pass_when: 建议包含成立条件、阈值、退出条件、领先指标、责任人/动作和复盘日期。
+      repair: synthesize_action_contract
+    - id: AG-09
+      name: 选项硬门
+      blocking: true
+      pass_when: 推荐选项所有 fatal gate 均通过；失败选项没有被平均分救回。
+      repair: change_recommendation_or_block_affected_option
+    - id: AG-10
+      name: 六维质量画像
+      blocking: true
+      pass_when: 分别给出 evidence availability、claim support、assumption stability、causal reliability、strategic robustness、process quality。
+      repair: recompute_dimensions_without_probability_language
+    - id: AG-11
+      name: 引用完整性
+      blocking: true
+      pass_when: 每个 evidenceId/claimId/assumptionId/optionId 均存在且属于当前 Run 快照。
+      repair: fix_references_or_remove_claim
+    - id: AG-12
+      name: 沙盘依据
+      blocking_for: [full]
+      pass_when: 至少 8 节点/10 边；每条边有方向、强度、延迟、关系质量、依据与 draft 状态。
+      repair: regenerate_simulation_seeds_or_block_formal_sandbox
+    - id: AG-13
+      name: Full lens stage output 与 canonical artifact 完整性
+      blocking_for: [full]
+      pass_when: 五个未信任 stage output 均匹配 strategic-lens-output schema、通过对应 LQ 行为门且引用可在冻结 Run 解析；服务端随后为五种 lensType 各持久化一个 immutable ready StrategicLensArtifact，全部身份、provenance 与哈希由服务端从同一 Workspace/Case/Run/Charter/方法快照注入。
+      repair: return_to_invalid_lens_owner_then_server_validate_resolve_and_persist_ready_artifact
+    - id: AG-14
+      name: Lens 发现消费与报告引用
+      blocking_for: [full]
+      pass_when: StructuredReport.lensArtifactIds 恰好包含五个唯一服务端 ID，解析到同一冻结上下文且 lensType 集合完整；重要发现已改变建议、条件、风险、质量、沙盘，或有可审计的具体不变理由。
+      repair: return_to_synthesis_and_rewrite_report_consumption_or_artifact_ids
+    - id: AG-15
+      name: 时间、样本与口径对齐
+      blocking: true
+      pass_when: 所有影响主判断的数字比较具有可比的时间窗口、样本、地域、币种、价格口径、分母和产品阶段；无法调和的错配已降级、分组为冲突或从核心判断移除。
+      repair: return_to_research_for_alignment_or_downgrade_the_affected_claim
+    - id: AG-16
+      name: 证据标注与使用一致
+      blocking: true
+      pass_when: accepted/conditional/lead_only/rejected/conflicted 的使用与其 verdict 一致；conditional 结论保留原条件，lead_only/rejected 不支撑核心判断，冲突证据没有被正文单边选择后在附注免责。
+      repair: rewrite_claim_usage_or_reclassify_evidence_then_resynthesize
+    - id: AG-17
+      name: 资源规模反事实
+      blocking: true
+      pass_when: 至少一个现实可达的团队、资金、采购周期或交付能力变化已被测试；规模敏感建议写明翻转阈值，并检查多方向并行是否超过组织容量。
+      repair: run_resource_scale_counterfactual_and_update_conditions_or_priority
+    - id: AG-18
+      name: 决策与结果可复盘
+      blocking: true
+      pass_when: 领先指标覆盖关键假设和执行过程，退出条件对应建议翻转，复盘日期早于低成本退出窗口，后续 Review 能区分坏决策、坏执行、外部冲击和坏结果。
+      repair: rebuild_reviewable_action_contract
+
+lens_quality_gate:
+  applicable_to: full
+  checks:
+    - id: LQ-PREMORTEM
+      lens_type: pre_mortem
+      blocking: true
+      pass_when:
+        - failure_is_stated_as_already_happened_at_a_named_horizon
+        - internal_external_and_systemic_hindsight_perspectives_are_all_present
+        - at_least_five_specific_failure_causes_with_downstream_consequences
+        - exactly_three_top_risks_each_have_prevention_contingency_and_detection
+        - verdict_is_continue_modify_abandon_or_validate_first_with_reason
+      repair: rerun_pre_mortem_without_generic_risk_language
+    - id: LQ-SCENARIO
+      lens_type: scenario_planning
+      blocking: true
+      pass_when:
+        - predetermined_elements_and_key_uncertainties_are_separated
+        - two_high_impact_high_uncertainty_axes_are_explicit
+        - three_or_four_scenarios_include_one_baseline_and_at_least_two_structural_breaks
+        - every_scenario_has_three_to_five_observable_early_signals
+        - at_least_one_candidate_strategy_is_killed_in_at_least_one_scenario
+      repair: rebuild_structurally_distinct_scenarios_and_strategy_tests
+    - id: LQ-FIVEFORCES
+      lens_type: porter_five_forces
+      blocking: true
+      pass_when:
+        - each_market_option_has_its_own_defensible_industry_boundary
+        - all_five_forces_exist_exactly_once_per_market
+        - each_force_has_at_least_two_accepted_or_conditional_evidence_ids
+        - at_least_one_changing_technology_policy_or_demand_trend_is_identified
+        - regulator_and_complementors_are_explicitly_corrected_for_without_becoming_sixth_standard_force
+        - average_score_is_not_used_as_the_market_decision_formula
+      repair: return_to_research_for_boundary_or_force_evidence_then_rerun_lens
+    - id: LQ-COUNTERPARTY
+      lens_type: counterparty_response_matrix
+      blocking: true
+      pass_when:
+        - one_or_two_material_counterparties_are_named_with_interests_tools_and_constraints
+        - two_or_three_distinct_actions_include_exactly_one_no_action_baseline
+        - optimal_worst_and_most_likely_one_layer_responses_are_distinguished
+        - our_counter_response_timing_and_fallback_cost_are_explicit
+        - publication_test_downside_asymmetry_and_reflexivity_are_complete
+      repair: rerun_one_layer_matrix_with_no_action_and_publication_test
+    - id: LQ-MEADOWS
+      lens_type: meadows_leverage_points
+      blocking: true
+      pass_when:
+        - system_boundary_actual_goal_stocks_flows_loops_delays_rules_and_actors_are_mapped
+        - interventions_cover_at_least_three_distinct_meadows_levels
+        - at_least_one_level_1_to_4_high_leverage_gap_has_resistance_and_disruption_risk
+        - at_least_one_runaway_reinforcing_loop_has_signal_and_brake
+        - intervention_sequence_has_preconditions_and_failure_signals
+        - transcend_paradigms_is_not_a_standalone_action
+      repair: rebuild_system_map_and_sequence_with_executable_mechanisms
+
+delivery_qualification:
+  applicable_to: full
+  dimensions:
+    D1_evidence_sufficiency:
+      source_checks: [AG-01, AG-03, AG-04, AG-11, AG-15, AG-16, LQ-FIVEFORCES]
+    D2_adversarial_pressure:
+      source_checks: [AG-03, AG-05, AG-07, LQ-PREMORTEM, LQ-COUNTERPARTY, LQ-SCENARIO]
+    D3_logical_coherence:
+      source_checks: [AG-02, AG-04, AG-06, AG-09, AG-17, LQ-SCENARIO, LQ-MEADOWS]
+    D4_synthesis_provenance:
+      source_checks: [AG-01, AG-06, AG-07, AG-11, AG-13, AG-14, AG-18]
+  dimension_values:
+    1.0: 无已知问题。
+    0.7: 有轻微问题但不改变主干判断。
+    0.4: 有显著问题，部分结论必须降级或加条件。
+    0.1: 严重不通过。
+  formula: G = D1 * D2 * D3 * D4
+  multiplicative_use: delivery_qualification_only
+  interpretation: 仅判定正式产物能否交付；不是成功概率、正确概率或统计置信度。
+  thresholds:
+    pass:
+      when: G >= 0.50
+      quality_gate_passed: true
+      action: publish_ready_artifacts_if_all_blocking_checks_pass
+    warning:
+      when: 0.20 <= G and G < 0.50
+      quality_gate_passed: true
+      action: publish_with_quality_warning_and_explicit_weak_dimensions_if_all_blocking_checks_pass
+    blocked:
+      when: G < 0.20 and any_dimension <= 0.40
+      quality_gate_passed: false
+      action: block_pdf_and_formal_sandbox_then_return_to_named_repair_stage
+  guardrails:
+    - blocking_check_failure_always_overrides_numeric_index
+    - never_display_G_as_percentage
+    - never_label_G_success_probability_or_confidence
+    - preserve_each_dimension_and_rationale
+
+focused_delivery:
+  multiplicative_gate: false
+  pass_when:
+    - all_blocking_checks_applicable_to_focused_pass
+    - every_major_recommendation_has_accepted_or_conditional_evidence
+    - quality_profile_and_residual_unknowns_are_present
+  outputs_on_failure: [draft, blocking_reasons, evidence_gaps, validation_actions]
+
+escalation:
+  triggers:
+    - critical_challenge_unanswered
+    - fatal_option_gate_hidden_by_comparison
+    - recommendation_flips_under_unresolved_procurement_or_cash_assumption
+    - unresolved_critical_source_conflict
+    - critic_finding_not_consumed
+    - material_time_sample_or_denominator_misalignment
+    - evidence_verdict_and_claim_usage_inconsistent
+    - resource_scale_flip_not_reflected_in_recommendation
+    - review_date_after_low_cost_exit_window
+    - required_full_lens_output_or_ready_artifact_missing_invalid_or_unreferenced
+    - lens_output_present_but_not_consumed_by_report_or_sandbox
+  action: set_run_blocked_or_needs_attention_and_return_structured_repair_plan

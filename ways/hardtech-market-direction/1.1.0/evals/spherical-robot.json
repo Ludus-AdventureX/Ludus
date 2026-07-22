@@ -1,0 +1,391 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "hardtech-market-direction.spherical-robot.v1",
+  "description": "资金与研发资源有限的球形机器人在救援、家庭服务和继续研究之间选择优先方向。",
+  "input": {
+    "workspaceId": "workspace_demo",
+    "caseVersion": 3,
+    "caseSnapshotHash": "sha256:595488e799f85cb1238f4e43c5f341e0b51c61f3b6247ad3cbfb3be0ecead4ae",
+    "dossierSnapshotHash": "sha256:9553f3256455188eb9c30167363f7c026d14eaec9f4014db9ef1de790a4e423f",
+    "requestedAnalysisLevel": "full",
+    "confirmation": {
+      "routeInputsConfirmed": true,
+      "allowedMaterialsConfirmed": true,
+      "unknownItemsConfirmed": true
+    },
+    "subject": {
+      "id": "subject_spherical_robot",
+      "class": "robotics",
+      "stage": "working_prototype",
+      "owner": "founding_team"
+    },
+    "decision": {
+      "type": "market_direction",
+      "question": "在资金与研发资源有限、只能优先投入一个方向时，球形机器人应优先进入救援市场、家庭服务市场，还是继续研究后再决定？",
+      "deadline": "2026-10-15"
+    },
+    "switchingCost": {
+      "material": true,
+      "drivers": [
+        "救援与家庭环境要求会导致机械、传感、软件、安全和服务体系分叉",
+        "认证、采购渠道和售后网络投入难以快速复用",
+        "错误方向可能耗尽 9 个月现金窗口"
+      ]
+    },
+    "goals": [
+      {
+        "metric": "有效试点",
+        "target": "6 个月内形成至少 2 个可验证试点",
+        "weight": 0.4
+      },
+      {
+        "metric": "现金安全",
+        "target": "达到下一个可验证里程碑时仍保留至少 2 个月缓冲",
+        "weight": 0.35
+      },
+      {
+        "metric": "可重复交付",
+        "target": "明确从样机到小批量交付的工程与供应链路径",
+        "weight": 0.25
+      }
+    ],
+    "constraints": [
+      {
+        "id": "constraint_single_direction",
+        "text": "只能优先投入一个市场方向",
+        "hard": true
+      },
+      {
+        "id": "constraint_cash_runway",
+        "text": "剩余现金窗口为 9 个月，并需保留 2 个月安全缓冲",
+        "hard": true
+      },
+      {
+        "id": "constraint_public_or_sanitized_materials",
+        "text": "只使用公开、脱敏或演示材料，不提供未申请专利的核心工艺参数",
+        "hard": true
+      }
+    ],
+    "options": [
+      {
+        "id": "opt_rescue_pilot",
+        "name": "救援市场试点"
+      },
+      {
+        "id": "opt_home_service_pilot",
+        "name": "家庭服务市场试点"
+      },
+      {
+        "id": "opt_continue_research",
+        "name": "继续研究后再决定"
+      }
+    ],
+    "knownFacts": [
+      "已有可运行的球形机器人原型",
+      "续航、载荷、复杂地形、烟尘环境和通信中断能力尚未在真实任务中验证",
+      "团队没有成熟量产、现场服务或机构采购交付体系",
+      "部分救援一线人员表达了危险区域远程侦察兴趣",
+      "家庭服务方向尚无付费、留存或无指导真实使用证据"
+    ],
+    "assumptions": [
+      {
+        "id": "asm_rescue_need_becomes_budget",
+        "text": "一线救援需求能够转化为机构预算和采购"
+      },
+      {
+        "id": "asm_procurement_within_runway",
+        "text": "救援试点、采购和回款可在现金窗口内完成"
+      },
+      {
+        "id": "asm_terrain_reliability_reachable",
+        "text": "复杂地形、续航和失联保护能在试点前达到门槛"
+      },
+      {
+        "id": "asm_home_need_is_specific_and_paid",
+        "text": "家庭用户有足够具体且愿意付费的任务"
+      },
+      {
+        "id": "asm_platform_reuse",
+        "text": "两个方向能复用大部分核心平台而不会产生高切换成本"
+      }
+    ],
+    "unknownItems": [
+      {
+        "id": "unknown_procurement_owner",
+        "question": "目标救援机构的预算由谁持有，采购和回款周期多长？",
+        "priority": "critical"
+      },
+      {
+        "id": "unknown_rescue_acceptance",
+        "question": "真实救援环境的最低可靠性、安全和责任验收门槛是什么？",
+        "priority": "critical"
+      },
+      {
+        "id": "unknown_home_willingness_to_pay",
+        "question": "哪个具体家庭任务能产生持续使用和足以覆盖交付/售后的付费？",
+        "priority": "high"
+      },
+      {
+        "id": "unknown_supply_scale",
+        "question": "小批量良率、关键器件交期、返修与备件成本是多少？",
+        "priority": "high"
+      }
+    ],
+    "allowedMaterials": [
+      "公开采购文件和预算规则",
+      "脱敏访谈摘要",
+      "公开标准与安全指南",
+      "公开竞品资料",
+      "脱敏原型测试记录"
+    ],
+    "prohibitedMaterials": [
+      "API Key 或账号凭证",
+      "未申请专利的核心工艺参数",
+      "客户个人信息",
+      "原始未脱敏合同"
+    ]
+  },
+  "expectedRoute": {
+    "matchStatus": "exact",
+    "recommendedMethodId": "hardtech-market-direction",
+    "recommendedMethodVersion": "1.1.0",
+    "formalAnalysisAllowed": true,
+    "reasonsMustInclude": [
+      "决策主体属于机器人/硬科技",
+      "问题是在至少两个市场方向之间选择",
+      "研发、交付、采购和现金造成实质切换成本",
+      "目标、硬约束、期限、材料和关键未知项已确认"
+    ],
+    "missingInputs": []
+  },
+  "mustDiscover": {
+    "criticalAssumptions": [
+      "一线人员表达的需求不等于预算持有人会采购或在现金窗口内回款",
+      "工作原型不等于在烟尘、碎石、通信受限和人员附近可安全交付",
+      "试点成功不等于采购转化，采购流程和验收责任可能成为主要延迟",
+      "家庭服务的宽泛 TAM 不等于具体任务、付费意愿、留存和可承受售后成本",
+      "救援与家庭方向的共同平台假设可能掩盖传感、结构、安全、界面和服务体系分叉",
+      "关键器件交期、良率、返修和现场维护可能使样机经济性无法扩展",
+      "继续研究虽然延迟学习，但可能在高不可逆投入前保留选择权"
+    ],
+    "counterArguments": [
+      "救援痛点更强，但机构预算、采购、责任和回款可能慢于团队现金窗口",
+      "家庭服务看似进入更快，但需求分散、家庭安全、支持成本和替代方案可能让单位经济不成立",
+      "两个方向都可能不具备当前交付门槛，继续研究或窄合作探针可能优于过早押注",
+      "行业增长和竞品融资不能证明本产品在任一具体场景可付费交付"
+    ],
+    "requiredSafetyAnchor": {
+      "ifAllWrongBecauseMustAddress": "团队把兴趣、试点意向或行业叙事误读成可在现金窗口内完成的安全交付与采购承诺",
+      "pseudoConvergenceChecks": [
+        "多个结论是否复用了同一行业报告或厂商叙事",
+        "多个方向是否共同默认平台复用和技术差距可快速解决"
+      ]
+    }
+  },
+  "evidenceAndQualityRequirements": {
+    "minimumIndependentSources": 3,
+    "minimumPrimarySources": 1,
+    "minimumSubstantiveCounterSources": 1,
+    "coreClaimVerdictsAllowed": ["accepted", "conditional"],
+    "coreClaimsMustNotRelyOn": ["lead_only", "rejected", "L6_unverifiable"],
+    "requiredCoverage": [
+      "每个市场至少一条具体用户任务/需求证据",
+      "救援方向至少一条预算持有人、采购流程或公开采购先例证据",
+      "每个推荐相关技术门至少一条相关环境测试或适用标准证据",
+      "现金与单位经济使用显式时间和成本假设",
+      "供应链和维护至少覆盖一个关键单点依赖",
+      "来源冲突建立 conflict group 并在正文解释"
+    ],
+    "blockingConditions": [
+      "推荐选项的核心判断没有 accepted/conditional 证据",
+      "关键来源冲突未解释",
+      "致命安全、采购、现金或交付门被比较分数抵消",
+      "高或关键 Critic 发现没有改变产物或触发 escalation",
+      "把质量分数或沙盘输出称为成功概率"
+    ],
+    "fullDeliveryGate": {
+      "multiplicativeUse": "delivery_qualification_only",
+      "notSuccessProbability": true,
+      "blockingChecksOverrideIndex": true
+    }
+  },
+  "strategicLensRequirements": {
+    "requiredLensTypes": [
+      "porter_five_forces",
+      "pre_mortem",
+      "counterparty_response_matrix",
+      "scenario_planning",
+      "meadows_leverage_points"
+    ],
+    "stageOutputs": {
+      "requiredCount": 5,
+      "schemaId": "urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0",
+      "requiredTopLevelFields": ["lensType", "sourceSkillVersion", "phase", "references", "researchRequests", "content"],
+      "forbiddenModelFields": [
+        "id",
+        "artifactId",
+        "workspaceId",
+        "decisionCaseId",
+        "analysisRunId",
+        "charterId",
+        "charterVersion",
+        "caseVersion",
+        "caseSnapshotHash",
+        "methodId",
+        "methodVersion",
+        "methodContentHash",
+        "schemaVersion",
+        "producerRole",
+        "status",
+        "originModes",
+        "contentHash",
+        "createdAt"
+      ],
+      "phaseByLensType": {
+        "porter_five_forces": "research_interpretation",
+        "pre_mortem": "adversarial_stress",
+        "counterparty_response_matrix": "adversarial_stress",
+        "scenario_planning": "strategic_synthesis",
+        "meadows_leverage_points": "strategic_synthesis"
+      },
+      "allReferencesMustResolveWithinFrozenRun": true
+    },
+    "canonicalArtifacts": {
+      "requiredCount": 5,
+      "canonicalType": "StrategicLensArtifact",
+      "requiredStatus": "ready",
+      "immutableAfterWrite": true,
+      "onePerLensType": true,
+      "serverMustDeriveIdentityProvenanceAndHashes": true,
+      "sameFrozenContextFields": [
+        "workspaceId",
+        "decisionCaseId",
+        "analysisRunId",
+        "charterId",
+        "charterVersion",
+        "caseVersion",
+        "caseSnapshotHash",
+        "methodId",
+        "methodVersion",
+        "methodContentHash"
+      ],
+      "producerRoleByLensType": {
+        "porter_five_forces": "research",
+        "pre_mortem": "critic",
+        "counterparty_response_matrix": "critic",
+        "scenario_planning": "synthesis",
+        "meadows_leverage_points": "synthesis"
+      }
+    },
+    "behaviorByLensType": {
+      "porter_five_forces": [
+        "separate_industry_boundary_for_each_market_option",
+        "all_five_standard_forces_exactly_once_per_market",
+        "at_least_two_accepted_or_conditional_evidence_ids_per_force",
+        "changing_technology_policy_or_demand_trend",
+        "regulator_and_complementor_correction_without_sixth_force",
+        "average_score_not_used_as_decision_formula"
+      ],
+      "pre_mortem": [
+        "failure_stated_as_already_happened_at_named_horizon",
+        "internal_external_and_systemic_hindsight_perspectives",
+        "at_least_five_specific_causes_with_consequences",
+        "exactly_three_top_risks_with_prevention_contingency_and_detection",
+        "explicit_continue_modify_abandon_or_validate_first_verdict"
+      ],
+      "counterparty_response_matrix": [
+        "one_or_two_material_counterparties",
+        "two_or_three_actions_with_exactly_one_no_action_baseline",
+        "one_response_layer_with_optimal_worst_and_likely_response",
+        "our_counter_response_timing_fallback_and_cost",
+        "publication_downside_asymmetry_and_reflexivity_tests"
+      ],
+      "scenario_planning": [
+        "three_or_four_structurally_distinct_scenarios",
+        "one_baseline_and_at_least_two_structural_breaks",
+        "three_to_five_observable_signals_per_scenario",
+        "at_least_one_strategy_killed_in_at_least_one_scenario"
+      ],
+      "meadows_leverage_points": [
+        "system_map_with_stocks_flows_loops_delays_rules_and_actors",
+        "interventions_cover_at_least_three_levels",
+        "level_one_to_four_gap_with_resistance_and_disruption_risk",
+        "runaway_reinforcing_loop_with_signal_and_brake",
+        "intervention_sequence_with_preconditions_and_failure_signals"
+      ]
+    },
+    "reportAndSandboxConsumption": {
+      "reportField": "lensArtifactIds",
+      "requiredIdCount": 5,
+      "uniqueIds": true,
+      "idsMustResolveToRequiredReadyArtifacts": true,
+      "porterMustAffect": ["market_structure", "competition_or_substitution"],
+      "counterpartyMustAffect": ["challenge", "response_path_or_fallback"],
+      "preMortemMustAffect": ["risk", "exit_condition_or_validation_priority"],
+      "scenarioMustAffect": ["strategic_robustness", "flip_condition_or_monitoring_signal"],
+      "meadowsMustAffect": ["simulation_lever_or_edge", "intervention_sequence"],
+      "unconsumedLensFindingBlocksReadyPdfAndFormalSandbox": true
+    },
+    "focusedBoundary": {
+      "stageOutputCount": 0,
+      "canonicalArtifactCount": 0
+    }
+  },
+  "simulationRequirements": {
+    "minimumCandidateNodes": 8,
+    "minimumCandidateEdges": 10,
+    "scenarioSourceLensType": "scenario_planning",
+    "minimumScenarioCandidates": 3,
+    "maximumScenarioCandidates": 4,
+    "requiredBaselineCount": 1,
+    "minimumStructuralBreakCount": 2,
+    "minimumStrategyKilledCount": 1,
+    "minimumEarlySignalsPerScenario": 3,
+    "genericOptimisticBasePessimisticOnlyForbidden": true,
+    "scenarioVersionRequiresUserReview": true,
+    "requiredNodeConcepts": [
+      "市场方向选择",
+      "救援需求强度",
+      "家庭具体付费需求",
+      "采购周期",
+      "现金安全度",
+      "复杂地形与任务可靠性",
+      "安全责任可接受度",
+      "供应链与小批量交付能力",
+      "试点到合同转化",
+      "方向切换成本"
+    ],
+    "requiredEdgeProperties": [
+      "polarity",
+      "strength",
+      "delaySteps",
+      "relationshipQualityScore",
+      "claimIds",
+      "evidenceIds",
+      "assumptionIds",
+      "rationale",
+      "draft status"
+    ],
+    "procurementCycleFlip": {
+      "driver": "procurement_cycle_months",
+      "flipCondition": "procurement_cycle_months + pilot_to_contract_months + cash_buffer_months > cash_runway_months",
+      "expectedEffect": "救援选项触发现金/采购 fatal gate；推荐必须转向继续研究，或转向另一个已通过全部 fatal gate 的选项。",
+      "reverseCondition": "只有采购与回款可在现金窗口及缓冲内完成、且技术与安全门同时通过时，救援试点才可恢复为候选主选项。",
+      "explanationMustReference": [
+        "constraint_cash_runway",
+        "asm_procurement_within_runway",
+        "采购周期来源或明确假设"
+      ]
+    },
+    "forbiddenInterpretations": [
+      "最终成功概率",
+      "精确未来预测",
+      "模型生成因果边等同于已证实事实"
+    ]
+  },
+  "forbiddenHardcodedOutcome": {
+    "forbidSuccessProbabilityField": true,
+    "forbidFixedFinalRecommendationWithoutConditions": true,
+    "note": "eval 校验路由、必须发现的问题、质量和翻转行为，不规定最终项目成功率，也不在证据变化前硬编码唯一市场结论。"
+  }
+}

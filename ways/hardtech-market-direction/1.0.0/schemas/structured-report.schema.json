@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:structured-report:1.0.0",
+  "title": "Hardtech Market Direction Structured Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "methodContentHash",
+    "executiveBrief",
+    "situation",
+    "sections",
+    "options",
+    "evidenceReview",
+    "counterArguments",
+    "recommendation",
+    "residualUncertainty",
+    "lensArtifactIds",
+    "simulationSeeds",
+    "qualityGate",
+    "originModes",
+    "appendix"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "methodId": { "const": "hardtech-market-direction" },
+    "methodVersion": { "const": "1.0.0" },
+    "methodContentHash": { "$ref": "urn:ludus:method:hardtech-market-direction:focused-result:1.0.0#/$defs/sha256" },
+    "executiveBrief": { "$ref": "urn:ludus:method:hardtech-market-direction:focused-result:1.0.0#/$defs/briefSection" },
+    "situation": { "$ref": "#/$defs/reportSection" },
+    "sections": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/reportSection" }
+    },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/optionAnalysis" }
+    },
+    "evidenceReview": { "$ref": "urn:ludus:method:hardtech-market-direction:focused-result:1.0.0#/$defs/evidenceReview" },
+    "counterArguments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "urn:ludus:method:hardtech-market-direction:challenge:1.0.0" }
+    },
+    "recommendation": { "$ref": "urn:ludus:method:hardtech-market-direction:focused-result:1.0.0#/$defs/recommendation" },
+    "residualUncertainty": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "urn:ludus:method:hardtech-market-direction:focused-result:1.0.0#/$defs/unknownItem" }
+    },
+    "lensArtifactIds": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" },
+      "description": "Server-issued IDs for exactly one ready canonical StrategicLensArtifact of each required lens type. Type coverage and frozen Workspace/Case/Run/Charter/method snapshot equality are validated server-side."
+    },
+    "simulationSeeds": { "$ref": "urn:ludus:method:hardtech-market-direction:simulation-seeds:1.0.0" },
+    "qualityGate": { "$ref": "urn:ludus:method:hardtech-market-direction:focused-result:1.0.0#/$defs/reportValidation" },
+    "originModes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "enum": ["live", "cached", "fixture"] }
+    },
+    "appendix": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/reportSection" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "idArray": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "reportSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "summary", "claimIds", "evidenceIds"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "summary": { "$ref": "#/$defs/longText" },
+        "claimIds": { "$ref": "#/$defs/idArray" },
+        "evidenceIds": { "$ref": "#/$defs/idArray" }
+      }
+    },
+    "optionAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionId", "summary", "benefits", "risks"],
+      "properties": {
+        "optionId": { "$ref": "#/$defs/id" },
+        "summary": { "$ref": "#/$defs/longText" },
+        "benefits": {
+          "type": "array",
+          "maxItems": 30,
+          "items": { "$ref": "#/$defs/longText" }
+        },
+        "risks": {
+          "type": "array",
+          "maxItems": 30,
+          "items": { "$ref": "#/$defs/longText" }
+        },
+        "score": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenarioScores", "rationale", "sensitivityDrivers"],
+          "properties": {
+            "scenarioScores": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sourceStrategicScenarioId", "score", "strategySurvives", "rationale"],
+                "properties": {
+                  "sourceStrategicScenarioId": { "$ref": "#/$defs/id" },
+                  "score": { "type": "number" },
+                  "strategySurvives": { "type": "boolean" },
+                  "rationale": { "$ref": "#/$defs/longText" }
+                }
+              }
+            },
+            "rationale": { "$ref": "#/$defs/longText" },
+            "sensitivityDrivers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": { "$ref": "#/$defs/longText" }
+            }
+          },
+          "description": "Optional comparison scores for options that passed fatal gates, keyed by structurally distinct Scenario Planning frames; never a success probability."
+        }
+      }
+    }
+  }
+}

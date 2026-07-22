@@ -1,0 +1,21 @@
+name: decision-lab
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-decision_lab}
+      POSTGRES_USER: ${POSTGRES_USER:-decision_lab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-decision_lab_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-decision_lab} -d ${POSTGRES_DB:-decision_lab}"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    volumes:
+      - decision_lab_db:/var/lib/postgresql/data
+
+volumes:
+  decision_lab_db:

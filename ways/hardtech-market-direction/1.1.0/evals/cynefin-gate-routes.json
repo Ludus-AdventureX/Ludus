@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "hardtech-market-direction.cynefin-gate-routes.v1",
+  "description": "Cynefin gate must route clear/complicated/complex/chaotic/disorder without allowing silent model override.",
+  "cases": [
+    {
+      "domain": "clear",
+      "defaultAction": "proceed_quick",
+      "formalAnalysisAllowed": false,
+      "overrideRequired": true
+    },
+    {
+      "domain": "complicated",
+      "defaultAction": "proceed_focused",
+      "formalAnalysisAllowed": true,
+      "overrideRequired": false
+    },
+    {
+      "domain": "complex",
+      "defaultAction": "proceed_full",
+      "formalAnalysisAllowed": true,
+      "overrideRequired": false
+    },
+    {
+      "domain": "chaotic",
+      "defaultAction": "stabilize_first",
+      "formalAnalysisAllowed": false,
+      "overrideRequired": true
+    },
+    {
+      "domain": "disorder",
+      "defaultAction": "clarify_scope",
+      "formalAnalysisAllowed": false,
+      "overrideRequired": true
+    }
+  ],
+  "invariants": [
+    "override must carry a human user id and reason",
+    "gate result is frozen into the AnalysisCharter and RunManifest",
+    "chaotic and disorder cannot start a long formal run by model choice alone"
+  ]
+}

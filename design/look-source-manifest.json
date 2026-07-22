@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "1.0.0",
+  "source": "../look",
+  "lookVersionText": "Ludus Prototype\nXuan Cinnabar Deep Indigo Secondary\nUpdated: 2026-07-19",
+  "importedAt": "2026-07-22",
+  "files": [
+    "VERSION",
+    "README.md",
+    "index.html",
+    "themes.css",
+    "styles.css",
+    "app.js"
+  ],
+  "fileSha256": {
+    "VERSION": "8d34b37a9f79306157391a69a2ccb9b38febf608d1b67854a572bade2c2f808c",
+    "README.md": "59e0b4a4d95743a56ad3e048c60d5aca1595747b951f3d184dc0a2ec24b7a180",
+    "index.html": "b1583a6e4667a916cc616e740f0c2b6611a800e87b627e9f63db588d636553ce",
+    "themes.css": "331a6877d9366c9783babfbfac45c75f6fbc4338c4697971254d1b92b7b69775",
+    "styles.css": "f2b4abedec90e66fed4c11e5916876fe40fedaafa03d827067259cfa4a32f242",
+    "app.js": "c5bbdce11b1fecab72f60e34883069d7dc240a7df26f02d288bb56a85c3d155a"
+  },
+  "bundleSha256": "c5d5d65bf62efdd14e4e3e13d1c70b92f9d6b4cdd4dbd2f652107d84d1a55e98",
+  "expectedBundleSha256": "c5d5d65bf62efdd14e4e3e13d1c70b92f9d6b4cdd4dbd2f652107d84d1a55e98",
+  "themes": [
+    "ink",
+    "ledger",
+    "vermilion",
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "cyan",
+    "blue",
+    "purple"
+  ],
+  "defaultTheme": "ink",
+  "themeTokenNames": [
+    "accent-analysis",
+    "accent-analysis-rgb",
+    "accent-analysis-strong",
+    "accent-analysis-wash",
+    "accent-human",
+    "accent-human-rgb",
+    "accent-human-strong",
+    "accent-human-wash",
+    "accent-unknown",
+    "accent-unknown-rgb",
+    "accent-unknown-wash",
+    "action-night-on-primary",
+    "action-night-primary",
+    "ambient-analysis-alpha",
+    "ambient-human-alpha",
+    "analysis",
+    "analysis-deep",
+    "analysis-rgb",
+    "analysis-wash",
+    "border-night",
+    "border-night-strong",
+    "border-strong",
+    "border-subtle",
+    "content-gutter",
+    "content-max-width",
+    "control-height",
+    "control-radius",
+    "danger",
+    "focus-ring",
+    "grain-opacity",
+    "grain-rgb",
+    "human",
+    "human-deep",
+    "human-rgb",
+    "human-wash",
+    "ink",
+    "ink-2",
+    "ink-3",
+    "ink-rgb",
+    "layout-masthead",
+    "layout-spine",
+    "line-night-analysis",
+    "line-night-human",
+    "line-night-unknown",
+    "night-analysis-line",
+    "night-base",
+    "night-base-rgb",
+    "night-border",
+    "night-card",
+    "night-human-line",
+    "night-muted",
+    "night-primary",
+    "night-primary-text",
+    "night-quiet",
+    "night-rule",
+    "night-rule-rgb",
+    "night-sheet",
+    "night-sheet-rgb",
+    "night-text",
+    "night-unknown-line",
+    "on-accent-human",
+    "on-accent-human-rgb",
+    "on-human",
+    "on-human-rgb",
+    "paper-base",
+    "paper-base-rgb",
+    "paper-rule",
+    "paper-rule-strong",
+    "paper-sheet",
+    "paper-sheet-rgb",
+    "paper-wash",
+    "shadow-color-rgb",
+    "shadow-floating",
+    "shadow-resting",
+    "shadow-rgb",
+    "surface-night",
+    "surface-night-card",
+    "surface-night-rgb",
+    "surface-night-sheet",
+    "surface-page",
+    "surface-page-rgb",
+    "surface-sheet",
+    "surface-sheet-rgb",
+    "surface-wash",
+    "text-muted",
+    "text-night-muted",
+    "text-night-primary",
+    "text-night-secondary",
+    "text-primary",
+    "text-primary-rgb",
+    "text-secondary",
+    "texture-grain-opacity",
+    "texture-grain-rgb",
+    "unknown",
+    "unknown-rgb",
+    "unknown-wash"
+  ],
+  "componentMappings": [
+    {
+      "source": "masthead",
+      "target": "Masthead"
+    },
+    {
+      "source": "decision-spine",
+      "target": "DecisionSpine"
+    },
+    {
+      "source": "workspace",
+      "target": "WorkspaceView"
+    },
+    {
+      "source": "analysis",
+      "target": "AnalysisView"
+    },
+    {
+      "source": "report",
+      "target": "ReportView"
+    },
+    {
+      "source": "sandbox",
+      "target": "SandboxView"
+    },
+    {
+      "source": "decision",
+      "target": "DecisionView"
+    },
+    {
+      "source": "project-drawer",
+      "target": "ProjectDrawer"
+    },
+    {
+      "source": "empty-project",
+      "target": "EmptyProjectView"
+    },
+    {
+      "source": "review-dialog",
+      "target": "ReviewDialog"
+    },
+    {
+      "source": "theme-drawer",
+      "target": "ThemeDrawer"
+    },
+    {
+      "source": "evidence-drawer",
+      "target": "EvidenceDrawer"
+    }
+  ],
+  "runtimeDependencyPolicy": {
+    "index.html": "structure-and-accessibility-reference",
+    "themes.css": "token-source; convert to centralized tokens",
+    "styles.css": "layout-and-component-source; split before production use",
+    "app.js": "behavior-specification-only; never load at runtime"
+  },
+  "readiness": {
+    "lookRootExists": true,
+    "bundleMatchesFrozenV7": true,
+    "headOrLogoStateNotRead": true
+  }
+}

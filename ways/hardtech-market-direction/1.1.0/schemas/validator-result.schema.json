@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:validator-result:1.1.0",
+  "title": "Validator Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "result"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "methodId": {
+      "const": "hardtech-market-direction"
+    },
+    "methodVersion": {
+      "const": "1.1.0"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validatorId",
+        "validatorVersion",
+        "outcome",
+        "findings",
+        "executionMode"
+      ],
+      "properties": {
+        "validatorId": {
+          "enum": [
+            "V1_scope_charter",
+            "V2_source_traceability",
+            "V3_evidence_quality",
+            "V4_claim_evidence_entailment",
+            "V5_contradiction_alignment",
+            "V6_unknown_assumption",
+            "V7_adversarial_dissent",
+            "V8_causal_simulation",
+            "V9_publication_authority"
+          ]
+        },
+        "validatorVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "warn",
+            "block"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message",
+              "severity",
+              "artifactIds"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "warning",
+                  "blocker"
+                ]
+              },
+              "artifactIds": {
+                "type": "array",
+                "uniqueItems": true,
+                "maxItems": 200,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              }
+            }
+          }
+        },
+        "repairTarget": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "executionMode": {
+          "enum": [
+            "deterministic",
+            "model_assisted",
+            "hybrid"
+          ]
+        },
+        "modelInvocationRef": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    }
+  }
+}

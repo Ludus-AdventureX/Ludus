@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "hardtech-market-direction.bci-platform-angel.v1",
+  "description": "与 seed eval 使用同一去标识化 BCI 战略问题，但资源提升到天使期；验证方法会重新计算策略性质而非机械复用上一阶段结论。",
+  "input": {
+    "workspaceId": "workspace_eval_bci_angel",
+    "caseVersion": 2,
+    "caseSnapshotHash": "sha256:2121212121212121212121212121212121212121212121212121212121212121",
+    "dossierSnapshotHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "requestedAnalysisLevel": "full",
+    "confirmation": {"routeInputsConfirmed": true, "allowedMaterialsConfirmed": true, "unknownItemsConfirmed": true},
+    "subject": {"id": "subject_bci_angel", "class": "regulated_device", "stage": "validated_prototype", "owner": "founding_team"},
+    "decision": {
+      "type": "product_market_path",
+      "question": "在 8-12 人团队、500-1000 万元可用资金和 24-36 个月窗口下，非植入式 BCI 应继续单一科研工具路径，还是分阶段进入教育与医疗并建设共享平台？",
+      "deadline": "2026-10-31"
+    },
+    "switchingCost": {
+      "material": true,
+      "drivers": ["教育与医疗需要不同采购和验证体系", "共享平台投资具有不可逆性", "多线组织和供应链建设会提高固定成本"]
+    },
+    "goals": [
+      {"metric": "组合验证", "target": "12 个月内至少一条线形成可重复收入、另一条线形成有边界的联合验证", "weight": 0.40},
+      {"metric": "平台复用", "target": "核心硬件、算法和数据工具链在两条线间被可测复用", "weight": 0.30},
+      {"metric": "现金安全", "target": "任何新线未达 Gate 时可停止且不拖垮主线", "weight": 0.30}
+    ],
+    "constraints": [
+      {"id": "constraint_angel_budget", "text": "可用资金上限 1000 万元，必须保留 9 个月缓冲", "hard": true},
+      {"id": "constraint_angel_team", "text": "团队最多 12 人，不能同时建设三套完整商业组织", "hard": true},
+      {"id": "constraint_stage_gates", "text": "新增产品线必须分阶段通过需求、采购、交付和现金 Gate", "hard": true}
+    ],
+    "options": [
+      {"id": "opt_research_only", "name": "继续单一科研工具路径"},
+      {"id": "opt_research_plus_education", "name": "科研主线加教育分阶段验证"},
+      {"id": "opt_research_plus_medical", "name": "科研主线加医疗联合验证"},
+      {"id": "opt_staged_platform", "name": "共享平台下的分阶段组合"}
+    ],
+    "knownFacts": [
+      "核心原型已完成更稳定的相关环境验证",
+      "团队和资金较种子期显著增加",
+      "新增资源仍不足以同时建设三套完整销售和交付组织"
+    ],
+    "assumptions": [
+      {"id": "asm_angel_reuse", "text": "共享平台可以降低第二条线的边际研发成本"},
+      {"id": "asm_angel_stage_gate", "text": "每条新增路径都能在不可逆投入前设置停止 Gate"},
+      {"id": "asm_angel_partner", "text": "教育或医疗合作方会提供真实场景和部分验证资源"}
+    ],
+    "unknownItems": ["共享平台真实复用比例", "教育线首个回款周期", "医疗联合验证的责任和数据边界"],
+    "allowedMaterials": ["公开资料", "脱敏试点记录", "演示预算和人员规划"],
+    "prohibitedMaterials": ["患者个人信息", "未申请专利核心参数", "真实合作合同"]
+  },
+  "expectedRoute": {
+    "matchStatus": "exact",
+    "recommendedMethodId": "hardtech-market-direction",
+    "recommendedMethodVersion": "1.0.0",
+    "formalAnalysisAllowed": true,
+    "reasonsMustInclude": ["hardtech subject", "resource-dependent product-market paths", "material switching cost", "confirmed decision contract"],
+    "missingInputs": []
+  },
+  "mustDiscover": {
+    "criticalAssumptions": [
+      "资源增加改变了可承受的验证组合，但没有消除组织并行容量约束",
+      "共享技术平台只有在产品、采购和交付接口被明确分层时才产生真实复用",
+      "第二条线必须在不可逆投入前拥有独立 Gate 和退出路径",
+      "种子期的单线结论不能在新 Charter 下直接复用"
+    ],
+    "counterArguments": [
+      "继续科研单线最稳健，但可能浪费扩大后的时间窗口和合作机会",
+      "分阶段组合提高选择权，但平台投资和组织复杂度可能提前吞噬缓冲",
+      "更多资金不足以证明教育、科研、医疗三线都具有真实需求和采购路径"
+    ],
+    "requiredSafetyAnchor": {
+      "ifAllWrongBecauseMustAddress": "团队把融资和人员增加误读为所有产品线的需求、采购和交付风险已同时解除",
+      "pseudoConvergenceChecks": ["多个建议是否共同假设共享平台必然降低商业复杂度", "是否沿用 seed 结论而未重新评估新资源"]
+    }
+  },
+  "evidenceAndQualityRequirements": {
+    "minimumIndependentSources": 3,
+    "minimumPrimarySources": 1,
+    "minimumSubstantiveCounterSources": 1,
+    "coreClaimVerdictsAllowed": ["accepted", "conditional"],
+    "coreClaimsMustNotRelyOn": ["lead_only", "rejected", "L6_unverifiable"],
+    "requiredCoverage": [
+      "新资源对团队容量、现金窗口和验证周期的实际改变",
+      "共享平台复用的技术与组织边界",
+      "每条新增产品线独立的需求、付费、采购和退出 Gate",
+      "分阶段组合与全面三线并行的区别",
+      "种子期与天使期结论差异的原因"
+    ],
+    "blockingConditions": [
+      "机械沿用 seed 阶段只能单线的结论",
+      "把更多资金直接解释为三线全面扩张",
+      "没有为第二条线设置独立停止 Gate",
+      "共享平台复用没有证据或条件"
+    ],
+    "fullDeliveryGate": {"multiplicativeUse": "delivery_qualification_only", "notSuccessProbability": true, "blockingChecksOverrideIndex": true}
+  },
+  "strategicLensRequirements": {
+    "requiredLensTypes": ["porter_five_forces", "pre_mortem", "counterparty_response_matrix", "scenario_planning", "meadows_leverage_points"],
+    "stageOutputsMustRemainUntrusted": true,
+    "canonicalArtifactsRequired": 5,
+    "caseSpecificExpectations": [
+      "Scenario 必须包含融资延迟或合作方退出导致组合收缩的结构性情景",
+      "Pre-mortem 必须攻击平台投资提前和组织复杂度",
+      "Meadows 必须给出分阶段干预顺序而不是同时启动"
+    ],
+    "focusedBoundary": "focused 不生成任何正式 lens artifact"
+  },
+  "simulationRequirements": {
+    "minimumCandidateNodes": 8,
+    "minimumCandidateEdges": 10,
+    "requiredDrivers": ["team_capacity", "cash_runway_months", "platform_reuse_ratio", "education_procurement_months", "medical_validation_months", "partner_commitment"],
+    "resourceScaleFlip": {
+      "condition": "new_resources_allow_second_bounded_probe_but_not_three_full_commercial_stacks",
+      "expectedEffect": "允许在主线之外增加一个有独立 Gate 的分阶段验证；不得自动推荐三线全面并行。"
+    },
+    "forbiddenInterpretations": ["天使轮必然适合平台化", "资金增加等同于需求验证", "seed 与 angel 结论必须相同"]
+  },
+  "forbiddenHardcodedOutcome": {
+    "forbidSuccessProbabilityField": true,
+    "forbidFixedFinalRecommendationWithoutConditions": true,
+    "note": "允许条件化推荐分阶段组合，也允许证据不足时继续单线；必须解释资源变化为何改变或没有改变策略。"
+  }
+}
