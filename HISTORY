@@ -144,3 +144,34 @@
 - Offline Hackathon Prototype implementation: GO.
 - Formal 6-Agent/72-hour timer under the literal bundled-Chromium requirement: conditional; do not auto-start until the browser fallback is explicitly accepted or bundled Chromium is acquired.
 - Full MVP and production release: not implied by Gate 0 and remain NO-GO pending their implementation gates.
+
+
+## Archived work 2026-07-22T16:04:07.1294325+08:00
+
+# Current Work: Gate 0 GitHub Publication
+
+- Started: 2026-07-22T15:54:44.3851959+08:00 (Asia/Shanghai)
+- Completed: 2026-07-22T16:04:07.1294325+08:00 (Asia/Shanghai)
+- Status: completed
+- Objective: integrate the Private GitHub repository's initial README history without losing the validated local repository, synchronize the six lane branches, and push the Gate 0 baseline.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Remote: https://github.com/xiayuzizhuo666/Ludus.git
+- Constraint: preserve the local README/licensing boundary, do not force-push, and do not expose credentials.
+
+## Completed
+
+- Fetched the Private origin and identified its single unrelated initial commit containing only a two-line README.
+- Merged the unrelated origin history without force-push and resolved the add/add README conflict in favor of the validated local README and licensing boundary.
+- Created merge commit 36dbd95 (chore: integrate private GitHub repository history).
+- Fast-forwarded all six local lane worktrees to the integrated baseline.
+- Pushed main and all six codex/* lane branches to the approved Private origin.
+
+## Verification
+
+- Remote main and all six lane refs resolved to 36dbd95 before the final log-only commit.
+- HTTPS push succeeded with HTTP/1.1 and an enlarged request buffer after two ordinary push attempts were reset by the network.
+- No force push, history rewrite, license change or credential disclosure occurred.
+
+## Remaining Risk
+
+- GitHub publication is complete. The remaining Gate 0 browser caveat is already recorded in the preceding archived Gate 0 validation entry: bundled Chromium acquisition is still pending, while the system-Chrome Playwright fallback is proven.
