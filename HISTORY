@@ -89,3 +89,58 @@
 - Next work: continue Gate 0 after product-owner environment and capacity approvals.
 - Secret policy: no credentials are stored in this file.
 
+
+
+## Archived work 2026-07-22T15:52:37.8215940+08:00
+
+# Current Work: Gate 0 Full Validation
+
+- Started: 2026-07-22T09:24:54.2667817+08:00 (Asia/Shanghai)
+- Completed: 2026-07-22T15:52:37.8215940+08:00 (Asia/Shanghai)
+- Status: completed
+- Objective: execute the authorized Gate 0 environment, contract, frontend, database, provider and six-worktree validation for the 6-Agent/72-hour Hackathon Prototype profile.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Validation slice: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0
+- Capacity profile: six_agent_72h
+- Baseline commit: ddd2945
+- Secret policy: local .env values were loaded only into process memory; no credential value was printed, committed or written to validation reports.
+
+## Completed
+
+- Created and verified the Python 3.12 repository environment, local uv runtime, pnpm workspace, Next.js 15 shell, generated contracts, Look V7 tokens and spherical-robot fixture trust boundaries.
+- Verified Docker Desktop/Compose and healthy postgres:16-alpine / PostgreSQL 16.14.
+- Verified the canonical Decision OS contracts, accepted CCR, manifest DAG, owner scopes, Ways 1.1.0 and the 31-Skill dual ledger.
+- Ran a real DeepSeek capability probe for text, thinking, strict tool call and structured JSON output; all passed without persisting content or reasoning.
+- Ran a real Exa search capability probe; HTTP 200 with a result and request identifier.
+- Created six independent codex/* lane branches/worktrees plus the main integration worktree.
+- Remediated dependency audit findings by updating pytest and overriding vulnerable transitive sharp/postcss versions; Python and production pnpm audits then reported no known vulnerabilities.
+- Committed the runtime bootstrap as ddd2945 (chore: complete Gate 0 runtime bootstrap).
+
+## Verification
+
+- PREFLIGHT_OK; report: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\gate0-preflight.json
+- pytest health: 1 passed
+- ruff: all checks passed
+- decision-os-contracts: PASS; 17 schemas, 26 tasks, 31/31 skills, acyclic DAG
+- OpenAPI/TypeScript: CONTRACT_DRIFT_OK
+- Look V7: LOOK_V7_SNAPSHOT_OK and LOOK_V7_TOKENS_OK; bundle sha256 c5d5d65bf62efdd14e4e3e13d1c70b92f9d6b4cdd4dbd2f652107d84d1a55e98
+- Web: typecheck, lint and production build passed; Vitest harness passed with no test files present
+- Browser: Playwright 1.61.1 drove installed system Chrome at 1440x900, 1024x768 and 390x844; five workspaces, ten themes, project/theme drawers, zero page/console errors and zero horizontal overflow
+- DeepSeek: DEEPSEEK_MODEL_PROBE_OK for requested/returned deepseek-v4-pro
+- Exa: EXA_LIVE_PROBE_OK with HTTP 200
+- Dependency audit: pip-audit and pnpm production audit reported no known vulnerabilities after remediation
+- Secret/IP boundary: exact configured secret values and high-confidence patterns scanned across the working tree and all reachable Git history; no matches
+
+## Remaining Risks / Not Yet Verified
+
+- The exact bundled Playwright Chromium acquisition is not complete. A controlled 20-minute retry on 2026-07-22 timed out; playwright install --list shows no bundled Chromium. The installed system Chrome fallback is proven functional, but literal Task 1W compliance still requires bundled Chromium or an explicit product-owner acceptance of the fallback before the formal 72-hour timer is treated as unconditional GO.
+- The Vitest harness currently has no component test files; Task 1W only required the toolchain/build, and QA-owned tests begin in later slices.
+- Fixture directories establish trust boundaries only; canonical seed/external/expected/negative payloads remain owned by later implementation tasks.
+- Task 2/19A migrations, auth, Worker/SSE, full golden path, PDF and production release gates have not started.
+
+## Go / No-Go
+
+- Automated Gate 0 preflight and runtime capability: GO.
+- Offline Hackathon Prototype implementation: GO.
+- Formal 6-Agent/72-hour timer under the literal bundled-Chromium requirement: conditional; do not auto-start until the browser fallback is explicitly accepted or bundled Chromium is acquired.
+- Full MVP and production release: not implied by Gate 0 and remain NO-GO pending their implementation gates.
