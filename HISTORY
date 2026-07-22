@@ -447,3 +447,49 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 
 - Task 6 remains a prerequisite before full Task 19A implementation.
 - The previously noted DomainEventActor/standalone event-shape cleanup remains a later contract task and is not silently treated as fixed by this Task 2 approval.
+
+## Archive 2026-07-22 (Asia/Shanghai)
+# Work Log: idle
+
+- Last archived: 2026-07-22 (Asia/Shanghai)
+- Archive file: HISTORY
+- Archive marker: Task 2 QA R2 Regression and Merge Approval
+- Next work: await product-owner merge decision for codex/qa-release-task2-r2; do not merge automatically. Task 6 remains required before full Task 19A.
+- Secret policy: no credentials are stored in this file.
+
+## Archive Gate 1 — 2026-07-22 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-22 (Asia/Shanghai)
+- Completed: 2026-07-22 (Asia/Shanghai)
+- Status: completed
+- Objective: Gate 1 mainline health verification after Task 2 QA R2 fast-forward integration.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Baseline: local main fast-forwarded from 5cb42f9 to 7ea46ee648244cc7285f9b265f9e632adcfbaf3f.
+
+## Completed
+
+- Local `main` fast-forward integration completed; no merge commit created.
+- Full API/model suite: 19 passed with `PYTHONWARNINGS=error`.
+- Same-Workspace cross-Subject targeted regressions: 5 passed.
+- Ruff: PASS.
+- Python compileall: PASS.
+- Docker Postgres 16-alpine: healthy; pg_isready accepting connections.
+- Alembic upgrade head -> downgrade base -> empty schema -> upgrade head: PASS.
+- Alembic check: no new upgrade operations detected.
+- Final schema: 15 business tables, 19 public enum types, and 7 targeted same-subject constraints present.
+- OpenAPI/TypeScript contract drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: 7/7 groups PASS; active ways version 1.1.0, historical 1.0.0.
+- Refined tracked-tree secret scan: 180 files scanned, zero high-confidence hits; `.env` ignored and untracked.
+- Unexpected `services/api/.venv` created by an initial command was moved, not deleted, to `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\archives\unexpected-services-api-venv-20260722-gate1`.
+- Local database backup created before synchronizing the development role password: `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\archives\gate1-decision_lab-before-password-sync-20260722.dump`.
+
+## Not verified / remaining risk
+
+- `git push origin main` could not complete because GitHub `github.com:443` timed out; remote `origin/main` still points to 5cb42f9 until network recovery.
+- The local database password was synchronized to the existing ignored `.env` configuration; no credential value was recorded.
+
+## Next work
+
+- After this archive, create the independent `codex/task-06-method-pack` branch from local main and begin Task 6; do not start full Task 19A before Task 6 is reviewed and merged.
+- Secret policy: no credentials are stored in this file.

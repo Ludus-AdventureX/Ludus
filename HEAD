@@ -2,6 +2,6 @@
 
 - Last archived: 2026-07-22 (Asia/Shanghai)
 - Archive file: HISTORY
-- Archive marker: Task 2 QA R2 Regression and Merge Approval
-- Next work: await product-owner merge decision for codex/qa-release-task2-r2; do not merge automatically. Task 6 remains required before full Task 19A.
+- Archive marker: Gate 1 mainline health verification
+- Next work: create and implement Task 6 on a separate branch after recording this archive.
 - Secret policy: no credentials are stored in this file.
