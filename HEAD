@@ -1,7 +1,6 @@
 # Work Log: idle
 
-- Last archived: 2026-07-22T09:14:38.4399429+08:00
+- Last archived: 2026-07-22T09:17:47.7581373+08:00
 - Archive file: HISTORY
-- Last commit: 92fb4af
-- Next work: continue Gate 0 only after product-owner approvals listed in the archived record.
+- Next work: continue Gate 0 after product-owner environment and capacity approvals.
 - Secret policy: no credentials are stored in this file.

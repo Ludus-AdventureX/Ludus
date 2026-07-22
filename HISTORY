@@ -49,3 +49,33 @@
 4. Approve starting Docker Desktop/daemon and pulling/running PostgreSQL 16.
 5. Confirm that a DeepSeek key is configured in the host environment and authorize the live capability probe; do not paste the key into chat.
 
+
+## Archived idle checkpoint 2026-07-22T09:16:36.0986324+08:00
+
+# Work Log: idle
+
+- Last archived: 2026-07-22T09:14:38.4399429+08:00
+- Archive file: HISTORY
+- Last commit: 92fb4af
+- Next work: continue Gate 0 only after product-owner approvals listed in the archived record.
+- Secret policy: no credentials are stored in this file.
+
+
+## Archived work 2026-07-22T09:17:47.7581373+08:00
+
+# Current Work: DeepSeek Gate 0 Probe Refinement
+
+- Started: 2026-07-22T09:16:36.0986324+08:00 (Asia/Shanghai)
+- Status: completed
+- Scope: align the offline capability probe with the current official DeepSeek V4 thinking/strict-tool/JSON behavior without performing a live request.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Prior checkpoint: 3dd911b
+- Constraint: do not install dependencies, create a runtime, or expose a key during this refinement.
+- Planned verification: Python AST, no-key safe failure, Look snapshot regression, secret scan, commit, then archive this record.
+## Completed
+
+- Added explicit `reasoning_effort="high"` to the thinking capability probe.
+- Preserved the beta base URL for strict tool calling.
+- Preserved structured-output empty-content retry and fail-closed validation.
+- Verified Python AST parsing, no-key redacted failure, Look V7 snapshot, and high-confidence secret scan.
+

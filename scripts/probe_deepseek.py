@@ -168,6 +168,7 @@ def run_probe() -> dict[str, Any]:
             }
         ],
         extra_body={"thinking": {"type": "enabled"}},
+        reasoning_effort="high",
         max_tokens=256,
     )
     thinking_message = thinking_response.choices[0].message
