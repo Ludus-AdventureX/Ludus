@@ -219,3 +219,62 @@
 - Archive marker: Publish Product Plan to Private GitHub / 3d614ca
 - Next work: accept the proven system-Chrome fallback or complete bundled Chromium acquisition, then begin Task 2/19A from the six synchronized worktrees.
 - Secret policy: no credentials are stored in this file.
+
+
+## Archived work 2026-07-22 (Asia/Shanghai)
+
+# Current Work: Task 2 Canonical Data Model and Task 19A Dependency Gate
+
+- Started: 2026-07-22 (Asia/Shanghai)
+- Completed: 2026-07-22 (Asia/Shanghai)
+- Status: completed
+- Objective: implement and validate Task 2 canonical PostgreSQL data model and Alembic migration, then audit Task 19A against its Task 6 dependency without bypassing the manifest gate.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\contract-lead
+- Canonical repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/contract-lead-task2-19a
+- Merge policy: no merge into main or another branch occurred; explicit product-owner approval remains required.
+- Secret policy: no credential value was printed, copied, committed, or recorded.
+
+## Implemented
+
+- Added canonical Python enums and UUID ID aliases, including exact Strategic Lens IDs, the repaired Case lifecycle, separate operational status, membership capability enums, and single-object compatibility symbols for the pre-repair Task 2 names.
+- Added SQLAlchemy 2 async database foundation and 15 initial PostgreSQL tables: users, workspaces, workspace_memberships, user_sessions, decision_subjects, initiatives, decision_cases, case_versions, dossier_entries, dossier_versions, conversations, messages, candidate_revisions, quick_analysis_results, and domain_events.
+- Enforced Workspace-scoped unique constraints, composite tenant foreign keys, subject slug isolation, dossier scope/case consistency, session revocation columns, enum-backed statuses, and Workspace cascade behavior.
+- Added Alembic configuration/environment and revision 0001_core_tenancy_and_dossiers.
+- Repaired revision 0001 downgrade so PostgreSQL enum types are removed after tables; a downgrade/re-upgrade round trip now leaves no residual table or enum objects.
+- Made contract drift comparison insensitive only to CRLF/LF differences while remaining ordinal for all content.
+- Pinned pytest-asyncio fixture loop scope to function for reproducible async tests.
+- Repaired the repository-local detailed plan and manifest so services/api/alembic.ini has an owner/write scope and acceptance commands use the required config path.
+
+## Commits
+
+- 12f0e20 feat: add tenant-scoped decision domain model
+- cf5a9dd fix: make contract drift checks newline-stable
+- f36d094 test: pin async fixture loop scope
+- d4a24a6 chore: normalize API project encoding
+- 743a271 docs: align Alembic task ownership and commands
+- a6393f2 fix: remove PostgreSQL enums on migration rollback
+
+## Validation
+
+- PostgreSQL 16 container decision-lab-db-1: healthy.
+- Initial migration applied to an empty PostgreSQL database and repeated upgrade succeeded.
+- Alembic upgrade -> downgrade base -> zero residual business tables/enums -> upgrade head: PASS.
+- Alembic metadata drift check: No new upgrade operations detected.
+- QA branch codex/qa-release-task2: 13 Task 2 model/invariant tests plus baseline health test passed with PYTHONWARNINGS=error (14 passed).
+- Ruff over services/api: PASS.
+- OpenAPI/TypeScript contract drift: CONTRACT_DRIFT_OK.
+- Decision OS verifier: all 7 groups PASS; DAG acyclic, 06/26 DeepAnalysis exact, legacy wire IDs 0, validators 9, Ways 1.1.0 active.
+
+## Task 19A Dependency Gate
+
+- task-19a depends on task-02 and task-06.
+- Task 2 is implemented and validated.
+- Task 6 is not implemented: services/api/app/methods, scripts/install_method_pack.py, runtime method-packs, and method pack/router tests are absent.
+- Only dependency-independent preparation was performed (newline-stable drift checking and Alembic manifest/path repair). Source union, SystemRecommendation, SignoffPayload, Simulation replay fields, generated OpenAPI/types, and the full Task 19A acceptance gate were not implemented or claimed complete.
+
+## Remaining Risks / Review Notes
+
+- DecisionSubject.slug is required by the explicit Task 2 persistence constraint but is not yet shown in the 06 TypeScript interface; it remains an internal database field until a later wire-schema CCR synchronizes it.
+- Conversation, Message, and DomainEvent storage columns follow the combined 05/10/18 requirements because 06 does not provide complete standalone interfaces for all three; no API DTO was introduced in this slice.
+- Full Task 19A must wait for Task 6 and must not be merged or marked complete based on this branch alone.
