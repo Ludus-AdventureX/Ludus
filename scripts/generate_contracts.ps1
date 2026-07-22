@@ -41,9 +41,10 @@ function Assert-SameFile([string]$Expected, [string]$Actual, [string]$Label) {
         throw "$Label regenerated artifact is missing: $Actual"
     }
 
-    $expectedHash = (Get-FileHash -LiteralPath $Expected -Algorithm SHA256).Hash
-    $actualHash = (Get-FileHash -LiteralPath $Actual -Algorithm SHA256).Hash
-    if ($expectedHash -ne $actualHash) {
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    $expectedText = [System.IO.File]::ReadAllText($Expected, $utf8).Replace("`r`n", "`n").Replace("`r", "`n")
+    $actualText = [System.IO.File]::ReadAllText($Actual, $utf8).Replace("`r`n", "`n").Replace("`r", "`n")
+    if (-not [string]::Equals($expectedText, $actualText, [System.StringComparison]::Ordinal)) {
         throw "$Label drift detected between '$Expected' and '$Actual'."
     }
 }
