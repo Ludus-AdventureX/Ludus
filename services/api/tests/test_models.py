@@ -12,10 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 from app.db import Base, get_database_url
 from app.models import (
+    Conversation,
+    DecisionCase,
     DecisionSubject,
     DossierEntry,
     DossierVersion,
     Initiative,
+    Message,
+    QuickAnalysisResult,
     User,
     UserSession,
     Workspace,
@@ -292,3 +296,193 @@ async def test_membership_capability_and_session_revocation_fields_work(
         select(UserSession.revoked_at).where(UserSession.id == session_id)
     )
     assert stored is not None
+
+async def seed_subject_pair(
+    connection: AsyncConnection,
+    workspace_id: object,
+) -> tuple[object, object]:
+    subject_ids = (
+        await connection.execute(
+            insert(DecisionSubject)
+            .values(
+                [
+                    {
+                        "workspace_id": workspace_id,
+                        "name": "Subject A",
+                        "slug": f"subject-a-{uuid4()}",
+                    },
+                    {
+                        "workspace_id": workspace_id,
+                        "name": "Subject B",
+                        "slug": f"subject-b-{uuid4()}",
+                    },
+                ]
+            )
+            .returning(DecisionSubject.id)
+        )
+    ).scalars().all()
+    return subject_ids[0], subject_ids[1]
+
+
+async def seed_case(
+    connection: AsyncConnection,
+    workspace_id: object,
+    subject_id: object,
+    *,
+    initiative_id: object | None = None,
+) -> object:
+    return (
+        await connection.execute(
+            insert(DecisionCase)
+            .values(
+                workspace_id=workspace_id,
+                decision_subject_id=subject_id,
+                initiative_id=initiative_id,
+                title=f"Case {uuid4()}",
+                decision_question="Which option should be prioritized?",
+            )
+            .returning(DecisionCase.decision_case_id)
+        )
+    ).scalar_one()
+
+
+async def seed_conversation(
+    connection: AsyncConnection,
+    workspace_id: object,
+    subject_id: object,
+    case_id: object,
+) -> object:
+    return (
+        await connection.execute(
+            insert(Conversation)
+            .values(
+                workspace_id=workspace_id,
+                decision_subject_id=subject_id,
+                decision_case_id=case_id,
+            )
+            .returning(Conversation.id)
+        )
+    ).scalar_one()
+
+
+@pytest.mark.asyncio
+async def test_same_workspace_cross_subject_case_initiative_is_rejected(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    initiative_id = (
+        await connection.execute(
+            insert(Initiative)
+            .values(
+                workspace_id=workspace_id,
+                decision_subject_id=subject_a,
+                name="Subject A initiative",
+            )
+            .returning(Initiative.id)
+        )
+    ).scalar_one()
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await seed_case(
+            connection,
+            workspace_id,
+            subject_b,
+            initiative_id=initiative_id,
+        )
+    await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_same_workspace_cross_subject_case_scoped_entry_is_rejected(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    case_a = await seed_case(connection, workspace_id, subject_a)
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(DossierEntry).values(
+                workspace_id=workspace_id,
+                decision_subject_id=subject_b,
+                decision_case_id=case_a,
+                scope="case",
+                statement_type="assumption",
+                content="Cross-subject case entry",
+                status="candidate",
+                source_type="user",
+                version=1,
+            )
+        )
+    await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_same_workspace_cross_subject_conversation_is_rejected(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    case_a = await seed_case(connection, workspace_id, subject_a)
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(Conversation).values(
+                workspace_id=workspace_id,
+                decision_subject_id=subject_b,
+                decision_case_id=case_a,
+            )
+        )
+    await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_message_scope_must_match_its_conversation_and_case(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    case_a = await seed_case(connection, workspace_id, subject_a)
+    case_b = await seed_case(connection, workspace_id, subject_b)
+    conversation_a = await seed_conversation(connection, workspace_id, subject_a, case_a)
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(Message).values(
+                workspace_id=workspace_id,
+                conversation_id=conversation_a,
+                decision_subject_id=subject_b,
+                decision_case_id=case_b,
+                role="user",
+                content="Cross-subject conversation message",
+            )
+        )
+    await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_quick_analysis_case_must_match_its_conversation(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    case_a = await seed_case(connection, workspace_id, subject_a)
+    case_b = await seed_case(connection, workspace_id, subject_b)
+    conversation_a = await seed_conversation(connection, workspace_id, subject_a, case_a)
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(QuickAnalysisResult).values(
+                workspace_id=workspace_id,
+                conversation_id=conversation_a,
+                decision_case_id=case_b,
+                judgment="Cross-subject quick analysis",
+            )
+        )
+    await savepoint.rollback()

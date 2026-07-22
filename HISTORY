@@ -402,3 +402,48 @@
 ## Next
 
 Create a descendant QA R2 branch, add the targeted rejection tests without merging, run the full gates, and report one final branch/SHA for product-owner merge.
+
+## Archived work 2026-07-22 (Asia/Shanghai)
+
+# Current Work: Task 2 QA R2 Regression and Merge Approval
+
+- Started: 2026-07-22 (Asia/Shanghai)
+- Completed: 2026-07-22 (Asia/Shanghai)
+- Status: completed
+- Verdict: APPROVED for product-owner merge after the final QA R2 commit; no merge or pull request was created.
+- Objective: add targeted same-Workspace cross-Subject rejection tests, rerun every Task 2 gate, and issue a fresh merge approval without merging.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-release
+- Canonical repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/qa-release-task2-r2
+- Base repair commit: 94e6523
+- Write scope: services/api/tests/test_models.py and HEAD/HISTORY review records only.
+- Merge policy: product owner remains the only merger; no agent merge or PR creation.
+- Secret policy: do not print, copy, commit, or record credentials or API keys.
+
+## Changes reviewed
+
+- Added five same-Workspace cross-Subject rejection tests covering Case -> Initiative, case-scoped DossierEntry, Conversation -> Case, Message -> Conversation/Case, and QuickAnalysisResult -> Conversation/Case.
+- Confirmed the Contract Lead repair commit synchronizes CCR-20260722-004, canonical 06/10/18/26, AGENTS, the Decision OS verifier, SQLAlchemy constraints, and the initial Alembic migration.
+
+## Validation evidence
+
+- Test collection: 19 tests.
+- Full API/model/health suite: 19 passed with PYTHONWARNINGS=error.
+- Targeted new regression suite: 5 passed.
+- Ruff for services/api and scripts: PASS.
+- Alembic preflight found zero business rows; downgrade base -> zero business tables/enums -> upgrade head: PASS.
+- Alembic check: PASS (No new upgrade operations detected).
+- Final schema: 15 business tables, 19 enum types, and 7 targeted same-subject constraints present.
+- OpenAPI/TypeScript contract drift: CONTRACT_DRIFT_OK.
+- Decision OS verifier: all 7 groups PASS.
+- Changed-tree secret scan: no sensitive filenames or high-confidence pattern hits.
+- Git topology: QA R2 is a linear descendant of 94e6523; main remains at 5cb42f9; no merge commit was created.
+
+## Fresh approval review
+
+No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings are addressed by composite database constraints, accepted CCR synchronization, and executable regression coverage. The branch is approved for the product owner to merge after the final commit SHA is confirmed.
+
+## Remaining risks outside this approval
+
+- Task 6 remains a prerequisite before full Task 19A implementation.
+- The previously noted DomainEventActor/standalone event-shape cleanup remains a later contract task and is not silently treated as fixed by this Task 2 approval.

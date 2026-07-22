@@ -2,6 +2,6 @@
 
 - Last archived: 2026-07-22 (Asia/Shanghai)
 - Archive file: HISTORY
-- Archive marker: Task 2 Contract Repair Follow-up / Contract Lead source handoff
-- Next work: create codex/qa-release-task2-r2 from the Contract Lead repair commit, add same-Workspace cross-Subject rejection tests, run all gates, and issue a fresh merge approval without merging.
+- Archive marker: Task 2 QA R2 Regression and Merge Approval
+- Next work: await product-owner merge decision for codex/qa-release-task2-r2; do not merge automatically. Task 6 remains required before full Task 19A.
 - Secret policy: no credentials are stored in this file.
