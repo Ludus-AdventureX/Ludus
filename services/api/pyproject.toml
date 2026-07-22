@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "decision-lab-api"
 version = "0.1.0"
 description = "Ludus FastAPI service"
