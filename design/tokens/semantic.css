@@ -1,0 +1,21 @@
+/* Generated semantic aliases for the Ludus V7 theme contract. */
+@layer tokens {
+  :root {
+    --surface-canvas: var(--paper-base);
+    --surface-sheet: var(--paper-sheet);
+    --surface-muted: var(--paper-wash);
+    --surface-night: var(--night-base);
+    --surface-night-sheet: var(--night-sheet);
+    --text-primary: var(--ink);
+    --text-secondary: var(--ink-2);
+    --text-tertiary: var(--ink-3);
+    --border-subtle: var(--paper-rule);
+    --border-strong: var(--paper-rule-strong);
+    --responsibility-human: var(--human);
+    --responsibility-analysis: var(--analysis);
+    --responsibility-unknown: var(--unknown);
+    --state-danger: var(--danger);
+    --focus-ring: color-mix(in srgb, var(--analysis) 72%, white);
+    --shadow-soft: 0 18px 60px rgb(var(--shadow-rgb) / 0.12);
+  }
+}

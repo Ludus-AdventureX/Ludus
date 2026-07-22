@@ -1,0 +1,18 @@
+/* Generated geometry tokens; component CSS consumes these aliases. */
+@layer tokens {
+  :root {
+    --layout-max: 1440px;
+    --masthead-height: 72px;
+    --spine-height: 76px;
+    --stage-gutter: clamp(18px, 3vw, 48px);
+    --panel-padding: clamp(20px, 3vw, 40px);
+    --drawer-width: min(420px, calc(100vw - 28px));
+    --radius-control: 3px;
+    --radius-panel: 5px;
+    --duration-fast: 140ms;
+    --duration-medium: 240ms;
+    --font-editorial: "Iowan Old Style", "Songti SC", "Noto Serif CJK SC", serif;
+    --font-ui: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, monospace;
+  }
+}

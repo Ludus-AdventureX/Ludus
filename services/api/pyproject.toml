@@ -25,10 +25,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "pytest>=8.4,<9",
+  "pytest>=9.0.3,<10",
   "pytest-asyncio>=1.1,<2",
   "ruff>=0.12,<1",
-  "pip-audit>=2.9,<3"
+  "pip-audit>=2.9,<3",
+  "jsonschema>=4.23,<5"
 ]
 
 [tool.uv]

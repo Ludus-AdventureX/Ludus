@@ -142,22 +142,48 @@ def run_probe() -> dict[str, Any]:
         "probes": {},
     }
 
+    text_messages = [
+        {
+            "role": "system",
+            "content": "Return a short plain-text acknowledgement for a capability probe.",
+        },
+        {"role": "user", "content": "Reply with the word READY."},
+    ]
     text_response = client.chat.completions.create(
         model=config.model,
-        messages=[
-            {
-                "role": "system",
-                "content": "Return a short plain-text acknowledgement for a capability probe.",
-            },
-            {"role": "user", "content": "Reply with the word READY."},
-        ],
+        messages=text_messages,
+        extra_body={"thinking": {"type": "disabled"}},
         temperature=0,
-        max_tokens=32,
+        max_tokens=128,
     )
     text_message = text_response.choices[0].message
-    if not get_text_content(text_message).strip():
-        raise ProbeFailure("Text probe returned empty content without an alternate artifact.")
-    results["probes"]["text"] = {"ok": True, **completion_metadata(text_response)}
+    text_content = get_text_content(text_message)
+    empty_content_retry_used = False
+    if not text_content.strip():
+        empty_content_retry_used = True
+        text_response = client.chat.completions.create(
+            model=config.model,
+            messages=text_messages
+            + [{"role": "user", "content": "The previous content was empty. Reply READY now."}],
+            extra_body={"thinking": {"type": "disabled"}},
+            temperature=0,
+            max_tokens=512,
+        )
+        text_message = text_response.choices[0].message
+        text_content = get_text_content(text_message)
+    if not text_content.strip():
+        metadata = completion_metadata(text_response)
+        reasoning_present = bool(get_reasoning_content(text_message).strip())
+        raise ProbeFailure(
+            "Text probe returned empty content after one retry "
+            f"(response_model={metadata['response_model']}, "
+            f"finish_reason={metadata['finish_reason']}, reasoning_present={reasoning_present})."
+        )
+    results["probes"]["text"] = {
+        "ok": True,
+        "empty_content_retry_used": empty_content_retry_used,
+        **completion_metadata(text_response),
+    }
 
     thinking_response = client.chat.completions.create(
         model=config.model,
@@ -213,6 +239,7 @@ def run_probe() -> dict[str, Any]:
             }
         ],
         tool_choice={"type": "function", "function": {"name": "record_probe"}},
+        extra_body={"thinking": {"type": "disabled"}},
         temperature=0,
         max_tokens=128,
     )
@@ -249,6 +276,7 @@ def run_probe() -> dict[str, Any]:
         model=config.model,
         messages=structured_messages,
         response_format={"type": "json_object"},
+        extra_body={"thinking": {"type": "disabled"}},
         temperature=0,
         max_tokens=128,
     )
@@ -267,6 +295,7 @@ def run_probe() -> dict[str, Any]:
                 }
             ],
             response_format={"type": "json_object"},
+            extra_body={"thinking": {"type": "disabled"}},
             temperature=0,
             max_tokens=128,
         )

@@ -79,3 +79,13 @@
 - Preserved structured-output empty-content retry and fail-closed validation.
 - Verified Python AST parsing, no-key redacted failure, Look V7 snapshot, and high-confidence secret scan.
 
+
+## Archived idle checkpoint 2026-07-22T09:24:54.2667817+08:00
+
+# Work Log: idle
+
+- Last archived: 2026-07-22T09:17:47.7581373+08:00
+- Archive file: HISTORY
+- Next work: continue Gate 0 after product-owner environment and capacity approvals.
+- Secret policy: no credentials are stored in this file.
+

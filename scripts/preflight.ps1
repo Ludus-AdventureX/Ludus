@@ -9,6 +9,17 @@ param(
 $ErrorActionPreference = "Stop"
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $ContractsRoot = Join-Path $RepositoryRoot "packages\contracts"
+$LocalUv = Join-Path $RepositoryRoot ".tools\uv\uv.exe"
+$UvCommand = if (Get-Command "uv" -ErrorAction SilentlyContinue) {
+    (Get-Command "uv").Source
+}
+elseif (Test-Path -LiteralPath $LocalUv -PathType Leaf) {
+    $LocalUv
+}
+else {
+    ""
+}
+$ProjectPython = Join-Path $RepositoryRoot ".venv\Scripts\python.exe"
 $WorkspaceRoot = Split-Path -Parent $RepositoryRoot
 $PlanRoot = if ([string]::IsNullOrWhiteSpace($env:DECISION_LAB_PLAN_PATH)) {
     Join-Path $WorkspaceRoot "decision-lab-product-plan"
@@ -21,6 +32,25 @@ $LookRoot = if ([string]::IsNullOrWhiteSpace($env:DECISION_LAB_LOOK_PATH)) {
 }
 else {
     $env:DECISION_LAB_LOOK_PATH
+}
+
+$LocalEnvPath = Join-Path $RepositoryRoot ".env"
+if (Test-Path -LiteralPath $LocalEnvPath -PathType Leaf) {
+    foreach ($rawLine in Get-Content -LiteralPath $LocalEnvPath -Encoding UTF8) {
+        $line = $rawLine.Trim()
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#") -or -not $line.Contains("=")) {
+            continue
+        }
+        $parts = $line.Split("=", 2)
+        $name = $parts[0].Trim()
+        $value = $parts[1].Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        if ($name -match '^[A-Za-z_][A-Za-z0-9_]*$') {
+            [Environment]::SetEnvironmentVariable($name, $value, "Process")
+        }
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($CapacityProfile)) {
@@ -168,9 +198,9 @@ try {
         Add-Check "python-3.12" "FAIL" "Windows Python launcher 'py' is not available"
     }
 
-    if (Test-CommandAvailable "uv") {
-        $uvVersion = Invoke-Capture "uv" @("--version")
-        $uvPython = Invoke-Capture "uv" @("python", "find", "3.12")
+    if (-not [string]::IsNullOrWhiteSpace($UvCommand)) {
+        $uvVersion = Invoke-Capture $UvCommand @("--version")
+        $uvPython = Invoke-Capture $UvCommand @("python", "find", "3.12")
         if ($uvVersion.exit_code -eq 0 -and $uvPython.exit_code -eq 0) {
             Add-Check "uv-python" "PASS" ((First-NonEmptyLine $uvVersion) + "; Python 3.12 resolved")
         }
@@ -231,8 +261,9 @@ try {
 
     if ($dockerDaemonReady -and (Test-Path -LiteralPath (Join-Path $RepositoryRoot "compose.yaml"))) {
         $postgres = Invoke-Capture "docker" @("compose", "exec", "-T", "db", "postgres", "--version")
-        if ($postgres.exit_code -eq 0 -and (First-NonEmptyLine $postgres) -match 'PostgreSQL 16\.') {
-            Add-Check "postgres-16" "PASS" (First-NonEmptyLine $postgres)
+        $postgresLine = First-NonEmptyLine $postgres
+        if (($postgres.exit_code -eq 0) -and ($postgresLine -match 'PostgreSQL\) 16\.')) {
+            Add-Check "postgres-16" "PASS" $postgresLine
         }
         else {
             Add-Check "postgres-16" "FAIL" "the db service is not running as PostgreSQL 16"
@@ -257,8 +288,8 @@ try {
     }
 
     $contractVerifier = Join-Path $RepositoryRoot "scripts\verify_decision_os_contracts.py"
-    if ((Test-Path -LiteralPath $contractVerifier -PathType Leaf) -and (Test-CommandAvailable "py")) {
-        $contractCheck = Invoke-Capture "py" @("-3.12", $contractVerifier)
+    if ((Test-Path -LiteralPath $contractVerifier -PathType Leaf) -and (Test-Path -LiteralPath $ProjectPython -PathType Leaf)) {
+        $contractCheck = Invoke-Capture $ProjectPython @($contractVerifier)
         if ($contractCheck.exit_code -eq 0 -and ($contractCheck.output -contains "decision-os-contracts: PASS")) {
             Add-Check "canonical-contract-validation" "PASS" "decision-os-contracts: PASS"
         }
@@ -348,8 +379,8 @@ try {
     }
 
     $snapshotScript = Join-Path $RepositoryRoot "scripts\snapshot_look.py"
-    if ((Test-Path -LiteralPath $snapshotScript -PathType Leaf) -and (Test-Path -LiteralPath $LookRoot -PathType Container)) {
-        $snapshot = Invoke-Capture "py" @("-3.12", $snapshotScript, "--check")
+    if ((Test-Path -LiteralPath $snapshotScript -PathType Leaf) -and (Test-Path -LiteralPath $LookRoot -PathType Container) -and (Test-Path -LiteralPath $ProjectPython -PathType Leaf)) {
+        $snapshot = Invoke-Capture $ProjectPython @($snapshotScript, "--check")
         if ($snapshot.exit_code -eq 0) {
             Add-Check "look-v7-snapshot" "PASS" "immutable Look source snapshot check passed"
         }
@@ -365,8 +396,8 @@ try {
     $canonicalTypes = Join-Path $RepositoryRoot "packages\contracts\src\types.gen.ts"
     if ((Test-Path -LiteralPath $canonicalOpenApi -PathType Leaf) -and
         (Test-Path -LiteralPath $canonicalTypes -PathType Leaf) -and
-        (Test-CommandAvailable "uv") -and
-        (Test-Path -LiteralPath (Join-Path $ContractsRoot "node_modules"))) {
+        (-not [string]::IsNullOrWhiteSpace($UvCommand)) -and
+        ((Test-Path -LiteralPath (Join-Path $ContractsRoot "node_modules")) -or (Test-Path -LiteralPath (Join-Path $RepositoryRoot "node_modules")))) {
         $contractDrift = Invoke-Capture "powershell" @("-ExecutionPolicy", "Bypass", "-File", (Join-Path $PSScriptRoot "generate_contracts.ps1"), "-Check")
         if ($contractDrift.exit_code -eq 0 -and ($contractDrift.output -contains "CONTRACT_DRIFT_OK")) {
             Add-Check "openapi-typescript-drift" "PASS" "CONTRACT_DRIFT_OK"

@@ -9,6 +9,9 @@
 auth.json
 credentials.json
 
+# Repository-local tools
+.tools/
+
 # Python
 .venv/
 venv/

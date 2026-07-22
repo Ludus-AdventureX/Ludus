@@ -15,5 +15,11 @@
     "contracts:generate": "powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1",
     "contracts:check": "powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check",
     "preflight": "powershell -ExecutionPolicy Bypass -File scripts/preflight.ps1"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.10",
+      "sharp": "0.35.3"
+    }
   }
 }

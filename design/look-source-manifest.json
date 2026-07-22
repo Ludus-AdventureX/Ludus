@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "source": "../look",
   "lookVersionText": "Ludus Prototype\nXuan Cinnabar Deep Indigo Secondary\nUpdated: 2026-07-19",
   "importedAt": "2026-07-22",
@@ -132,6 +132,11 @@
     "unknown-rgb",
     "unknown-wash"
   ],
+  "generatedArtifacts": {
+    "design/tokens/themes.generated.css": "5f8de44a6342b154fdeabc900b0444f87e9b84bd6c6e32015f905f9ab969dfa7",
+    "design/tokens/semantic.css": "e0d882c5c8126497f4156d19a332520e162a268835b0f1653d75792e5af7b80b",
+    "design/tokens/components.css": "2927ca2ea5dfbcb3f112e98e95c286581bcf6f36aeda032a7378dfc681b26be1"
+  },
   "componentMappings": [
     {
       "source": "masthead",
@@ -184,7 +189,7 @@
   ],
   "runtimeDependencyPolicy": {
     "index.html": "structure-and-accessibility-reference",
-    "themes.css": "token-source; convert to centralized tokens",
+    "themes.css": "token-source; converted to centralized generated tokens",
     "styles.css": "layout-and-component-source; split before production use",
     "app.js": "behavior-specification-only; never load at runtime"
   },

@@ -9,6 +9,17 @@ $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $ContractsRoot = Join-Path $RepositoryRoot "packages\contracts"
 $CanonicalOpenApi = Join-Path $ContractsRoot "openapi.json"
 $CanonicalTypes = Join-Path $ContractsRoot "src\types.gen.ts"
+$LocalUv = Join-Path $RepositoryRoot ".tools\uv\uv.exe"
+$UvCommand = if (Get-Command "uv" -ErrorAction SilentlyContinue) {
+    (Get-Command "uv").Source
+}
+elseif (Test-Path -LiteralPath $LocalUv -PathType Leaf) {
+    $LocalUv
+}
+else {
+    ""
+}
+$env:UV_PROJECT_ENVIRONMENT = Join-Path $RepositoryRoot ".venv"
 
 function Assert-LastExitCode([string]$Operation) {
     if ($LASTEXITCODE -ne 0) {
@@ -37,7 +48,7 @@ function Assert-SameFile([string]$Expected, [string]$Actual, [string]$Label) {
     }
 }
 
-Assert-Command "uv"
+if ([string]::IsNullOrWhiteSpace($UvCommand)) { throw "Required command uv is not available." }
 Assert-Command "pnpm"
 Push-Location $RepositoryRoot
 try {
@@ -62,7 +73,7 @@ try {
         $checkOpenApi = Join-Path $checkRoot "openapi.json"
         $checkTypes = Join-Path $checkRoot "types.gen.ts"
 
-        & uv run --python 3.12 --project services/api python scripts/export_openapi.py --output $checkOpenApi
+        & $UvCommand run --python 3.12 --project services/api python scripts/export_openapi.py --output $checkOpenApi
         Assert-LastExitCode "OpenAPI regeneration"
 
         & pnpm --dir packages/contracts exec openapi-typescript $checkOpenApi -o $checkTypes
@@ -73,7 +84,7 @@ try {
         Write-Output "CONTRACT_DRIFT_OK"
     }
     else {
-        & uv run --python 3.12 --project services/api python scripts/export_openapi.py
+        & $UvCommand run --python 3.12 --project services/api python scripts/export_openapi.py
         Assert-LastExitCode "OpenAPI export"
 
         & pnpm --dir packages/contracts generate
