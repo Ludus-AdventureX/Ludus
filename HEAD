@@ -7,5 +7,6 @@
 - Current branch: codex/task-03-auth-envelope-p1-fix (base aa240f7, frozen Task 3 implementation candidate; old branch untouched)
 - Owner result: RequestValidationError handler no longer passes unsupported kwargs to exc.errors(); url/input stripped and ctx reduced to JSON scalars by _sanitize_validation_errors; malformed-payload probe 6/6 green (red-reproduced on base first), ruff/compileall PASS, full suite 84 passed.
 - Product change: services/api/app/security/envelope.py only.
+- Remote status: BLOCKED. Five push attempts to origin over ~4 minutes failed (one TCP connection reset, four connect timeouts to github.com:443); no remote branch exists yet and no upload is claimed. Local tip cc08531 is the integration reference; retry push when connectivity returns or hand the branch to the Integration Lead locally.
 - Next: QA rebuilds the combined candidate from this fix branch; permanent red-to-green regression lives on the QA branch and was not modified here.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
