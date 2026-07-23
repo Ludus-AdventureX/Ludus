@@ -1,20 +1,10 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Contract Integration Lead (Task 3 candidate recomposition with P1 fix)
-- objective: Recompose the Task 3 combined candidate on codex/task-03-contract-integration: keep 9555ae6 content unchanged, merge P1 repair branch codex/task-03-auth-envelope-p1-fix (bdc30cd; product fix 36ee13b touching only services/api/app/security/envelope.py), re-run full acceptance, and hand the new candidate to Task 3 QA for the final release re-review. No main merge; no repeated push while GitHub 443 blockage persists.
-- base_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e (CONTRACT_FREEZE_SHA)
-- branch: codex/task-03-contract-integration (previous tip 9555ae68c8e65013272aeb5530e72252a6ebec64)
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
-- write_scope: merge commit for bdc30cd; HEAD/HISTORY lifecycle records (append-only). No other file may change relative to 9555ae6 except services/api/app/security/envelope.py arriving from 36ee13b.
-- forbidden_scope: app/main.py beyond existing CCR content; packages/contracts/**; migrations/**; apps/web/**; services/api/tests/**; other lanes' branches; main; force-push; history rewrite.
-- dependencies:
-  - repair branch: codex/task-03-auth-envelope-p1-fix @ bdc30cd8853ec9d1c899f4bce5d3e4425e00f685 (verified: 36ee13b~1 == aa240f7; product delta exactly envelope.py +39/-1; cc08531/bdc30cd lifecycle-only; remote BLOCKED per repair lane disclosure)
-- acceptance_commands:
-  - git diff aa240f7 <tip> -- services/api/app  (must equal existing main.py CCR change + envelope.py P1 fix)
-  - git diff 9555ae6 <tip>  (must contain only envelope.py + lifecycle records)
-  - full pytest -q -W error on disposable PG16; alembic upgrade head + check; ruff; compileall; scope/secret/diff-check; validation-envelope probe
-- known_initial_risks:
-  - GitHub 443 blockage persists; per instruction no repeated push this session — remote status stays BLOCKED and is recorded honestly.
-  - HEAD/HISTORY merge conflicts expected (both sides diverged from aa240f7 lifecycle); resolved append-only with no record loss.
-- secret_policy: no credentials, API keys, tokens, cookies, or connection strings are recorded here.
+- Status: idle after recomposing the Task 3 combined candidate with the envelope P1 fix.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Task 3 Recomposed Candidate with Envelope P1 Fix - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/task-03-contract-integration = 9555ae6 content (implementation aa240f7 + CCR-20260724-005 + generated contracts) + envelope P1 fix 36ee13b (via merge of bdc30cd); full acceptance re-passed; NOT merged to main.
+- Remote status: BLOCKED (GitHub 443 persists; no push attempted this session per instruction; local commits intact).
+- Gate condition: main merge requires Task 3 QA RELEASE_GATE_VERDICT: PASS on this recomposed HEAD, then network recovery, push, and live remote SHA verification.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.

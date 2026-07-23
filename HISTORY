@@ -1433,3 +1433,32 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - QA-owned permanent red-to-green regression stays on the QA branch and was not modified.
 - No merge into main is performed or claimed; remote push result is recorded in the P1_FIX_HANDOFF.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Recomposed Candidate with Envelope P1 Fix - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; Task 3 combined candidate recomposed with the envelope P1 fix; full acceptance re-passed; NOT merged to main; awaiting QA final release re-review.
+- Role: Mainline Audit / Contract Integration Lead
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/task-03-contract-integration
+- Previous candidate tip: 9555ae68c8e65013272aeb5530e72252a6ebec64 (content preserved unchanged)
+- P1 fix provenance: branch codex/task-03-auth-envelope-p1-fix @ bdc30cd8853ec9d1c899f4bce5d3e4425e00f685; product commit 36ee13b (parent verified == aa240f7); delta exactly services/api/app/security/envelope.py (+39/-1): replaces the unsupported RequestValidationError.errors(include_url/include_input) kwargs with a whitelist sanitizer so 422 handling works on the locked FastAPI stack and never echoes submitted input (passwords included); cc08531/bdc30cd are lifecycle-only.
+- Merge: --no-ff; conflicts confined to HEAD/HISTORY; HISTORY resolved binary-safe via raw index-stage bytes (base proven exact byte prefix of both sides; merged = base + candidate archives + P1-fix archives; 36 archives intact, UTF-8 preserved). A transient 0-byte HISTORY working-file overwrite caused by PowerShell redirection during extraction was recovered in-session from index stages before any commit; committed history was never at risk.
+- Scope audit versus spec: git diff aa240f7 tip -- services/api/app == {app/main.py (existing CCR mounting), app/security/envelope.py (P1 fix)}; git diff 9555ae6 tip == {HEAD, HISTORY, services/api/app/security/envelope.py}; envelope.py at tip byte-identical to 36ee13b; zero changes under packages/contracts, migrations, apps/web, services/api/tests, and app/main.py beyond the prior CCR commit.
+
+## Acceptance on recomposed HEAD (fresh, disposable PG16 @55432, removed afterwards)
+
+- Full product pytest -q -W error: 84 passed.
+- Alembic upgrade head + alembic check: clean (no new migration).
+- Contract drift: CONTRACT_DRIFT_OK (envelope change does not alter the OpenAPI surface).
+- Ruff: PASS. compileall: PASS.
+- P1 behavior probe on canonical app.main: PASS (VALIDATION_ENVELOPE_OK) — malformed login body returns 422 VALIDATION_FAILED envelope; secret marker in the submitted password is NOT echoed anywhere in the response; error entries restricted to type/loc/msg/ctx.
+- Forbidden-path check, secret scan over the new delta, git diff --check: PASS (only the known P3 EOF blank line at app/auth/routes.py:343 remains; implementation-owned cosmetic).
+
+## Remote status and next step
+
+- Remote status: BLOCKED (GitHub 443 blockage disclosed by all lanes persists; per instruction no repeated push this session; local commits intact and recoverable).
+- Next step: hand the recomposed candidate to Task 3 QA for the final release re-review on this exact HEAD (QA overlays its tests from codex/qa-task-03-auth-workspace, flips CT-01 and the envelope xfail-class checks as applicable). Main merge only after RELEASE_GATE_VERDICT: PASS, network recovery, push, and live remote SHA verification.
+- No credentials or secret values are recorded here.
