@@ -1,83 +1,232 @@
 "use client";
 
 import Image from "next/image";
-import {
-  Archive,
-  Beaker,
-  BookOpenText,
-  CheckCircle2,
-  ChevronRight,
-  FileText,
-  FolderOpen,
-  Menu,
-  Network,
-  Palette,
-  Plus,
-  Scale,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const workspaceOrder = ["workspace", "analysis", "report", "sandbox", "decision"] as const;
-type WorkspaceId = (typeof workspaceOrder)[number];
-type DrawerId = "project" | "theme" | null;
-
-const workspaces: Record<
-  WorkspaceId,
-  { label: string; number: string; description: string; icon: typeof FolderOpen }
-> = {
-  workspace: {
-    label: "工作台",
-    number: "01",
-    description: "界定问题与责任边界",
-    icon: FolderOpen,
-  },
-  analysis: {
-    label: "分析",
-    number: "02",
-    description: "授权方法并形成证据链",
-    icon: Sparkles,
-  },
-  report: {
-    label: "报告",
-    number: "03",
-    description: "审阅主张、引用与反方",
-    icon: FileText,
-  },
-  sandbox: {
-    label: "沙盘",
-    number: "04",
-    description: "检验脆弱条件与情景",
-    icon: Network,
-  },
-  decision: {
-    label: "决定",
-    number: "05",
-    description: "由人签署并承担责任",
-    icon: Scale,
-  },
-};
-
+const copy = {
+  "currentIssue": "当前议题",
+  "emptyCaseTitle": "尚未创建决策项目",
+  "emptySource": "空工作台",
+  "mobileCaseGlyph": "项",
+  "themeLabel": "主题",
+  "dossierLabel": "档案",
+  "emptyCoordinate": "NEW-00",
+  "emptyCoordinateStatus": "尚未建立项目",
+  "emptyEyebrow": "这里没有示例答案，也没有等待你清理的仪表盘",
+  "emptyTitle": "先写下一个真正需要\n承担后果的问题。",
+  "emptyIntro": "Ludus 不要求你先选模板、方法或 Agent。一个决策项目从人的问题开始；证据、分析、推演和正式决定会在边界确认后逐步出现。",
+  "formSubline": "只有创建后才会生成 Case 版本",
+  "formLabel": "现在最需要看清的取舍是什么？",
+  "formPlaceholder": "例如：未来 12 个月，我们应该把有限资源投入现有产品增长，还是验证一个新的市场方向？",
+  "formPrivacy": "项目创建前不会生成证据、模型、报告或正式档案。",
+  "importText": "先导入材料",
+  "createText": "建立决策项目",
+  "createSubline": "进入问题边界确认，而不是立即开始分析",
+  "methodLabel": "从一个问题开始",
+  "methodNote": "没有项目时，Decision Spine、档案计数和运行状态都不会伪造显示。",
+  "examplesTitle": "可作为起点的提问方式",
+  "examplesSubline": "点击只会填入草稿，不会自动创建项目",
+  "caseDrawerTitle": "项目与空工作台",
+  "caseDrawerIntro": "切换只改变当前展示项目，不会修改已保存的 Case 版本。",
+  "caseEmptyTitle": "空项目演示",
+  "caseEmptyStatus": "尚未创建 Case",
+  "caseEmptyDescription": "查看没有任何项目时，对外呈现的新建决策入口。",
+  "themeDrawerTitle": "十种材料色",
+  "themeDrawerIntro": "只改变环境、强调色与模型墨色；人的责任、系统证据和未知状态仍保持清晰分工。",
+  "themeReset": "恢复水墨",
+  "themeApply": "应用并返回",
+  "caseRuleLabel": "展示规则",
+  "caseRuleText": "空项目不会显示伪造的进度、证据数量、运行状态或推荐结果。",
+  "caseStay": "留在当前项目",
+  "caseOpen": "打开空工作台",
+  "draftedTitle": "项目草稿已建立",
+  "draftedSubline": "下一步将确认边界；当前仍是静态展示",
+  "emptySubmitNotice": "已建立决策项目草稿；尚未生成证据、分析或正式档案。",
+  "emptyNoQuestionNotice": "先写下一个需要承担后果的问题。",
+  "emptyImportNotice": "静态原型：正式版本会先建立项目草稿，再把材料写入项目级 RawArtifact。",
+  "methodRows": [
+    [
+      "01",
+      "写下问题",
+      "保留你的原话，不自动改写成系统任务。"
+    ],
+    [
+      "02",
+      "确认边界",
+      "确认时间、资源、责任主体和不能接受的结果。"
+    ],
+    [
+      "03",
+      "决定深度",
+      "由你选择快速梳理、聚焦研究或完整战略分析。"
+    ]
+  ],
+  "exampleRows": [
+    [
+      "方向取舍",
+      "我们应该继续扩大当前市场，还是把资源转向一个更小但更确定的细分机会？",
+      "继续扩大，还是换一个更可验证的方向？"
+    ],
+    [
+      "资源承诺",
+      "在现金窗口有限的情况下，我们应该现在招聘关键岗位，还是延后并先降低交付风险？",
+      "现在投入，还是保留路线切换能力？"
+    ],
+    [
+      "条件决策",
+      "我们是否应该接受这个合作条件；哪些前提一旦不成立，就必须退出？",
+      "在什么条件下做，以及何时停止？"
+    ]
+  ]
+} as const;
+const workspaceItems = [
+  [
+    "workspace",
+    "Q",
+    "问题",
+    "界定边界"
+  ],
+  [
+    "analysis",
+    "E",
+    "证据",
+    "研究与质疑"
+  ],
+  [
+    "report",
+    "J",
+    "判断",
+    "条件化建议"
+  ],
+  [
+    "sandbox",
+    "G",
+    "推演",
+    "寻找翻转"
+  ],
+  [
+    "decision",
+    "D",
+    "决定",
+    "冻结行动"
+  ],
+  [
+    "review",
+    "R",
+    "复盘",
+    "回到现实"
+  ]
+] as const;
 const themes = [
-  ["ink", "水墨黑白", "克制、清晰、默认"],
-  ["ledger", "墨纸酒红", "档案感与人类承诺"],
-  ["vermilion", "宣纸朱红", "深靛青分析副色"],
-  ["red", "冷红", "谨慎与冲突"],
-  ["orange", "赭橙", "行动与窗口"],
-  ["yellow", "矿黄", "提醒与未知"],
-  ["green", "松绿", "韧性与长期"],
-  ["cyan", "青瓷", "系统与关系"],
-  ["blue", "靛蓝", "证据与审阅"],
-  ["purple", "暮紫", "复杂与反事实"],
+  [
+    "ink",
+    "水墨黑白",
+    "Ink Wash",
+    "黑、灰与矿物蓝灰，作为不带情绪的研究基线。",
+    "#f1f0ec",
+    "#2b2d2c",
+    "#53656b",
+    "#716957"
+  ],
+  [
+    "ledger",
+    "墨纸酒红",
+    "Quiet Ledger",
+    "暖纸、酒红承诺与烟墨证据，保留沉静而克制的经典基线。",
+    "#f2eee5",
+    "#783b49",
+    "#536866",
+    "#80633b"
+  ],
+  [
+    "vermilion",
+    "宣纸朱红",
+    "Xuan Cinnabar",
+    "宣纸白、朱砂红与深靛青，拉开承诺、推演与未知的责任层级。",
+    "#f6f2e9",
+    "#a54030",
+    "#40536b",
+    "#80694a"
+  ],
+  [
+    "red",
+    "莫兰迪红",
+    "Dusty Red",
+    "旧玫瑰与松柏灰，适合编辑批注、承诺复核与谨慎异议。",
+    "#f2eceb",
+    "#84515b",
+    "#4e625f",
+    "#7d6048"
+  ],
+  [
+    "orange",
+    "莫兰迪橙",
+    "Quiet Terracotta",
+    "陶土与深青，推动行动但不触发警报感。",
+    "#f2ece5",
+    "#8f5746",
+    "#44676a",
+    "#7c633f"
+  ],
+  [
+    "yellow",
+    "莫兰迪黄",
+    "Dry Ochre",
+    "赭石与橄榄灰，适合条件、阈值与未知项。",
+    "#f3f0e4",
+    "#78693e",
+    "#52675b",
+    "#876047"
+  ],
+  [
+    "green",
+    "莫兰迪绿",
+    "Muted Sage",
+    "鼠尾草与深灰蓝，适合长期观察、稳健和复盘。",
+    "#edf1eb",
+    "#5a705e",
+    "#4c626a",
+    "#7c624d"
+  ],
+  [
+    "cyan",
+    "莫兰迪青",
+    "Mist Cyan",
+    "雾青与深紫灰，保持清醒而不进入科技荧光。",
+    "#eaf1f0",
+    "#4d7272",
+    "#554e6b",
+    "#7a6348"
+  ],
+  [
+    "blue",
+    "莫兰迪蓝",
+    "Slate Blue",
+    "灰蓝与暖橄榄，强调研究秩序和版本边界。",
+    "#ebeff4",
+    "#5b6d88",
+    "#536452",
+    "#7e604d"
+  ],
+  [
+    "purple",
+    "莫兰迪紫",
+    "Dusty Violet",
+    "灰紫与松柏青，适合复杂判断和审慎异议。",
+    "#f0edf2",
+    "#75617d",
+    "#4e665f",
+    "#7f604d"
+  ]
 ] as const;
 
+type WorkspaceId = (typeof workspaceItems)[number][0];
 type ThemeId = (typeof themes)[number][0];
+type DrawerId = "project" | "theme" | null;
 
 function isWorkspace(value: string | null): value is WorkspaceId {
-  return value !== null && workspaceOrder.includes(value as WorkspaceId);
+  return value !== null && workspaceItems.some(([id]) => id === value);
 }
-
 function isTheme(value: string | null): value is ThemeId {
   return value !== null && themes.some(([id]) => id === value);
 }
@@ -88,35 +237,39 @@ export function DecisionShell() {
   const [drawer, setDrawer] = useState<DrawerId>(null);
   const [question, setQuestion] = useState("");
   const [draftNotice, setDraftNotice] = useState("");
+  const [isDrafted, setIsDrafted] = useState(false);
+  const [ready, setReady] = useState(false);
   const projectTrigger = useRef<HTMLButtonElement>(null);
   const themeTrigger = useRef<HTMLButtonElement>(null);
+  const questionInput = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const queryView = params.get("view");
-    const queryTheme = params.get("theme");
-    const storedTheme = window.localStorage.getItem("ludus-theme-v7");
-    const nextWorkspace = isWorkspace(queryView) ? queryView : "workspace";
-    const migratedTheme = queryTheme === "v6" ? "ledger" : queryTheme;
-    const nextTheme = isTheme(migratedTheme)
-      ? migratedTheme
-      : isTheme(storedTheme)
-        ? storedTheme
-        : "ink";
-
-    setActiveWorkspace(nextWorkspace);
-    setTheme(nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
+    document.body.classList.add("empty-case");
+    return () => document.body.classList.remove("empty-case");
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedTheme = params.get("theme");
+    const storedTheme = window.localStorage.getItem("ludus-theme-v7");
+    const requestedView = params.get("view");
+    setActiveWorkspace(isWorkspace(requestedView) ? requestedView : "workspace");
+    setTheme(isTheme(requestedTheme) ? requestedTheme : isTheme(storedTheme) ? storedTheme : "ink");
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("ludus-theme-v7", theme);
     const params = new URLSearchParams(window.location.search);
     params.set("theme", theme);
     params.set("view", activeWorkspace);
     window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
-  }, [activeWorkspace, theme]);
+  }, [activeWorkspace, ready, theme]);
+
+  const currentTheme = useMemo(() => themes.find(([id]) => id === theme) ?? themes[0], [theme]);
+  const activeItem = useMemo(() => workspaceItems.find(([id]) => id === activeWorkspace) ?? workspaceItems[0], [activeWorkspace]);
 
   const closeDrawer = useCallback(() => {
     const closing = drawer;
@@ -136,188 +289,153 @@ export function DecisionShell() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeDrawer, drawer]);
 
-  const currentTheme = useMemo(
-    () => themes.find(([id]) => id === theme) ?? themes[0],
-    [theme],
-  );
-
   const submitDraft = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!question.trim()) {
-      setDraftNotice("请先写下一个需要承担责任的取舍问题。");
+      setDraftNotice(copy.emptyNoQuestionNotice);
+      questionInput.current?.focus();
       return;
     }
-    setDraftNotice("问题草稿已保留在当前页面；API 合同接入前不会创建 Case 或启动分析。");
+    setIsDrafted(true);
+    setDraftNotice(copy.emptySubmitNotice);
+  };
+
+  const chooseExample = (value: string) => {
+    setQuestion(value);
+    setDraftNotice("");
+    window.setTimeout(() => questionInput.current?.focus(), 0);
   };
 
   return (
     <div className="app-shell">
       <header className="masthead">
-        <div className="brand-lockup">
-          <Image
-            className="brand-logo"
-            src="/ludus-logo.svg"
-            alt="Ludus"
-            width={1478}
-            height={406}
-            priority
-          />
+        <div className="brand-lockup" aria-label="Ludus">
+          <Image className="brand-logo" src="/ludus-logo.svg" alt="Ludus" width={1478} height={406} priority />
         </div>
-
-        <div className="masthead-context">
-          <span className="source-mode"><i /> 离线准备</span>
-          <span className="context-divider" aria-hidden="true" />
-          <span className="project-context">未建立决策项目</span>
+        <div className="case-title">
+          <span>{copy.currentIssue}</span>
+          <button ref={projectTrigger} id="openCaseMenu" type="button" aria-haspopup="dialog" aria-expanded={drawer === "project"} onClick={() => setDrawer("project")}>
+            <span>{copy.emptyCaseTitle}</span> <i aria-hidden="true">{"\u2304"}</i>
+          </button>
         </div>
-
         <div className="masthead-actions">
-          <button
-            ref={themeTrigger}
-            className="quiet-action"
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={drawer === "theme"}
-            onClick={() => setDrawer("theme")}
-          >
-            <Palette size={17} aria-hidden="true" />
-            <span><small>主题</small>{currentTheme[1]}</span>
+          <span className="source-mode is-empty" id="sourceMode"><i /> <span>{copy.emptySource}</span></span>
+          <button className="mobile-case-trigger" id="openMobileCaseMenu" type="button" aria-label="Open project switcher" aria-haspopup="dialog" aria-expanded={drawer === "project"} onClick={() => setDrawer("project")}>{copy.mobileCaseGlyph}</button>
+          <button ref={themeTrigger} className="theme-trigger" id="openThemeDrawer" type="button" aria-label={`Switch theme: ${currentTheme[1]}`} aria-haspopup="dialog" aria-expanded={drawer === "theme"} onClick={() => setDrawer("theme")}>
+            <span className="theme-trigger-swatch" aria-hidden="true"><i /><i /><i /></span>
+            <span className="theme-trigger-label"><small>{copy.themeLabel}</small><b>{currentTheme[1]}</b></span>
           </button>
-          <button
-            ref={projectTrigger}
-            className="quiet-action"
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={drawer === "project"}
-            onClick={() => setDrawer("project")}
-          >
-            <Archive size={17} aria-hidden="true" />
-            <span><small>档案</small>项目</span>
-          </button>
-          <button className="mobile-menu" type="button" onClick={() => setDrawer("project")} aria-label="打开项目抽屉">
-            <Menu size={20} />
-          </button>
+          <button className="quiet-action" id="openDossier" type="button" aria-label="Open decision dossier" onClick={() => setDrawer("project")}><span>{copy.dossierLabel}</span><b>?</b></button>
         </div>
       </header>
 
-      <nav className="decision-spine" aria-label="决策工作区">
-        {workspaceOrder.map((id) => {
-          const item = workspaces[id];
-          const Icon = item.icon;
+      <nav className="decision-spine" aria-label="Decision lifecycle">
+        <div className="spine-line" aria-hidden="true" />
+        {workspaceItems.map(([id, coordinate, label, description]) => {
           const active = activeWorkspace === id;
           return (
-            <button
-              key={id}
-              type="button"
-              className={active ? "spine-step is-active" : "spine-step"}
-              aria-current={active ? "page" : undefined}
-              onClick={() => setActiveWorkspace(id)}
-            >
-              <span className="spine-number">{item.number}</span>
-              <Icon size={18} aria-hidden="true" />
-              <span className="spine-copy"><b>{item.label}</b><small>{item.description}</small></span>
-              {id !== "decision" && <ChevronRight className="spine-chevron" size={16} aria-hidden="true" />}
+            <button key={id} className={active ? "spine-step is-active" : "spine-step"} type="button" aria-current={active ? "page" : undefined} onClick={() => setActiveWorkspace(id)}>
+              <span className="step-coordinate">{coordinate}</span>
+              <span className="step-copy"><b>{label}</b><small>{description}</small></span>
             </button>
           );
         })}
       </nav>
 
-      <main className="stage">
+      <main className="stage" id="mainStage">
         {activeWorkspace === "workspace" ? (
-          <section className="workspace-view" aria-labelledby="workspace-title">
-            <header className="view-intro">
-              <div>
-                <p className="section-code">WORKSPACE / EMPTY PROJECT</p>
-                <h1 id="workspace-title">先把问题写清楚，再让系统开始工作。</h1>
-              </div>
-              <p>当前没有 Case。Ludus 不会伪造档案计数、证据、运行状态或结论。</p>
-            </header>
+          <section className="view empty-view is-active" id="view-empty" aria-labelledby="empty-title">
+            <div className="empty-case-shell">
+              <header className="empty-intro">
+                <div className="intro-coordinate"><span>{copy.emptyCoordinate}</span><i /><small>{copy.emptyCoordinateStatus}</small></div>
+                <p className="eyebrow">{copy.emptyEyebrow}</p>
+                <h1 id="empty-title">{copy.emptyTitle.split("\n").map((line, index) => <span key={line}>{index > 0 && <br />}{line}</span>)}</h1>
+                <p>{copy.emptyIntro}</p>
+              </header>
 
-            <div className="empty-workbench">
-              <form className="decision-question" onSubmit={submitDraft}>
-                <div className="form-heading"><span>DECISION QUESTION / DRAFT</span><small>创建后才生成 Case 版本</small></div>
-                <label htmlFor="decision-question">现在最需要看清的取舍是什么？</label>
-                <textarea
-                  id="decision-question"
-                  rows={6}
-                  value={question}
-                  onChange={(event) => setQuestion(event.target.value)}
-                  placeholder="例如：未来 12 个月，我们应该把有限资源投入现有产品增长，还是验证一个新的市场方向？"
-                />
-                <div className="form-actions">
-                  <button type="button" className="secondary-button" onClick={() => setDraftNotice("材料导入将在安全上传合同完成后开放。")}>先导入材料</button>
-                  <button type="submit" className="primary-button"><Plus size={17} />建立决策项目</button>
+              <div className="empty-workbench">
+                <form className={isDrafted ? "empty-case-form is-drafted" : "empty-case-form"} id="emptyCaseForm" onSubmit={submitDraft}>
+                  <div className="empty-form-heading"><span>DECISION QUESTION / DRAFT</span><small>{copy.formSubline}</small></div>
+                  <label htmlFor="emptyQuestion">{copy.formLabel}</label>
+                  <textarea ref={questionInput} id="emptyQuestion" rows={5} value={question} onChange={(event) => { setQuestion(event.target.value); setDraftNotice(""); }} placeholder={copy.formPlaceholder} />
+                  <div className="empty-form-actions">
+                    <button type="button" className="secondary-action" id="importEmptyMaterial" onClick={() => setDraftNotice(copy.emptyImportNotice)}>{copy.importText}</button>
+                    <button type="submit" className="primary-action" id="createEmptyCase"><span>{isDrafted ? copy.draftedTitle : copy.createText}</span><small>{isDrafted ? copy.draftedSubline : copy.createSubline}</small></button>
+                  </div>
+                  <p className="empty-privacy">{copy.formPrivacy}</p>
+                  {draftNotice && <p className="draft-notice" role="status">{draftNotice}</p>}
+                </form>
+
+                <aside className="empty-method" aria-label="New project steps">
+                  <span className="margin-label">{copy.methodLabel}</span>
+                  <ol>
+                    {copy.methodRows.map(([number, title, description]) => <li key={number}><b>{number}</b><div><strong>{title}</strong><p>{description}</p></div></li>)}
+                  </ol>
+                  <div className="empty-method-note"><i /><p>{copy.methodNote}</p></div>
+                </aside>
+              </div>
+
+              <section className="empty-examples" aria-labelledby="emptyExamplesTitle">
+                <header><span id="emptyExamplesTitle">{copy.examplesTitle}</span><small>{copy.examplesSubline}</small></header>
+                <div>
+                  {copy.exampleRows.map(([label, prompt, description]) => <button key={prompt} type="button" onClick={() => chooseExample(prompt)}><b>{label}</b><span>{description}</span></button>)}
                 </div>
-                <p className="privacy-note">项目创建前不会生成证据、模型、报告或正式档案。</p>
-                {draftNotice && <p className="draft-notice" role="status">{draftNotice}</p>}
-              </form>
-
-              <aside className="method-note" aria-label="新项目建立步骤">
-                <p className="section-code">RESPONSIBILITY FIRST</p>
-                <h2>系统先确认责任，再请求计算。</h2>
-                <ol>
-                  <li><span>1</span><div><b>界定问题</b><small>明确选项、时间窗和真正的取舍。</small></div></li>
-                  <li><span>2</span><div><b>确认材料</b><small>区分用户输入、外部来源与未知。</small></div></li>
-                  <li><span>3</span><div><b>授权分析</b><small>由人确认方法、阈值与可接受风险。</small></div></li>
-                </ol>
-                <div className="method-callout"><CheckCircle2 size={18} /><p>没有项目时，Decision Spine 与运行状态都不会伪造显示。</p></div>
-              </aside>
+              </section>
             </div>
-
-            <section className="example-prompts" aria-labelledby="example-title">
-              <div><p className="section-code">STARTING POINTS</p><h2 id="example-title">从一种真实取舍开始</h2></div>
-              <div className="example-grid">
-                {[
-                  ["方向取舍", "继续扩大当前市场，还是转向一个更可验证的细分机会？"],
-                  ["资源承诺", "现在招聘关键岗位，还是延后并先降低交付风险？"],
-                  ["条件决策", "是否接受合作条件；哪些前提失效时必须退出？"],
-                ].map(([title, copy]) => (
-                  <button key={title} type="button" onClick={() => { setQuestion(copy); setDraftNotice(""); }}>
-                    <b>{title}</b><span>{copy}</span><ChevronRight size={17} />
-                  </button>
-                ))}
-              </div>
-            </section>
           </section>
         ) : (
-          <section className="pending-view" aria-labelledby="pending-title">
-            <div className="pending-symbol">
-              {activeWorkspace === "analysis" && <Sparkles size={34} />}
-              {activeWorkspace === "report" && <BookOpenText size={34} />}
-              {activeWorkspace === "sandbox" && <Beaker size={34} />}
-              {activeWorkspace === "decision" && <Scale size={34} />}
-            </div>
-            <p className="section-code">{activeWorkspace.toUpperCase()} / NO CASE</p>
-            <h1 id="pending-title">{workspaces[activeWorkspace].label}工作区尚未获得有效输入。</h1>
-            <p>请先在工作台建立决策项目。系统不会用静态样例冒充本次运行结果。</p>
-            <button type="button" className="text-button" onClick={() => setActiveWorkspace("workspace")}>返回工作台 <ChevronRight size={16} /></button>
+          <section className="view pending-view is-active" aria-labelledby="pending-title">
+            <div className="pending-symbol"><span>{activeItem[1]}</span></div>
+            <p className="eyebrow">{activeItem[1]} / NO CASE</p>
+            <h1 id="pending-title">No case input yet.</h1>
+            <p>Please return to the question entry and create a decision project before opening this workspace.</p>
+            <button type="button" className="text-action" onClick={() => setActiveWorkspace("workspace")}>Back to question entry <span aria-hidden="true">{"\u2192"}</span></button>
           </section>
         )}
       </main>
 
-      <footer className="status-rail">
-        <span><i className="status-dot" /> Gate 0 · baseline bootstrap</span>
-        <span>尚未创建决策项目；静态界面不会伪造分析、报告或签署结果。</span>
-      </footer>
-
       {drawer && (
-        <div className="drawer-backdrop" onMouseDown={(event) => { if (event.currentTarget === event.target) closeDrawer(); }}>
-          <aside className="drawer" role="dialog" aria-modal="true" aria-label={drawer === "project" ? "项目抽屉" : "主题抽屉"}>
-            <header><div><p className="section-code">{drawer === "project" ? "PROJECT ARCHIVE" : "THEME FOLIO"}</p><h2>{drawer === "project" ? "决策项目" : "材料主题"}</h2></div><button type="button" onClick={closeDrawer} aria-label="关闭抽屉"><X size={20} /></button></header>
-            {drawer === "project" ? (
-              <div className="drawer-empty"><FolderOpen size={30} /><h3>还没有决策项目</h3><p>建立第一个问题后，这里才会出现 Case、版本与档案状态。</p><button type="button" className="primary-button" onClick={() => { closeDrawer(); setActiveWorkspace("workspace"); }}><Plus size={17} />建立项目</button></div>
-            ) : (
-              <div className="theme-list" role="listbox" aria-label="选择主题">
-                {themes.map(([id, name, description]) => (
-                  <button key={id} type="button" role="option" aria-selected={theme === id} className={theme === id ? "theme-option is-selected" : "theme-option"} onClick={() => setTheme(id)}>
-                    <span className="theme-swatch" data-preview-theme={id}><i /><i /><i /></span>
-                    <span><b>{name}</b><small>{description}</small></span>
-                    {theme === id && <CheckCircle2 size={18} />}
-                  </button>
-                ))}
+        <aside className={drawer === "theme" ? "drawer theme-drawer is-open" : "drawer case-drawer is-open"} aria-hidden="false" aria-label={drawer === "theme" ? "Theme selection" : "Project selection"}>
+          <button className="drawer-scrim" type="button" aria-label="Close drawer" onClick={closeDrawer} />
+          <section className={drawer === "theme" ? "drawer-sheet theme-sheet" : "drawer-sheet case-sheet"} role="dialog" aria-modal="true">
+            <header>
+              <div>
+                <span>{drawer === "theme" ? "THEME FOLIO" : "DECISION PROJECTS"}</span>
+                <h2>{drawer === "theme" ? copy.themeDrawerTitle : copy.caseDrawerTitle}</h2>
+                <p>{drawer === "theme" ? copy.themeDrawerIntro : copy.caseDrawerIntro}</p>
               </div>
+              <button className="drawer-close" type="button" onClick={closeDrawer} aria-label="Close drawer">{"\u00d7"}</button>
+            </header>
+
+            {drawer === "project" ? (
+              <>
+                <div className="case-list" role="radiogroup" aria-label="Choose project">
+                  <button className="case-choice" type="button" role="radio" aria-checked="true" onClick={() => { setActiveWorkspace("workspace"); closeDrawer(); }}>
+                    <span className="case-glyph empty">{"\uff0b"}</span>
+                    <span><b>{copy.caseEmptyTitle}</b><small>{copy.caseEmptyStatus}</small><em>{copy.caseEmptyDescription}</em></span>
+                  </button>
+                </div>
+                <section className="case-drawer-note"><span>{copy.caseRuleLabel}</span><p>{copy.caseRuleText}</p></section>
+                <footer><button className="secondary-action" type="button" onClick={closeDrawer}>{copy.caseStay}</button><button className="primary-action small" type="button" onClick={closeDrawer}><span>{copy.caseOpen}</span></button></footer>
+              </>
+            ) : (
+              <>
+                <div className="theme-options" role="radiogroup" aria-label="Choose Ludus theme">
+                  {themes.map(([id, name, english, description, paper, key, analysis, unknown]) => {
+                    const previewStyle = { "--preview-paper": paper, "--preview-key": key, "--preview-analysis": analysis, "--preview-unknown": unknown } as CSSProperties;
+                    return (
+                      <button key={id} className="theme-option" type="button" role="radio" aria-checked={theme === id} style={previewStyle} onClick={() => setTheme(id)}>
+                        <span className="theme-preview" aria-hidden="true"><i /><i /><i /><i /></span>
+                        <span><b>{name}</b><small>{english}</small><em>{description}</em></span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <footer><button className="secondary-action" type="button" onClick={() => setTheme("ink")}>{copy.themeReset}</button><button className="primary-action small" type="button" onClick={closeDrawer}><span>{copy.themeApply}</span></button></footer>
+              </>
             )}
-          </aside>
-        </div>
+          </section>
+        </aside>
       )}
     </div>
   );
