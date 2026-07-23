@@ -231,6 +231,21 @@ function isTheme(value: string | null): value is ThemeId {
   return value !== null && themes.some(([id]) => id === value);
 }
 
+const drawerFocusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])"
+].join(",");
+
+function getDrawerFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(drawerFocusableSelector)).filter(
+    (element) => element.getAttribute("aria-hidden") !== "true"
+  );
+}
+
 export function DecisionShell() {
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>("workspace");
   const [theme, setTheme] = useState<ThemeId>("ink");
@@ -242,6 +257,8 @@ export function DecisionShell() {
   const projectTrigger = useRef<HTMLButtonElement>(null);
   const themeTrigger = useRef<HTMLButtonElement>(null);
   const questionInput = useRef<HTMLTextAreaElement>(null);
+  const drawerDialog = useRef<HTMLElement>(null);
+  const drawerTrigger = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     document.body.classList.add("empty-case");
@@ -271,22 +288,67 @@ export function DecisionShell() {
   const currentTheme = useMemo(() => themes.find(([id]) => id === theme) ?? themes[0], [theme]);
   const activeItem = useMemo(() => workspaceItems.find(([id]) => id === activeWorkspace) ?? workspaceItems[0], [activeWorkspace]);
 
+  const openDrawer = useCallback((nextDrawer: Exclude<DrawerId, null>, trigger: HTMLButtonElement) => {
+    drawerTrigger.current = trigger;
+    setDrawer(nextDrawer);
+  }, []);
+
   const closeDrawer = useCallback(() => {
+    if (!drawer) return;
     const closing = drawer;
+    const trigger = drawerTrigger.current;
     setDrawer(null);
     window.setTimeout(() => {
-      if (closing === "project") projectTrigger.current?.focus();
-      if (closing === "theme") themeTrigger.current?.focus();
+      const fallback = closing === "project" ? projectTrigger.current : themeTrigger.current;
+      (trigger?.isConnected ? trigger : fallback)?.focus();
+      drawerTrigger.current = null;
     }, 0);
   }, [drawer]);
 
   useEffect(() => {
     if (!drawer) return;
+    const dialog = drawerDialog.current;
+    if (!dialog) return;
+
+    const focusTimer = window.setTimeout(() => {
+      const [firstFocusable] = getDrawerFocusableElements(dialog);
+      (firstFocusable ?? dialog).focus();
+    }, 0);
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeDrawer();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDrawer();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = getDrawerFocusableElements(dialog);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const focusIsOutside = active === null || !dialog.contains(active);
+
+      if (event.shiftKey && (active === first || focusIsOutside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || focusIsOutside)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [closeDrawer, drawer]);
 
   const submitDraft = (event: FormEvent<HTMLFormElement>) => {
@@ -306,30 +368,33 @@ export function DecisionShell() {
     window.setTimeout(() => questionInput.current?.focus(), 0);
   };
 
+  const drawerTitleId = drawer === "theme" ? "theme-drawer-title" : "project-drawer-title";
+  const drawerDialogId = drawer === "theme" ? "theme-drawer-dialog" : "project-drawer-dialog";
+
   return (
     <div className="app-shell">
-      <header className="masthead">
+      <header className="masthead" inert={drawer !== null}>
         <div className="brand-lockup" aria-label="Ludus">
           <Image className="brand-logo" src="/ludus-logo.svg" alt="Ludus" width={1478} height={406} priority />
         </div>
         <div className="case-title">
           <span>{copy.currentIssue}</span>
-          <button ref={projectTrigger} id="openCaseMenu" type="button" aria-haspopup="dialog" aria-expanded={drawer === "project"} onClick={() => setDrawer("project")}>
+          <button ref={projectTrigger} id="openCaseMenu" type="button" aria-haspopup="dialog" aria-controls="project-drawer-dialog" aria-expanded={drawer === "project"} onClick={(event) => openDrawer("project", event.currentTarget)}>
             <span>{copy.emptyCaseTitle}</span> <i aria-hidden="true">{"\u2304"}</i>
           </button>
         </div>
         <div className="masthead-actions">
           <span className="source-mode is-empty" id="sourceMode"><i /> <span>{copy.emptySource}</span></span>
-          <button className="mobile-case-trigger" id="openMobileCaseMenu" type="button" aria-label="Open project switcher" aria-haspopup="dialog" aria-expanded={drawer === "project"} onClick={() => setDrawer("project")}>{copy.mobileCaseGlyph}</button>
-          <button ref={themeTrigger} className="theme-trigger" id="openThemeDrawer" type="button" aria-label={`Switch theme: ${currentTheme[1]}`} aria-haspopup="dialog" aria-expanded={drawer === "theme"} onClick={() => setDrawer("theme")}>
+          <button className="mobile-case-trigger" id="openMobileCaseMenu" type="button" aria-label="Open project switcher" aria-haspopup="dialog" aria-controls="project-drawer-dialog" aria-expanded={drawer === "project"} onClick={(event) => openDrawer("project", event.currentTarget)}>{copy.mobileCaseGlyph}</button>
+          <button ref={themeTrigger} className="theme-trigger" id="openThemeDrawer" type="button" aria-label={`Switch theme: ${currentTheme[1]}`} aria-haspopup="dialog" aria-controls="theme-drawer-dialog" aria-expanded={drawer === "theme"} onClick={(event) => openDrawer("theme", event.currentTarget)}>
             <span className="theme-trigger-swatch" aria-hidden="true"><i /><i /><i /></span>
             <span className="theme-trigger-label"><small>{copy.themeLabel}</small><b>{currentTheme[1]}</b></span>
           </button>
-          <button className="quiet-action" id="openDossier" type="button" aria-label="Open decision dossier" onClick={() => setDrawer("project")}><span>{copy.dossierLabel}</span><b>?</b></button>
+          <button className="quiet-action" id="openDossier" type="button" aria-label="Open decision dossier" aria-haspopup="dialog" aria-controls="project-drawer-dialog" aria-expanded={drawer === "project"} onClick={(event) => openDrawer("project", event.currentTarget)}><span>{copy.dossierLabel}</span><b>?</b></button>
         </div>
       </header>
 
-      <nav className="decision-spine" aria-label="Decision lifecycle">
+      <nav className="decision-spine" aria-label="Decision lifecycle" inert={drawer !== null}>
         <div className="spine-line" aria-hidden="true" />
         {workspaceItems.map(([id, coordinate, label, description]) => {
           const active = activeWorkspace === id;
@@ -342,7 +407,7 @@ export function DecisionShell() {
         })}
       </nav>
 
-      <main className="stage" id="mainStage">
+      <main className="stage" id="mainStage" inert={drawer !== null}>
         {activeWorkspace === "workspace" ? (
           <section className="view empty-view is-active" id="view-empty" aria-labelledby="empty-title">
             <div className="empty-case-shell">
@@ -395,13 +460,13 @@ export function DecisionShell() {
       </main>
 
       {drawer && (
-        <aside className={drawer === "theme" ? "drawer theme-drawer is-open" : "drawer case-drawer is-open"} aria-hidden="false" aria-label={drawer === "theme" ? "Theme selection" : "Project selection"}>
+        <aside className={drawer === "theme" ? "drawer theme-drawer is-open" : "drawer case-drawer is-open"}>
           <button className="drawer-scrim" type="button" aria-label="Close drawer" onClick={closeDrawer} />
-          <section className={drawer === "theme" ? "drawer-sheet theme-sheet" : "drawer-sheet case-sheet"} role="dialog" aria-modal="true">
+          <section ref={drawerDialog} id={drawerDialogId} className={drawer === "theme" ? "drawer-sheet theme-sheet" : "drawer-sheet case-sheet"} role="dialog" aria-modal="true" aria-labelledby={drawerTitleId} tabIndex={-1}>
             <header>
               <div>
                 <span>{drawer === "theme" ? "THEME FOLIO" : "DECISION PROJECTS"}</span>
-                <h2>{drawer === "theme" ? copy.themeDrawerTitle : copy.caseDrawerTitle}</h2>
+                <h2 id={drawerTitleId}>{drawer === "theme" ? copy.themeDrawerTitle : copy.caseDrawerTitle}</h2>
                 <p>{drawer === "theme" ? copy.themeDrawerIntro : copy.caseDrawerIntro}</p>
               </div>
               <button className="drawer-close" type="button" onClick={closeDrawer} aria-label="Close drawer">{"\u00d7"}</button>

@@ -677,7 +677,7 @@ html.theme-switching .causal-node { transition: color 180ms ease, background-col
 @media (max-width: 900px) {
   .masthead { grid-template-columns: auto minmax(0,1fr) auto; }
   .theme-trigger-label { display: none; }
-  .theme-trigger { width: 38px; padding: 2px; justify-content: center; border-color: transparent; }
+  .theme-trigger { width: 44px; min-width: 44px; height: 44px; padding: 2px; justify-content: center; border-color: transparent; }
   .theme-trigger-swatch { width: 30px; height: 23px; }
 }
 @media (max-width: 620px) {

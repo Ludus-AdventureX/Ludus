@@ -931,3 +931,45 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - The authorized condition for pushing `main` was not met, so live remote-write verification was intentionally deferred.
 - Repair must occur on new owner-specific branches from the latest local `main`: Web UX fixes product source/CSS; QA/Release adds tests without patching product source. Final mainline acceptance and a fresh remote SHA/visibility check are required before a normal non-force push.
 - Secret policy: no credentials are stored in this record.
+
+
+## Archive Look V7 Accessibility Repair - 2026-07-24 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-24 (Asia/Shanghai).
+- Status: completed.
+- Objective: repair the Look V7 modal drawer accessibility contract and mobile touch-target release blockers identified by the independent mainline audit.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/fix-look-v7-accessibility
+- Baseline local main: e65502e2c90783430fb74549270f51555721d5fc
+- Owner: web_ux
+
+## Changes
+
+- Added modal drawer focus management in `apps/web/components/shell/DecisionShell.tsx`: trigger tracking, focus on open, Escape close, Tab/Shift+Tab trap, dialog `aria-labelledby`, and trigger-specific focus return.
+- Added `aria-controls` to drawer triggers and `inert` isolation for masthead, lifecycle nav, and main stage while a drawer is open.
+- Increased Look V7 drawer/mobile controls to meet 44x44 CSS px targets, including mobile case trigger, mobile theme trigger, drawer close, and small drawer primary buttons.
+- Did not add or modify QA-owned test files on this Web UX branch.
+
+## Validation
+
+- `git diff --check`: PASS.
+- `pnpm --dir apps/web typecheck`: PASS.
+- `pnpm --dir apps/web lint`: PASS.
+- `pnpm --dir apps/web build`: PASS; `/` and `/_not-found` statically prerendered.
+- `py -3.12 scripts/snapshot_look.py --check`: PASS (`LOOK_V7_SNAPSHOT_OK`, `LOOK_V7_TOKENS_OK`).
+- Contract drift check: PASS via regenerated OpenAPI/types comparison in `decision-lab-G0\contracts-check-mainline`.
+- Decision OS verifier: PASS, 7/7.
+- Browser production validation at 1440x900, 1024x768, and 390x844: page identity PASS, no Next overlay, console warnings/errors 0, page errors 0, failed requests/responses 0, horizontal overflow 0.
+- Empty submit focus, example prompt fill, draft state, theme selection/query persistence, and project/theme drawer behavior passed.
+- Drawer accessibility: accessible names present, `aria-modal=true`, focus moves inside on open, Tab wraps last-to-first, Shift+Tab wraps first-to-last, background focus stays inside due `inert`, Escape/close returns focus to the actual trigger.
+- Mobile touch targets: `#openMobileCaseMenu` 44x44, `#openThemeDrawer` 44x44, drawer close 44x44; no visible small interactive controls in initial mobile, project drawer, or theme drawer scans.
+- Screenshots saved outside repo: `C:\Users\xiayu\AppData\Local\Temp\ludus-lookfix-desktop.png`, `C:\Users\xiayu\AppData\Local\Temp\ludus-lookfix-mobile.png`.
+
+## Remaining risk
+
+- `pnpm --dir apps/web test` is still expected to fail until the separate QA-owned branch adds real Vitest/Testing Library coverage.
+- No remote push, pull request, or GitHub merge was performed on this branch.
+- Secret policy: no credentials are stored in this record.
