@@ -1,8 +1,13 @@
 """Shared QA fixtures for the Task 3 auth/workspace gate tests.
 
-Fixtures here are implementation-independent: they rely only on the frozen
-canonical models from Task 19A and a migrated PostgreSQL database. Gate tests
-that need the not-yet-delivered auth implementation must importorskip it.
+Two layers:
+
+- DB-layer fixtures (``db_connection``, ``two_tenants``) rely only on the
+  frozen canonical models from Task 19A and run on the baseline.
+- The QA app assembly (``build_qa_app``) mounts the Task 3 routers exactly as
+  the accompanying CONTRACT_CHANGE_REQUEST instructs the Contract Lead to do
+  in ``app.main``. It is imported lazily so this conftest still loads on
+  baselines where ``app.auth`` does not exist yet.
 """
 
 from __future__ import annotations
@@ -10,8 +15,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from uuid import UUID, uuid4
 
+import httpx
 import pytest_asyncio
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
@@ -31,6 +38,9 @@ from app.types import (
     WorkspaceStatus,
 )
 
+QA_PASSWORD = "correct horse battery staple"
+QA_ORIGIN = "http://testserver"
+
 
 @pytest_asyncio.fixture
 async def db_connection() -> AsyncIterator[AsyncConnection]:
@@ -44,6 +54,131 @@ async def db_connection() -> AsyncIterator[AsyncConnection]:
         finally:
             await transaction.rollback()
     await engine.dispose()
+
+
+async def execute_committed(statement) -> None:
+    """Run one statement in its own committed transaction.
+
+    HTTP-level tests need mutations that the API's separate connection can
+    observe, so the rollback-only fixture cannot be used for them.
+    """
+
+    engine = create_async_engine(get_database_url(), pool_pre_ping=True)
+    try:
+        async with engine.begin() as connection:
+            await connection.execute(statement)
+    finally:
+        await engine.dispose()
+
+
+async def fetch_committed(statement):
+    """Read committed state on a throwaway connection."""
+
+    engine = create_async_engine(get_database_url(), pool_pre_ping=True)
+    try:
+        async with engine.connect() as connection:
+            result = await connection.execute(statement)
+            return result.all()
+    finally:
+        await engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# QA app assembly (Task 3 handoff review)
+# ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def build_qa_app():
+    """Assemble auth + tenancy routers with the shared error handlers.
+
+    Mirrors the CONTRACT_CHANGE_REQUEST mounting instructions. A QA-only
+    probe route is attached under ``workspace_router`` (its docstring invites
+    exactly this) so cross-tenant isolation is testable before Task 4
+    resource routers exist.
+    """
+
+    from fastapi import FastAPI
+
+    from app.auth.routes import router as auth_router
+    from app.db import get_session
+    from app.security.envelope import register_error_handlers
+    from app.tenancy.routes import workspace_router
+
+    if not any(
+        getattr(route, "path", "").endswith("/qa-tenancy-probe")
+        for route in workspace_router.routes
+    ):
+
+        @workspace_router.get("/qa-tenancy-probe")
+        async def qa_tenancy_probe() -> dict[str, bool]:
+            return {"reached": True}
+
+    app = FastAPI(title="Ludus QA Task 3 assembly")
+    app.include_router(auth_router)
+    app.include_router(workspace_router)
+    register_error_handlers(app)
+
+    # pytest-asyncio gives every test its own event loop. The product's
+    # module-level engine pools asyncpg connections across loops, which
+    # poisons later tests; the QA harness swaps in a NullPool session per
+    # request so each connection lives and dies inside one loop.
+    async def qa_get_session():
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+        from sqlalchemy.pool import NullPool
+
+        engine = create_async_engine(get_database_url(), poolclass=NullPool)
+        factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        try:
+            async with factory() as session:
+                yield session
+        finally:
+            await engine.dispose()
+
+    app.dependency_overrides[get_session] = qa_get_session
+    return app
+
+
+def qa_client() -> httpx.AsyncClient:
+    """Async client over the assembled app with a same-origin header."""
+
+    return httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=build_qa_app()),
+        base_url=QA_ORIGIN,
+        headers={"Origin": QA_ORIGIN},
+    )
+
+
+async def csrf_headers(client: httpx.AsyncClient) -> dict[str, str]:
+    response = await client.get("/api/auth/csrf")
+    assert response.status_code == 200, "CSRF issuance endpoint must exist (C-01)"
+    token = response.json()["data"]["csrfToken"]
+    assert token
+    return {"X-CSRF-Token": token}
+
+
+async def register_user(
+    client: httpx.AsyncClient,
+    *,
+    email: str | None = None,
+    password: str = QA_PASSWORD,
+) -> tuple[str, dict]:
+    """Register a fresh user; return (email, session envelope data)."""
+
+    email = email or f"qa-{uuid4().hex[:12]}@example.test"
+    headers = await csrf_headers(client)
+    response = await client.post(
+        "/api/auth/register",
+        json={"email": email, "password": password},
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    return email, response.json()["data"]
+
+
+# ---------------------------------------------------------------------------
+# DB-level tenancy fixture (runs on the frozen baseline)
+# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -63,9 +198,9 @@ class TenancyFixture:
 async def seed_two_tenants(connection: AsyncConnection) -> TenancyFixture:
     """Insert two users, two workspaces, one membership + session each.
 
-    User A owns workspace A only; user B owns workspace B only. Capability
-    sets intentionally differ so capability-projection tests can tell them
-    apart: A has the full human set, B lacks ``sign``.
+    Capability sets intentionally differ so projection tests can tell the
+    tenants apart: A's membership stores the full grant list, B's lacks
+    ``sign``.
     """
 
     now = datetime.now(timezone.utc)
@@ -128,7 +263,7 @@ async def seed_two_tenants(connection: AsyncConnection) -> TenancyFixture:
                 "id": member_b,
                 "workspace_id": ws_b,
                 "user_id": user_b,
-                "role": WorkspaceRole.OWNER,
+                "role": WorkspaceRole.MEMBER,
                 "capabilities": [
                     WorkspaceCapability.CONTRIBUTE,
                     WorkspaceCapability.REVIEW,

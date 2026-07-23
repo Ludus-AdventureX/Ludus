@@ -1,13 +1,10 @@
-# Work Log: active
+# Work Log: idle
 
-- Started: 2026-07-24 (Asia/Shanghai).
-- Status: active.
-- Role: QA/Release Owner (Task 3 Auth/Workspace lane, post-CONTRACT_FREEZE parallel phase).
-- Objective: build the independent QA baseline for Task 3 (Authentication and Workspace isolation) before any implementation handoff: QA plan, acceptance matrix, regression baseline, executable gate tests, fixtures, and contract/migration verification preparation.
-- Branch: codex/qa-task-03-auth-workspace (worktree E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-task03-auth-workspace).
-- Base: contract_freeze_sha 239620681f88c525912c2e1d8b23483a5f362a5e (verified live equal to refs/heads/main before branching).
-- Scope: services/api/tests/**, docs/handoffs/**, lifecycle records only. No product source, schema, migration, contract, or apps/web implementation file will be modified; product defects route back to case_api_data per manifest.
-- Constraints: no merge or push of main; no reuse of Task 19A QA branches; implementation review happens only after IMPLEMENTATION_HANDOFF in a clean worktree.
-- Verification so far: baseline pytest suite must stay green with the added skip-until-implemented gate tests before QA_BASELINE_READY is declared.
-- Next: write QA plan + acceptance matrix, shared tenancy fixtures, four manifest gate test files, rerun baseline suite, then archive and report QA_BASELINE_READY.
+- Status: idle after Task 3 QA baseline and candidate review completion.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive QA Task 3 Auth/Workspace Baseline and Candidate Review - 2026-07-24 (Asia/Shanghai)`.
+- Reviewed candidate: codex/task-03-auth-workspace @ aa240f78edf812e6f3b1d98a356dea5c56264e9d (base = frozen main 2396206).
+- IMPLEMENTATION_QA_VERDICT: PASS (P0=0, P1=0; routed P2 findings QA-TASK03-001, QA-TASK03-002).
+- RELEASE_GATE_VERDICT: BLOCKED pending contract_lead CCR execution (mount routers + error handlers in app.main, regenerate contracts, doc-10 error codes, .env.example AUTH_* placeholders); QA re-review required afterwards.
+- QA evidence: docs/handoffs/TASK03_QA_HANDOFF.md; acceptance matrix in docs/handoffs/TASK03_QA_PLAN.md.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.

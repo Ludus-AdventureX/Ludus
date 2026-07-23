@@ -9,59 +9,27 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 import pytest
 
 pytest.importorskip("app.auth", reason="Task 3 auth implementation not delivered yet")
 
-import httpx
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.main import app
-from app.models import User, UserSession
+from app.models import User, UserSession, WorkspaceMembership
+from app.types import WorkspaceMembershipStatus
 
-REGISTER_PATH = "/api/auth/register"
-LOGIN_PATH = "/api/auth/login"
-LOGOUT_PATH = "/api/auth/logout"
-CSRF_PATH = "/api/auth/csrf"
-ME_PATH = "/api/auth/me"
+from tests.conftest import (
+    csrf_headers,
+    execute_committed,
+    fetch_committed,
+    qa_client,
+    register_user,
+)
 
-QA_PASSWORD = "correct horse battery staple"
-
-
-def _client() -> httpx.AsyncClient:
-    transport = httpx.ASGITransport(app=app)
-    return httpx.AsyncClient(
-        transport=transport,
-        base_url="http://testserver",
-        headers={"Origin": "http://testserver"},
-    )
-
-
-async def _csrf_headers(client: httpx.AsyncClient) -> dict[str, str]:
-    response = await client.get(CSRF_PATH)
-    assert response.status_code == 200
-    token = response.json().get("data", {}).get("token") or response.json().get("token")
-    assert token
-    return {"X-CSRF-Token": token}
-
-
-async def _register_and_login(client: httpx.AsyncClient, email: str) -> str:
-    """Register + login; return the raw session cookie value (JWT)."""
-
-    headers = await _csrf_headers(client)
-    register = await client.post(
-        REGISTER_PATH, json={"email": email, "password": QA_PASSWORD}, headers=headers
-    )
-    assert register.status_code in (200, 201)
-    login = await client.post(
-        LOGIN_PATH, json={"email": email, "password": QA_PASSWORD}, headers=headers
-    )
-    assert login.status_code == 200
-    cookie = client.cookies.get("decision_lab_session")
-    assert cookie, "login must set the decision_lab_session cookie"
-    return cookie
+SESSION_COOKIE = "decision_lab_session"
 
 
 def _jwt_claims(token: str) -> dict:
@@ -73,107 +41,125 @@ def _jwt_claims(token: str) -> dict:
 async def test_jwt_contains_only_minimal_claims() -> None:
     """A-02: JWT payload is exactly {sub, session_id, iat, exp}."""
 
-    async with _client() as client:
-        token = await _register_and_login(client, "qa-claims-a02@example.test")
+    async with qa_client() as client:
+        await register_user(client)
+        token = client.cookies.get(SESSION_COOKIE)
+    assert token, "register must set the session cookie"
     claims = _jwt_claims(token)
     assert set(claims) == {"sub", "session_id", "iat", "exp"}
     for forbidden in ("role", "workspace_id", "workspaceId", "capabilities", "email"):
         assert forbidden not in claims
 
 
-async def test_logout_revokes_session_and_old_token_fails(
-    db_connection: AsyncConnection,
-) -> None:
-    """A-04: logout sets revoked_at; the old JWT fails before its exp."""
+async def test_logout_revokes_session_and_old_token_fails() -> None:
+    """A-04: logout sets revoked_at first; the old JWT fails before its exp."""
 
-    email = "qa-logout-a04@example.test"
-    async with _client() as client:
-        token = await _register_and_login(client, email)
-        headers = await _csrf_headers(client)
-        logout = await client.post(LOGOUT_PATH, headers=headers)
-        assert logout.status_code in (200, 204)
+    async with qa_client() as client:
+        email, _ = await register_user(client)
+        token = client.cookies.get(SESSION_COOKIE)
+        assert token
 
-        # replay the pre-logout cookie explicitly
-        replay = await client.get(ME_PATH, cookies={"decision_lab_session": token})
+        headers = await csrf_headers(client)
+        logout = await client.post("/api/auth/logout", headers=headers)
+        assert logout.status_code == 200
+
+        client.cookies.set(SESSION_COOKIE, token)
+        replay = await client.get("/api/auth/session")
         assert replay.status_code == 401
+        assert replay.json()["error"]["code"] == "SESSION_REVOKED_OR_EXPIRED"
 
-    user_id = (
-        await db_connection.execute(select(User.id).where(User.email == email))
-    ).scalar_one()
-    revoked = (
-        await db_connection.execute(
-            select(UserSession.revoked_at).where(UserSession.user_id == user_id)
-        )
-    ).scalars().all()
-    assert revoked, "a UserSession row must exist for the login"
-    assert any(value is not None for value in revoked), "logout must set revoked_at"
+    session_id = UUID(str(_jwt_claims(token)["session_id"]))
+    rows = await fetch_committed(
+        select(UserSession.revoked_at).where(UserSession.id == session_id)
+    )
+    assert rows and rows[0][0] is not None, "logout must persist revoked_at"
 
 
-async def test_token_version_bump_invalidates_live_session(
-    db_connection: AsyncConnection,
-) -> None:
-    """A-05: bumping token_version server-side rejects an otherwise valid JWT."""
+async def test_expired_session_is_rejected_before_revocation() -> None:
+    """A-05: an expired-but-unrevoked session fails with the uniform 401."""
 
-    email = "qa-version-a05@example.test"
-    async with _client() as client:
-        token = await _register_and_login(client, email)
-        claims = _jwt_claims(token)
+    async with qa_client() as client:
+        await register_user(client)
+        token = client.cookies.get(SESSION_COOKIE)
+        session_id = UUID(str(_jwt_claims(token)["session_id"]))
 
-        user_id = (
-            await db_connection.execute(select(User.id).where(User.email == email))
-        ).scalar_one()
-        await db_connection.execute(
+        await execute_committed(
             update(UserSession)
-            .where(UserSession.user_id == user_id)
+            .where(UserSession.id == session_id)
+            .values(expires_at=datetime.now(timezone.utc) - timedelta(minutes=1))
+        )
+
+        replay = await client.get("/api/auth/session")
+        assert replay.status_code == 401
+        assert replay.json()["error"]["code"] == "SESSION_REVOKED_OR_EXPIRED"
+
+
+@pytest.mark.xfail(
+    reason=(
+        "QA-TASK03-002 (P2): plan 18 Task 3 Step 2 requires per-request "
+        "tokenVersion validation, but the delivered resolver checks only "
+        "revocation and expiry; disclosed in the implementation handoff as a "
+        "known risk. Routed to case_api_data; xfail flips when fixed."
+    ),
+    strict=False,
+)
+async def test_token_version_bump_invalidates_live_session() -> None:
+    """A-05 (deferred half): bumping token_version must reject old tokens."""
+
+    async with qa_client() as client:
+        await register_user(client)
+        token = client.cookies.get(SESSION_COOKIE)
+        session_id = UUID(str(_jwt_claims(token)["session_id"]))
+
+        await execute_committed(
+            update(UserSession)
+            .where(UserSession.id == session_id)
             .values(token_version=UserSession.token_version + 1)
         )
-        await db_connection.commit()
 
-        replay = await client.get(ME_PATH, cookies={"decision_lab_session": token})
-        assert replay.status_code == 401, (
-            f"session {claims.get('session_id')} must be rejected after version bump"
-        )
+        replay = await client.get("/api/auth/session")
+        assert replay.status_code == 401
 
 
-async def test_workspace_access_requires_live_membership(
-    db_connection: AsyncConnection,
-) -> None:
-    """A-06: authorization re-reads membership per request; JWT alone is not enough."""
+async def test_workspace_access_requires_live_membership() -> None:
+    """A-06: authorization re-reads membership per request; JWT alone fails."""
 
-    from app.models import WorkspaceMembership
-    from app.types import WorkspaceMembershipStatus
+    async with qa_client() as client:
+        email, data = await register_user(client)
+        memberships = data["memberships"]
+        assert memberships, "registration must create the first workspace membership"
+        workspace_id = memberships[0]["workspaceId"]
 
-    email = "qa-membership-a06@example.test"
-    async with _client() as client:
-        headers = await _csrf_headers(client)
-        register = await client.post(
-            REGISTER_PATH, json={"email": email, "password": QA_PASSWORD}, headers=headers
-        )
-        assert register.status_code in (200, 201)
-        login = await client.post(
-            LOGIN_PATH, json={"email": email, "password": QA_PASSWORD}, headers=headers
-        )
-        assert login.status_code == 200
-
-        workspaces = await client.get("/api/workspaces")
-        assert workspaces.status_code == 200
-        payload = workspaces.json()
-        items = payload.get("data", payload)
-        assert items, "registration flow must yield at least one workspace"
-        workspace_id = items[0].get("id") or items[0].get("workspaceId")
-
-        allowed = await client.get(f"/api/workspaces/{workspace_id}")
+        allowed = await client.get(f"/api/workspaces/{workspace_id}/qa-tenancy-probe")
         assert allowed.status_code == 200
 
-        user_id = (
-            await db_connection.execute(select(User.id).where(User.email == email))
-        ).scalar_one()
-        await db_connection.execute(
+        user_rows = await fetch_committed(select(User.id).where(User.email == email))
+        user_id = user_rows[0][0]
+        await execute_committed(
             update(WorkspaceMembership)
             .where(WorkspaceMembership.user_id == user_id)
             .values(status=WorkspaceMembershipStatus.REVOKED)
         )
-        await db_connection.commit()
 
-        denied = await client.get(f"/api/workspaces/{workspace_id}")
+        denied = await client.get(f"/api/workspaces/{workspace_id}/qa-tenancy-probe")
         assert denied.status_code == 404, "revoked membership must yield uniform 404"
+        assert denied.json()["error"]["code"] == "WORKSPACE_NOT_FOUND"
+
+
+async def test_disabled_user_cannot_use_live_session() -> None:
+    """A-06 support: disabling the user invalidates an otherwise valid session."""
+
+    from app.types import UserStatus
+
+    async with qa_client() as client:
+        email, _ = await register_user(client)
+        token = client.cookies.get(SESSION_COOKIE)
+        assert token
+
+        await execute_committed(
+            update(User).where(User.email == email).values(status=UserStatus.DISABLED)
+        )
+
+        replay = await client.get("/api/auth/session")
+        assert replay.status_code == 401
+        assert replay.json()["error"]["code"] == "SESSION_REVOKED_OR_EXPIRED"

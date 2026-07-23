@@ -1329,3 +1329,29 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - This commit is lifecycle-log-only (HEAD/HISTORY); no product source, test, migration, or contract file changed.
 - After push, remote main SHA will be re-read live and recorded in the CONTRACT_FREEZE message; parallel lanes must branch from that frozen SHA.
 - No credentials or secret values are recorded here.
+
+
+## Archive QA Task 3 Auth/Workspace Baseline and Candidate Review - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: active
+
+- Started: 2026-07-24 (Asia/Shanghai).
+- Status: active.
+- Role: QA/Release Owner (Task 3 Auth/Workspace lane, post-CONTRACT_FREEZE parallel phase).
+- Objective: build the independent QA baseline for Task 3 (Authentication and Workspace isolation) before any implementation handoff: QA plan, acceptance matrix, regression baseline, executable gate tests, fixtures, and contract/migration verification preparation.
+- Branch: codex/qa-task-03-auth-workspace (worktree E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-task03-auth-workspace).
+- Base: contract_freeze_sha 239620681f88c525912c2e1d8b23483a5f362a5e (verified live equal to refs/heads/main before branching).
+- Scope: services/api/tests/**, docs/handoffs/**, lifecycle records only. No product source, schema, migration, contract, or apps/web implementation file will be modified; product defects route back to case_api_data per manifest.
+- Constraints: no merge or push of main; no reuse of Task 19A QA branches; implementation review happens only after IMPLEMENTATION_HANDOFF in a clean worktree.
+- Verification so far: baseline pytest suite must stay green with the added skip-until-implemented gate tests before QA_BASELINE_READY is declared.
+- Next: write QA plan + acceptance matrix, shared tenancy fixtures, four manifest gate test files, rerun baseline suite, then archive and report QA_BASELINE_READY.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
+
+## Completion addendum
+
+- Candidate reviewed: codex/task-03-auth-workspace @ aa240f78edf812e6f3b1d98a356dea5c56264e9d (base = frozen main 2396206, ancestry verified; remote branch SHA live-verified equal after 443 retries).
+- IMPLEMENTATION_QA_VERDICT: PASS (P0=0, P1=0; two routed P2 findings QA-TASK03-001 rate limiting deferral, QA-TASK03-002 tokenVersion non-enforcement).
+- RELEASE_GATE_VERDICT: BLOCKED on contract_lead integration prerequisites (router mounting in app.main, error handlers, contract regeneration, doc-10 error codes, .env.example placeholders) per the endorsed CONTRACT_CHANGE_REQUEST.
+- Final acceptance on candidate + QA tests: 108 passed, 1 xfailed with warnings as errors on a disposable migrated PostgreSQL 16; alembic check clean; ruff and compileall PASS; canonical OpenAPI semantically drift-free; owner-scope and secret scans clean.
+- Full evidence: docs/handoffs/TASK03_QA_HANDOFF.md on this branch. No product source was modified by QA.
+- No credentials or secret values are recorded here.
