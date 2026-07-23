@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Archive,
   Beaker,
@@ -152,12 +153,15 @@ export function DecisionShell() {
   return (
     <div className="app-shell">
       <header className="masthead">
-        <div className="brand-lockup" aria-label="Ludus">
-          <span className="brand-mark">L</span>
-          <div>
-            <strong>LUDUS</strong>
-            <small>DECISION OPERATING SYSTEM</small>
-          </div>
+        <div className="brand-lockup">
+          <Image
+            className="brand-logo"
+            src="/ludus-logo.svg"
+            alt="Ludus"
+            width={1478}
+            height={406}
+            priority
+          />
         </div>
 
         <div className="masthead-context">
