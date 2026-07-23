@@ -4,6 +4,7 @@
 - Last archived: 2026-07-24 (Asia/Shanghai).
 - Last archive entry: `Archive Task 3 Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)`.
 - Candidate: codex/task-03-contract-integration (implementation aa240f7 merged unmodified + CCR-20260724-005 executed); full contract-lead acceptance PASS; NOT merged to main.
+- Remote status: BLOCKED - four push attempts for codex/task-03-contract-integration failed with GitHub port 443 connection errors (last attempt also broke ls-remote); no upload is claimed; local tip f6d211b is intact; retry and live SHA verification required once the network recovers.
 - Gate condition: main merge requires Task 3 QA RELEASE_GATE_VERDICT: PASS on this combined HEAD.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
