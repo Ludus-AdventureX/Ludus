@@ -1,20 +1,9 @@
-# Work Log: in_progress
+# Work Log: idle
 
-- Started: 2026-07-23 (Asia/Shanghai).
-- Status: in_progress (implementation and visual verification pending).
-- Objective: replace the visible Ludus masthead text lockup with the user-provided `Logo.svg`, preserve the accessible brand name, and verify desktop and mobile rendering before merge approval.
+- Status: idle.
+- Last archived: 2026-07-23 (Asia/Shanghai).
+- Last archive entry: `Archive Ludus Look V7 Frontend and Transparent Logo - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Branch: codex/replace-ludus-wordmark
-- Base: main at cf9e093651d67784ecbd8a9de55632ccbca807f8
-- Authorized write scope: `apps/web/public/ludus-logo.svg`, `apps/web/components/shell/DecisionShell.tsx`, `apps/web/app/globals.css`, and lifecycle records `HEAD`/append-only `HISTORY`.
-- Constraint: this branch remains unmerged until the product owner approves the rendered screenshots.
-- Validation plan: web typecheck, lint, focused tests/build as available, and browser screenshots at 1440x900 and 390x844.
+- Branch policy: do not reuse `codex/replace-ludus-wordmark` for additional implementation after integration.
+- Next step: Mainline Audit/Integration may merge the fixed feature SHA after fresh remote-main verification and equivalent local acceptance.
 - Secret policy: no credentials are stored in this file.
-
-## Progress — 2026-07-23
-
-- Copied the user-provided `E:\Temp\xiayu\Documents\adventure-x\Logo.svg` byte-for-byte to `apps/web/public/ludus-logo.svg`; SHA-256 matched the source.
-- Replaced the masthead's L tile + `LUDUS` text lockup with the SVG via `next/image`; retained accessible `alt="Ludus"` and responsive height limits of 40px desktop / 32px mobile.
-- Validation: `pnpm --dir apps/web typecheck` PASS; `pnpm --dir apps/web lint` PASS; direct `next build` PASS. `pnpm --dir apps/web test` has no test files and exits 1 by project configuration. Turbopack build was not used because the dependency junction required for this isolated worktree is rejected by Turbopack; direct Next build completed successfully.
-- Browser verification: Chrome loaded the page with HTTP 200 and the SVG at natural size 1478x406; rendered logo 145.61x40px at 1440x900 and 116.48x32px at 390x844; no horizontal overflow; masthead heights 72px / 64px.
-- Pending: product owner visual confirmation before merging this branch into `main`.

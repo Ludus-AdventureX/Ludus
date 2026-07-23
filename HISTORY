@@ -800,3 +800,26 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - No force push, GitHub branch merge, history rewrite, product code modification, or credential publication was performed by this release-sync task.
 
 - Secret policy: no credentials are stored in this file.
+## Archive Ludus Look V7 Frontend and Transparent Logo - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: replace the visible Ludus masthead wordmark with the product-owner supplied SVG, align the empty workspace with the current `look` V7 static prototype, and remove the SVG canvas background while preserving the requested mark.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/replace-ludus-wordmark
+- Base: main at cf9e093651d67784ecbd8a9de55632ccbca807f8
+- Final implementation commits: 225aea4, 62b1a03, 0315053.
+- Changed implementation scope: `apps/web/public/ludus-logo.svg`, `apps/web/components/shell/DecisionShell.tsx`, `apps/web/app/globals.css`, `apps/web/app/look-styles.css`, and `apps/web/app/look-themes.css`.
+- Completed: replaced the prior text lockup with the supplied Ludus SVG through `next/image`; retained accessible `alt="Ludus"` and responsive 40px desktop / 32px mobile sizing.
+- Completed: rebuilt the no-Case landing workspace against the current `look/index.html`, `look/styles.css`, and `look/themes.css` V7 reference, including masthead, empty-project composition, editorial typography, decision-entry form, responsibility steps, examples, project drawer, and ten-theme drawer.
+- Completed: copied the current Look V7 style and theme sheets byte-for-byte into the web app at implementation time; their SHA-256 values matched the source files during verification.
+- Completed: removed only the SVG's full-canvas `#FDFDFD` background path from the web copy. The source `E:\Temp\xiayu\Documents\adventure-x\Logo.svg` remained unchanged; rendered corner alpha changed from 255 to 0.
+- Browser verification: desktop 1440x900 and mobile 390x844 passed with zero horizontal overflow; SVG loaded with HTTP 200 at natural size 1478x406; rendered size was 145.61x40px desktop and 116.48x32px mobile; console errors and failed requests were zero.
+- Interaction verification: empty submission focus/notice, example-question fill, drafted state, theme and project drawer open/ESC close/focus return all passed.
+- Static verification: `pnpm --dir apps/web typecheck` PASS; `pnpm --dir apps/web lint` PASS; direct Next.js production build PASS with `/` statically prerendered. `pnpm --dir apps/web test` has no test files and exits 1 by repository configuration.
+- Known environment limitation: the isolated worktree dependency junction is rejected by Turbopack; the standard Next.js production build completed successfully using the repository's installed Next binary.
+- Approval: the product owner reviewed the corrected Look V7 and transparent-logo screenshots and explicitly requested branch merge on 2026-07-23.
+- Remaining risk: this implementation presents the Look V7 empty-project state because no real Case data is connected in the current web slice; deeper Decision OS screens remain outside this change.
+- Secret policy: no credentials are stored in this record.
