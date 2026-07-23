@@ -1329,3 +1329,53 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - This commit is lifecycle-log-only (HEAD/HISTORY); no product source, test, migration, or contract file changed.
 - After push, remote main SHA will be re-read live and recorded in the CONTRACT_FREEZE message; parallel lanes must branch from that frozen SHA.
 - No credentials or secret values are recorded here.
+
+# Archive: Web/UX Task 11 Slice - Generated API Client + Session/Connectivity Bootstrap - 2026-07-24 (Asia/Shanghai)
+
+- role: Web / UX Owner
+- objective: Deliver the current-phase Web/UX minimal vertical slice on the frozen contract baseline. Because the backend business API surface is not implemented yet (generated client exposes only /health), the slice establishes the generated API client foundation, a TanStack Query provider, CSRF/credentials plumbing, and a real /health-driven session/connectivity bootstrap that wraps the existing Look V7 shell without regressing QA-owned tests.
+- base_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e (CONTRACT_FREEZE_SHA; verified present locally; local main == cached origin/main == freeze SHA; ab5fd33 is an ancestor => Task 19A merged)
+- branch: codex/task-11-web-analysis-shell
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-web-ux-48h
+
+- changed_paths (all within Web/UX owner scope):
+  - apps/web/lib/api/client.ts (new) - openapi-fetch typed client over @decision-lab/contracts paths; credentials include; CSRF double-submit middleware; ApiError.
+  - apps/web/lib/api/schemas.ts (new) - pure re-export aliases of generated canonical schemas.
+  - apps/web/lib/api/health.ts (new) - typed GET /health + query options (only real endpoint today).
+  - apps/web/lib/api/query-client.ts (new) - TanStack QueryClient factory.
+  - apps/web/lib/api/index.ts (new) - single public entry point for the client layer.
+  - apps/web/app/providers.tsx (new) - client-side QueryClientProvider boundary.
+  - apps/web/components/shell/SessionBootstrap.tsx (new) - honest connectivity strip wrapping the shell.
+  - apps/web/app/layout.tsx (mod) - mount Providers.
+  - apps/web/app/page.tsx (mod) - wrap DecisionShell with SessionBootstrap.
+  - apps/web/app/globals.css (mod) - connectivity strip styles using centralized semantic tokens only.
+  - apps/web/package.json (mod) - add "@decision-lab/contracts": "workspace:*" dependency.
+  - pnpm-lock.yaml (mod, +47) - lockfile sync for the new workspace dependency link (pnpm 9.14.4).
+  - HEAD / HISTORY - this lifecycle record.
+
+- verification (all re-run on this change):
+  - pnpm install (authorized): PASS - 460 pkgs, fully reused from local store, downloaded 0.
+  - pnpm --dir apps/web run typecheck: PASS.
+  - pnpm --dir apps/web lint: PASS.
+  - pnpm --dir apps/web test (QA-owned, run-only): PASS - 5/5, no DecisionShell regression.
+  - pnpm --dir apps/web build: PASS - compiled + type-checked + 5/5 static pages.
+  - py -3.12 scripts/snapshot_look.py --check: PASS - LOOK_V7_SNAPSHOT_OK + LOOK_V7_TOKENS_OK.
+  - git diff --check: clean.
+  - UI check (dev server :4011, backend down): PASS - real offline strip; shell + empty view render honestly.
+
+- key_decisions:
+  - Did NOT inject data hooks into DecisionShell.tsx; used a SessionBootstrap wrapper so QA-owned shell tests keep rendering DecisionShell without a QueryClientProvider. Confirmed green.
+  - Consumed generated client only; no hand-written parallel DTO. Feature code imports @/lib/api, never @decision-lab/contracts directly.
+  - No optimistic/fabricated business state; empty and offline states are truthful.
+
+- failures: none.
+- skipped: backend online connectivity path (no running API this session) - covered by typecheck + code review; handed to QA for live-integration verification.
+
+- contract_change_requested: NO (no field/status/API/migration invented).
+- integration_questions_for_owners:
+  - Case/API/Data: canonical CSRF cookie + header names; auth/session bootstrap route + response shape.
+  - Case/API/Data: canonical success/error envelope schema (ApiError.body currently unknown).
+  - Contract Lead: whether/when auth/session/case/charter/run/sse routes enter the generated contract.
+
+- remote_state: BLOCKED - github.com 443 connection timed out; push + git ls-remote not performed. Must not claim upload/PR/merge. Local branch commit is the recoverable state.
+- secret_policy: no credentials or secret values recorded here.

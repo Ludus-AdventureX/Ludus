@@ -1,5 +1,10 @@
 import { DecisionShell } from "@/components/shell/DecisionShell";
+import { SessionBootstrap } from "@/components/shell/SessionBootstrap";
 
 export default function Home() {
-  return <DecisionShell />;
+  return (
+    <SessionBootstrap>
+      <DecisionShell />
+    </SessionBootstrap>
+  );
 }

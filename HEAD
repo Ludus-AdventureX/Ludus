@@ -1,10 +1,85 @@
-# Work Log: idle
+# Work Log: completed
 
-- Status: idle after Task 19A mainline gate r3 re-audit and lifecycle log repair.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 19A Mainline Gate r3 Re-Audit and Lifecycle Log Repair - 2026-07-24 (Asia/Shanghai)`.
-- Task 19A status: published on main and remote-verified; mainline acceptance fully re-run on the main worktree with all gates PASS (P0=0/P1=0).
-- Lifecycle log repair: HISTORY restored from UTF-16LE binary blob to UTF-8 text with zero record loss; the missing implementation disclosure archive from 923a6ec was appended; no record was overwritten or discarded.
-- Contract freeze: issued from this commit; parallel lanes must branch from the frozen main SHA recorded in the freeze message and must not modify product code from stale bases.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Web / UX Owner
+- status: completed
+- objective: >
+    Deliver the Web/UX minimal vertical slice for the 48h Narrow Prototype on top of the
+    frozen contract baseline. Because the backend business API surface is not yet implemented
+    (only /health is exposed by the generated client), the slice establishes the generated
+    API client foundation (openapi-fetch over @decision-lab/contracts paths), a TanStack Query
+    provider, CSRF/credentials plumbing, and a real /health-driven session/connectivity
+    bootstrap layer that wraps the existing Look V7 shell without regressing QA-owned tests.
+    Every missing endpoint (Auth/Session/Case/Charter/Run/SSE) is recorded as an
+    INTEGRATION_QUESTION and routed to the owning lane; no unstable interface is assumed.
+
+- base_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e
+- branch: codex/task-11-web-analysis-shell
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-web-ux-48h
+
+- write_scope:
+    - apps/web/lib/api/**
+    - apps/web/components/shell/**
+    - apps/web/components/workspace/**
+    - apps/web/app/providers.tsx
+    - apps/web/app/layout.tsx
+    - apps/web/app/page.tsx
+    - apps/web/package.json (add @decision-lab/contracts workspace dependency only)
+    - design/** (only if snapshot mapping needs an update; none expected this slice)
+    - Web/UX HEAD / HISTORY (this branch)
+
+- forbidden_scope:
+    - apps/web/components/simulation/**
+    - apps/web/tests/**            # QA-owned
+    - apps/web/**/*.test.ts        # QA-owned
+    - apps/web/**/*.test.tsx       # QA-owned
+    - apps/web/playwright.config.ts
+    - services/api/**
+    - packages/contracts/**        # generated + Contract Lead owned
+    - look/**
+
+- dependencies:
+    - task-01w (Look V7 shell + design snapshot) — DONE on baseline
+    - task-19a (canonical contract types) — MERGED into main baseline
+    - Backend routes for auth/session/case/charter/run/sse — NOT YET IMPLEMENTED (only /health)
+
+- acceptance_commands:
+    - pnpm --dir apps/web build
+    - pnpm --dir apps/web run typecheck
+    - pnpm --dir apps/web lint
+    - pnpm --dir apps/web test          # QA-owned tests; run-only, must stay green (no regression)
+    - py -3.12 scripts/snapshot_look.py --check
+
+- known_initial_risks:
+    - Fresh worktree has empty apps/web/node_modules; build/test require an authorized `pnpm install`.
+    - Generated client exposes only /health; real business flows cannot be wired until routes land.
+    - Must not inject useQuery into DecisionShell.tsx: QA tests render it without a QueryClientProvider.
+    - Owner-scope forbids writing QA-owned *.test.tsx; new-component test needs are handed to QA.
+    - Remote verification (git ls-remote) is BLOCKED: github.com 443 connection timed out.
+
+- secret_policy: >
+    Do not read, print, log or commit tokens, cookies, private keys, Credential Manager
+    contents, DB passwords or .env contents. CSRF/token handling is code-level plumbing only;
+    no secret values are recorded here.
+
+- verification_results:
+    - `pnpm install` (authorized): PASS — 460 packages, all reused from local store, downloaded 0 (no network).
+    - `pnpm --dir apps/web run typecheck`: PASS (after fixing openapi-fetch never-narrowing in health.ts).
+    - `pnpm --dir apps/web lint`: PASS — clean.
+    - `pnpm --dir apps/web test` (QA-owned, run-only): PASS — 5/5 DecisionShell tests green, no regression.
+    - `pnpm --dir apps/web build`: PASS — compiled, type-checked, 5/5 static pages generated.
+    - `py -3.12 scripts/snapshot_look.py --check`: PASS — LOOK_V7_SNAPSHOT_OK + LOOK_V7_TOKENS_OK.
+    - UI check (dev server :4011, backend down): PASS — connectivity strip renders honest
+      "后端未连接" offline state; Look V7 shell + empty view render with no fabricated counters.
+      Screenshot: output/web-ux-offline-shell.png (outside worktree, not committed).
+
+- unverified_and_risks:
+    - Backend "online" connectivity path not exercised end-to-end (no running API); logic covered
+      by typecheck + code review only. QA should verify against a live /health in integration.
+    - CSRF cookie/header names (ludus_csrf / X-CSRF-Token) are assumed defaults, centralised in
+      lib/api/client.ts; canonical names are an open INTEGRATION_QUESTION for Case/API/Data.
+    - Error-envelope shape left as unknown (ApiError.body); not assumed until contract defines it.
+    - All business endpoints (auth/session/case/charter/run/sse) absent from generated client;
+      no business UI wired this slice — recorded as INTEGRATION_QUESTIONs in the handoff.
+    - Remote push verification BLOCKED: github.com 443 connection timed out during this session.
+    - pnpm-lock.yaml gained +47 lines from the new workspace dependency link; disclosed in commit.
