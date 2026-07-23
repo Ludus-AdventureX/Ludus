@@ -1,12 +1,28 @@
-# Work Log: idle
+# Work Log: in_progress
 
-- Status: idle.
-- Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Task 19A Canonical Contract Implementation - 2026-07-23 (Asia/Shanghai)`.
+- Started: 2026-07-23 (Asia/Shanghai).
+- Status: in_progress (independent QA compatibility and regression coverage pending).
+- Objective: update QA-owned tests for the stacked Task 19A canonical contract implementation, add focused regressions for the repaired shapes and persistence invariants, and provide a merge approval without modifying product source.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Current branch: codex/task-19a-canonical-contracts
-- State: Contract Lead implementation is owner-clean; final merge approval is pending an independent stacked QA branch because the Task 2 exact-table assertion must be updated by QA/Release.
-- Next work: commit and push this branch, then create `codex/qa-task-19a-canonical-contracts` from its tip and write a new active HEAD before changing tests.
-- Required merge order: `codex/task-19a-canonical-contracts`, then `codex/qa-task-19a-canonical-contracts`; do not merge automatically.
-- Constraint: the QA branch may change `services/api/tests/**` and lifecycle records only; product-source defects must return to the Contract Lead branch.
+- Branch: codex/qa-task-19a-canonical-contracts
+- Base implementation commit: 336956eeafaf0c32307b3b121bf27d7ed248b648
+- Underlying synchronized main: cf9e093651d67784ecbd8a9de55632ccbca807f8
+- Owner: qa_release
+- Stack order: `codex/task-19a-canonical-contracts`, then this QA branch.
+- Remote note: the implementation branch commit exists locally; its first push is pending because GitHub HTTPS connectivity is intermittent.
+
+## Authorized write scope
+
+- `services/api/tests/**`
+- Lifecycle records: `HEAD` and append-only `HISTORY`.
+- No product-source, schema, model, migration, generated-contract, manifest, or documentation changes are authorized on this QA branch.
+
+## QA plan
+
+- Update the Task 2 exact-table expectation to include the five authorized Task 19A tables without weakening tenant-scope assertions.
+- Add Pydantic regression coverage for required Source discriminators, pre-run/run-frozen separation, SystemRecommendation abstain semantics, the exact 18-field SignoffPayload, 06/26 DeepAnalysis I/O, sensitive response-field exclusion, and Simulation replay fields.
+- Add PostgreSQL regression coverage for Source scope checks, same-Workspace cross-Case Run/Source rejection, replay numeric constraints, and canonical table/column presence.
+- Run the manifest tests, all API/model/method tests with warnings as errors, migration upgrade/downgrade/re-upgrade, Alembic drift, contract drift, Decision OS verifier, Ruff, compileall, scope audit, append-only lifecycle audit, and secret scan.
+- Review the combined implementation + QA stack and issue an explicit `can merge` / `cannot merge` conclusion; do not merge automatically.
+
 - Secret policy: no credentials are stored in this file.
