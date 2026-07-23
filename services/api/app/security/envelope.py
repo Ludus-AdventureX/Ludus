@@ -11,6 +11,7 @@ Contract Lead when the routers are mounted.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -73,6 +74,43 @@ def session_rejected() -> ApiFailure:
     )
 
 
+def _sanitize_validation_errors(errors: Sequence[Any]) -> list[dict[str, Any]]:
+    """Project Pydantic error dicts onto the envelope contract fields.
+
+    On the locked stack ``RequestValidationError.errors()`` accepts no keyword
+    arguments, so ``url``/``input`` cannot be suppressed at the source and are
+    stripped here instead: ``input`` may echo submitted values (passwords
+    included) and ``url`` is documentation noise. Only ``type``/``loc``/``msg``
+    and JSON-scalar ``ctx`` entries survive; non-scalar ctx values (for
+    example the wrapped exception of ``json_invalid``) are dropped rather than
+    stringified because their reprs can embed raw input fragments.
+    """
+
+    sanitized: list[dict[str, Any]] = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        entry: dict[str, Any] = {
+            "type": str(error.get("type", "value_error")),
+            "loc": [
+                part if isinstance(part, (str, int)) else str(part)
+                for part in error.get("loc", ())
+            ],
+            "msg": str(error.get("msg", "Invalid value.")),
+        }
+        ctx = error.get("ctx")
+        if isinstance(ctx, dict):
+            safe_ctx = {
+                key: value
+                for key, value in ctx.items()
+                if value is None or isinstance(value, (str, int, float, bool))
+            }
+            if safe_ctx:
+                entry["ctx"] = safe_ctx
+        sanitized.append(entry)
+    return sanitized
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Attach envelope-shaped handlers; called from app assembly."""
 
@@ -88,6 +126,6 @@ def register_error_handlers(app: FastAPI) -> None:
             "VALIDATION_FAILED",
             "Request body or parameters failed validation.",
             http_status=422,
-            details={"errors": exc.errors(include_url=False, include_input=False)},
+            details={"errors": _sanitize_validation_errors(exc.errors())},
         )
         return JSONResponse(status_code=failure.http_status, content=failure_body(failure))
