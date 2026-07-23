@@ -1,10 +1,52 @@
-# Work Log: idle
+# Work Log: in_progress
 
-- Status: idle after Task 19A mainline gate r3 re-audit and lifecycle log repair.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 19A Mainline Gate r3 Re-Audit and Lifecycle Log Repair - 2026-07-24 (Asia/Shanghai)`.
-- Task 19A status: published on main and remote-verified; mainline acceptance fully re-run on the main worktree with all gates PASS (P0=0/P1=0).
-- Lifecycle log repair: HISTORY restored from UTF-16LE binary blob to UTF-8 text with zero record loss; the missing implementation disclosure archive from 923a6ec was appended; no record was overwritten or discarded.
-- Contract freeze: issued from this commit; parallel lanes must branch from the frozen main SHA recorded in the freeze message and must not modify product code from stale bases.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Ways / Agent Pipeline Coordinator
+- status: in_progress
+- objective: >
+    Build the minimal runnable Ways/Agent-Pipeline runtime skeleton (Task 7 seam:
+    model provider abstraction, tool registry, budgets, run/tool context isolation,
+    worker runner with structured-output + empty-content handling) and define the
+    stable input/output/error/version/acceptance contract for the five strategic
+    lenses, then dispatch five non-overlapping LENS_ASSIGNMENT packages to lane
+    conversations 7-11 (one lens each). Only the runtime skeleton and lens seam are
+    implemented in this branch; concrete per-lens behavior/prompt/fixtures are owned
+    by the five lens specialists and later integrated on a dedicated Ways
+    integration branch.
+- base_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e
+- contract_freeze_sha: 239620681f88c525912c2e1d8b23483a5f362a5e
+- branch: codex/task-07-agent-runtime
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-runtime-48h
+- write_scope:
+    - services/api/app/agents/**
+    - HEAD (this branch) and HISTORY (append-only)
+- forbidden_scope:
+    - services/api/app/**/schemas.py (contract_lead; canonical schemas)
+    - services/api/migrations/**, packages/contracts/** (contract_lead; generated)
+    - services/api/app/connectors/** (case_api_data; concrete provider adapters)
+    - services/api/app/evidence/**, services/api/app/analyses/** except
+      services/api/app/workers/analysis_worker.py (case_api_data owns analyses/Case)
+    - services/api/tests/**, e2e/** (qa_release)
+    - apps/web/** (web_ux), services/api/app/simulations/** (simulation_graph)
+    - hermes-agent-* and open-webui-* reference trees (no copy)
+- dependencies:
+    - Task 6 published method pack hardtech-market-direction@1.1.0 (present, hash-verified loader)
+    - canonical types (app.types) and DeepAnalysis contracts (app.analyses.schemas) from Task 19A
+    - published strategic-lens-output.schema.json (immutable) as the lens output contract
+- acceptance_commands:
+    - py -3.12 -m py_compile over all new services/api/app/agents/** files (syntax gate)
+    - import smoke via repo .venv python with PYTHONPATH=services/api (no new env)
+    - ruff check services/api/app/agents (if ruff available in env)
+    - NOTE: formal test_agent_runtime.py / test_model_provider.py are QA-owned
+      (services/api/tests/**); full Task 7 test acceptance is a later milestone.
+- known_initial_risks:
+    - Manifest vs 18-plan ownership tension for Task 8 (evidence) and Task 9
+      (analyses) and for connectors/providers/**; this branch stays strictly inside
+      services/api/app/agents/** and defers those to their canonical owners.
+    - Remote GitHub access is currently BLOCKED (port 443); remote branch
+      verification will be marked BLOCKED until connectivity returns. No push claimed.
+    - Adding lens prompts/schemas to a published pack would require a SemVer bump per
+      AGENTS.md; lens specialists must not mutate the published 1.1.0 pack contents.
+- secret_policy: >
+    No credentials, API keys, tokens, cookies, connection strings, or .env contents
+    are read, echoed, logged, or committed. Fixture provider requires no keys.
