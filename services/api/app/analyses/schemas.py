@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -59,8 +60,8 @@ class DeepAnalysisRequest(CanonicalModel):
     @field_validator("budget")
     @classmethod
     def budget_values_are_non_negative(cls, budget: dict[str, float]) -> dict[str, float]:
-        if any(value < 0 for value in budget.values()):
-            raise ValueError("analysis budget values must be non-negative")
+        if any(not math.isfinite(value) or value < 0 for value in budget.values()):
+            raise ValueError("analysis budget values must be finite and non-negative")
         return budget
 
     @field_validator("allowed_tools", "allowed_connector_ids")

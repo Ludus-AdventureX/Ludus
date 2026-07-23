@@ -391,14 +391,22 @@ class AnalysisRun(Base):
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            ["workspace_id", "supersedes_analysis_run_id"],
-            ["analysis_runs.workspace_id", "analysis_runs.analysis_run_id"],
+            ["workspace_id", "decision_case_id", "supersedes_analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
             name="fk_analysis_runs_workspace_supersedes",
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
-            ["workspace_id", "superseded_by_analysis_run_id"],
-            ["analysis_runs.workspace_id", "analysis_runs.analysis_run_id"],
+            ["workspace_id", "decision_case_id", "superseded_by_analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
             name="fk_analysis_runs_workspace_superseded_by",
             ondelete="RESTRICT",
         ),
@@ -506,6 +514,10 @@ class SourceRecord(Base):
             "(source_scope = 'run_frozen' AND analysis_run_id IS NOT NULL "
             "AND frozen_from_source_record_id IS NOT NULL AND frozen_at IS NOT NULL)",
             name="source_scope_fields_consistent",
+        ),
+        CheckConstraint(
+            "kind NOT IN ('human_input', 'case_snapshot') OR raw_artifact_id IS NULL",
+            name="raw_artifact_matches_source_kind",
         ),
         Index(
             "ix_source_records_workspace_case_scope",
@@ -629,7 +641,10 @@ class SimulationRun(Base):
         ),
         CheckConstraint("decision_maker_profile_version > 0", name="profile_version_positive"),
         CheckConstraint("risk_tolerance >= 0 AND risk_tolerance <= 1", name="risk_tolerance_range"),
-        CheckConstraint("epsilon > 0", name="epsilon_positive"),
+        CheckConstraint(
+            "epsilon > 0 AND epsilon < 'Infinity'::double precision",
+            name="epsilon_finite_positive",
+        ),
         CheckConstraint("max_steps > 0", name="max_steps_positive"),
         CheckConstraint("steps >= 0 AND steps <= max_steps", name="steps_range"),
         Index(

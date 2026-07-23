@@ -1,12 +1,12 @@
 # Work Log: idle
 
-- Status: idle.
+- Status: idle after completing the Contract Lead implementation for Task 19A hardening.
 - Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Task 19A Canonical Contract Implementation - 2026-07-23 (Asia/Shanghai)`.
+- Last archive entry: `Archive Contract Lead Task 19A Hardening Fixes - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Current branch: codex/task-19a-canonical-contracts
-- State: Contract Lead implementation is owner-clean; final merge approval is pending an independent stacked QA branch because the Task 2 exact-table assertion must be updated by QA/Release.
-- Next work: commit and push this branch, then create `codex/qa-task-19a-canonical-contracts` from its tip and write a new active HEAD before changing tests.
-- Required merge order: `codex/task-19a-canonical-contracts`, then `codex/qa-task-19a-canonical-contracts`; do not merge automatically.
-- Constraint: the QA branch may change `services/api/tests/**` and lifecycle records only; product-source defects must return to the Contract Lead branch.
-- Secret policy: no credentials are stored in this file.
+- Current branch: codex/task-19a-contract-hardening-fixes
+- Owner result: implementation and owner-scoped verification complete; no merge approval yet.
+- Next approved work: commit/push this implementation tip, then create fresh `codex/qa-task-19a-canonical-contracts-r2` from it and run QA-owned regressions.
+- QA boundary: QA may change only `services/api/tests/**` and lifecycle/handoff records; product-source defects return to Contract Lead.
+- Remote policy: verify the canonical private origin and live remote SHA before any push; do not merge automatically.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.

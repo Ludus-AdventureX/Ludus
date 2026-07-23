@@ -30,21 +30,20 @@ Identifier = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=240),
 ]
+
+_HASH_PATTERN = re.compile(r"^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$")
+
+
 ContentHash = Annotated[
     str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=256),
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=256,
+        pattern=_HASH_PATTERN,
+    ),
 ]
 NonEmptyText = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1),
 ]
-
-_HASH_PATTERN = re.compile(r"^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$")
-
-
-def validate_content_hash(value: str) -> str:
-    """Reject whitespace/control-bearing pseudo hashes without fixing one storage encoding."""
-
-    if not _HASH_PATTERN.fullmatch(value):
-        raise ValueError("content hash must be an opaque, whitespace-free digest value")
-    return value

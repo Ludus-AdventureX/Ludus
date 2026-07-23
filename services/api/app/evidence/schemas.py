@@ -22,6 +22,13 @@ class SourceRecordBase(CanonicalModel):
     raw_artifact_id: Identifier | None = None
     created_at: datetime
 
+    @model_validator(mode="after")
+    def raw_artifact_matches_source_kind(self) -> SourceRecordBase:
+        if self.kind in {SourceKind.HUMAN_INPUT, SourceKind.CASE_SNAPSHOT}:
+            if self.raw_artifact_id is not None:
+                raise ValueError("human_input and case_snapshot cannot reference rawArtifactId")
+        return self
+
 
 class PreRunSourceRecord(SourceRecordBase):
     source_scope: Literal["pre_run"]

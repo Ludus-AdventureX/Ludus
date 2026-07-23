@@ -872,3 +872,70 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Required review/merge order: implementation branch first, then the stacked QA branch; no automatic merge.
 
 - Secret policy: no credentials are stored in this file.
+
+
+## Archive before Contract Lead Task 19A repair - 2026-07-23 (Asia/Shanghai)
+
+# Work Log: idle
+
+- Status: idle.
+- Last archived: 2026-07-23 (Asia/Shanghai).
+- Last archive entry: `Archive Task 19A Canonical Contract Implementation - 2026-07-23 (Asia/Shanghai)`.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Current branch: codex/task-19a-canonical-contracts
+- State: Contract Lead implementation is owner-clean; final merge approval is pending an independent stacked QA branch because the Task 2 exact-table assertion must be updated by QA/Release.
+- Next work: commit and push this branch, then create `codex/qa-task-19a-canonical-contracts` from its tip and write a new active HEAD before changing tests.
+- Required merge order: `codex/task-19a-canonical-contracts`, then `codex/qa-task-19a-canonical-contracts`; do not merge automatically.
+- Constraint: the QA branch may change `services/api/tests/**` and lifecycle records only; product-source defects must return to the Contract Lead branch.
+- Secret policy: no credentials are stored in this file.
+
+
+## Archive Contract Lead Task 19A Hardening Fixes - 2026-07-23 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed for Contract Lead implementation; final merge approval remains blocked until independent QA r2 passes.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/task-19a-contract-hardening-fixes
+- Base implementation: 336956eeafaf0c32307b3b121bf27d7ed248b648
+- Current local/remote main observed before this task: 0dde4ab46220fc4a61e2a67561430af92a986c47
+- Owner: contract_lead
+
+## Scope completed
+
+- Rejected `rawArtifactId` for `human_input` and `case_snapshot` in Pydantic and PostgreSQL while retaining it for real uploaded-file sources.
+- Exposed the canonical ContentHash regex in runtime validation and generated OpenAPI; whitespace-bearing pseudo hashes are rejected.
+- Rejected non-finite and negative DeepAnalysis budget values.
+- Restricted AnalysisRun supersession to the same Workspace and DecisionCase.
+- Rejected non-finite SimulationRun epsilon values at PostgreSQL persistence level.
+- Added Alembic revision `f850d361ee42_harden_canonical_contract_invariants.py`; applied revision `f850d361ee42` was not rewritten.
+- Regenerated `packages/contracts/openapi.json`; TypeScript output remained byte-stable because the pattern does not alter its type shape.
+
+## Verification
+
+- Pydantic/schema negative probe: PASS (`OWNER_SCHEMA_NEGATIVE_PROBE_OK`), including fabricated RawArtifact rejection, internal ContentHash whitespace rejection, uploaded-file acceptance, and NaN/Infinity/-Infinity/negative budget rejection.
+- PostgreSQL rollback-only probe: PASS; illegal human/case RawArtifact references, cross-Case supersession, and `epsilon = Infinity` were rejected; legal uploaded-file RawArtifact, same-Case supersession, and finite epsilon were accepted.
+- Alembic lifecycle: PASS for upgrade to `f850d361ee42`, downgrade to `6b246c283d7a`, re-upgrade, downgrade to `0001`, re-upgrade, `alembic check`, and final current=`f850d361ee42 (head)`.
+- Contract generation: PASS; `generate_contracts.ps1 -Check` returned `CONTRACT_DRIFT_OK`.
+- Owner-compatible API suite: `67 passed, 1 deselected` with warnings treated as errors; the deselected case is the known stale Task 2 exact-table assertion.
+- Direct Task 19A model/invariant suite: `17 passed, 1 failed`; the sole failure is `test_core_table_set_and_workspace_scope`, which expects the pre-Task-19A table set and belongs to QA/Release test ownership.
+- Ruff: PASS. Compileall: PASS. Decision OS verifier: PASS (7/7 groups, DAG acyclic, 06/26 DeepAnalysis exact, 18 Signoff fields, zero legacy wire IDs).
+- Canonical legacy-ID scan: PASS. Changed-tree high-confidence secret scan: PASS. `git diff --check`: PASS.
+
+## Review boundary
+
+- Product-source changes are limited to Contract Lead scope; no `services/api/tests/**` files were changed.
+- No merge approval is issued from this owner branch. QA/Release must create a fresh `codex/qa-task-19a-canonical-contracts-r2` branch from this tip, restore the archived negative regressions, update only QA-owned tests/lifecycle records, and rerun the combined acceptance.
+- The old QA archive commit `54ebf80` remains archive-only and must not be merged directly.
+- No credentials or secret values are recorded here.
+
+## Artifact digests
+
+- OpenAPI SHA-256: `7723b65ac2e89ccf392eb444ed17d9b88f6c430eb4a293553cde3266ce2a6a65`.
+- TypeScript SHA-256: `418f1801e5c542e9a0d178e1dfbeab5ceb5b97b15e2e14af93648e5655682b94`.
+- Migration SHA-256: `fe67ee646cac5922bc795142a4a0bb0455eb2774353f384ffdf7767fccd603ed`.
+
+## Next step
+
+- Commit and push this Contract Lead implementation branch after remote URL/SHA verification.
+- Create a new QA r2 branch from the implementation commit; do not reuse the old QA branch and do not modify product source from QA.
