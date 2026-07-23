@@ -840,3 +840,28 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Approval: the product owner reviewed the corrected Look V7 and transparent-logo screenshots and explicitly requested branch merge on 2026-07-23.
 - Remaining risk: this implementation presents the Look V7 empty-project state because no real Case data is connected in the current web slice; deeper Decision OS screens remain outside this change.
 - Secret policy: no credentials are stored in this record.
+
+## Archive Ludus Look V7 Frontend Integration - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: locally integrate the product-owner-approved `codex/replace-ludus-wordmark` implementation into the current mainline baseline and verify the merged result before advancing local `main`.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Integration branch: codex/integrate-ludus-look-v7
+- Base local main: 0dde4ab46220fc4a61e2a67561430af92a986c47.
+- Fixed implementation SHA: 1ea9a5d; product commits: 225aea4, 62b1a03, 0315053.
+- Integration merge commit: 9369ff2.
+- Merge resolution: preserved current-main `AGENTS.md` and integration `HEAD`; preserved the existing append-only main `HISTORY` and appended the completed Look V7 feature archive exactly once.
+- Scope review: only `HEAD`, `HISTORY`, `apps/web/app/globals.css`, `apps/web/app/look-styles.css`, `apps/web/app/look-themes.css`, `apps/web/components/shell/DecisionShell.tsx`, and `apps/web/public/ludus-logo.svg` differ from the base mainline.
+- QA verdict: PASS; P0 findings: 0; P1 findings: 0.
+- Static verification: `pnpm --dir apps/web typecheck` PASS; `pnpm --dir apps/web lint` PASS; standard `pnpm exec next build` PASS; `/` and `/_not-found` statically prerendered; homepage First Load JS approximately 114 kB.
+- Browser verification on the integrated production build: HTTP 200; empty submit notice/focus PASS; example prompt fill PASS; drafted state PASS; theme drawer open/ESC close/focus return PASS; transparent SVG loaded and rendered at 145.61x40px desktop; horizontal overflow 0; console errors 0; failed requests 0; the removed `#FDFDFD` full-canvas SVG background path remained absent.
+- Dependency recovery: the integration worktree initially had no installed dependencies. An attempted direct build triggered an unwanted Next.js TypeScript auto-install; its tracked package and lockfile edits were restored from the integration commit, then `pnpm install --offline --frozen-lockfile` completed and all final checks passed. No package metadata change remains.
+- Prototype-source audit: Look style/theme content matches the local `look` source after newline normalization; checkout-only CRLF conversion explains worktree byte-hash differences.
+- Secret/publish-scope audit: high-confidence secret-content hits 0; suspicious changed filenames 0; no credential or registry configuration is included; `git diff --check` PASS.
+- Remote verification: canonical origin URL confirmed as `https://github.com/Ludus-AdventureX/Ludus.git`; direct Git HTTPS access timed out, but a fresh GitHub Plugin read confirmed live remote `main` at 0dde4ab46220fc4a61e2a67561430af92a986c47 before integration.
+- Publication status: no push, pull request, or remote merge was performed or claimed. This task advances local `main` only after a second fresh GitHub Plugin read confirms no concurrent remote advance.
+- Remaining functional risk: the web slice displays the Look V7 empty-project state because no real Case data is connected; deeper Decision OS screens are outside this change.
+- Secret policy: no credentials are stored in this record.

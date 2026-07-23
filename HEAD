@@ -1,14 +1,9 @@
-# Work Log: in_progress
+# Work Log: idle
 
-- Started: 2026-07-23 (Asia/Shanghai).
-- Status: in_progress.
-- Objective: locally integrate the product-owner-approved `codex/replace-ludus-wordmark` implementation into the current mainline baseline and verify the merged result before advancing local `main`.
+- Status: idle.
+- Last archived: 2026-07-23 (Asia/Shanghai).
+- Last archive entry: `Archive Ludus Look V7 Frontend Integration - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Branch: codex/integrate-ludus-look-v7
-- Base local main: 0dde4ab46220fc4a61e2a67561430af92a986c47.
-- Live GitHub main before integration: 0dde4ab46220fc4a61e2a67561430af92a986c47, read through the GitHub Plugin on 2026-07-23 after direct Git network access timed out.
-- Fixed implementation SHA: 1ea9a5d (includes product commits 225aea4, 62b1a03, 0315053 and lifecycle archive).
-- Merge method: non-squash merge into this isolated integration branch; local `main` may advance only after acceptance passes.
-- Validation plan: changed-path and conflict review, web typecheck, lint, standard Next.js production build, browser smoke/interaction verification, diff check, and secret/publish-scope audit.
-- Constraints: preserve current main AGENTS.md governance and append-only HISTORY; do not push or claim remote publication; do not merge unrelated Task 19A branches.
+- Integration result: codex/integrate-ludus-look-v7, pending a fresh remote-main check and local-main fast-forward.
+- Remote publication: not performed.
 - Secret policy: no credentials are stored in this file.
