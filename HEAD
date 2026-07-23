@@ -1,11 +1,55 @@
-# Work Log: idle
+# Work Log: in_progress
 
-- Status: idle.
-- Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Verified Main Publication after Task 6 - 2026-07-23 (Asia/Shanghai)`.
+- Started: 2026-07-23 (Asia/Shanghai).
+- Status: in_progress (canonical contract baseline audit and implementation pending).
+- Objective: implement Task 19A canonical schema, identifiers, Source/session/signoff/simulation fields, migrations, and generated contracts without entering Task 19B/19C behavior or QA-owned test scope.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Publication result: Task 2, Task 6, their QA/integration records, and the post-Task-6 branch policy were fast-forward published to the controlled private GitHub `main`; the live remote was verified at `bd76d245e4277ef5c5890e296e2a16b7a6f5c70a` before this lifecycle archive.
-- Repository location note: GitHub redirects the configured origin to `https://github.com/Ludus-AdventureX/Ludus.git`.
-- Next approved task: create `codex/task-19a-canonical-contracts` from the final synchronized local `main`, then write a new active `HEAD` before any Task 19A project-file modification.
-- Constraint: do not continue development on completed Task 6, governance, integration, QA, or release-sync branches.
+- Branch: codex/task-19a-canonical-contracts
+- Base local/remote main commit: cf9e093651d67784ecbd8a9de55632ccbca807f8
+- Owner: contract_lead
+- Manifest dependencies: task-02 and task-06; both are present on the synchronized base mainline.
+
+## Authorized write scope
+
+- `services/api/app/**/schemas.py`
+- `services/api/app/db.py`
+- `services/api/app/models.py`
+- `services/api/app/types.py`
+- `services/api/alembic.ini`
+- `services/api/migrations/**`
+- `packages/contracts/**`
+- `scripts/generate_contracts.ps1`
+- Lifecycle records: `HEAD` and append-only `HISTORY`.
+
+## Required implementation
+
+- Canonical `decisionCaseId` / `analysisRunId` identifiers and wire names.
+- Existing User, WorkspaceMembership, UserSession, DecisionSubject, and DecisionCase baseline preservation/alignment rather than duplicate model creation.
+- Membership/session capability contract shapes.
+- Discriminated Source union that supports pre-run user input and post-run artifacts.
+- `SystemRecommendation` abstain-capable shape.
+- Complete `SignoffPayload` content freeze shape.
+- Simulation replay fields required by the accepted 06/10/26 contracts.
+- Alembic persistence changes and generated OpenAPI/TypeScript contracts.
+
+## Explicit exclusions
+
+- No Task 19B service behavior: session revocation orchestration, source freeze transactions, signoff transaction logic, no-run-no-report enforcement, or append-only Decision service implementation.
+- No Task 19C methods/agents/report behavior.
+- No QA-owned `services/api/tests/**` edits on this branch; any required QA changes must be handed off to a separate owner-specific branch.
+- No reuse of completed Task 6, governance, integration, QA, or release-sync branches.
+
+## Acceptance
+
+- Manifest tests: `uv run --project services/api pytest services/api/tests/test_models.py services/api/tests/test_decision_os_invariants.py -q`.
+- Migration: Alembic upgrade head and clean migration/drift checks; isolated downgrade/re-upgrade when safe.
+- Generated contracts: `powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check`.
+- Contract alignment: 06/10/26 canonical shape checklist passes.
+- Repository checks: Decision OS verifier, Ruff, compileall, scope audit, append-only lifecycle audit, and high-confidence secret scan.
+- Handoff artifacts: canonical shape report, migration revision, generated contract digest, and review conclusion.
+
+## Initial state
+
+- Branch was created from the final synchronized private GitHub/local `main` at `cf9e093651d67784ecbd8a9de55632ccbca807f8`.
+- No Task 19A project file has been modified yet.
 - Secret policy: no credentials are stored in this file.
