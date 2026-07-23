@@ -1008,3 +1008,55 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 
 - Browser production validation remains covered by the immediately preceding Web UX branch and will be rerun again after local mainline integration.
 - No remote push, pull request, or GitHub merge was performed on this branch.
+
+
+## Archive Look V7 Main Publication - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: archive the completed Look V7 main publication and the fresh live remote verification after network proxy access became available.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/record-look-v7-publication
+- Baseline local main: 35ac17fc10415d4ed5d8f5470e94c2afb394b444
+- Owner: mainline_audit_integration
+- Scope: governance records only; no product, contract, migration, dependency, license, visibility, or secret changes.
+
+## Publication result
+
+- Canonical remote: `https://github.com/Ludus-AdventureX/Ludus.git`.
+- Repository visibility: Private, confirmed through the authenticated GitHub connector (`private=true`, `visibility=private`).
+- Remote `main` before product publication: `0dde4ab46220fc4a61e2a67561430af92a986c47`.
+- Published local branch/ref: local `main` at `35ac17fc10415d4ed5d8f5470e94c2afb394b444` to remote `main`.
+- Remote `main` after product publication: `35ac17fc10415d4ed5d8f5470e94c2afb394b444`.
+- Publication method: direct normal fast-forward-capable `main:main` push; non-force; no GitHub branch auto-merge, no history rewrite, and no pull request was created for this already-reviewed local integration.
+- Fixed release SHAs: Look V7 audit `e65502e`; Web UX repair `00bb12e`; QA regression coverage `35ac17f`.
+- Fresh live verification through the configured proxy confirmed remote `main`, local HEAD, and local `origin/main` all matched `35ac17f` before this archive-only branch was created.
+
+## Acceptance evidence for the published product tree
+
+- Web test: PASS, 1 file / 5 tests.
+- TypeScript typecheck: PASS.
+- ESLint: PASS.
+- Next.js 15.5.21 production build: PASS; `/` and `/_not-found` statically prerendered.
+- Look V7 snapshot/token checks: PASS (`LOOK_V7_SNAPSHOT_OK`, `LOOK_V7_TOKENS_OK`).
+- Contract drift: PASS (`CONTRACT_DRIFT_OK`).
+- Decision OS verifier: PASS, 7/7; DAG acyclic, 26 tasks, zero legacy wire IDs, 18 signoff fields, active Ways version 1.1.0.
+- API suite on isolated `postgres:16-alpine`: PASS, 68 tests; the earlier local-port attempt failed only because an unrelated local PostgreSQL instance had different credentials.
+- Production browser QA at 1440x900, 1024x768, and 390x844: PASS; console/page/network errors 0, horizontal overflow 0, drawer focus/accessibility behavior PASS, and visible mobile touch-target violations 0.
+- Secret scan high-confidence findings: 0.
+- Release findings: P0=0, P1=0.
+- The temporary Next.js service and isolated PostgreSQL container were stopped after validation; no permanent deletion was performed.
+
+## Date correction and append-only handling
+
+- The authoritative runtime date for this publication archive is 2026-07-23 (Asia/Shanghai).
+- Earlier HISTORY entries labeled 2026-07-24 are retained unchanged because HISTORY is append-only; those labels resulted from an earlier runtime/date mismatch and are not evidence of work performed in the future.
+
+## Remaining risk / next step
+
+- This archive-only commit still requires a focused diff review, local main integration, a normal proxy-assisted push, and a final live remote SHA read.
+- That final archive-write publication will be reported in the approved handoff because a commit cannot contain its own final SHA without another circular record commit.
+- No credentials are stored in this record.
