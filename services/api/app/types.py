@@ -46,8 +46,32 @@ class EvidenceVerdict(StrEnum):
     REJECTED = "rejected"
 
 
+class OriginMode(StrEnum):
+    LIVE = "live"
+    CACHED = "cached"
+    FIXTURE = "fixture"
+
+
+class SourceKind(StrEnum):
+    WEB_PAGE = "web_page"
+    PROVIDER_RESULT = "provider_result"
+    UPLOADED_FILE = "uploaded_file"
+    HUMAN_INPUT = "human_input"
+    CASE_SNAPSHOT = "case_snapshot"
+
+
+class SourceScope(StrEnum):
+    PRE_RUN = "pre_run"
+    RUN_FROZEN = "run_frozen"
+
+
 class AnalysisLevel(StrEnum):
     QUICK = "quick"
+    FOCUSED = "focused"
+    FULL = "full"
+
+
+class FormalAnalysisLevel(StrEnum):
     FOCUSED = "focused"
     FULL = "full"
 
@@ -92,6 +116,26 @@ class CaseOperationalStatus(StrEnum):
     CANCELLED = "cancelled"
     REOPENED = "reopened"
     ARCHIVED = "archived"
+
+
+class SignoffRequestStatus(StrEnum):
+    PENDING = "pending"
+    SIGNED = "signed"
+    DECLINED = "declined"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+
+
+class SimulationMode(StrEnum):
+    FORMAL = "formal"
+    EXPERIMENTAL = "experimental"
+
+
+class SimulationConvergenceStatus(StrEnum):
+    CONVERGED = "converged"
+    MAX_STEPS = "max_steps"
+    SATURATED = "saturated"
+    INVALID = "invalid"
 
 
 class NodeType(StrEnum):

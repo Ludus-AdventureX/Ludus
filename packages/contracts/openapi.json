@@ -1,6 +1,284 @@
 {
   "components": {
     "schemas": {
+      "AbstainSystemRecommendation": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "abstain",
+            "title": "Kind",
+            "type": "string"
+          },
+          "rationale": {
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reasonCodes": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Reasoncodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "reasonCodes",
+          "rationale"
+        ],
+        "title": "AbstainSystemRecommendation",
+        "type": "object"
+      },
+      "ActionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "dueAt": {
+            "format": "date",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "owner": {
+            "minLength": 1,
+            "title": "Owner",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "done",
+              "blocked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "owner",
+          "dueAt",
+          "status"
+        ],
+        "title": "ActionItem",
+        "type": "object"
+      },
+      "DeepAnalysisRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "allowedConnectorIds": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Allowedconnectorids",
+            "type": "array"
+          },
+          "allowedTools": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Allowedtools",
+            "type": "array"
+          },
+          "analysisDepth": {
+            "$ref": "#/components/schemas/FormalAnalysisLevel"
+          },
+          "analysisRunId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Analysisrunid",
+            "type": "string"
+          },
+          "budget": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Budget",
+            "type": "object"
+          },
+          "caseSnapshotHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Casesnapshothash",
+            "type": "string"
+          },
+          "charterId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Charterid",
+            "type": "string"
+          },
+          "charterVersion": {
+            "exclusiveMinimum": 0.0,
+            "title": "Charterversion",
+            "type": "integer"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "dossierSnapshotHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Dossiersnapshothash",
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "minLength": 1,
+            "title": "Idempotencykey",
+            "type": "string"
+          },
+          "materialSnapshotHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Materialsnapshothash",
+            "type": "string"
+          },
+          "method": {
+            "$ref": "#/components/schemas/MethodVersionRef"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "decisionCaseId",
+          "analysisRunId",
+          "charterId",
+          "charterVersion",
+          "caseSnapshotHash",
+          "dossierSnapshotHash",
+          "materialSnapshotHash",
+          "analysisDepth",
+          "method",
+          "budget",
+          "allowedTools",
+          "allowedConnectorIds",
+          "idempotencyKey"
+        ],
+        "title": "DeepAnalysisRequest",
+        "type": "object"
+      },
+      "DeepAnalysisResult": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisRunId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Analysisrunid",
+            "type": "string"
+          },
+          "dissentRecordId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Dissentrecordid",
+            "type": "string"
+          },
+          "draftRecommendationId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Draftrecommendationid",
+            "type": "string"
+          },
+          "judgmentSetId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Judgmentsetid",
+            "type": "string"
+          },
+          "provenanceHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Provenancehash",
+            "type": "string"
+          },
+          "qualityGateResultId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Qualitygateresultid",
+            "type": "string"
+          },
+          "runManifestHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Runmanifesthash",
+            "type": "string"
+          },
+          "runManifestId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Runmanifestid",
+            "type": "string"
+          },
+          "unresolvedUnknownIds": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Unresolvedunknownids",
+            "type": "array"
+          },
+          "validatorResults": {
+            "items": {
+              "$ref": "#/components/schemas/ValidatorResult"
+            },
+            "title": "Validatorresults",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysisRunId",
+          "runManifestId",
+          "runManifestHash",
+          "judgmentSetId",
+          "dissentRecordId",
+          "draftRecommendationId",
+          "unresolvedUnknownIds",
+          "validatorResults",
+          "qualityGateResultId",
+          "provenanceHash"
+        ],
+        "title": "DeepAnalysisResult",
+        "type": "object"
+      },
+      "FormalAnalysisLevel": {
+        "enum": [
+          "focused",
+          "full"
+        ],
+        "title": "FormalAnalysisLevel",
+        "type": "string"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -12,6 +290,1935 @@
         },
         "title": "HealthResponse",
         "type": "object"
+      },
+      "LeadingIndicator": {
+        "additionalProperties": false,
+        "properties": {
+          "checkCadence": {
+            "minLength": 1,
+            "title": "Checkcadence",
+            "type": "string"
+          },
+          "expectedDirection": {
+            "enum": [
+              "up",
+              "down",
+              "stable"
+            ],
+            "title": "Expecteddirection",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "metric": {
+            "minLength": 1,
+            "title": "Metric",
+            "type": "string"
+          },
+          "threshold": {
+            "minLength": 1,
+            "title": "Threshold",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "metric",
+          "expectedDirection",
+          "threshold",
+          "checkCadence"
+        ],
+        "title": "LeadingIndicator",
+        "type": "object"
+      },
+      "MethodVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "contentHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "version": {
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "contentHash"
+        ],
+        "title": "MethodVersionRef",
+        "type": "object"
+      },
+      "OptionSystemRecommendation": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "option",
+            "title": "Kind",
+            "type": "string"
+          },
+          "optionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Optionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "optionId"
+        ],
+        "title": "OptionSystemRecommendation",
+        "type": "object"
+      },
+      "OriginMode": {
+        "enum": [
+          "live",
+          "cached",
+          "fixture"
+        ],
+        "title": "OriginMode",
+        "type": "string"
+      },
+      "PreRunSourceRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "canonicalUri": {
+            "minLength": 1,
+            "title": "Canonicaluri",
+            "type": "string"
+          },
+          "contentHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "originMode": {
+            "$ref": "#/components/schemas/OriginMode"
+          },
+          "rawArtifactId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawartifactid"
+          },
+          "sourceScope": {
+            "const": "pre_run",
+            "title": "Sourcescope",
+            "type": "string"
+          },
+          "sourceVersion": {
+            "minLength": 1,
+            "title": "Sourceversion",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "kind",
+          "canonicalUri",
+          "title",
+          "contentHash",
+          "sourceVersion",
+          "originMode",
+          "createdAt",
+          "sourceScope"
+        ],
+        "title": "PreRunSourceRecord",
+        "type": "object"
+      },
+      "PreRunSourceSpan": {
+        "additionalProperties": false,
+        "properties": {
+          "contextAfter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextafter"
+          },
+          "contextBefore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextbefore"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "locator": {
+            "$ref": "#/components/schemas/SourceSpanLocator"
+          },
+          "quote": {
+            "minLength": 1,
+            "title": "Quote",
+            "type": "string"
+          },
+          "quoteHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Quotehash",
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourcerecordid",
+            "type": "string"
+          },
+          "sourceScope": {
+            "const": "pre_run",
+            "title": "Sourcescope",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "sourceRecordId",
+          "locator",
+          "quote",
+          "quoteHash",
+          "createdAt",
+          "sourceScope"
+        ],
+        "title": "PreRunSourceSpan",
+        "type": "object"
+      },
+      "Recommendation": {
+        "additionalProperties": false,
+        "properties": {
+          "alternativeOptionIds": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Alternativeoptionids",
+            "type": "array"
+          },
+          "conditions": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "exitCriteria": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Exitcriteria",
+            "type": "array"
+          },
+          "fragileAssumptionIds": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Fragileassumptionids",
+            "type": "array"
+          },
+          "leadingIndicators": {
+            "items": {
+              "$ref": "#/components/schemas/LeadingIndicator"
+            },
+            "title": "Leadingindicators",
+            "type": "array"
+          },
+          "nextActions": {
+            "items": {
+              "$ref": "#/components/schemas/ActionItem"
+            },
+            "title": "Nextactions",
+            "type": "array"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/SystemRecommendation"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/RecommendationQuality"
+          },
+          "reviewDate": {
+            "format": "date",
+            "title": "Reviewdate",
+            "type": "string"
+          },
+          "risks": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Risks",
+            "type": "array"
+          },
+          "summary": {
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "thresholds": {
+            "items": {
+              "$ref": "#/components/schemas/Threshold"
+            },
+            "title": "Thresholds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outcome",
+          "alternativeOptionIds",
+          "summary",
+          "conditions",
+          "thresholds",
+          "exitCriteria",
+          "risks",
+          "fragileAssumptionIds",
+          "leadingIndicators",
+          "nextActions",
+          "reviewDate",
+          "quality"
+        ],
+        "title": "Recommendation",
+        "type": "object"
+      },
+      "RecommendationQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "assumptionStability": {
+            "enum": [
+              "stable",
+              "fragile",
+              "fatal_unknown"
+            ],
+            "title": "Assumptionstability",
+            "type": "string"
+          },
+          "causalReliability": {
+            "enum": [
+              "confirmed",
+              "conditional",
+              "draft",
+              "rejected"
+            ],
+            "title": "Causalreliability",
+            "type": "string"
+          },
+          "claimSupport": {
+            "enum": [
+              "supported",
+              "conflicted",
+              "assumption_only",
+              "unsupported"
+            ],
+            "title": "Claimsupport",
+            "type": "string"
+          },
+          "evidenceAvailability": {
+            "enum": [
+              "sufficient",
+              "conditional",
+              "insufficient",
+              "blocked"
+            ],
+            "title": "Evidenceavailability",
+            "type": "string"
+          },
+          "processQuality": {
+            "enum": [
+              "passed",
+              "warning",
+              "blocked"
+            ],
+            "title": "Processquality",
+            "type": "string"
+          },
+          "rationale": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Rationale",
+            "type": "array"
+          },
+          "strategicRobustness": {
+            "enum": [
+              "robust",
+              "scenario_sensitive",
+              "flip_detected"
+            ],
+            "title": "Strategicrobustness",
+            "type": "string"
+          },
+          "weakestDimension": {
+            "enum": [
+              "evidence_availability",
+              "claim_support",
+              "assumption_stability",
+              "causal_reliability",
+              "strategic_robustness",
+              "process_quality"
+            ],
+            "title": "Weakestdimension",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidenceAvailability",
+          "claimSupport",
+          "assumptionStability",
+          "causalReliability",
+          "strategicRobustness",
+          "processQuality",
+          "weakestDimension",
+          "rationale"
+        ],
+        "title": "RecommendationQuality",
+        "type": "object"
+      },
+      "RunFrozenSourceRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisRunId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Analysisrunid",
+            "type": "string"
+          },
+          "canonicalUri": {
+            "minLength": 1,
+            "title": "Canonicaluri",
+            "type": "string"
+          },
+          "contentHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "frozenAt": {
+            "format": "date-time",
+            "title": "Frozenat",
+            "type": "string"
+          },
+          "frozenFromSourceRecordId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Frozenfromsourcerecordid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "originMode": {
+            "$ref": "#/components/schemas/OriginMode"
+          },
+          "rawArtifactId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawartifactid"
+          },
+          "sourceScope": {
+            "const": "run_frozen",
+            "title": "Sourcescope",
+            "type": "string"
+          },
+          "sourceVersion": {
+            "minLength": 1,
+            "title": "Sourceversion",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "kind",
+          "canonicalUri",
+          "title",
+          "contentHash",
+          "sourceVersion",
+          "originMode",
+          "createdAt",
+          "sourceScope",
+          "analysisRunId",
+          "frozenFromSourceRecordId",
+          "frozenAt"
+        ],
+        "title": "RunFrozenSourceRecord",
+        "type": "object"
+      },
+      "RunFrozenSourceSpan": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisRunId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Analysisrunid",
+            "type": "string"
+          },
+          "contextAfter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextafter"
+          },
+          "contextBefore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextbefore"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "frozenFromSourceSpanId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Frozenfromsourcespanid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "locator": {
+            "$ref": "#/components/schemas/SourceSpanLocator"
+          },
+          "quote": {
+            "minLength": 1,
+            "title": "Quote",
+            "type": "string"
+          },
+          "quoteHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Quotehash",
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourcerecordid",
+            "type": "string"
+          },
+          "sourceScope": {
+            "const": "run_frozen",
+            "title": "Sourcescope",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "sourceRecordId",
+          "locator",
+          "quote",
+          "quoteHash",
+          "createdAt",
+          "sourceScope",
+          "analysisRunId",
+          "frozenFromSourceSpanId"
+        ],
+        "title": "RunFrozenSourceSpan",
+        "type": "object"
+      },
+      "SignoffPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptedUnknownIds": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Acceptedunknownids",
+            "type": "array"
+          },
+          "actionItems": {
+            "items": {
+              "$ref": "#/components/schemas/ActionItem"
+            },
+            "title": "Actionitems",
+            "type": "array"
+          },
+          "caseVersion": {
+            "exclusiveMinimum": 0.0,
+            "title": "Caseversion",
+            "type": "integer"
+          },
+          "conditions": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "decisionDraft": {
+            "minLength": 1,
+            "title": "Decisiondraft",
+            "type": "string"
+          },
+          "exitCriteria": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Exitcriteria",
+            "type": "array"
+          },
+          "leadingIndicators": {
+            "items": {
+              "$ref": "#/components/schemas/LeadingIndicator"
+            },
+            "title": "Leadingindicators",
+            "type": "array"
+          },
+          "reviewDate": {
+            "format": "date",
+            "title": "Reviewdate",
+            "type": "string"
+          },
+          "selectedOptionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Selectedoptionid",
+            "type": "string"
+          },
+          "sourceAnalysisRunId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourceanalysisrunid",
+            "type": "string"
+          },
+          "sourceCausalGraphId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcecausalgraphid"
+          },
+          "sourceCausalGraphVersionId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcecausalgraphversionid"
+          },
+          "sourceDissentRecordId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourcedissentrecordid",
+            "type": "string"
+          },
+          "sourceJudgmentSetId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourcejudgmentsetid",
+            "type": "string"
+          },
+          "sourceReportArtifactId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourcereportartifactid",
+            "type": "string"
+          },
+          "sourceSimulationRunId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesimulationrunid"
+          },
+          "systemRecommendation": {
+            "$ref": "#/components/schemas/SystemRecommendation"
+          },
+          "thresholds": {
+            "items": {
+              "$ref": "#/components/schemas/Threshold"
+            },
+            "title": "Thresholds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "caseVersion",
+          "sourceAnalysisRunId",
+          "sourceReportArtifactId",
+          "sourceJudgmentSetId",
+          "sourceDissentRecordId",
+          "systemRecommendation",
+          "selectedOptionId",
+          "decisionDraft",
+          "conditions",
+          "thresholds",
+          "exitCriteria",
+          "actionItems",
+          "leadingIndicators",
+          "acceptedUnknownIds",
+          "reviewDate"
+        ],
+        "title": "SignoffPayload",
+        "type": "object"
+      },
+      "SignoffRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "nonceIssuedAt": {
+            "format": "date-time",
+            "title": "Nonceissuedat",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SignoffPayload"
+          },
+          "payloadHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Payloadhash",
+            "type": "string"
+          },
+          "requestedByUserId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Requestedbyuserid",
+            "type": "string"
+          },
+          "signedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signedat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SignoffRequestStatus"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "requestedByUserId",
+          "payload",
+          "payloadHash",
+          "status",
+          "nonceIssuedAt",
+          "expiresAt",
+          "createdAt"
+        ],
+        "title": "SignoffRequest",
+        "type": "object"
+      },
+      "SignoffRequestStatus": {
+        "enum": [
+          "pending",
+          "signed",
+          "declined",
+          "cancelled",
+          "expired"
+        ],
+        "title": "SignoffRequestStatus",
+        "type": "string"
+      },
+      "SignoffSignCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "nonce": {
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          },
+          "payloadHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Payloadhash",
+            "type": "string"
+          },
+          "signatureStatement": {
+            "minLength": 1,
+            "title": "Signaturestatement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signatureStatement",
+          "payloadHash",
+          "nonce"
+        ],
+        "title": "SignoffSignCommand",
+        "type": "object"
+      },
+      "SimulationConvergenceStatus": {
+        "enum": [
+          "converged",
+          "max_steps",
+          "saturated",
+          "invalid"
+        ],
+        "title": "SimulationConvergenceStatus",
+        "type": "string"
+      },
+      "SimulationMode": {
+        "enum": [
+          "formal",
+          "experimental"
+        ],
+        "title": "SimulationMode",
+        "type": "string"
+      },
+      "SimulationOptionScore": {
+        "additionalProperties": false,
+        "properties": {
+          "optionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Optionid",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "optionId",
+          "score"
+        ],
+        "title": "SimulationOptionScore",
+        "type": "object"
+      },
+      "SimulationRun": {
+        "additionalProperties": false,
+        "properties": {
+          "convergenceStatus": {
+            "$ref": "#/components/schemas/SimulationConvergenceStatus"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "decisionMakerProfileId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisionmakerprofileid",
+            "type": "string"
+          },
+          "decisionMakerProfileVersion": {
+            "exclusiveMinimum": 0.0,
+            "title": "Decisionmakerprofileversion",
+            "type": "integer"
+          },
+          "engineVersion": {
+            "minLength": 1,
+            "title": "Engineversion",
+            "type": "string"
+          },
+          "epsilon": {
+            "exclusiveMinimum": 0.0,
+            "title": "Epsilon",
+            "type": "number"
+          },
+          "graphId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Graphid",
+            "type": "string"
+          },
+          "graphVersionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Graphversionid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "inputHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Inputhash",
+            "type": "string"
+          },
+          "maxSteps": {
+            "exclusiveMinimum": 0.0,
+            "title": "Maxsteps",
+            "type": "integer"
+          },
+          "nodeResults": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Noderesults",
+            "type": "object"
+          },
+          "optionScores": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationOptionScore"
+            },
+            "title": "Optionscores",
+            "type": "array"
+          },
+          "originModes": {
+            "items": {
+              "$ref": "#/components/schemas/OriginMode"
+            },
+            "title": "Originmodes",
+            "type": "array"
+          },
+          "recommendationShift": {
+            "title": "Recommendationshift",
+            "type": "string"
+          },
+          "riskTolerance": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Risktolerance",
+            "type": "number"
+          },
+          "scenarioId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Scenarioid",
+            "type": "string"
+          },
+          "scenarioVersionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Scenarioversionid",
+            "type": "string"
+          },
+          "scoreDefinitionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Scoredefinitionid",
+            "type": "string"
+          },
+          "scoreDefinitionVersion": {
+            "minLength": 1,
+            "title": "Scoredefinitionversion",
+            "type": "string"
+          },
+          "simulationMode": {
+            "$ref": "#/components/schemas/SimulationMode"
+          },
+          "steps": {
+            "minimum": 0.0,
+            "title": "Steps",
+            "type": "integer"
+          },
+          "strategyVersionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Strategyversionid",
+            "type": "string"
+          },
+          "topDrivers": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationTopDriver"
+            },
+            "title": "Topdrivers",
+            "type": "array"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "graphId",
+          "graphVersionId",
+          "strategyVersionId",
+          "scenarioVersionId",
+          "scoreDefinitionId",
+          "scoreDefinitionVersion",
+          "decisionMakerProfileId",
+          "decisionMakerProfileVersion",
+          "riskTolerance",
+          "engineVersion",
+          "scenarioId",
+          "simulationMode",
+          "epsilon",
+          "maxSteps",
+          "steps",
+          "inputHash",
+          "nodeResults",
+          "optionScores",
+          "topDrivers",
+          "recommendationShift",
+          "convergenceStatus",
+          "originModes",
+          "createdAt"
+        ],
+        "title": "SimulationRun",
+        "type": "object"
+      },
+      "SimulationTopDriver": {
+        "additionalProperties": false,
+        "properties": {
+          "nodeId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Nodeid",
+            "type": "string"
+          },
+          "scoreDelta": {
+            "title": "Scoredelta",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nodeId",
+          "scoreDelta"
+        ],
+        "title": "SimulationTopDriver",
+        "type": "object"
+      },
+      "SourceKind": {
+        "enum": [
+          "web_page",
+          "provider_result",
+          "uploaded_file",
+          "human_input",
+          "case_snapshot"
+        ],
+        "title": "SourceKind",
+        "type": "string"
+      },
+      "SourceRecord": {
+        "description": "Named discriminated union for pre-run and run-frozen sources.",
+        "discriminator": {
+          "mapping": {
+            "pre_run": "#/components/schemas/PreRunSourceRecord",
+            "run_frozen": "#/components/schemas/RunFrozenSourceRecord"
+          },
+          "propertyName": "sourceScope"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PreRunSourceRecord"
+          },
+          {
+            "$ref": "#/components/schemas/RunFrozenSourceRecord"
+          }
+        ],
+        "title": "SourceRecord"
+      },
+      "SourceRecordBase": {
+        "additionalProperties": false,
+        "properties": {
+          "canonicalUri": {
+            "minLength": 1,
+            "title": "Canonicaluri",
+            "type": "string"
+          },
+          "contentHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "originMode": {
+            "$ref": "#/components/schemas/OriginMode"
+          },
+          "rawArtifactId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawartifactid"
+          },
+          "sourceVersion": {
+            "minLength": 1,
+            "title": "Sourceversion",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "kind",
+          "canonicalUri",
+          "title",
+          "contentHash",
+          "sourceVersion",
+          "originMode",
+          "createdAt"
+        ],
+        "title": "SourceRecordBase",
+        "type": "object"
+      },
+      "SourceSpan": {
+        "description": "Named discriminated union for pre-run and run-frozen source spans.",
+        "discriminator": {
+          "mapping": {
+            "pre_run": "#/components/schemas/PreRunSourceSpan",
+            "run_frozen": "#/components/schemas/RunFrozenSourceSpan"
+          },
+          "propertyName": "sourceScope"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PreRunSourceSpan"
+          },
+          {
+            "$ref": "#/components/schemas/RunFrozenSourceSpan"
+          }
+        ],
+        "title": "SourceSpan"
+      },
+      "SourceSpanBase": {
+        "additionalProperties": false,
+        "properties": {
+          "contextAfter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextafter"
+          },
+          "contextBefore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextbefore"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionCaseId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Decisioncaseid",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "locator": {
+            "$ref": "#/components/schemas/SourceSpanLocator"
+          },
+          "quote": {
+            "minLength": 1,
+            "title": "Quote",
+            "type": "string"
+          },
+          "quoteHash": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$",
+            "title": "Quotehash",
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourcerecordid",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "decisionCaseId",
+          "sourceRecordId",
+          "locator",
+          "quote",
+          "quoteHash",
+          "createdAt"
+        ],
+        "title": "SourceSpanBase",
+        "type": "object"
+      },
+      "SourceSpanLocator": {
+        "additionalProperties": false,
+        "properties": {
+          "caseFieldPath": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Casefieldpath"
+          },
+          "charEnd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charend"
+          },
+          "charStart": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charstart"
+          },
+          "columnEnd": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columnend"
+          },
+          "columnStart": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columnstart"
+          },
+          "messageId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messageid"
+          },
+          "pageNumber": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagenumber"
+          },
+          "paragraphIndex": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraphindex"
+          },
+          "rowEnd": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rowend"
+          },
+          "rowStart": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rowstart"
+          },
+          "sheetName": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheetname"
+          }
+        },
+        "title": "SourceSpanLocator",
+        "type": "object"
+      },
+      "SystemRecommendation": {
+        "description": "A system may recommend one option or explicitly abstain, never an empty option.",
+        "discriminator": {
+          "mapping": {
+            "abstain": "#/components/schemas/AbstainSystemRecommendation",
+            "option": "#/components/schemas/OptionSystemRecommendation"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/OptionSystemRecommendation"
+          },
+          {
+            "$ref": "#/components/schemas/AbstainSystemRecommendation"
+          }
+        ],
+        "title": "SystemRecommendation"
+      },
+      "Threshold": {
+        "additionalProperties": false,
+        "properties": {
+          "actionIfMissed": {
+            "minLength": 1,
+            "title": "Actionifmissed",
+            "type": "string"
+          },
+          "metric": {
+            "minLength": 1,
+            "title": "Metric",
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              ">",
+              ">=",
+              "<",
+              "<=",
+              "="
+            ],
+            "title": "Operator",
+            "type": "string"
+          },
+          "value": {
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "operator",
+          "value",
+          "actionIfMissed"
+        ],
+        "title": "Threshold",
+        "type": "object"
+      },
+      "User": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "User",
+        "type": "object"
+      },
+      "UserSession": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "format": "date-time",
+            "title": "Lastseenat",
+            "type": "string"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "tokenVersion": {
+            "exclusiveMinimum": 0.0,
+            "title": "Tokenversion",
+            "type": "integer"
+          },
+          "userId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Userid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "tokenVersion",
+          "expiresAt",
+          "lastSeenAt",
+          "createdAt"
+        ],
+        "title": "UserSession",
+        "type": "object"
+      },
+      "UserStatus": {
+        "enum": [
+          "active",
+          "disabled"
+        ],
+        "title": "UserStatus",
+        "type": "string"
+      },
+      "ValidatorFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "artifactIds": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Artifactids",
+            "type": "array"
+          },
+          "code": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "artifactIds"
+        ],
+        "title": "ValidatorFinding",
+        "type": "object"
+      },
+      "ValidatorResult": {
+        "additionalProperties": false,
+        "properties": {
+          "executionMode": {
+            "enum": [
+              "deterministic",
+              "model_assisted",
+              "hybrid"
+            ],
+            "title": "Executionmode",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/ValidatorFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "modelInvocationRef": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelinvocationref"
+          },
+          "outcome": {
+            "enum": [
+              "pass",
+              "warn",
+              "block"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "repairTarget": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repairtarget"
+          },
+          "validatorId": {
+            "enum": [
+              "V1_scope_charter",
+              "V2_source_traceability",
+              "V3_evidence_quality",
+              "V4_claim_evidence_entailment",
+              "V5_contradiction_alignment",
+              "V6_unknown_assumption",
+              "V7_adversarial_dissent",
+              "V8_causal_simulation",
+              "V9_publication_authority"
+            ],
+            "title": "Validatorid",
+            "type": "string"
+          },
+          "validatorVersion": {
+            "minLength": 1,
+            "title": "Validatorversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "validatorId",
+          "validatorVersion",
+          "outcome",
+          "findings",
+          "executionMode"
+        ],
+        "title": "ValidatorResult",
+        "type": "object"
+      },
+      "WorkspaceCapability": {
+        "enum": [
+          "contribute",
+          "review",
+          "sign",
+          "manage_connectors"
+        ],
+        "title": "WorkspaceCapability",
+        "type": "string"
+      },
+      "WorkspaceMembership": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceCapability"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkspaceMembershipStatus"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "userId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Userid",
+            "type": "string"
+          },
+          "workspaceId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Workspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "userId",
+          "role",
+          "capabilities",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "WorkspaceMembership",
+        "type": "object"
+      },
+      "WorkspaceMembershipStatus": {
+        "enum": [
+          "active",
+          "suspended",
+          "revoked"
+        ],
+        "title": "WorkspaceMembershipStatus",
+        "type": "string"
+      },
+      "WorkspaceRole": {
+        "enum": [
+          "owner",
+          "member"
+        ],
+        "title": "WorkspaceRole",
+        "type": "string"
       }
     }
   },
@@ -43,5 +2250,38 @@
         ]
       }
     }
-  }
+  },
+  "x-decision-lab-contract-models": [
+    "AbstainSystemRecommendation",
+    "ActionItem",
+    "DeepAnalysisRequest",
+    "DeepAnalysisResult",
+    "LeadingIndicator",
+    "MethodVersionRef",
+    "OptionSystemRecommendation",
+    "PreRunSourceRecord",
+    "PreRunSourceSpan",
+    "Recommendation",
+    "RecommendationQuality",
+    "RunFrozenSourceRecord",
+    "RunFrozenSourceSpan",
+    "SignoffPayload",
+    "SignoffRequest",
+    "SignoffSignCommand",
+    "SimulationOptionScore",
+    "SimulationRun",
+    "SimulationTopDriver",
+    "SourceRecord",
+    "SourceRecordBase",
+    "SourceSpan",
+    "SourceSpanBase",
+    "SourceSpanLocator",
+    "SystemRecommendation",
+    "Threshold",
+    "User",
+    "UserSession",
+    "ValidatorFinding",
+    "ValidatorResult",
+    "WorkspaceMembership"
+  ]
 }

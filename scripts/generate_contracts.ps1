@@ -9,6 +9,7 @@ $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $ContractsRoot = Join-Path $RepositoryRoot "packages\contracts"
 $CanonicalOpenApi = Join-Path $ContractsRoot "openapi.json"
 $CanonicalTypes = Join-Path $ContractsRoot "src\types.gen.ts"
+$CanonicalOpenApiBuilder = Join-Path $ContractsRoot "build_openapi.py"
 $LocalUv = Join-Path $RepositoryRoot ".tools\uv\uv.exe"
 $UvCommand = if (Get-Command "uv" -ErrorAction SilentlyContinue) {
     (Get-Command "uv").Source
@@ -74,7 +75,7 @@ try {
         $checkOpenApi = Join-Path $checkRoot "openapi.json"
         $checkTypes = Join-Path $checkRoot "types.gen.ts"
 
-        & $UvCommand run --python 3.12 --project services/api python scripts/export_openapi.py --output $checkOpenApi
+        & $UvCommand run --python 3.12 --project services/api python $CanonicalOpenApiBuilder --output $checkOpenApi
         Assert-LastExitCode "OpenAPI regeneration"
 
         & pnpm --dir packages/contracts exec openapi-typescript $checkOpenApi -o $checkTypes
@@ -85,7 +86,7 @@ try {
         Write-Output "CONTRACT_DRIFT_OK"
     }
     else {
-        & $UvCommand run --python 3.12 --project services/api python scripts/export_openapi.py
+        & $UvCommand run --python 3.12 --project services/api python $CanonicalOpenApiBuilder
         Assert-LastExitCode "OpenAPI export"
 
         & pnpm --dir packages/contracts generate

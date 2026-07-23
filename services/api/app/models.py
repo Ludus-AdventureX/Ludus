@@ -10,6 +10,7 @@ from sqlalchemy import (
     Enum as SAEnum,
     ForeignKey,
     ForeignKeyConstraint,
+    Float,
     Index,
     Integer,
     String,
@@ -23,6 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
 from app.types import (
+    AnalysisRunStatus,
     CandidateRevisionStatus,
     CandidateSourceType,
     CaseOperationalStatus,
@@ -33,9 +35,16 @@ from app.types import (
     DossierSourceType,
     DossierStatementType,
     EntryStatus,
+    FormalAnalysisLevel,
     InitiativeStatus,
     MessageRole,
+    OriginMode,
     QuickAnalysisFormality,
+    SignoffRequestStatus,
+    SimulationConvergenceStatus,
+    SimulationMode,
+    SourceKind,
+    SourceScope,
     SubjectStatus,
     UserStatus,
     WorkspaceCapability,
@@ -114,6 +123,8 @@ def json_object_column():
 
 
 WORKSPACE_CAPABILITY_ENUM = enum_type(WorkspaceCapability, "workspace_capability")
+ORIGIN_MODE_ENUM = enum_type(OriginMode, "origin_mode")
+ANALYSIS_RUN_STATUS_ENUM = enum_type(AnalysisRunStatus, "analysis_run_status")
 
 
 class User(Base):
@@ -356,6 +367,381 @@ class DecisionCase(Base):
     current_decision_record_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
     created_at: Mapped[datetime] = created_at_column()
     updated_at: Mapped[datetime] = updated_at_column()
+
+
+class AnalysisRun(Base):
+    __tablename__ = "analysis_runs"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "analysis_run_id", name="uq_analysis_runs_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "analysis_run_id",
+            name="uq_analysis_runs_workspace_case_id",
+        ),
+        UniqueConstraint(
+            "workspace_id",
+            "idempotency_key",
+            name="uq_analysis_runs_workspace_idempotency",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_analysis_runs_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "supersedes_analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_analysis_runs_workspace_supersedes",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "superseded_by_analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_analysis_runs_workspace_superseded_by",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("charter_version > 0", name="charter_version_positive"),
+        CheckConstraint("case_version > 0", name="case_version_positive"),
+        CheckConstraint("dossier_snapshot_version > 0", name="dossier_snapshot_version_positive"),
+        CheckConstraint("progress >= 0 AND progress <= 1", name="progress_range"),
+        CheckConstraint("attempt > 0", name="attempt_positive"),
+        CheckConstraint("max_attempts > 0", name="max_attempts_positive"),
+        CheckConstraint("attempt <= max_attempts", name="attempt_within_max"),
+        CheckConstraint(
+            "last_resumable_stage IS NULL OR last_resumable_stage IN "
+            "('planning', 'retrieving', 'analyzing', 'criticizing', 'synthesizing', 'validating')",
+            name="last_resumable_stage_valid",
+        ),
+        Index("ix_analysis_runs_workspace_case_status", "workspace_id", "decision_case_id", "status"),
+    )
+
+    analysis_run_id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    charter_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    charter_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    run_manifest_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    run_manifest_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    cynefin_gate_result_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    analysis_level: Mapped[FormalAnalysisLevel] = mapped_column(
+        enum_type(FormalAnalysisLevel, "formal_analysis_level"),
+        nullable=False,
+    )
+    status: Mapped[AnalysisRunStatus] = mapped_column(
+        ANALYSIS_RUN_STATUS_ENUM,
+        nullable=False,
+        default=AnalysisRunStatus.QUEUED,
+        server_default=AnalysisRunStatus.QUEUED.value,
+    )
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::origin_mode[]"),
+    )
+    case_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    case_snapshot_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    dossier_snapshot_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    dossier_snapshot_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    method_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    method_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    method_content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    stage_results: Mapped[dict[str, Any]] = json_object_column()
+    strategic_lens_artifact_ids: Mapped[list[str]] = json_list_column()
+    last_resumable_stage: Mapped[AnalysisRunStatus | None] = mapped_column(
+        ANALYSIS_RUN_STATUS_ENUM
+    )
+    interruption_classification_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    supersedes_analysis_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    superseded_by_analysis_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    cancellation_reason: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = created_at_column()
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SourceRecord(Base):
+    __tablename__ = "source_records"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_source_records_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "id",
+            name="uq_source_records_workspace_case_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_source_records_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_source_records_workspace_case_run",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "frozen_from_source_record_id"],
+            ["source_records.workspace_id", "source_records.decision_case_id", "source_records.id"],
+            name="fk_source_records_workspace_case_frozen_from",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "(source_scope = 'pre_run' AND analysis_run_id IS NULL "
+            "AND frozen_from_source_record_id IS NULL AND frozen_at IS NULL) OR "
+            "(source_scope = 'run_frozen' AND analysis_run_id IS NOT NULL "
+            "AND frozen_from_source_record_id IS NOT NULL AND frozen_at IS NOT NULL)",
+            name="source_scope_fields_consistent",
+        ),
+        CheckConstraint(
+            "kind NOT IN ('human_input', 'case_snapshot') OR raw_artifact_id IS NULL",
+            name="raw_artifact_matches_source_kind",
+        ),
+        Index(
+            "ix_source_records_workspace_case_scope",
+            "workspace_id",
+            "decision_case_id",
+            "source_scope",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_scope: Mapped[SourceScope] = mapped_column(
+        enum_type(SourceScope, "source_scope"),
+        nullable=False,
+    )
+    analysis_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    frozen_from_source_record_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    frozen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    kind: Mapped[SourceKind] = mapped_column(
+        enum_type(SourceKind, "source_kind"),
+        nullable=False,
+    )
+    canonical_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    source_version: Mapped[str] = mapped_column(String(160), nullable=False)
+    origin_mode: Mapped[OriginMode] = mapped_column(ORIGIN_MODE_ENUM, nullable=False)
+    raw_artifact_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class SourceSpan(Base):
+    __tablename__ = "source_spans"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_source_spans_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "id",
+            name="uq_source_spans_workspace_case_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_source_spans_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "source_record_id"],
+            ["source_records.workspace_id", "source_records.decision_case_id", "source_records.id"],
+            name="fk_source_spans_workspace_case_source",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_source_spans_workspace_case_run",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "frozen_from_source_span_id"],
+            ["source_spans.workspace_id", "source_spans.decision_case_id", "source_spans.id"],
+            name="fk_source_spans_workspace_case_frozen_from",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "(source_scope = 'pre_run' AND analysis_run_id IS NULL "
+            "AND frozen_from_source_span_id IS NULL) OR "
+            "(source_scope = 'run_frozen' AND analysis_run_id IS NOT NULL "
+            "AND frozen_from_source_span_id IS NOT NULL)",
+            name="source_scope_fields_consistent",
+        ),
+        CheckConstraint("locator <> '{}'::jsonb", name="locator_not_empty"),
+        CheckConstraint("length(quote) > 0", name="quote_not_empty"),
+        Index(
+            "ix_source_spans_workspace_case_scope",
+            "workspace_id",
+            "decision_case_id",
+            "source_scope",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_record_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_scope: Mapped[SourceScope] = mapped_column(
+        enum_type(SourceScope, "source_scope"),
+        nullable=False,
+    )
+    analysis_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    frozen_from_source_span_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    locator: Mapped[dict[str, Any]] = json_object_column()
+    quote: Mapped[str] = mapped_column(Text, nullable=False)
+    quote_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    context_before: Mapped[str | None] = mapped_column(Text)
+    context_after: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class SimulationRun(Base):
+    __tablename__ = "simulation_runs"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_simulation_runs_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "id",
+            name="uq_simulation_runs_workspace_case_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_simulation_runs_workspace_case",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("decision_maker_profile_version > 0", name="profile_version_positive"),
+        CheckConstraint("risk_tolerance >= 0 AND risk_tolerance <= 1", name="risk_tolerance_range"),
+        CheckConstraint(
+            "epsilon > 0 AND epsilon < 'Infinity'::double precision",
+            name="epsilon_finite_positive",
+        ),
+        CheckConstraint("max_steps > 0", name="max_steps_positive"),
+        CheckConstraint("steps >= 0 AND steps <= max_steps", name="steps_range"),
+        Index(
+            "ix_simulation_runs_workspace_case_created",
+            "workspace_id",
+            "decision_case_id",
+            "created_at",
+        ),
+        Index("ix_simulation_runs_workspace_input_hash", "workspace_id", "input_hash"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    graph_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    graph_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    strategy_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    scenario_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    score_definition_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    score_definition_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    decision_maker_profile_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_maker_profile_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    risk_tolerance: Mapped[float] = mapped_column(Float, nullable=False)
+    engine_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    scenario_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    simulation_mode: Mapped[SimulationMode] = mapped_column(
+        enum_type(SimulationMode, "simulation_mode"),
+        nullable=False,
+    )
+    epsilon: Mapped[float] = mapped_column(Float, nullable=False)
+    max_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    node_results: Mapped[dict[str, float]] = json_object_column()
+    option_scores: Mapped[list[dict[str, Any]]] = json_list_column()
+    top_drivers: Mapped[list[dict[str, Any]]] = json_list_column()
+    recommendation_shift: Mapped[str] = mapped_column(Text, nullable=False)
+    convergence_status: Mapped[SimulationConvergenceStatus] = mapped_column(
+        enum_type(SimulationConvergenceStatus, "simulation_convergence_status"),
+        nullable=False,
+    )
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::origin_mode[]"),
+    )
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class SignoffRequest(Base):
+    __tablename__ = "signoff_requests"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_signoff_requests_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "id",
+            name="uq_signoff_requests_workspace_case_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_signoff_requests_workspace_case",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("expires_at > nonce_issued_at", name="expiry_after_nonce"),
+        CheckConstraint("status <> 'signed' OR signed_at IS NOT NULL", name="signed_has_timestamp"),
+        Index(
+            "ix_signoff_requests_workspace_case_status",
+            "workspace_id",
+            "decision_case_id",
+            "status",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    status: Mapped[SignoffRequestStatus] = mapped_column(
+        enum_type(SignoffRequestStatus, "signoff_request_status"),
+        nullable=False,
+        default=SignoffRequestStatus.PENDING,
+        server_default=SignoffRequestStatus.PENDING.value,
+    )
+    nonce_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    nonce_issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class CaseVersion(Base):
