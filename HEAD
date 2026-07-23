@@ -1,8 +1,10 @@
 # Work Log: idle
 
-- Status: idle.
+- Status: idle after Task 19A mainline gate r3 re-audit and lifecycle log repair.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 19A Mainline Integration Gate - 2026-07-24 (Asia/Shanghai)`.
-- Task 19A gate verdict: GO; integration branch codex/mainline-task-19a-integration fully passed mainline acceptance and is the mainline publication candidate.
+- Last archive entry: `Archive Task 19A Mainline Gate r3 Re-Audit and Lifecycle Log Repair - 2026-07-24 (Asia/Shanghai)`.
+- Task 19A status: published on main and remote-verified; mainline acceptance fully re-run on the main worktree with all gates PASS (P0=0/P1=0).
+- Lifecycle log repair: HISTORY restored from UTF-16LE binary blob to UTF-8 text with zero record loss; the missing implementation disclosure archive from 923a6ec was appended; no record was overwritten or discarded.
+- Contract freeze: issued from this commit; parallel lanes must branch from the frozen main SHA recorded in the freeze message and must not modify product code from stale bases.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
