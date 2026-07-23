@@ -25,6 +25,96 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AbstainSystemRecommendation */
+        AbstainSystemRecommendation: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "abstain";
+            /** Rationale */
+            rationale: string;
+            /** Reasoncodes */
+            reasonCodes: string[];
+        };
+        /** ActionItem */
+        ActionItem: {
+            /**
+             * Dueat
+             * Format: date
+             */
+            dueAt: string;
+            /** Id */
+            id: string;
+            /** Owner */
+            owner: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "done" | "blocked";
+            /** Text */
+            text: string;
+        };
+        /** DeepAnalysisRequest */
+        DeepAnalysisRequest: {
+            /** Allowedconnectorids */
+            allowedConnectorIds: string[];
+            /** Allowedtools */
+            allowedTools: string[];
+            analysisDepth: components["schemas"]["FormalAnalysisLevel"];
+            /** Analysisrunid */
+            analysisRunId: string;
+            /** Budget */
+            budget: {
+                [key: string]: number;
+            };
+            /** Casesnapshothash */
+            caseSnapshotHash: string;
+            /** Charterid */
+            charterId: string;
+            /** Charterversion */
+            charterVersion: number;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Dossiersnapshothash */
+            dossierSnapshotHash: string;
+            /** Idempotencykey */
+            idempotencyKey: string;
+            /** Materialsnapshothash */
+            materialSnapshotHash: string;
+            method: components["schemas"]["MethodVersionRef"];
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** DeepAnalysisResult */
+        DeepAnalysisResult: {
+            /** Analysisrunid */
+            analysisRunId: string;
+            /** Dissentrecordid */
+            dissentRecordId: string;
+            /** Draftrecommendationid */
+            draftRecommendationId: string;
+            /** Judgmentsetid */
+            judgmentSetId: string;
+            /** Provenancehash */
+            provenanceHash: string;
+            /** Qualitygateresultid */
+            qualityGateResultId: string;
+            /** Runmanifesthash */
+            runManifestHash: string;
+            /** Runmanifestid */
+            runManifestId: string;
+            /** Unresolvedunknownids */
+            unresolvedUnknownIds: string[];
+            /** Validatorresults */
+            validatorResults: components["schemas"]["ValidatorResult"][];
+        };
+        /**
+         * FormalAnalysisLevel
+         * @enum {string}
+         */
+        FormalAnalysisLevel: "focused" | "full";
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -34,6 +124,650 @@ export interface components {
              */
             status: "ok";
         };
+        /** LeadingIndicator */
+        LeadingIndicator: {
+            /** Checkcadence */
+            checkCadence: string;
+            /**
+             * Expecteddirection
+             * @enum {string}
+             */
+            expectedDirection: "up" | "down" | "stable";
+            /** Id */
+            id: string;
+            /** Metric */
+            metric: string;
+            /** Threshold */
+            threshold: string;
+        };
+        /** MethodVersionRef */
+        MethodVersionRef: {
+            /** Contenthash */
+            contentHash: string;
+            /** Id */
+            id: string;
+            /** Version */
+            version: string;
+        };
+        /** OptionSystemRecommendation */
+        OptionSystemRecommendation: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "option";
+            /** Optionid */
+            optionId: string;
+        };
+        /**
+         * OriginMode
+         * @enum {string}
+         */
+        OriginMode: "live" | "cached" | "fixture";
+        /** PreRunSourceRecord */
+        PreRunSourceRecord: {
+            /** Canonicaluri */
+            canonicalUri: string;
+            /** Contenthash */
+            contentHash: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Id */
+            id: string;
+            kind: components["schemas"]["SourceKind"];
+            originMode: components["schemas"]["OriginMode"];
+            /** Rawartifactid */
+            rawArtifactId?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            sourceScope: "pre_run";
+            /** Sourceversion */
+            sourceVersion: string;
+            /** Title */
+            title: string;
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** PreRunSourceSpan */
+        PreRunSourceSpan: {
+            /** Contextafter */
+            contextAfter?: string | null;
+            /** Contextbefore */
+            contextBefore?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Id */
+            id: string;
+            locator: components["schemas"]["SourceSpanLocator"];
+            /** Quote */
+            quote: string;
+            /** Quotehash */
+            quoteHash: string;
+            /** Sourcerecordid */
+            sourceRecordId: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            sourceScope: "pre_run";
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** Recommendation */
+        Recommendation: {
+            /** Alternativeoptionids */
+            alternativeOptionIds: string[];
+            /** Conditions */
+            conditions: string[];
+            /** Exitcriteria */
+            exitCriteria: string[];
+            /** Fragileassumptionids */
+            fragileAssumptionIds: string[];
+            /** Leadingindicators */
+            leadingIndicators: components["schemas"]["LeadingIndicator"][];
+            /** Nextactions */
+            nextActions: components["schemas"]["ActionItem"][];
+            outcome: components["schemas"]["SystemRecommendation"];
+            quality: components["schemas"]["RecommendationQuality"];
+            /**
+             * Reviewdate
+             * Format: date
+             */
+            reviewDate: string;
+            /** Risks */
+            risks: string[];
+            /** Summary */
+            summary: string;
+            /** Thresholds */
+            thresholds: components["schemas"]["Threshold"][];
+        };
+        /** RecommendationQuality */
+        RecommendationQuality: {
+            /**
+             * Assumptionstability
+             * @enum {string}
+             */
+            assumptionStability: "stable" | "fragile" | "fatal_unknown";
+            /**
+             * Causalreliability
+             * @enum {string}
+             */
+            causalReliability: "confirmed" | "conditional" | "draft" | "rejected";
+            /**
+             * Claimsupport
+             * @enum {string}
+             */
+            claimSupport: "supported" | "conflicted" | "assumption_only" | "unsupported";
+            /**
+             * Evidenceavailability
+             * @enum {string}
+             */
+            evidenceAvailability: "sufficient" | "conditional" | "insufficient" | "blocked";
+            /**
+             * Processquality
+             * @enum {string}
+             */
+            processQuality: "passed" | "warning" | "blocked";
+            /** Rationale */
+            rationale: string[];
+            /**
+             * Strategicrobustness
+             * @enum {string}
+             */
+            strategicRobustness: "robust" | "scenario_sensitive" | "flip_detected";
+            /**
+             * Weakestdimension
+             * @enum {string}
+             */
+            weakestDimension: "evidence_availability" | "claim_support" | "assumption_stability" | "causal_reliability" | "strategic_robustness" | "process_quality";
+        };
+        /** RunFrozenSourceRecord */
+        RunFrozenSourceRecord: {
+            /** Analysisrunid */
+            analysisRunId: string;
+            /** Canonicaluri */
+            canonicalUri: string;
+            /** Contenthash */
+            contentHash: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /**
+             * Frozenat
+             * Format: date-time
+             */
+            frozenAt: string;
+            /** Frozenfromsourcerecordid */
+            frozenFromSourceRecordId: string;
+            /** Id */
+            id: string;
+            kind: components["schemas"]["SourceKind"];
+            originMode: components["schemas"]["OriginMode"];
+            /** Rawartifactid */
+            rawArtifactId?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            sourceScope: "run_frozen";
+            /** Sourceversion */
+            sourceVersion: string;
+            /** Title */
+            title: string;
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** RunFrozenSourceSpan */
+        RunFrozenSourceSpan: {
+            /** Analysisrunid */
+            analysisRunId: string;
+            /** Contextafter */
+            contextAfter?: string | null;
+            /** Contextbefore */
+            contextBefore?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Frozenfromsourcespanid */
+            frozenFromSourceSpanId: string;
+            /** Id */
+            id: string;
+            locator: components["schemas"]["SourceSpanLocator"];
+            /** Quote */
+            quote: string;
+            /** Quotehash */
+            quoteHash: string;
+            /** Sourcerecordid */
+            sourceRecordId: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            sourceScope: "run_frozen";
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** SignoffPayload */
+        SignoffPayload: {
+            /** Acceptedunknownids */
+            acceptedUnknownIds: string[];
+            /** Actionitems */
+            actionItems: components["schemas"]["ActionItem"][];
+            /** Caseversion */
+            caseVersion: number;
+            /** Conditions */
+            conditions: string[];
+            /** Decisiondraft */
+            decisionDraft: string;
+            /** Exitcriteria */
+            exitCriteria: string[];
+            /** Leadingindicators */
+            leadingIndicators: components["schemas"]["LeadingIndicator"][];
+            /**
+             * Reviewdate
+             * Format: date
+             */
+            reviewDate: string;
+            /** Selectedoptionid */
+            selectedOptionId: string;
+            /** Sourceanalysisrunid */
+            sourceAnalysisRunId: string;
+            /** Sourcecausalgraphid */
+            sourceCausalGraphId?: string | null;
+            /** Sourcecausalgraphversionid */
+            sourceCausalGraphVersionId?: string | null;
+            /** Sourcedissentrecordid */
+            sourceDissentRecordId: string;
+            /** Sourcejudgmentsetid */
+            sourceJudgmentSetId: string;
+            /** Sourcereportartifactid */
+            sourceReportArtifactId: string;
+            /** Sourcesimulationrunid */
+            sourceSimulationRunId?: string | null;
+            systemRecommendation: components["schemas"]["SystemRecommendation"];
+            /** Thresholds */
+            thresholds: components["schemas"]["Threshold"][];
+        };
+        /** SignoffRequest */
+        SignoffRequest: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /**
+             * Expiresat
+             * Format: date-time
+             */
+            expiresAt: string;
+            /** Id */
+            id: string;
+            /**
+             * Nonceissuedat
+             * Format: date-time
+             */
+            nonceIssuedAt: string;
+            payload: components["schemas"]["SignoffPayload"];
+            /** Payloadhash */
+            payloadHash: string;
+            /** Requestedbyuserid */
+            requestedByUserId: string;
+            /** Signedat */
+            signedAt?: string | null;
+            status: components["schemas"]["SignoffRequestStatus"];
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /**
+         * SignoffRequestStatus
+         * @enum {string}
+         */
+        SignoffRequestStatus: "pending" | "signed" | "declined" | "cancelled" | "expired";
+        /** SignoffSignCommand */
+        SignoffSignCommand: {
+            /** Nonce */
+            nonce: string;
+            /** Payloadhash */
+            payloadHash: string;
+            /** Signaturestatement */
+            signatureStatement: string;
+        };
+        /**
+         * SimulationConvergenceStatus
+         * @enum {string}
+         */
+        SimulationConvergenceStatus: "converged" | "max_steps" | "saturated" | "invalid";
+        /**
+         * SimulationMode
+         * @enum {string}
+         */
+        SimulationMode: "formal" | "experimental";
+        /** SimulationOptionScore */
+        SimulationOptionScore: {
+            /** Optionid */
+            optionId: string;
+            /** Score */
+            score: number;
+        };
+        /** SimulationRun */
+        SimulationRun: {
+            convergenceStatus: components["schemas"]["SimulationConvergenceStatus"];
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Decisionmakerprofileid */
+            decisionMakerProfileId: string;
+            /** Decisionmakerprofileversion */
+            decisionMakerProfileVersion: number;
+            /** Engineversion */
+            engineVersion: string;
+            /** Epsilon */
+            epsilon: number;
+            /** Graphid */
+            graphId: string;
+            /** Graphversionid */
+            graphVersionId: string;
+            /** Id */
+            id: string;
+            /** Inputhash */
+            inputHash: string;
+            /** Maxsteps */
+            maxSteps: number;
+            /** Noderesults */
+            nodeResults: {
+                [key: string]: number;
+            };
+            /** Optionscores */
+            optionScores: components["schemas"]["SimulationOptionScore"][];
+            /** Originmodes */
+            originModes: components["schemas"]["OriginMode"][];
+            /** Recommendationshift */
+            recommendationShift: string;
+            /** Risktolerance */
+            riskTolerance: number;
+            /** Scenarioid */
+            scenarioId: string;
+            /** Scenarioversionid */
+            scenarioVersionId: string;
+            /** Scoredefinitionid */
+            scoreDefinitionId: string;
+            /** Scoredefinitionversion */
+            scoreDefinitionVersion: string;
+            simulationMode: components["schemas"]["SimulationMode"];
+            /** Steps */
+            steps: number;
+            /** Strategyversionid */
+            strategyVersionId: string;
+            /** Topdrivers */
+            topDrivers: components["schemas"]["SimulationTopDriver"][];
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** SimulationTopDriver */
+        SimulationTopDriver: {
+            /** Nodeid */
+            nodeId: string;
+            /** Scoredelta */
+            scoreDelta: number;
+        };
+        /**
+         * SourceKind
+         * @enum {string}
+         */
+        SourceKind: "web_page" | "provider_result" | "uploaded_file" | "human_input" | "case_snapshot";
+        /**
+         * SourceRecord
+         * @description Named discriminated union for pre-run and run-frozen sources.
+         */
+        SourceRecord: components["schemas"]["PreRunSourceRecord"] | components["schemas"]["RunFrozenSourceRecord"];
+        /** SourceRecordBase */
+        SourceRecordBase: {
+            /** Canonicaluri */
+            canonicalUri: string;
+            /** Contenthash */
+            contentHash: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Id */
+            id: string;
+            kind: components["schemas"]["SourceKind"];
+            originMode: components["schemas"]["OriginMode"];
+            /** Rawartifactid */
+            rawArtifactId?: string | null;
+            /** Sourceversion */
+            sourceVersion: string;
+            /** Title */
+            title: string;
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /**
+         * SourceSpan
+         * @description Named discriminated union for pre-run and run-frozen source spans.
+         */
+        SourceSpan: components["schemas"]["PreRunSourceSpan"] | components["schemas"]["RunFrozenSourceSpan"];
+        /** SourceSpanBase */
+        SourceSpanBase: {
+            /** Contextafter */
+            contextAfter?: string | null;
+            /** Contextbefore */
+            contextBefore?: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decisioncaseid */
+            decisionCaseId: string;
+            /** Id */
+            id: string;
+            locator: components["schemas"]["SourceSpanLocator"];
+            /** Quote */
+            quote: string;
+            /** Quotehash */
+            quoteHash: string;
+            /** Sourcerecordid */
+            sourceRecordId: string;
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /** SourceSpanLocator */
+        SourceSpanLocator: {
+            /** Casefieldpath */
+            caseFieldPath?: string | null;
+            /** Charend */
+            charEnd?: number | null;
+            /** Charstart */
+            charStart?: number | null;
+            /** Columnend */
+            columnEnd?: number | null;
+            /** Columnstart */
+            columnStart?: number | null;
+            /** Messageid */
+            messageId?: string | null;
+            /** Pagenumber */
+            pageNumber?: number | null;
+            /** Paragraphindex */
+            paragraphIndex?: number | null;
+            /** Rowend */
+            rowEnd?: number | null;
+            /** Rowstart */
+            rowStart?: number | null;
+            /** Sheetname */
+            sheetName?: string | null;
+        };
+        /**
+         * SystemRecommendation
+         * @description A system may recommend one option or explicitly abstain, never an empty option.
+         */
+        SystemRecommendation: components["schemas"]["OptionSystemRecommendation"] | components["schemas"]["AbstainSystemRecommendation"];
+        /** Threshold */
+        Threshold: {
+            /** Actionifmissed */
+            actionIfMissed: string;
+            /** Metric */
+            metric: string;
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: ">" | ">=" | "<" | "<=" | "=";
+            /** Value */
+            value: string;
+        };
+        /** User */
+        User: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Email */
+            email: string;
+            /** Id */
+            id: string;
+            status: components["schemas"]["UserStatus"];
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /** UserSession */
+        UserSession: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Expiresat
+             * Format: date-time
+             */
+            expiresAt: string;
+            /** Id */
+            id: string;
+            /**
+             * Lastseenat
+             * Format: date-time
+             */
+            lastSeenAt: string;
+            /** Revokedat */
+            revokedAt?: string | null;
+            /** Tokenversion */
+            tokenVersion: number;
+            /** Userid */
+            userId: string;
+        };
+        /**
+         * UserStatus
+         * @enum {string}
+         */
+        UserStatus: "active" | "disabled";
+        /** ValidatorFinding */
+        ValidatorFinding: {
+            /** Artifactids */
+            artifactIds: string[];
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** ValidatorResult */
+        ValidatorResult: {
+            /**
+             * Executionmode
+             * @enum {string}
+             */
+            executionMode: "deterministic" | "model_assisted" | "hybrid";
+            /** Findings */
+            findings: components["schemas"]["ValidatorFinding"][];
+            /** Modelinvocationref */
+            modelInvocationRef?: string | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "pass" | "warn" | "block";
+            /** Repairtarget */
+            repairTarget?: string | null;
+            /**
+             * Validatorid
+             * @enum {string}
+             */
+            validatorId: "V1_scope_charter" | "V2_source_traceability" | "V3_evidence_quality" | "V4_claim_evidence_entailment" | "V5_contradiction_alignment" | "V6_unknown_assumption" | "V7_adversarial_dissent" | "V8_causal_simulation" | "V9_publication_authority";
+            /** Validatorversion */
+            validatorVersion: string;
+        };
+        /**
+         * WorkspaceCapability
+         * @enum {string}
+         */
+        WorkspaceCapability: "contribute" | "review" | "sign" | "manage_connectors";
+        /** WorkspaceMembership */
+        WorkspaceMembership: {
+            /** Capabilities */
+            capabilities: components["schemas"]["WorkspaceCapability"][];
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Id */
+            id: string;
+            role: components["schemas"]["WorkspaceRole"];
+            status: components["schemas"]["WorkspaceMembershipStatus"];
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Userid */
+            userId: string;
+            /** Workspaceid */
+            workspaceId: string;
+        };
+        /**
+         * WorkspaceMembershipStatus
+         * @enum {string}
+         */
+        WorkspaceMembershipStatus: "active" | "suspended" | "revoked";
+        /**
+         * WorkspaceRole
+         * @enum {string}
+         */
+        WorkspaceRole: "owner" | "member";
     };
     responses: never;
     parameters: never;

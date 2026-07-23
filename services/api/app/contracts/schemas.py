@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import re
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, StringConstraints
+
+
+def to_camel(value: str) -> str:
+    """Convert internal snake_case names to the canonical camelCase wire contract."""
+
+    head, *tail = value.split("_")
+    return head + "".join(part[:1].upper() + part[1:] for part in tail)
+
+
+class CanonicalModel(BaseModel):
+    """Strict base for Pydantic models that feed the generated OpenAPI contract."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        extra="forbid",
+        populate_by_name=True,
+        serialize_by_alias=True,
+        str_strip_whitespace=True,
+        validate_assignment=True,
+    )
+
+
+Identifier = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=240),
+]
+ContentHash = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=256),
+]
+NonEmptyText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
+
+_HASH_PATTERN = re.compile(r"^(?:sha256:)?[A-Za-z0-9._:+/=~-]+$")
+
+
+def validate_content_hash(value: str) -> str:
+    """Reject whitespace/control-bearing pseudo hashes without fixing one storage encoding."""
+
+    if not _HASH_PATTERN.fullmatch(value):
+        raise ValueError("content hash must be an opaque, whitespace-free digest value")
+    return value

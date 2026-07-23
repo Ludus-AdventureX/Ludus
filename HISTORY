@@ -800,3 +800,75 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - No force push, GitHub branch merge, history rewrite, product code modification, or credential publication was performed by this release-sync task.
 
 - Secret policy: no credentials are stored in this file.
+
+## Archive Task 19A Canonical Contract Implementation - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed (Contract Lead implementation slice; independent QA compatibility slice remains required before merge approval).
+- Objective: implement Task 19A canonical schema, identifiers, Source/session/signoff/simulation fields, migrations, and generated contracts without entering Task 19B/19C behavior or QA-owned test scope.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/task-19a-canonical-contracts
+- Base local/remote main commit: cf9e093651d67784ecbd8a9de55632ccbca807f8
+- Owner: contract_lead
+- Manifest dependencies: task-02 and task-06; both were present on the synchronized base mainline.
+
+## Implemented canonical schemas
+
+- Added strict camelCase Pydantic contract modules for User, WorkspaceMembership, UserSession, SourceRecord/SourceSpan discriminated unions, DeepAnalysis request/result, SystemRecommendation, Recommendation, the complete 18-field SignoffPayload, SignoffRequest/sign command, and SimulationRun replay fields.
+- `pre_run` Source variants do not expose `analysisRunId`; `run_frozen` variants require the run ID and original source/span reference.
+- `SystemRecommendation` is a required `kind` discriminator over a non-empty option ID or explicit abstain reason codes/rationale; an empty option cannot represent abstention.
+- DeepAnalysis request/result field order and shape match 06/26, use `decisionCaseId` / `analysisRunId`, and return persisted artifact identifiers/hashes rather than duplicate domain DTOs.
+- SignoffPayload exposes exactly 18 canonical properties, including optional graph/simulation provenance and all conditions, thresholds, actions, indicators, accepted Unknowns, and review date.
+- SimulationRun freezes ScoreDefinition/profile IDs and versions, riskTolerance, engineVersion, epsilon, maxSteps, and inputHash, with finite-number and bounds validation.
+- Password hashes and signoff nonce hashes remain available to internal validation/persistence but are excluded from response-mode generated OpenAPI/TypeScript schemas.
+
+## Persistence and migration
+
+- Preserved the existing Task 2 User, WorkspaceMembership, UserSession, DecisionSubject, and DecisionCase models rather than duplicating them.
+- Added canonical SQLAlchemy foundations for `analysis_runs`, `source_records`, `source_spans`, `simulation_runs`, and `signoff_requests`.
+- Added composite Workspace/Case/Run foreign keys, pre-run/run-frozen check constraints, deterministic locator requirements, replay numeric bounds, signoff expiry/status constraints, tenant-qualified unique keys, and resumable-stage restrictions.
+- Added Alembic revision `6b246c283d7a_add_canonical_contract_foundations.py` with explicit enum cleanup on downgrade.
+- Real Postgres migration validation passed: upgrade to head, downgrade to `0001`, re-upgrade to head, and `alembic check` reported no new upgrade operations.
+
+## Generated contract chain
+
+- Added `packages/contracts/build_openapi.py`, which combines the real FastAPI OpenAPI document with a route-independent Pydantic schema catalog while endpoints are not yet owned by Task 19A.
+- Updated only the authorized `scripts/generate_contracts.ps1` entrypoint; `main.py` and `scripts/export_openapi.py` were not modified.
+- Regenerated `packages/contracts/openapi.json` and `packages/contracts/src/types.gen.ts`; `generate_contracts.ps1 -Check` returned `CONTRACT_DRIFT_OK`.
+- Generated OpenAPI includes named `SourceRecord`, `SourceSpan`, `SystemRecommendation`, `SignoffPayload`, `SimulationRun`, `DeepAnalysisRequest/Result`, `WorkspaceMembership`, and `UserSession` components with required discriminators.
+
+## Validation
+
+- Pydantic canonical-shape probe: PASS for Source pre-run/run-frozen rejection/acceptance, SourceSpan locator, option/abstain union, exact Signoff payload, exact DeepAnalysis I/O, and Simulation replay fields.
+- PostgreSQL invariant probe in a rolled-back transaction: PASS for valid pre-run/frozen chains plus rejection of illegal pre-run run IDs, cross-Case run/source binding, and invalid simulation step bounds.
+- Full API/model/method suite with warnings as errors after the final schema changes, excluding the one known stale QA assertion: 67 passed, 1 deselected in 63.75 seconds.
+- The unmodified manifest test command produced 17 passed and 1 failed; the sole failure is `test_core_table_set_and_workspace_scope`, whose Task 2 expected set omits the five authorized Task 19A tables. No second product regression was present.
+- Ruff over `services/api`, `scripts`, and the contract builder: PASS.
+- Python compileall over app/tests/scripts/contract builder: PASS.
+- Decision OS verifier: all 7 groups PASS; DAG acyclic, 26 tasks, DeepAnalysis 06/26 exact, 18 Signoff fields, and zero legacy wire IDs.
+- Canonical DB/wire identifier scan: zero bare `caseId`, `runId`, `case_id`, or `run_id` findings in the Task 19A implementation.
+- Task 19A write-scope audit: 13 project/generated paths, all inside the Contract Lead manifest scope.
+- Changed-tree high-confidence secret scan: zero findings.
+
+## Review and owner boundary
+
+- During self-review, fixed two release-relevant issues before commit: discriminator fields are now required in OpenAPI, and passwordHash/nonceHash are excluded from response-mode generated contracts.
+- No P0/P1 product-code blocker remains in the Contract Lead write scope.
+- This implementation branch intentionally does not edit `services/api/tests/**`; the stale exact-table assertion and new regression coverage belong to an independent QA/Release branch stacked on this implementation.
+- Result: owner implementation is complete, but the branch must not receive a final merge approval until the QA branch updates tests only and the combined stack passes the full manifest acceptance.
+
+## Artifact digests
+
+- OpenAPI SHA-256: `daf470109dcb7b631d0d244051127079780ba37b6a985c3c8093acd43f1375d5`.
+- TypeScript SHA-256: `418f1801e5c542e9a0d178e1dfbeab5ceb5b97b15e2e14af93648e5655682b94`.
+- Migration SHA-256: `bbc9b35d245ee05dea4bf00586a8ccf68f11661f12d2d5b04f38f1ecd2f5b43b`.
+
+## Next step
+
+- Commit and push this owner-clean implementation branch.
+- Create `codex/qa-task-19a-canonical-contracts` from the implementation tip, write a new active HEAD, and modify only QA-owned tests/lifecycle records.
+- Required review/merge order: implementation branch first, then the stacked QA branch; no automatic merge.
+
+- Secret policy: no credentials are stored in this file.
