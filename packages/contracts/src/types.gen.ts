@@ -4,6 +4,91 @@
  */
 
 export interface paths {
+    "/api/auth/csrf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Csrf Token */
+        get: operations["get_csrf_token_api_auth_csrf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register */
+        post: operations["register_api_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Session */
+        get: operations["read_session_api_auth_session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -55,6 +140,38 @@ export interface components {
             status: "open" | "done" | "blocked";
             /** Text */
             text: string;
+        };
+        /** AuthSessionData */
+        AuthSessionData: {
+            /** Memberships */
+            memberships: components["schemas"]["MembershipSummary"][];
+            session: components["schemas"]["SessionSummary"];
+            user: components["schemas"]["UserSummary"];
+        };
+        /** AuthSessionEnvelope */
+        AuthSessionEnvelope: {
+            data: components["schemas"]["AuthSessionData"];
+            /**
+             * Ok
+             * @default true
+             * @constant
+             */
+            ok: true;
+        };
+        /** CsrfEnvelope */
+        CsrfEnvelope: {
+            data: components["schemas"]["CsrfTokenData"];
+            /**
+             * Ok
+             * @default true
+             * @constant
+             */
+            ok: true;
+        };
+        /** CsrfTokenData */
+        CsrfTokenData: {
+            /** Csrftoken */
+            csrfToken: string;
         };
         /** DeepAnalysisRequest */
         DeepAnalysisRequest: {
@@ -115,6 +232,11 @@ export interface components {
          * @enum {string}
          */
         FormalAnalysisLevel: "focused" | "full";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -139,6 +261,43 @@ export interface components {
             metric: string;
             /** Threshold */
             threshold: string;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** LogoutData */
+        LogoutData: {
+            /**
+             * Loggedout
+             * @default true
+             * @constant
+             */
+            loggedOut: true;
+        };
+        /** LogoutEnvelope */
+        LogoutEnvelope: {
+            data: components["schemas"]["LogoutData"];
+            /**
+             * Ok
+             * @default true
+             * @constant
+             */
+            ok: true;
+        };
+        /** MembershipSummary */
+        MembershipSummary: {
+            /** Capabilities */
+            capabilities: components["schemas"]["WorkspaceCapability"][];
+            role: components["schemas"]["WorkspaceRole"];
+            status: components["schemas"]["WorkspaceMembershipStatus"];
+            /** Workspaceid */
+            workspaceId: string;
+            /** Workspacename */
+            workspaceName: string;
         };
         /** MethodVersionRef */
         MethodVersionRef: {
@@ -293,6 +452,15 @@ export interface components {
              */
             weakestDimension: "evidence_availability" | "claim_support" | "assumption_stability" | "causal_reliability" | "strategic_robustness" | "process_quality";
         };
+        /** RegisterRequest */
+        RegisterRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+            /** Workspacename */
+            workspaceName?: string | null;
+        };
         /** RunFrozenSourceRecord */
         RunFrozenSourceRecord: {
             /** Analysisrunid */
@@ -366,6 +534,26 @@ export interface components {
             sourceScope: "run_frozen";
             /** Workspaceid */
             workspaceId: string;
+        };
+        /** SessionSummary */
+        SessionSummary: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Expiresat
+             * Format: date-time
+             */
+            expiresAt: string;
+            /** Id */
+            id: string;
+            /**
+             * Lastseenat
+             * Format: date-time
+             */
+            lastSeenAt: string;
         };
         /** SignoffPayload */
         SignoffPayload: {
@@ -695,6 +883,32 @@ export interface components {
          * @enum {string}
          */
         UserStatus: "active" | "disabled";
+        /** UserSummary */
+        UserSummary: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Email */
+            email: string;
+            /** Id */
+            id: string;
+            status: components["schemas"]["UserStatus"];
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
         /** ValidatorFinding */
         ValidatorFinding: {
             /** Artifactids */
@@ -777,6 +991,132 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_csrf_token_api_auth_csrf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CsrfEnvelope"];
+                };
+            };
+        };
+    };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutEnvelope"];
+                };
+            };
+        };
+    };
+    register_api_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_session_api_auth_session_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionEnvelope"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;

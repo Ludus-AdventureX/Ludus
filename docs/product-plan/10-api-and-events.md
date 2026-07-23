@@ -887,6 +887,7 @@ Idempotency-Key: decision_001_review_2026_10_15
 | 错误码 | HTTP | 含义 | 是否可重试 |
 |---|---:|---|---|
 | `CASE_NOT_FOUND` | 404 | 决策项目不存在或不属于当前 Workspace | 否 |
+| `WORKSPACE_NOT_FOUND` | 404 | Workspace 不存在、不可见或当前用户无活动 membership；对外部与不存在的资源逐字节一致，不泄露存在性 | 否 |
 | `VERSION_CONFLICT` | 409 | 客户端基于旧版本写入 | 否，需刷新 |
 | `VALIDATION_FAILED` | 422 | 结构或质量门不通过 | 否，需修正输入 |
 | `ANALYSIS_RUN_ALREADY_ACTIVE` | 409 | Case 已有另一条活动正式 Run；不是幂等重放 | 否，读取 details.existingAnalysisRunId |
@@ -908,6 +909,7 @@ Idempotency-Key: decision_001_review_2026_10_15
 | `CYNEFIN_GATE_BLOCKED` | 422 | domain 为 chaotic/disorder，且没有合法的人类 override | 否，先稳定或补充边界 |
 | `LIFECYCLE_TRANSITION_INVALID` | 409 | 当前 Case 阶段不允许目标命令 | 否 |
 | `SESSION_REVOKED_OR_EXPIRED` | 401 | UserSession 已撤销、过期或 tokenVersion 失效 | 否，重新登录 |
+| `AUTH_INVALID_CREDENTIALS` | 401 | 登录凭据无效；未知邮箱与错误密码返回一致响应，不泄露账户存在性 | 否 |
 | `MEMBERSHIP_CAPABILITY_REQUIRED` | 403 | 当前 membership 缺少所需 capability | 否 |
 | `SIGNOFF_REQUIRED` | 409 | 尝试绕过 pending SignoffRequest 创建决定 | 否 |
 | `SIGNOFF_HUMAN_REQUIRED` | 403 | actor 不是授权人类用户或客户端伪造签署人 | 否 |
