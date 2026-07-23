@@ -1,0 +1,628 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0",
+  "title": "StrategicLensOutput",
+  "description": "Untrusted model stage output. The server validates this discriminated union, resolves references in the frozen Run, injects canonical identity/provenance/hash fields, and only then persists a ready StrategicLensArtifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lensType",
+    "sourceSkillVersion",
+    "phase",
+    "references",
+    "researchRequests",
+    "content"
+  ],
+  "properties": {
+    "lensType": {
+      "enum": ["pre_mortem", "scenario_planning", "porter_five_forces", "counterparty_response_matrix", "meadows_leverage_points"]
+    },
+    "sourceSkillVersion": { "const": "1.0.0" },
+    "phase": { "enum": ["research_interpretation", "adversarial_stress", "strategic_synthesis"] },
+    "references": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourcePacketIds", "claimIds", "evidenceIds", "assumptionIds", "challengeIds"],
+      "properties": {
+        "sourcePacketIds": { "$ref": "#/$defs/idArray" },
+        "claimIds": { "$ref": "#/$defs/idArray" },
+        "evidenceIds": { "$ref": "#/$defs/idArray" },
+        "assumptionIds": { "$ref": "#/$defs/idArray" },
+        "challengeIds": { "$ref": "#/$defs/idArray" }
+      }
+    },
+    "researchRequests": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/researchRequest" }
+    },
+    "content": {}
+  },
+  "oneOf": [
+    {
+      "title": "Pre-mortem stage output",
+      "properties": {
+        "lensType": { "const": "pre_mortem" },
+        "phase": { "const": "adversarial_stress" },
+        "content": { "$ref": "#/$defs/preMortemContent" }
+      }
+    },
+    {
+      "title": "Scenario planning stage output",
+      "properties": {
+        "lensType": { "const": "scenario_planning" },
+        "phase": { "const": "strategic_synthesis" },
+        "content": { "$ref": "#/$defs/scenarioPlanningContent" }
+      }
+    },
+    {
+      "title": "Porter five forces stage output",
+      "properties": {
+        "lensType": { "const": "porter_five_forces" },
+        "phase": { "const": "research_interpretation" },
+        "content": { "$ref": "#/$defs/porterContent" }
+      }
+    },
+    {
+      "title": "Counterparty response stage output",
+      "properties": {
+        "lensType": { "const": "counterparty_response_matrix" },
+        "phase": { "const": "adversarial_stress" },
+        "content": { "$ref": "#/$defs/counterpartyContent" }
+      }
+    },
+    {
+      "title": "Meadows leverage points stage output",
+      "properties": {
+        "lensType": { "const": "meadows_leverage_points" },
+        "phase": { "const": "strategic_synthesis" },
+        "content": { "$ref": "#/$defs/meadowsContent" }
+      }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 5000 },
+    "idArray": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "nonEmptyIdArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "textArray": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/longText" }
+    },
+    "nonEmptyTextArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/longText" }
+    },
+    "researchRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "question", "evidenceNeed", "priority", "affectedClaimIds"],
+      "properties": {
+        "requestId": { "$ref": "#/$defs/id" },
+        "question": { "$ref": "#/$defs/longText" },
+        "evidenceNeed": { "enum": ["primary", "counterevidence", "current_market", "regulatory", "technical_test", "procurement", "stakeholder"] },
+        "priority": { "enum": ["medium", "high", "critical"] },
+        "affectedClaimIds": { "$ref": "#/$defs/idArray" }
+      }
+    },
+    "preMortemContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failureHorizon", "failureStatement", "perspectives", "failureCauses", "topRisks", "verdict", "verdictRationale", "additionalInformationNeeded"],
+      "properties": {
+        "failureHorizon": { "$ref": "#/$defs/text" },
+        "failureStatement": { "$ref": "#/$defs/longText" },
+        "perspectives": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["internal", "external", "systemic_hindsight"] }
+        },
+        "failureCauses": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["causeId", "perspective", "category", "cause", "downstreamConsequences", "likelihoodScore", "impactScore", "riskScore", "controllability"],
+            "properties": {
+              "causeId": { "$ref": "#/$defs/id" },
+              "perspective": { "enum": ["internal", "external", "systemic_hindsight"] },
+              "category": { "enum": ["external", "internal_execution", "assumption_failure", "relationship_or_politics", "timing", "systemic_blind_spot"] },
+              "cause": { "$ref": "#/$defs/longText" },
+              "downstreamConsequences": { "$ref": "#/$defs/nonEmptyTextArray" },
+              "likelihoodScore": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Ordinal prioritization score, not a probability." },
+              "impactScore": { "type": "integer", "minimum": 1, "maximum": 5 },
+              "riskScore": { "type": "integer", "minimum": 1, "maximum": 25 },
+              "controllability": { "enum": ["controllable", "partly_controllable", "uncontrollable"] }
+            }
+          }
+        },
+        "topRisks": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rank", "causeId", "prevention", "contingency", "detectionIndicator"],
+            "properties": {
+              "rank": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "causeId": { "$ref": "#/$defs/id" },
+              "prevention": { "$ref": "#/$defs/longText" },
+              "contingency": { "$ref": "#/$defs/longText" },
+              "detectionIndicator": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "verdict": { "enum": ["continue", "modify", "abandon", "validate_first"] },
+        "verdictRationale": { "$ref": "#/$defs/longText" },
+        "additionalInformationNeeded": { "$ref": "#/$defs/textArray" }
+      }
+    },
+    "scenarioPlanningContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["focusQuestion", "timeHorizon", "predeterminedElements", "keyUncertainties", "axes", "scenarios", "strategyTests", "strategyKilledInAtLeastOneScenario", "monitoringActions", "irreducibleUnknowns"],
+      "properties": {
+        "focusQuestion": { "$ref": "#/$defs/longText" },
+        "timeHorizon": { "$ref": "#/$defs/text" },
+        "predeterminedElements": { "$ref": "#/$defs/nonEmptyTextArray" },
+        "keyUncertainties": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["uncertaintyId", "factor", "impact", "uncertainty", "evidenceIds"],
+            "properties": {
+              "uncertaintyId": { "$ref": "#/$defs/id" },
+              "factor": { "$ref": "#/$defs/longText" },
+              "impact": { "enum": ["medium", "high"] },
+              "uncertainty": { "enum": ["medium", "high"] },
+              "evidenceIds": { "$ref": "#/$defs/idArray" }
+            }
+          }
+        },
+        "axes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["axisId", "uncertaintyId", "lowState", "highState", "selectionRationale"],
+            "properties": {
+              "axisId": { "$ref": "#/$defs/id" },
+              "uncertaintyId": { "$ref": "#/$defs/id" },
+              "lowState": { "$ref": "#/$defs/text" },
+              "highState": { "$ref": "#/$defs/text" },
+              "selectionRationale": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/scenario" },
+          "allOf": [
+            { "contains": { "type": "object", "properties": { "kind": { "const": "baseline" } }, "required": ["kind"] }, "minContains": 1, "maxContains": 1 },
+            { "contains": { "type": "object", "properties": { "kind": { "const": "structural_break" } }, "required": ["kind"] }, "minContains": 2 }
+          ]
+        },
+        "strategyTests": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["scenarioId", "optionId", "performance", "failureReason", "requiredAdjustment", "triggerSignalIds"],
+            "properties": {
+              "scenarioId": { "$ref": "#/$defs/id" },
+              "optionId": { "$ref": "#/$defs/id" },
+              "performance": { "enum": ["robust", "viable_with_adjustment", "high_risk", "killed"] },
+              "failureReason": { "$ref": "#/$defs/longText" },
+              "requiredAdjustment": { "$ref": "#/$defs/longText" },
+              "triggerSignalIds": { "$ref": "#/$defs/idArray" }
+            }
+          }
+        },
+        "strategyKilledInAtLeastOneScenario": { "const": true },
+        "monitoringActions": { "$ref": "#/$defs/nonEmptyTextArray" },
+        "irreducibleUnknowns": { "$ref": "#/$defs/nonEmptyTextArray" }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarioId", "name", "kind", "axisStates", "coreLogic", "timeline", "stakeholderStates", "earlySignals"],
+      "properties": {
+        "scenarioId": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/text" },
+        "kind": { "enum": ["baseline", "structural_break"] },
+        "axisStates": { "$ref": "#/$defs/nonEmptyTextArray" },
+        "coreLogic": { "$ref": "#/$defs/longText" },
+        "timeline": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["period", "turningPoint"],
+            "properties": {
+              "period": { "$ref": "#/$defs/text" },
+              "turningPoint": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "stakeholderStates": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stakeholder", "state"],
+            "properties": {
+              "stakeholder": { "$ref": "#/$defs/text" },
+              "state": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "earlySignals": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["signalId", "type", "observable", "thresholdOrPattern", "cadence"],
+            "properties": {
+              "signalId": { "$ref": "#/$defs/id" },
+              "type": { "enum": ["qualitative", "quantitative", "structural"] },
+              "observable": { "$ref": "#/$defs/longText" },
+              "thresholdOrPattern": { "$ref": "#/$defs/text" },
+              "cadence": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "porterContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marketAnalyses", "crossMarketComparison", "strategicImplications", "scoreIsNotDecisionFormula"],
+      "properties": {
+        "marketAnalyses": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/porterMarketAnalysis" }
+        },
+        "crossMarketComparison": { "$ref": "#/$defs/longText" },
+        "strategicImplications": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["optionId", "strategy", "logic", "conditions"],
+            "properties": {
+              "optionId": { "$ref": "#/$defs/id" },
+              "strategy": { "enum": ["cost_leadership", "differentiation", "focus", "targeted_defense", "avoid_entry", "validate_before_entry"] },
+              "logic": { "$ref": "#/$defs/longText" },
+              "conditions": { "$ref": "#/$defs/nonEmptyTextArray" }
+            }
+          }
+        },
+        "scoreIsNotDecisionFormula": { "const": true }
+      }
+    },
+    "porterMarketAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionId", "industryBoundary", "forces", "averageThreatScore", "changingTrend", "regulatoryAssessment", "complementors"],
+      "properties": {
+        "optionId": { "$ref": "#/$defs/id" },
+        "industryBoundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["coreValue", "upstream", "downstream", "adjacentMarkets", "crossIndustrySubstitutes", "boundaryRisk"],
+          "properties": {
+            "coreValue": { "$ref": "#/$defs/longText" },
+            "upstream": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "downstream": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "adjacentMarkets": { "$ref": "#/$defs/textArray" },
+            "crossIndustrySubstitutes": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "boundaryRisk": { "$ref": "#/$defs/longText" }
+          }
+        },
+        "forces": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/force" },
+          "allOf": [
+            { "contains": { "type": "object", "properties": { "forceId": { "const": "rivalry" } }, "required": ["forceId"] }, "minContains": 1, "maxContains": 1 },
+            { "contains": { "type": "object", "properties": { "forceId": { "const": "new_entrants" } }, "required": ["forceId"] }, "minContains": 1, "maxContains": 1 },
+            { "contains": { "type": "object", "properties": { "forceId": { "const": "substitutes" } }, "required": ["forceId"] }, "minContains": 1, "maxContains": 1 },
+            { "contains": { "type": "object", "properties": { "forceId": { "const": "supplier_power" } }, "required": ["forceId"] }, "minContains": 1, "maxContains": 1 },
+            { "contains": { "type": "object", "properties": { "forceId": { "const": "buyer_power" } }, "required": ["forceId"] }, "minContains": 1, "maxContains": 1 }
+          ]
+        },
+        "averageThreatScore": { "type": "number", "minimum": 1, "maximum": 5, "description": "Descriptive average only; not a recommendation or success probability." },
+        "changingTrend": { "$ref": "#/$defs/longText" },
+        "regulatoryAssessment": { "$ref": "#/$defs/longText" },
+        "complementors": { "$ref": "#/$defs/nonEmptyTextArray" }
+      }
+    },
+    "force": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["forceId", "threatScore", "keyIndicators", "evidenceIds", "reasoning", "directionOfChange"],
+      "properties": {
+        "forceId": { "enum": ["rivalry", "new_entrants", "substitutes", "supplier_power", "buyer_power"] },
+        "threatScore": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "keyIndicators": { "$ref": "#/$defs/nonEmptyTextArray" },
+        "evidenceIds": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "reasoning": { "$ref": "#/$defs/longText" },
+        "directionOfChange": { "enum": ["strengthening", "stable", "weakening", "uncertain"] }
+      }
+    },
+    "counterpartyContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxResponseDepth", "counterparties", "ourActions", "responseMatrix", "publicationTest", "downsideAsymmetry", "reflexivityWarning"],
+      "properties": {
+        "maxResponseDepth": { "const": 1 },
+        "counterparties": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["counterpartyId", "identity", "coreInterest", "responseTools", "constraints"],
+            "properties": {
+              "counterpartyId": { "$ref": "#/$defs/id" },
+              "identity": { "$ref": "#/$defs/text" },
+              "coreInterest": { "$ref": "#/$defs/longText" },
+              "responseTools": { "$ref": "#/$defs/nonEmptyTextArray" },
+              "constraints": { "$ref": "#/$defs/nonEmptyTextArray" }
+            }
+          }
+        },
+        "ourActions": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["actionId", "actionType", "description", "observability", "irreversibility", "coreAssumptionIds"],
+            "properties": {
+              "actionId": { "$ref": "#/$defs/id" },
+              "actionType": { "enum": ["active", "no_action"] },
+              "description": { "$ref": "#/$defs/longText" },
+              "observability": { "enum": ["low", "medium", "high"] },
+              "irreversibility": { "enum": ["low", "medium", "high"] },
+              "coreAssumptionIds": { "$ref": "#/$defs/idArray" }
+            }
+          },
+          "contains": { "type": "object", "properties": { "actionType": { "const": "no_action" } }, "required": ["actionType"] },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        "responseMatrix": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["counterpartyId", "actionId", "optimalResponse", "worstResponseForUs", "mostLikelyResponse", "responseWindow", "optimalLikelyGap", "ourCounterResponse", "fallbackCost", "strategyInvalidated"],
+            "properties": {
+              "counterpartyId": { "$ref": "#/$defs/id" },
+              "actionId": { "$ref": "#/$defs/id" },
+              "optimalResponse": { "$ref": "#/$defs/longText" },
+              "worstResponseForUs": { "$ref": "#/$defs/longText" },
+              "mostLikelyResponse": { "$ref": "#/$defs/longText" },
+              "responseWindow": { "$ref": "#/$defs/text" },
+              "optimalLikelyGap": { "$ref": "#/$defs/longText" },
+              "ourCounterResponse": { "$ref": "#/$defs/longText" },
+              "fallbackCost": { "$ref": "#/$defs/longText" },
+              "strategyInvalidated": { "type": "boolean" }
+            }
+          }
+        },
+        "publicationTest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["responseChangesIfPublished", "newInformationRevealed", "informationAsymmetryVulnerability", "mitigation"],
+          "properties": {
+            "responseChangesIfPublished": { "type": "boolean" },
+            "newInformationRevealed": { "$ref": "#/$defs/longText" },
+            "informationAsymmetryVulnerability": { "enum": ["none", "low", "medium", "high", "critical"] },
+            "mitigation": { "$ref": "#/$defs/longText" }
+          }
+        },
+        "downsideAsymmetry": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["actionId", "worstCase", "downsideFloor", "exitPath", "exitCost"],
+            "properties": {
+              "actionId": { "$ref": "#/$defs/id" },
+              "worstCase": { "$ref": "#/$defs/longText" },
+              "downsideFloor": { "enum": ["bounded", "unbounded", "unknown"] },
+              "exitPath": { "$ref": "#/$defs/longText" },
+              "exitCost": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "reflexivityWarning": { "$ref": "#/$defs/longText" }
+      }
+    },
+    "meadowsContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["systemMap", "levelsCovered", "currentInterventions", "highLeverageGaps", "runawayPositiveLoops", "interventionSequence", "riskTradeoffs"],
+      "properties": {
+        "systemMap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["boundary", "statedGoal", "actualGoal", "stocks", "flows", "reinforcingLoops", "balancingLoops", "delays", "actors", "rulesAndIncentives"],
+          "properties": {
+            "boundary": { "$ref": "#/$defs/longText" },
+            "statedGoal": { "$ref": "#/$defs/longText" },
+            "actualGoal": { "$ref": "#/$defs/longText" },
+            "stocks": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "flows": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "reinforcingLoops": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "balancingLoops": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "delays": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "actors": { "$ref": "#/$defs/nonEmptyTextArray" },
+            "rulesAndIncentives": { "$ref": "#/$defs/nonEmptyTextArray" }
+          }
+        },
+        "levelsCovered": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 12 }
+        },
+        "currentInterventions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/leverageIntervention" }
+        },
+        "highLeverageGaps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/highLeverageIntervention" }
+        },
+        "runawayPositiveLoops": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["loop", "runawaySignal", "brake"],
+            "properties": {
+              "loop": { "$ref": "#/$defs/longText" },
+              "runawaySignal": { "$ref": "#/$defs/longText" },
+              "brake": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "interventionSequence": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["order", "interventionId", "purpose", "precondition", "failureSignal"],
+            "properties": {
+              "order": { "type": "integer", "minimum": 1, "maximum": 12 },
+              "interventionId": { "$ref": "#/$defs/id" },
+              "purpose": { "enum": ["trust_building", "information_gain", "system_change", "risk_control"] },
+              "precondition": { "$ref": "#/$defs/longText" },
+              "failureSignal": { "$ref": "#/$defs/longText" }
+            }
+          }
+        },
+        "riskTradeoffs": { "$ref": "#/$defs/nonEmptyTextArray" }
+      }
+    },
+    "leverageIntervention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interventionId", "level", "levelName", "strengthBand", "target", "action", "feasibility", "expectedEffect", "failureSignal"],
+      "properties": {
+        "interventionId": { "$ref": "#/$defs/id" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "levelName": { "enum": ["transcend_paradigms", "paradigm", "goals", "self_organization", "rules", "information_flows", "reinforcing_feedback", "balancing_feedback", "delays", "stock_flow_structure", "buffers", "parameters"] },
+        "strengthBand": { "enum": ["low", "medium", "high"] },
+        "target": { "$ref": "#/$defs/longText" },
+        "action": { "$ref": "#/$defs/longText" },
+        "feasibility": { "enum": ["low", "medium", "high"] },
+        "expectedEffect": { "$ref": "#/$defs/longText" },
+        "failureSignal": { "$ref": "#/$defs/longText" }
+      },
+      "oneOf": [
+        { "properties": { "level": { "const": 1 }, "levelName": { "const": "transcend_paradigms" }, "strengthBand": { "const": "high" } } },
+        { "properties": { "level": { "const": 2 }, "levelName": { "const": "paradigm" }, "strengthBand": { "const": "high" } } },
+        { "properties": { "level": { "const": 3 }, "levelName": { "const": "goals" }, "strengthBand": { "const": "high" } } },
+        { "properties": { "level": { "const": 4 }, "levelName": { "const": "self_organization" }, "strengthBand": { "const": "high" } } },
+        { "properties": { "level": { "const": 5 }, "levelName": { "const": "rules" }, "strengthBand": { "const": "medium" } } },
+        { "properties": { "level": { "const": 6 }, "levelName": { "const": "information_flows" }, "strengthBand": { "const": "medium" } } },
+        { "properties": { "level": { "const": 7 }, "levelName": { "const": "reinforcing_feedback" }, "strengthBand": { "const": "medium" } } },
+        { "properties": { "level": { "const": 8 }, "levelName": { "const": "balancing_feedback" }, "strengthBand": { "const": "medium" } } },
+        { "properties": { "level": { "const": 9 }, "levelName": { "const": "delays" }, "strengthBand": { "const": "low" } } },
+        { "properties": { "level": { "const": 10 }, "levelName": { "const": "stock_flow_structure" }, "strengthBand": { "const": "low" } } },
+        { "properties": { "level": { "const": 11 }, "levelName": { "const": "buffers" }, "strengthBand": { "const": "low" } } },
+        { "properties": { "level": { "const": 12 }, "levelName": { "const": "parameters" }, "strengthBand": { "const": "low" } } }
+      ]
+    },
+    "highLeverageIntervention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interventionId", "level", "levelName", "strengthBand", "target", "action", "feasibility", "expectedEffect", "failureSignal", "whyAvoided", "disruptionRisk"],
+      "properties": {
+        "interventionId": { "$ref": "#/$defs/id" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "levelName": { "enum": ["transcend_paradigms", "paradigm", "goals", "self_organization"] },
+        "strengthBand": { "const": "high" },
+        "target": { "$ref": "#/$defs/longText" },
+        "action": { "$ref": "#/$defs/longText" },
+        "feasibility": { "enum": ["low", "medium", "high"] },
+        "expectedEffect": { "$ref": "#/$defs/longText" },
+        "failureSignal": { "$ref": "#/$defs/longText" },
+        "whyAvoided": { "$ref": "#/$defs/longText" },
+        "disruptionRisk": { "$ref": "#/$defs/longText" }
+      },
+      "oneOf": [
+        { "properties": { "level": { "const": 1 }, "levelName": { "const": "transcend_paradigms" } } },
+        { "properties": { "level": { "const": 2 }, "levelName": { "const": "paradigm" } } },
+        { "properties": { "level": { "const": 3 }, "levelName": { "const": "goals" } } },
+        { "properties": { "level": { "const": 4 }, "levelName": { "const": "self_organization" } } }
+      ]
+    }
+  }
+}

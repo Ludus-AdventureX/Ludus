@@ -493,3 +493,101 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 
 - After this archive, create the independent `codex/task-06-method-pack` branch from local main and begin Task 6; do not start full Task 19A before Task 6 is reviewed and merged.
 - Secret policy: no credentials are stored in this file.
+
+## Archive Task 6 Method Pack ? 2026-07-23 (Asia/Shanghai)
+# Work Log: in_progress
+
+- Started: 2026-07-22 (Asia/Shanghai); resumed and validated: 2026-07-23 (Asia/Shanghai).
+- Status: in_progress (implementation and verification complete; final archive, commit, review and push remain).
+- Objective: complete Task 6 method-pack acceptance, harden source/runtime validation, run all Gate 1 regression and contract checks, and prepare a reviewable branch without merging.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/task-06-method-pack
+- Base: b488ecb50be8985761d416232b35536892c83c42 (Gate 1 local baseline).
+
+## Implemented
+
+- Added deterministic source validator, installer, immutable loader, MethodRouter and Cynefin gate implementation.
+- Added and generated the sole active package: hardtech-market-direction@1.1.0.
+- Runtime package is published and hash verified; current content hash: 5b336854a34f30aa1f0dd9c505f53dd9894c5fb0a3cbfad8e2955a37747ce904.
+- Runtime reads published method-packs only; no direct ways read in router/loader.
+- Cynefin formal focused/full requests in blocked domains require paired human identity and reason; allowed requested formal levels are honored; unknown levels are rejected.
+- Router now enforces manifest applicability predicates for switching_cost.material and confirmation.route_inputs_confirmed.
+- Validator cross-checks source Skill name/version/path across manifest, SOURCES.md, CAPABILITY-MAP.md and canonical SKILL.md frontmatter when the sibling source tree is present.
+- Validator rejects unknown tools, Windows/Posix path traversal, network schema refs, invalid worker/schema/lens contracts, symlinks and source/runtime status drift.
+- Removed accidental duplicate EOF blank lines from the eight method source/runtime documents; staged diff check is clean.
+
+## Verification completed on 2026-07-23
+
+- Task 6 method-pack/router/Cynefin suite: 37 passed.
+- Full API suite (original + Task 6): 56 passed against configured PostgreSQL.
+- Ruff: PASS.
+- Python compileall: PASS.
+- CLI install: published successfully; prior two-run idempotence passed, and runtime was reinstalled after EOF normalization.
+- Checked-in runtime/source parity and hash recomputation: PASS.
+- OpenAPI/TypeScript contract drift: CONTRACT_DRIFT_OK.
+- Decision OS verifier: all 7 groups PASS; active ways 1.1.0, historical 1.0.0.
+- Alembic check: no new upgrade operations detected.
+- Refined tracked-file secret scan: 231 tracked files, 0 high-confidence matches; local .env was not read or tracked by the scan.
+- Gate 1 database migration/schema verification remains inherited from main baseline b488ecb (19 tests, Alembic upgrade/downgrade/re-upgrade, schema and verifier checks passed).
+
+## Review scope
+
+- Staged files remain within Task 6 write scope plus HEAD: ways source EOF normalization, generated method-packs, installer CLI, methods modules, and method-pack/router/Cynefin tests.
+- No Task 19A implementation was added; Charter/RunManifest references are declarative method-contract fields only.
+- No merge or GitHub branch merge will be performed by Codex.
+
+## Remaining
+
+- Append this final record to HISTORY, set HEAD to idle, commit the Task 6 branch, and attempt push.
+- Perform final staged-diff review and report whether the product owner may merge.
+- GitHub push may still fail because previous github.com:443 attempts timed out.
+
+- Secret policy: do not print, copy, commit, or record credentials or API keys.
+
+## Archive Task 6 Implementation ? 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: remediate Task 6 pre-commit blockers, validate the deterministic method-pack runtime, and prepare an owner-clean implementation branch without merging.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/task-06-method-pack
+- Base: b488ecb50be8985761d416232b35536892c83c42.
+
+## Implemented
+
+- Added deterministic source validation, installation, immutable loading, method routing, and Cynefin gate behavior for `hardtech-market-direction@1.1.0`.
+- Rejected catalog path escape through POSIX symlinks and Windows directory junctions in Loader, Installer, hash computation, and package validation.
+- Locked manifest applicability, exclusion route semantics, required-input descriptors, Cynefin decision-gate contract, and executable eval declarations in the source/runtime validator.
+- Added Router aliases for the checked-in camelCase eval contract and canonical requested analysis levels; corrected prohibited/unconfirmed material and confirmation failures to `partial` as required by the manifest.
+- Added the approved read-only connector list to the five route eval inputs so the eval fixtures satisfy the manifest's required-input contract.
+- Reinstalled the immutable runtime after source changes. Current runtime content hash: `92e41e56c75bb7ad77a726b5ef91f83e3ff1f2c845c5af3ea4ffcde34c1ef482`.
+- Renamed the internal dataclass module from reserved `services/api/app/methods/schemas.py` to owner-safe `services/api/app/methods/models.py`.
+- Removed QA-owned test files from this implementation branch without deletion; archived at `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\archives\task6-qa-tests-handoff-20260723` for the independent QA branch.
+- Archived the replaced runtime at `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\archives\task6-runtime-before-review-remediation-20260723`.
+
+## Verification
+
+- Latest full API plus Task 6 test set: `68 passed` after temporarily restoring QA tests, then tests were moved back out of this branch.
+- Implementation branch base regression after owner split: `19 passed`.
+- Five checked-in route evals: `ROUTE_EVAL_SMOKE_OK=5`.
+- Ruff: PASS.
+- Python compileall: PASS.
+- CLI install twice: identical published result and hash (`92e41e56...f482`).
+- Source/runtime file parity and hash recomputation: PASS; 41 package files.
+- OpenAPI/TypeScript contract drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: all 7 groups PASS; active ways `1.1.0`, historical `1.0.0`.
+- Alembic check: `No new upgrade operations detected.`
+- Staged high-confidence secret scan: 66 files scanned, zero secret-like filenames and zero high-confidence hits; `.env` was not read or staged by the scan.
+- Staged diff check: PASS.
+- Ownership audit: no staged `services/api/app/**/schemas.py` and no staged `services/api/tests/**` remain on this implementation branch.
+
+## Review and remaining risks
+
+- The implementation branch is ready for its own commit and push; QA-owned acceptance tests must be restored and reviewed on a separate QA branch before the combined Task 6 change is considered release-ready.
+- GitHub connectivity may still block push; no history rewrite or merge is permitted.
+- Full Task 19A remains prohibited until Task 6 implementation and QA branches are reviewed and merged by the product owner.
+- A first full-test attempt without dotenv produced 46 passes and 10 PostgreSQL authentication setup errors; rerun with the approved local environment passed 68/68. No credential value was recorded.
+
+- Secret policy: no credentials are stored in this file.

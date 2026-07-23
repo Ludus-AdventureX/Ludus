@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:validator-aggregate:1.1.0",
+  "title": "Nine Validator Aggregate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "analysisRunId",
+    "overallOutcome",
+    "results",
+    "blockerCount",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "methodId": {
+      "const": "hardtech-market-direction"
+    },
+    "methodVersion": {
+      "const": "1.1.0"
+    },
+    "analysisRunId": {
+      "$ref": "#/$defs/id"
+    },
+    "overallOutcome": {
+      "enum": [
+        "pass",
+        "warn",
+        "block"
+      ]
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "V1_scope_charter",
+        "V2_source_traceability",
+        "V3_evidence_quality",
+        "V4_claim_evidence_entailment",
+        "V5_contradiction_alignment",
+        "V6_unknown_assumption",
+        "V7_adversarial_dissent",
+        "V8_causal_simulation",
+        "V9_publication_authority"
+      ],
+      "properties": {
+        "V1_scope_charter": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V1_scope_charter"
+                }
+              }
+            }
+          ]
+        },
+        "V2_source_traceability": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V2_source_traceability"
+                }
+              }
+            }
+          ]
+        },
+        "V3_evidence_quality": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V3_evidence_quality"
+                }
+              }
+            }
+          ]
+        },
+        "V4_claim_evidence_entailment": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V4_claim_evidence_entailment"
+                }
+              }
+            }
+          ]
+        },
+        "V5_contradiction_alignment": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V5_contradiction_alignment"
+                }
+              }
+            }
+          ]
+        },
+        "V6_unknown_assumption": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V6_unknown_assumption"
+                }
+              }
+            }
+          ]
+        },
+        "V7_adversarial_dissent": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V7_adversarial_dissent"
+                }
+              }
+            }
+          ]
+        },
+        "V8_causal_simulation": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V8_causal_simulation"
+                }
+              }
+            }
+          ]
+        },
+        "V9_publication_authority": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/validatorResult"
+            },
+            {
+              "properties": {
+                "validatorId": {
+                  "const": "V9_publication_authority"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "blockerCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "validatorResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validatorId",
+        "validatorVersion",
+        "outcome",
+        "findings",
+        "executionMode"
+      ],
+      "properties": {
+        "validatorId": {
+          "enum": [
+            "V1_scope_charter",
+            "V2_source_traceability",
+            "V3_evidence_quality",
+            "V4_claim_evidence_entailment",
+            "V5_contradiction_alignment",
+            "V6_unknown_assumption",
+            "V7_adversarial_dissent",
+            "V8_causal_simulation",
+            "V9_publication_authority"
+          ]
+        },
+        "validatorVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "warn",
+            "block"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message",
+              "severity",
+              "artifactIds"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "warning",
+                  "blocker"
+                ]
+              },
+              "artifactIds": {
+                "type": "array",
+                "uniqueItems": true,
+                "maxItems": 200,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              }
+            }
+          }
+        },
+        "repairTarget": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "executionMode": {
+          "enum": [
+            "deterministic",
+            "model_assisted",
+            "hybrid"
+          ]
+        },
+        "modelInvocationRef": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    }
+  }
+}

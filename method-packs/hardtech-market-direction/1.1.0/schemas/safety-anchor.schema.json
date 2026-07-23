@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:safety-anchor:1.1.0",
+  "title": "Hardtech Market Direction Safety Anchor Artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifactId",
+    "analysisRunId",
+    "analyzedPacketIds",
+    "blindSpots",
+    "challengedAssumptions",
+    "pseudoConvergences",
+    "vulnerableLinks",
+    "narrativeEcho",
+    "ifAllWrongBecause",
+    "requestedResearch"
+  ],
+  "properties": {
+    "artifactId": { "$ref": "#/$defs/id" },
+    "analysisRunId": { "$ref": "#/$defs/id" },
+    "analyzedPacketIds": { "$ref": "#/$defs/nonEmptyIdArray" },
+    "blindSpots": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "sharedByPacketIds", "affectedClaimIds", "ifFalseConsequence", "testability", "validationAction"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "description": { "$ref": "#/$defs/longText" },
+          "sharedByPacketIds": { "$ref": "#/$defs/nonEmptyIdArray" },
+          "affectedClaimIds": { "$ref": "#/$defs/idArray" },
+          "ifFalseConsequence": { "$ref": "#/$defs/longText" },
+          "testability": { "enum": ["testable_now", "testable_later", "partially_testable", "not_testable"] },
+          "validationAction": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "challengedAssumptions": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assumptionId", "affectedOptionIds", "flipTestResult", "fragility", "validationAction"],
+        "properties": {
+          "assumptionId": { "$ref": "#/$defs/id" },
+          "affectedOptionIds": { "$ref": "#/$defs/idArray" },
+          "flipTestResult": { "enum": ["collapse", "confidence_downgrade", "direction_flip", "robust"] },
+          "fragility": { "enum": ["low", "medium", "high", "fatal_unknown"] },
+          "validationAction": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "pseudoConvergences": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["packetIds", "sharedPremiseOrOrigin", "affectedClaimIds", "requiredDowngrade"],
+        "properties": {
+          "packetIds": { "$ref": "#/$defs/nonEmptyIdArray" },
+          "sharedPremiseOrOrigin": { "$ref": "#/$defs/longText" },
+          "affectedClaimIds": { "$ref": "#/$defs/idArray" },
+          "requiredDowngrade": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "vulnerableLinks": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rank", "description", "evidenceStrength", "alternativeExplanation", "attackPath", "cascadeImpact"],
+        "properties": {
+          "rank": { "type": "integer", "minimum": 1, "maximum": 10 },
+          "description": { "$ref": "#/$defs/longText" },
+          "evidenceStrength": { "enum": ["accepted", "conditional", "lead_only", "assumption_only", "rejected"] },
+          "alternativeExplanation": { "$ref": "#/$defs/longText" },
+          "attackPath": { "$ref": "#/$defs/longText" },
+          "cascadeImpact": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "narrativeEcho": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["detected", "severity", "dominantNarrative", "response"],
+      "properties": {
+        "detected": { "type": "boolean" },
+        "severity": { "enum": ["none", "low", "medium", "high", "severe"] },
+        "dominantNarrative": { "$ref": "#/$defs/longText" },
+        "response": { "$ref": "#/$defs/longText" }
+      }
+    },
+    "ifAllWrongBecause": { "$ref": "#/$defs/longText" },
+    "requestedResearch": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requestId", "type", "question", "affectedClaimIds", "priority"],
+        "properties": {
+          "requestId": { "$ref": "#/$defs/id" },
+          "type": { "enum": ["counterevidence", "alternative_explanation"] },
+          "question": { "$ref": "#/$defs/longText" },
+          "affectedClaimIds": { "$ref": "#/$defs/idArray" },
+          "priority": { "enum": ["high", "critical"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "idArray": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "nonEmptyIdArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:simulation-seeds:1.1.0",
+  "title": "Hardtech Market Direction Simulation Seeds",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidateNodes", "candidateEdges", "scenarioCandidates"],
+  "properties": {
+    "scenarioCandidates": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/scenarioCandidate" },
+      "allOf": [
+        {
+          "contains": { "type": "object", "properties": { "kind": { "const": "baseline" } }, "required": ["kind"] },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": { "type": "object", "properties": { "kind": { "const": "structural_break" } }, "required": ["kind"] },
+          "minContains": 2
+        },
+        {
+          "contains": { "type": "object", "properties": { "strategySurvives": { "const": false } }, "required": ["strategySurvives"] },
+          "minContains": 1
+        }
+      ]
+    },
+    "candidateNodes": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 40,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "candidateEdges": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+    "idArray": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "text": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "scenarioCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceLensArtifactId", "sourceStrategicScenarioId", "name", "kind", "coreLogic", "strategySurvives", "earlySignals", "driverStates"],
+      "properties": {
+        "sourceLensArtifactId": { "$ref": "#/$defs/id" },
+        "sourceStrategicScenarioId": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/text" },
+        "kind": { "enum": ["baseline", "structural_break"] },
+        "coreLogic": { "$ref": "#/$defs/longText" },
+        "strategySurvives": { "type": "boolean" },
+        "earlySignals": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["signalId", "type", "observable", "thresholdOrPattern", "cadence"],
+            "properties": {
+              "signalId": { "$ref": "#/$defs/id" },
+              "type": { "enum": ["qualitative", "quantitative", "structural"] },
+              "observable": { "$ref": "#/$defs/longText" },
+              "thresholdOrPattern": { "$ref": "#/$defs/text" },
+              "cadence": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "driverStates": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["driverLabel", "state", "proposedNormalizedShift", "evidenceIds", "assumptionIds"],
+            "properties": {
+              "driverLabel": { "$ref": "#/$defs/text" },
+              "state": { "$ref": "#/$defs/longText" },
+              "proposedNormalizedShift": { "type": "number", "minimum": -1, "maximum": 1 },
+              "evidenceIds": { "$ref": "#/$defs/idArray" },
+              "assumptionIds": { "$ref": "#/$defs/idArray" }
+            }
+          }
+        }
+      }
+    },
+    "qualityScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Evidence or relationship explanation quality, not probability."
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "type", "claimIds", "evidenceIds", "assumptionIds", "rationale", "status", "evidenceQualityScore"],
+      "properties": {
+        "label": { "$ref": "#/$defs/text" },
+        "type": { "enum": ["decision", "lever", "constraint", "external", "unknown", "intermediate", "outcome", "indicator"] },
+        "claimIds": { "$ref": "#/$defs/idArray" },
+        "evidenceIds": { "$ref": "#/$defs/idArray" },
+        "assumptionIds": { "$ref": "#/$defs/idArray" },
+        "rationale": { "$ref": "#/$defs/longText" },
+        "status": { "const": "draft" },
+        "evidenceQualityScore": { "$ref": "#/$defs/qualityScore" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceLabel", "targetLabel", "polarity", "strength", "delaySteps", "claimIds", "evidenceIds", "assumptionIds", "rationale", "status", "relationshipQualityScore"],
+      "properties": {
+        "sourceLabel": { "$ref": "#/$defs/text" },
+        "targetLabel": { "$ref": "#/$defs/text" },
+        "polarity": { "enum": ["positive", "negative"] },
+        "strength": { "type": "number", "minimum": 0, "maximum": 1 },
+        "delaySteps": { "type": "integer", "minimum": 0, "maximum": 24 },
+        "claimIds": { "$ref": "#/$defs/idArray" },
+        "evidenceIds": { "$ref": "#/$defs/idArray" },
+        "assumptionIds": { "$ref": "#/$defs/idArray" },
+        "rationale": { "$ref": "#/$defs/longText" },
+        "status": { "const": "draft" },
+        "relationshipQualityScore": { "$ref": "#/$defs/qualityScore" }
+      }
+    }
+  }
+}

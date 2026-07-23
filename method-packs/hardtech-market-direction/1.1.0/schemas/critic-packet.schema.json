@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:critic-packet:1.1.0",
+  "title": "Hardtech Market Direction Critic Packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "criticPacketId",
+    "workspaceId",
+    "decisionCaseId",
+    "analysisRunId",
+    "reviewedResearchPacketIds",
+    "safetyAnchor",
+    "challenges",
+    "strongestCounterArgument",
+    "ifAllWrongBecause",
+    "requiredChanges",
+    "requestedResearch",
+    "escalationTriggered",
+    "createdAt"
+  ],
+  "properties": {
+    "criticPacketId": { "$ref": "#/$defs/id" },
+    "workspaceId": { "$ref": "#/$defs/id" },
+    "decisionCaseId": { "$ref": "#/$defs/id" },
+    "analysisRunId": { "$ref": "#/$defs/id" },
+    "reviewedResearchPacketIds": { "$ref": "#/$defs/nonEmptyIdArray" },
+    "safetyAnchor": { "$ref": "urn:ludus:method:hardtech-market-direction:safety-anchor:1.1.0" },
+    "challenges": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "urn:ludus:method:hardtech-market-direction:challenge:1.1.0" }
+    },
+    "strongestCounterArgument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argument", "responseStatus", "affectedOptionIds", "evidenceIds", "requiredResponse"],
+      "properties": {
+        "argument": { "$ref": "#/$defs/longText" },
+        "responseStatus": { "enum": ["sufficient", "partial", "unanswered"] },
+        "affectedOptionIds": { "$ref": "#/$defs/idArray" },
+        "evidenceIds": { "$ref": "#/$defs/idArray" },
+        "requiredResponse": { "$ref": "#/$defs/longText" }
+      }
+    },
+    "ifAllWrongBecause": { "$ref": "#/$defs/longText" },
+    "requiredChanges": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["challengeId", "targetType", "targetId", "action", "blocking"],
+        "properties": {
+          "challengeId": { "$ref": "#/$defs/id" },
+          "targetType": { "enum": ["claim", "recommendation", "quality_status", "simulation_node", "simulation_edge", "report_section", "escalation"] },
+          "targetId": { "$ref": "#/$defs/id" },
+          "action": { "$ref": "#/$defs/longText" },
+          "blocking": { "type": "boolean" }
+        }
+      }
+    },
+    "requestedResearch": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requestId", "type", "question", "priority"],
+        "properties": {
+          "requestId": { "$ref": "#/$defs/id" },
+          "type": { "enum": ["counterevidence", "alternative_explanation", "conflict_resolution"] },
+          "question": { "$ref": "#/$defs/longText" },
+          "priority": { "enum": ["high", "critical"] }
+        }
+      }
+    },
+    "escalationTriggered": { "type": "boolean" },
+    "escalationReason": { "$ref": "#/$defs/longText" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "escalationTriggered": { "const": true } }, "required": ["escalationTriggered"] },
+      "then": {
+        "type": "object",
+        "properties": { "escalationReason": { "$ref": "#/$defs/longText" } },
+        "required": ["escalationReason"]
+      }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "idArray": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "nonEmptyIdArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    }
+  }
+}
