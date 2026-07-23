@@ -1329,3 +1329,65 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - This commit is lifecycle-log-only (HEAD/HISTORY); no product source, test, migration, or contract file changed.
 - After push, remote main SHA will be re-read live and recorded in the CONTRACT_FREEZE message; parallel lanes must branch from that frozen SHA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 12 Deterministic Causal Simulation Engine - 2026-07-24 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai).
+- Completed: 2026-07-24 (Asia/Shanghai).
+- Status: completed.
+- Role: Simulation/Graph Owner.
+- Objective: implement the minimal independently-verifiable Simulation/Graph vertical slice
+  — the deterministic pure causal simulation engine (Task 12 core) on internal domain value
+  objects — with automated verification and zero canonical schema/migration/API/contract change.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-simulation-48h
+- Branch: codex/task-12-simulation-engine
+- base_main_sha (contract freeze): 239620681f88c525912c2e1d8b23483a5f362a5e
+
+## Scope decision
+
+- Chose the pure-engine slice because the graph-side canonical wire types (GraphVersion /
+  CausalNode / CausalEdge / StrategyVersion / ScenarioVersion / ScoreDefinition / ...) are
+  absent at the freeze baseline; building the engine on internal frozen dataclasses keeps the
+  slice contract-clean (no schemas.py / migration / packages/contracts / API change).
+- Persistence, Alembic migration 0005, API routes and the Task 13 web UI are deferred to later
+  branches and require a versioned interface spec + CCR (Contract Lead), disclosed to
+  conversation 2 (Ways/Agent) and conversation 6 (QA/Release).
+
+## Changes (all within services/api/app/simulations/**)
+
+- domain.py: engine-internal immutable value objects + not-yet-canonical graph enums, with
+  finite/bounds/evidence invariants; ScenarioVersion has no riskTolerance.
+- engine.py: deterministic pure propagation (effect = delta*polarity*strength*edgeMultiplier*
+  damping; relationshipQualityScore excluded), normalize/denormalize, stability bound L,
+  converged/max_steps/saturated/invalid detection, canonical inputHash, formal/experimental
+  edge eligibility + authorization, explicit ScoreDefinition scoring with hard-constraint penalty.
+- sensitivity.py: single-variable perturbation (business step = sensitivityStep or (max-min)*0.1),
+  top drivers, first recommendation-flip threshold, recommendation-shift text.
+- graph_builder.py: from-report -> immutable DRAFT, bulk-review -> CONFIRMED (confirmed edges
+  require claims), and the spherical-robot confirmed fixture (9 nodes, 12 edges, 3 scenarios,
+  3-option ScoreDefinition with a cash-safety hard constraint).
+- tests/test_simulation_engine.py: 28 Simulation-owned tests (kept out of QA's services/api/tests/**).
+
+## Validation (main-worktree venv Python 3.12.7 + pytest 9.1.1; no new environment)
+
+- pytest app/simulations/tests -q: PASS (28 passed).
+- ruff check services/api/app/simulations: PASS (All checks passed).
+- git diff --check: PASS.
+- Changed-path/owner-scope audit: only HEAD + services/api/app/simulations/** changed.
+- Determinism: identical inputs -> identical node_results/option_scores/inputHash (verified).
+- Spherical-robot flip: baseline -> rescue_pilot; a held procurement=14mo intervention drives
+  cash_safety < 0.45, triggering the hard constraint and flipping to continue_research; the
+  sensitivity top driver and first flip are both procurement_cycle_months (~11.8 months).
+
+## Remaining risk / not verified
+
+- No DB migration/persistence and no API route in this slice (deferred; needs CCR).
+- Engine tests live under app/simulations/tests; the canonical acceptance path
+  services/api/tests/test_simulation_engine.py is left for QA/Contract Lead adoption.
+- Full backend suite / Alembic upgrade not run (out of this slice's scope and files).
+- Remote push is attempted after this commit and verified in the handoff; GitHub was
+  unreachable at task start, so the remote state may be recorded as BLOCKED.
+- Secret policy: no credentials, tokens, keys, or .env values are recorded.

@@ -1,10 +1,15 @@
 # Work Log: idle
 
-- Status: idle after Task 19A mainline gate r3 re-audit and lifecycle log repair.
+- Status: idle after Task 12 deterministic causal simulation engine.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 19A Mainline Gate r3 Re-Audit and Lifecycle Log Repair - 2026-07-24 (Asia/Shanghai)`.
-- Task 19A status: published on main and remote-verified; mainline acceptance fully re-run on the main worktree with all gates PASS (P0=0/P1=0).
-- Lifecycle log repair: HISTORY restored from UTF-16LE binary blob to UTF-8 text with zero record loss; the missing implementation disclosure archive from 923a6ec was appended; no record was overwritten or discarded.
-- Contract freeze: issued from this commit; parallel lanes must branch from the frozen main SHA recorded in the freeze message and must not modify product code from stale bases.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Last archive entry: `Archive Task 12 Deterministic Causal Simulation Engine - 2026-07-24 (Asia/Shanghai)`.
+- Role: Simulation/Graph Owner.
+- Branch: codex/task-12-simulation-engine (base contract-freeze SHA 239620681f88c525912c2e1d8b23483a5f362a5e).
+- Task 12 status: deterministic pure engine + sensitivity + graph builder + spherical-robot
+  confirmed fixture implemented under services/api/app/simulations/**; 28 owner tests pass and
+  ruff is clean. No canonical schema/migration/API/generated-contract change was made.
+- Deferred (needs Contract Lead CCR + disclosure to conversations 2 and 6): graph-side wire
+  types, Alembic migration 0005, persistence, API routes, and the Task 13 web simulation UI.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
+  replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
