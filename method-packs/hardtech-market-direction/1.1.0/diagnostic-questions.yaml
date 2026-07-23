@@ -1,0 +1,106 @@
+schema_version: "1.0.0"
+method_id: hardtech-market-direction
+method_version: "1.1.0"
+
+answer_contract:
+  allowed_states: [answered, unknown_with_acquisition_plan, skipped_by_condition]
+  unanswered_blocking_question: partial
+  unknown_is_not_failure: true
+  unknown_requires: [why_unknown, acquisition_plan, owner, due_or_review_date]
+
+blocking_levels:
+  route_exact: 未回答时 Router 只能返回 partial，不能创建正式 Run。
+  full_delivery: 可进入研究，但若 Validation 时仍无可用证据则阻断 full 正式产物。
+  none: 不阻断；必须把未知及影响写入产物。
+
+sections:
+  - id: five_w_one_h
+    name: 5W1H 与决策边界
+    questions:
+      - {id: 5w1h.why, prompt: "为什么必须现在决定，延迟决定的代价是什么？", blocking: route_exact, skippable: false}
+      - {id: 5w1h.what, prompt: "具体要在什么市场/场景选项之间选择？至少列出两个可比较选项。", blocking: route_exact, skippable: false}
+      - {id: 5w1h.who, prompt: "谁做最终决定，谁使用、谁付费、谁采购、谁承担交付与事故责任？", blocking: route_exact, skippable: false}
+      - {id: 5w1h.when, prompt: "决策期限、现金窗口和首个可验证里程碑分别是什么时间？", blocking: route_exact, skippable: false}
+      - {id: 5w1h.where, prompt: "首个部署地域、环境和制度边界是什么？", blocking: none, skippable: false}
+      - {id: 5w1h.how, prompt: "准备用何种试点、销售、交付和服务路径验证每个选项？", blocking: none, skippable: false}
+      - {id: 5w1h.success, prompt: "目标、硬约束和判断选项胜出的指标/阈值是什么？", blocking: route_exact, skippable: false}
+      - {id: 5w1h.materials, prompt: "哪些材料和只读连接器允许进入分析，哪些明确禁止？", blocking: route_exact, skippable: false}
+
+  - id: demand_reality
+    name: 需求真实性
+    questions:
+      - {id: demand.behavior, prompt: "最强需求证据是什么：付费、重复使用、工作流依赖，还是只有兴趣/等待列表/口头赞许？", blocking: full_delivery, skippable: false}
+      - {id: demand.workaround, prompt: "目标用户现在如何解决问题，土办法的时间、金钱、风险和机会成本是多少？", blocking: none, skippable: false}
+      - {id: demand.specific_user, prompt: "最痛的具体用户/机构是谁，其任务、KPI和失败后果是什么？", blocking: none, skippable: false}
+      - {id: demand.wedge, prompt: "最窄、最小、可在当前现金窗口内收费或验证的版本是什么？", blocking: none, skippable: false}
+      - {id: demand.observation, prompt: "是否观察过用户在无指导下执行真实任务，出现了什么意外？", blocking: none, skippable: true, skip_when: "尚无可用原型；改记为首个验证动作"}
+      - {id: demand.durability, prompt: "需求是结构性、周期性还是过渡性；三年内什么变化会让它消失？", blocking: none, skippable: false}
+
+  - id: payment_procurement
+    name: 付费与采购
+    questions:
+      - {id: procurement.payer, prompt: "使用者、受益者、预算持有人和签约人是否为同一主体？", blocking: full_delivery, skippable: false}
+      - {id: procurement.budget, prompt: "预算来自哪个科目，何时编制，谁能批准，最低合规材料是什么？", blocking: full_delivery, skippable: false}
+      - {id: procurement.cycle, prompt: "从接触、试点、验收到合同和回款各需多久；依据是什么？", blocking: full_delivery, skippable: false}
+      - {id: procurement.willingness, prompt: "有哪些真实付费、书面试点意向或可核验采购先例？", blocking: full_delivery, skippable: false}
+      - {id: procurement.unit, prompt: "定价单位、采购数量、折扣、售后与回款条件如何影响毛利和现金？", blocking: none, skippable: false}
+
+  - id: trl_delivery
+    name: TRL 与交付
+    questions:
+      - {id: trl.current, prompt: "各关键子系统目前的 TRL/验证状态是什么，证据来自实验室、相关环境还是真实任务？", blocking: full_delivery, skippable: false}
+      - {id: trl.environment, prompt: "每个市场的负载、续航、地形、通信、可靠性、噪声和维护门槛分别是什么？", blocking: full_delivery, skippable: false}
+      - {id: trl.gap, prompt: "从当前原型到可交付产品还缺哪些工程、认证、测试、工具链和人员？", blocking: full_delivery, skippable: false}
+      - {id: trl.acceptance, prompt: "谁验收、按什么测试协议和阈值验收，失败后如何修复或退出？", blocking: none, skippable: false}
+      - {id: trl.service, prompt: "部署、培训、备件、维修、远程支持和故障响应由谁承担？", blocking: none, skippable: false}
+
+  - id: safety_liability
+    name: 安全与责任
+    questions:
+      - {id: safety.hazards, prompt: "人员、财产、数据、环境和任务中断的主要危害及最坏可承受后果是什么？", blocking: full_delivery, skippable: false}
+      - {id: safety.owner, prompt: "制造商、集成商、运营方、采购方和用户之间的责任边界是什么？", blocking: full_delivery, skippable: false}
+      - {id: safety.controls, prompt: "失联、失控、误判、碰撞、滥用和维护失误有哪些预防、检测与降级控制？", blocking: full_delivery, skippable: false}
+      - {id: safety.regulatory, prompt: "适用的认证、许可、保险、数据和现场规则是什么？", blocking: none, skippable: true, skip_when: "明确不受监管且有可核验依据；仍需记录产品责任"}
+
+  - id: cash_window
+    name: 现金窗口与单位经济
+    questions:
+      - {id: cash.runway, prompt: "当前可用于本方向的现金、月度消耗和不可动用缓冲是多少？", blocking: route_exact, skippable: false}
+      - {id: cash.time_to_cash, prompt: "达到首个付费、回款和可重复交付各需多久，是否早于现金耗尽？", blocking: full_delivery, skippable: false}
+      - {id: cash.commitment, prompt: "每个选项在获得下一轮信息前必须投入多少不可逆研发、库存、认证和渠道成本？", blocking: none, skippable: false}
+      - {id: cash.economics, prompt: "在现实销量、良率、售后和回款条件下，毛利/贡献利润是否成立？", blocking: none, skippable: false}
+
+  - id: supply_chain
+    name: 供应链与量产
+    questions:
+      - {id: supply.critical_parts, prompt: "关键器件、材料和代工环节有哪些单点依赖、长交期或出口/合规风险？", blocking: none, skippable: false}
+      - {id: supply.scale, prompt: "样机到小批量的良率、测试、校准、返修和产能瓶颈是什么？", blocking: full_delivery, skippable: false}
+      - {id: supply.alternatives, prompt: "关键供应中断时的替代料、二供、重新认证时间与成本是多少？", blocking: none, skippable: false}
+
+  - id: competition_substitution
+    name: 竞争与替代
+    questions:
+      - {id: competition.alternatives, prompt: "客户当前可选择哪些人工、软件、传统设备、租赁或不行动方案？", blocking: none, skippable: false}
+      - {id: competition.advantage, prompt: "相对最强替代方案，本产品在哪个可测任务指标上明显更好，代价是什么？", blocking: none, skippable: false}
+      - {id: competition.response, prompt: "现有厂商、集成商和渠道会如何降价、捆绑、封锁接口或复制功能？", blocking: none, skippable: false}
+      - {id: competition.switching, prompt: "客户从现状切换到本产品需改变哪些流程、培训、责任和系统接口？", blocking: none, skippable: false}
+
+  - id: reversibility
+    name: 可逆性与退出
+    questions:
+      - {id: reversibility.shared_assets, prompt: "哪些技术、数据、认证、供应链和渠道资产可跨选项复用，哪些会导致产品分叉？", blocking: none, skippable: false}
+      - {id: reversibility.latest_exit, prompt: "每个方向最晚何时还能低成本退出或切换，届时应观察到什么信号？", blocking: none, skippable: false}
+      - {id: reversibility.kill_criteria, prompt: "哪些技术、采购、安全、现金或需求阈值一旦未达就必须停止？", blocking: full_delivery, skippable: false}
+      - {id: reversibility.option_value, prompt: "继续研究、并行小探针或合作试点是否能以更低成本保留选择权？", blocking: none, skippable: false}
+
+completion_rules:
+  route_exact_requires:
+    - all_route_exact_questions_are_answered_or_unknown_with_acquisition_plan
+    - at_least_two_comparable_options
+    - goals_hard_constraints_and_deadline_confirmed
+    - allowed_and_prohibited_materials_confirmed
+  focused_may_continue_with:
+    - full_delivery_questions_marked_unknown_with_acquisition_plan
+  full_formal_delivery_requires:
+    - every_full_delivery_unknown_resolved_or_explicitly_blocks_the_affected_option
+    - recommendation_does_not_depend_on_an_unresolved_fatal_unknown

@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:draft-recommendation:1.1.0",
+  "title": "Draft Recommendation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "analysisRunId",
+    "judgmentSetId",
+    "dissentRecordId",
+    "outcome",
+    "conditions",
+    "thresholds",
+    "exitCriteria",
+    "leadingIndicators",
+    "status",
+    "responsibility",
+    "contentHash"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "methodId": {
+      "const": "hardtech-market-direction"
+    },
+    "methodVersion": {
+      "const": "1.1.0"
+    },
+    "analysisRunId": {
+      "$ref": "#/$defs/id"
+    },
+    "judgmentSetId": {
+      "$ref": "#/$defs/id"
+    },
+    "dissentRecordId": {
+      "$ref": "#/$defs/id"
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "optionId"
+          ],
+          "properties": {
+            "kind": {
+              "const": "option"
+            },
+            "optionId": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reasonCodes",
+            "rationale"
+          ],
+          "properties": {
+            "kind": {
+              "const": "abstain"
+            },
+            "reasonCodes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "rationale": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      ]
+    },
+    "conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "thresholds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "metric",
+          "operator",
+          "value",
+          "actionIfMissed"
+        ],
+        "properties": {
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "operator": {
+            "enum": [
+              "<",
+              "<=",
+              "=",
+              ">=",
+              ">",
+              "in",
+              "not_in"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "actionIfMissed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        }
+      }
+    },
+    "exitCriteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "leadingIndicators": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "metric",
+          "expectedDirection",
+          "threshold",
+          "checkCadence"
+        ],
+        "properties": {
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "expectedDirection": {
+            "enum": [
+              "up",
+              "down",
+              "stable",
+              "mixed"
+            ]
+          },
+          "threshold": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "checkCadence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        }
+      }
+    },
+    "status": {
+      "const": "draft"
+    },
+    "responsibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "responsibility",
+        "actorType",
+        "createdAt"
+      ],
+      "properties": {
+        "responsibility": {
+          "const": "analysis"
+        },
+        "actorType": {
+          "enum": [
+            "system_service",
+            "analysis_worker"
+          ]
+        },
+        "actorId": {
+          "$ref": "#/$defs/id"
+        },
+        "sourceAnalysisRunId": {
+          "$ref": "#/$defs/id"
+        },
+        "producerRole": {
+          "enum": [
+            "research",
+            "critic",
+            "synthesis",
+            "validation"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "contentHash": {
+      "$ref": "#/$defs/hash"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    }
+  }
+}

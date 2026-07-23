@@ -1,7 +1,11 @@
 # Work Log: idle
 
-- Last archived: 2026-07-22 (Asia/Shanghai)
+- Last archived: 2026-07-23 (Asia/Shanghai)
 - Archive file: HISTORY
-- Archive marker: Gate 1 mainline health verification
-- Next work: create and implement Task 6 on a separate branch after recording this archive.
+- Archive marker: Task 6 Implementation
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/task-06-method-pack
+- State: owner-clean implementation complete; awaiting implementation commit/push and independent QA branch handoff.
+- Next work: commit and push this implementation branch, then create `codex/qa-task-06-method-pack` for the archived QA tests; do not merge automatically.
+- Constraint: do not start full Task 19A before Task 6 implementation and QA branches are reviewed and merged by the product owner.
 - Secret policy: no credentials are stored in this file.

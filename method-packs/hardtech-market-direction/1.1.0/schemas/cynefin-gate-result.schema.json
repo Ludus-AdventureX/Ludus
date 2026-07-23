@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:cynefin-gate-result:1.1.0",
+  "title": "Cynefin Gate Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "gateId",
+    "domain",
+    "recommendedAnalysisLevel",
+    "formalAnalysisAllowed",
+    "defaultAction",
+    "rationaleCodes",
+    "safeToFailProbes",
+    "reviewTriggers",
+    "overrideRequired",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "methodId": {
+      "const": "hardtech-market-direction"
+    },
+    "methodVersion": {
+      "const": "1.1.0"
+    },
+    "gateId": {
+      "$ref": "#/$defs/id"
+    },
+    "workspaceId": {
+      "$ref": "#/$defs/id"
+    },
+    "decisionCaseId": {
+      "$ref": "#/$defs/id"
+    },
+    "charterId": {
+      "$ref": "#/$defs/id"
+    },
+    "domain": {
+      "enum": [
+        "clear",
+        "complicated",
+        "complex",
+        "chaotic",
+        "disorder"
+      ]
+    },
+    "recommendedAnalysisLevel": {
+      "enum": [
+        "quick",
+        "focused",
+        "full"
+      ]
+    },
+    "formalAnalysisAllowed": {
+      "type": "boolean"
+    },
+    "defaultAction": {
+      "enum": [
+        "proceed_quick",
+        "proceed_focused",
+        "proceed_full",
+        "stabilize_first",
+        "clarify_scope"
+      ]
+    },
+    "rationaleCodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "safeToFailProbes": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "reviewTriggers": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "overrideRequired": {
+      "type": "boolean"
+    },
+    "override": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "userId",
+        "reason",
+        "createdAt"
+      ],
+      "properties": {
+        "userId": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    }
+  }
+}

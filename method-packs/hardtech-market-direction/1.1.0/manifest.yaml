@@ -1,0 +1,761 @@
+manifest_schema_version: 1.0.0
+id: hardtech-market-direction
+version: 1.1.0
+name: 高切换成本硬科技市场方向选择
+status: published
+language: zh-CN
+documentation:
+  overview: README.md
+  source_provenance: SOURCES.md
+  capability_map: CAPABILITY-MAP.md
+  changelog: CHANGELOG.md
+  eval_guide: evals/README.md
+release:
+  runtime_status: published
+  content_hash_algorithm: sha256
+  content_hash: 92e41e56c75bb7ad77a726b5ef91f83e3ff1f2c845c5af3ea4ffcde34c1ef482
+  hash_scope: all_package_files_except_manifest_release_content_hash
+  immutable_after_publish: true
+model_contract:
+  provider_neutral: true
+  compatible_protocols:
+  - openai_compatible
+  required_capabilities:
+  - json_object_output
+  schema_validation_server_side: true
+  formal_interface: DeepAnalysisRequest
+  formal_output: DeepAnalysisResult
+  chat_messages_primary_interface: false
+  vendor_specific_model_names: []
+applicability:
+  all:
+  - rule_id: subject_is_hardtech
+    field: subject.class
+    operator: in
+    value:
+    - hardtech
+    - robotics
+    - industrial_device
+    - scientific_instrument
+    - regulated_device
+  - rule_id: decision_is_market_direction
+    field: decision.type
+    operator: in
+    value:
+    - market_direction
+    - segment_selection
+    - use_case_selection
+    - product_market_path
+  - rule_id: comparable_options
+    field: options.count
+    operator: gte
+    value: 2
+  - rule_id: switching_cost_material
+    field: switching_cost.material
+    operator: eq
+    value: true
+  - rule_id: decision_contract_confirmed
+    field: confirmation.route_inputs_confirmed
+    operator: eq
+    value: true
+  interpretation:
+    switching_cost_material_when_any:
+    - divergent_r_and_d
+    - certification_or_safety_case
+    - tooling_or_supply_chain_commitment
+    - channel_or_procurement_lock_in
+    - cash_runway_at_risk
+exclusions:
+  any:
+  - rule_id: no_real_choice
+    when: fewer_than_two_comparable_options
+    route: partial
+    reason: 需要至少两个可比较选项；继续研究可作为显式选项。
+  - rule_id: pure_marketing_optimization
+    when: no_material_r_and_d_delivery_or_switching_constraint
+    route: unsupported
+    reason: 纯投放、文案或短期增长优化不属于本方法。
+  - rule_id: single_option_certification
+    when: question_is_only_engineering_certification_or_compliance_signoff
+    route: unsupported
+    reason: 本方法不替代工程认证、法律意见或监管审批。
+  - rule_id: investment_selection
+    when: primary_question_is_security_or_portfolio_investment
+    route: unsupported
+    reason: 本方法不用于证券或投资组合决策。
+  - rule_id: unsafe_or_unconfirmed_materials
+    when: analysis_requires_prohibited_or_unconfirmed_materials
+    route: partial
+    reason: 先移除禁用材料或完成材料授权确认。
+decision_gate:
+  cynefin:
+    required_before_formal_run: true
+    output_schema: urn:ludus:method:hardtech-market-direction:cynefin-gate-result:1.1.0
+    domains:
+    - clear
+    - complicated
+    - complex
+    - chaotic
+    - disorder
+    default_routes:
+      clear: quick
+      complicated: focused
+      complex: full
+      chaotic: stabilize_first
+      disorder: clarify_scope
+    formal_block_domains:
+    - chaotic
+    - disorder
+    human_override_required_for:
+    - clear
+    - chaotic
+    - disorder
+    freeze_into:
+    - analysis_charter
+    - run_manifest
+required_inputs:
+- id: decision_subject
+  type: confirmed_snapshot
+  required_for:
+  - focused
+  - full
+  fields:
+  - subject.id
+  - subject.class
+  - subject.stage
+  - subject.owner
+- id: decision_question_and_deadline
+  type: confirmed_case_fields
+  required_for:
+  - focused
+  - full
+  fields:
+  - decision.question
+  - decision.deadline
+- id: goals_and_hard_constraints
+  type: confirmed_case_fields
+  required_for:
+  - focused
+  - full
+  fields:
+  - goals
+  - constraints
+- id: comparable_options
+  type: confirmed_case_fields
+  required_for:
+  - focused
+  - full
+  minimum_items: 2
+  fields:
+  - options
+- id: evidence_policy
+  type: confirmed_charter_fields
+  required_for:
+  - focused
+  - full
+  fields:
+  - allowed_materials
+  - prohibited_materials
+  - allowed_connectors
+- id: knowns_assumptions_unknowns
+  type: confirmed_case_fields
+  required_for:
+  - focused
+  - full
+  fields:
+  - known_facts
+  - assumptions
+  - unknown_items
+- id: reproducibility
+  type: immutable_references
+  required_for:
+  - focused
+  - full
+  fields:
+  - workspace_id
+  - case_version
+  - case_snapshot_hash
+  - dossier_snapshot_hash
+analysis_levels:
+  quick:
+    formal_method_execution: false
+    router_invoked: false
+    charter_required: false
+    allowed_output: QuickAnalysisResult
+    forbidden:
+    - AnalysisRun
+    - FocusedResearchResult
+    - StructuredReport
+    - pdf
+    - formal_simulation
+  focused:
+    route_status_required: exact
+    confirmed_charter_required: true
+    formal_analysis_allowed_required: true
+    research_tracks: 1-2
+    workers:
+    - research
+    - critic
+    - synthesis
+    - validation
+    output_schema: urn:ludus:method:hardtech-market-direction:focused-result:1.1.0
+    required_lens_artifacts: []
+    forbidden:
+    - StructuredReport
+    - html_export
+    - pdf_export
+    - simulations_from_report
+  full:
+    route_status_required: exact
+    confirmed_charter_required: true
+    formal_analysis_allowed_required: true
+    research_tracks: 4
+    track_catalog:
+    - demand_payment_procurement
+    - trl_delivery_safety_liability
+    - economics_cash_supply_chain
+    - competition_substitution_reversibility
+    workers:
+    - research
+    - critic
+    - synthesis
+    - validation
+    output_schema: urn:ludus:method:hardtech-market-direction:structured-report:1.1.0
+    required_lens_artifacts:
+    - porter_five_forces
+    - pre_mortem
+    - counterparty_response_matrix
+    - scenario_planning
+    - meadows_leverage_points
+    formal_outputs_require_quality_gate_pass: true
+workers:
+- id: research
+  prompt: prompts/research.md
+  output_schema: urn:ludus:method:hardtech-market-direction:research-packet:1.1.0
+  responsibilities:
+  - plan_factor_research
+  - define_falsification_conditions
+  - retrieve_read_only
+  - normalize_evidence_refs
+  - check_time_sample_denominator_alignment
+  - identify_scale_sensitivity
+  - identify_gaps
+- id: critic
+  prompt: prompts/critic.md
+  mandatory_substeps:
+  - id: safety_anchor
+    prompt: prompts/safety-anchor.md
+    output_schema: urn:ludus:method:hardtech-market-direction:safety-anchor:1.1.0
+  - id: adversarial_review
+    output_schema: urn:ludus:method:hardtech-market-direction:critic-packet:1.1.0
+  responsibilities:
+  - blind_spots
+  - counterevidence
+  - pseudo_convergence
+  - evidence_use_mismatch
+  - resource_scale_stress
+  - failure_modes
+  - fatal_flaws
+- id: synthesis
+  prompt: prompts/synthesis.md
+  output_schemas:
+    focused: urn:ludus:method:hardtech-market-direction:focused-result:1.1.0
+    full: urn:ludus:method:hardtech-market-direction:structured-report:1.1.0
+  responsibilities:
+  - non_compensatory_option_gates
+  - cross_factor_resolution
+  - resource_scale_counterfactual
+  - conditional_recommendation
+  - reviewable_action_path
+- id: validation
+  prompt: prompts/validation.md
+  output_schema: urn:ludus:method:hardtech-market-direction:quality-gate-result:1.1.0
+  auxiliary_output_schema: urn:ludus:method:hardtech-market-direction:validator-aggregate:1.1.0
+  responsibilities:
+  - run_v1_scope_charter
+  - run_v2_source_traceability
+  - run_v3_evidence_quality
+  - run_v4_claim_evidence_entailment
+  - run_v5_contradiction_alignment
+  - run_v6_unknown_assumption
+  - run_v7_adversarial_dissent
+  - run_v8_causal_simulation
+  - run_v9_publication_authority
+  - information_gate_audit
+  - delivery_qualification
+execution:
+  order:
+  - cynefin_gate
+  - run_manifest.freeze
+  - research
+  - lens.porter_five_forces
+  - critic.safety_anchor
+  - lens.counterparty_response_matrix
+  - lens.pre_mortem
+  - critic.adversarial_review
+  - lens.scenario_planning
+  - lens.meadows_leverage_points
+  - synthesis.final
+  - validation.v1_v9
+  stage_output_required_before_next: true
+  output_schema_validation_required: true
+  stage_input_output_hashes_required: true
+  heartbeat_and_attempt_persistence_required: true
+  duplicate_claim_protection_required: true
+  critic_escalation_target: synthesis
+  validation_failure_target: named_repair_stage
+  formal_result_required: DeepAnalysisResult
+  no_chat_messages_primary_contract: true
+  blocker_policy: fail_closed
+lens_artifact_contract:
+  model_stage_output:
+    schema: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+    trust: untrusted
+    allowed_top_level_fields:
+    - lensType
+    - sourceSkillVersion
+    - phase
+    - references
+    - researchRequests
+    - content
+    forbidden_server_owned_fields:
+    - id
+    - artifactId
+    - workspaceId
+    - decisionCaseId
+    - analysisRunId
+    - charterId
+    - charterVersion
+    - caseVersion
+    - caseSnapshotHash
+    - methodId
+    - methodVersion
+    - methodContentHash
+    - schemaVersion
+    - producerRole
+    - status
+    - originModes
+    - contentHash
+    - createdAt
+  canonical_persistence:
+    type: StrategicLensArtifact
+    canonical_lens_order:
+    - porter_five_forces
+    - pre_mortem
+    - counterparty_response_matrix
+    - scenario_planning
+    - meadows_leverage_points
+    status_required_for_full_delivery: ready
+    full_required_count: 5
+    separate_persistence_required: true
+    canonical_store: postgres.strategic_lens_artifacts
+    content_storage: jsonb
+    artifact_store_file_copy_as_source_of_truth: forbidden
+    immutable_after_write: true
+    unique_by:
+    - workspaceId
+    - analysisRunId
+    - lensType
+    server_steps:
+    - validate_stage_output_schema_and_lens_behavior
+    - resolve_all_references_against_frozen_run
+    - inject_frozen_workspace_case_run_charter_method_and_producer_metadata
+    - compute_content_hash_and_server_identity
+    - persist_canonical_ready_artifact
+    server_derived_fields:
+    - id
+    - workspaceId
+    - decisionCaseId
+    - analysisRunId
+    - charterId
+    - charterVersion
+    - caseVersion
+    - caseSnapshotHash
+    - methodId
+    - methodVersion
+    - methodContentHash
+    - schemaVersion
+    - producerRole
+    - status
+    - originModes
+    - contentHash
+    - createdAt
+    copied_from_validated_output:
+    - lensType
+    - sourceSkillVersion
+    - phase
+    - researchRequests
+    - content
+    reference_projection:
+      sourcePacketIds: references.sourcePacketIds
+      claimIds: references.claimIds
+      evidenceIds: references.evidenceIds
+      assumptionIds: references.assumptionIds
+      challengeIds: references.challengeIds
+  embed_content_in_report: false
+  report_reference_field: lensArtifactIds
+  missing_or_invalid_artifact_action: block_full_delivery_and_return_to_owner_worker
+lens_protocols:
+- id: porter_five_forces
+  phase: research_interpretation
+  owner_worker: research
+  trigger: after_research_packets_pass_information_gate
+  required:
+    focused: false
+    full: true
+  prompt: prompts/lenses/porter-five-forces.md
+  output_schema: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+  stage_output_key: porter_five_forces
+  behavior_contract: per_market_boundary_then_five_forces_with_two_evidence_items_per_force_and_regulatory_complementor_correction
+- id: counterparty_response_matrix
+  phase: adversarial_stress
+  owner_worker: critic
+  trigger: after_safety_anchor_and_before_adversarial_review
+  required:
+    focused: false
+    full: true
+  prompt: prompts/lenses/counterparty-response-matrix.md
+  output_schema: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+  stage_output_key: counterparty_response_matrix
+  behavior_contract: one_layer_only_with_no_action_baseline_optimal_worst_likely_responses_publication_test_and_reflexivity
+- id: pre_mortem
+  phase: adversarial_stress
+  owner_worker: critic
+  trigger: after_counterparty_matrix_for_current_preference_or_strongest_candidate
+  required:
+    focused: false
+    full: true
+  prompt: prompts/lenses/pre-mortem.md
+  output_schema: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+  stage_output_key: pre_mortem
+  behavior_contract: failure_is_assumed_complete_with_three_perspectives_five_causes_top_three_prevention_contingency_detection_and_verdict
+- id: scenario_planning
+  phase: strategic_synthesis
+  owner_worker: synthesis
+  trigger: after_critic_packet_before_final_recommendation
+  required:
+    focused: false
+    full: true
+  prompt: prompts/lenses/scenario-planning.md
+  output_schema: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+  stage_output_key: scenario_planning
+  behavior_contract: three_or_four_structurally_distinct_scenarios_with_baseline_two_breaks_signals_and_at_least_one_killed_strategy
+- id: meadows_leverage_points
+  phase: strategic_synthesis
+  owner_worker: synthesis
+  trigger: after_scenario_planning_before_final_action_path
+  required:
+    focused: false
+    full: true
+  prompt: prompts/lenses/meadows-leverage-points.md
+  output_schema: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+  stage_output_key: meadows_leverage_points
+  behavior_contract: system_map_three_or_more_levels_high_leverage_gap_runaway_reinforcing_loop_risk_and_intervention_sequence
+tool_permissions:
+  stable_read_only_catalog:
+  - search_web
+  - fetch_url
+  - crawl_site
+  - extract_document
+  - get_source_status
+  by_worker:
+    research:
+      allow:
+      - search_web
+      - fetch_url
+      - crawl_site
+      - extract_document
+      - get_source_status
+    critic:
+      allow:
+      - get_source_status
+      may_request_research_tasks: true
+      direct_search: false
+    synthesis:
+      allow: []
+    validation:
+      allow:
+      - get_source_status
+  deny_for_all:
+  - external_write
+  - arbitrary_browser_action
+  - arbitrary_mcp
+  - provider_credentials
+  - secret_access
+  - sign_decision
+  - transition_to_decided
+  - update_decision_record
+  - create_report_without_run
+  constraints:
+    delegated_permissions_must_be_subset: true
+    external_content_is_untrusted: true
+    provider_specific_tool_names_hidden: true
+    lens_prompts_direct_tool_access: false
+budgets:
+  quick:
+    formal_worker_calls: 0
+    external_tool_calls: 0
+  focused:
+    max_elapsed_seconds: 1200
+    max_research_tracks: 2
+    max_parallel_tasks: 2
+    max_delegation_depth: 1
+    max_worker_attempts_per_stage: 2
+    max_model_calls: 12
+    max_total_tool_calls: 28
+    max_search_calls: 8
+    max_fetched_documents: 6
+    max_crawl_depth: 0
+    max_research_rounds_per_track: 2
+    max_critic_research_requests: 2
+  full:
+    max_elapsed_seconds: 4500
+    max_research_tracks: 4
+    max_parallel_tasks: 4
+    max_delegation_depth: 1
+    max_worker_attempts_per_stage: 2
+    max_model_calls: 34
+    max_lens_calls: 10
+    max_lens_attempts_per_type: 2
+    max_total_tool_calls: 64
+    max_search_calls: 20
+    max_fetched_documents: 12
+    max_crawl_depth: 1
+    max_research_rounds_per_track: 3
+    max_critic_research_requests: 6
+  on_exhaustion: persist_partial_artifacts_and_enter_needs_attention
+schemas:
+  research_packet:
+    id: urn:ludus:method:hardtech-market-direction:research-packet:1.1.0
+    path: schemas/research-packet.schema.json
+  challenge:
+    id: urn:ludus:method:hardtech-market-direction:challenge:1.1.0
+    path: schemas/challenge.schema.json
+  critic_packet:
+    id: urn:ludus:method:hardtech-market-direction:critic-packet:1.1.0
+    path: schemas/critic-packet.schema.json
+  safety_anchor:
+    id: urn:ludus:method:hardtech-market-direction:safety-anchor:1.1.0
+    path: schemas/safety-anchor.schema.json
+  focused_result:
+    id: urn:ludus:method:hardtech-market-direction:focused-result:1.1.0
+    path: schemas/focused-result.schema.json
+  structured_report:
+    id: urn:ludus:method:hardtech-market-direction:structured-report:1.1.0
+    path: schemas/structured-report.schema.json
+  quality_gate_result:
+    id: urn:ludus:method:hardtech-market-direction:quality-gate-result:1.1.0
+    path: schemas/quality-gate-result.schema.json
+  simulation_seeds:
+    id: urn:ludus:method:hardtech-market-direction:simulation-seeds:1.1.0
+    path: schemas/simulation-seeds.schema.json
+  strategic_lens_output:
+    id: urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0
+    path: schemas/strategic-lens-output.schema.json
+  cynefin_gate_result:
+    id: urn:ludus:method:hardtech-market-direction:cynefin-gate-result:1.1.0
+    path: schemas/cynefin-gate-result.schema.json
+  source_span:
+    id: urn:ludus:method:hardtech-market-direction:source-span:1.1.0
+    path: schemas/source-span.schema.json
+  judgment_set:
+    id: urn:ludus:method:hardtech-market-direction:judgment-set:1.1.0
+    path: schemas/judgment-set.schema.json
+  dissent_record:
+    id: urn:ludus:method:hardtech-market-direction:dissent-record:1.1.0
+    path: schemas/dissent-record.schema.json
+  draft_recommendation:
+    id: urn:ludus:method:hardtech-market-direction:draft-recommendation:1.1.0
+    path: schemas/draft-recommendation.schema.json
+  validator_result:
+    id: urn:ludus:method:hardtech-market-direction:validator-result:1.1.0
+    path: schemas/validator-result.schema.json
+  validator_aggregate:
+    id: urn:ludus:method:hardtech-market-direction:validator-aggregate:1.1.0
+    path: schemas/validator-aggregate.schema.json
+  deep_analysis_result:
+    id: urn:ludus:method:hardtech-market-direction:deep-analysis-result:1.1.0
+    path: schemas/deep-analysis-result.schema.json
+quality_gates:
+  definition: quality-gates.yaml
+  responsibility_semantics_required: true
+  source_span_required_for_claims: true
+  run_manifest_required_before_workers: true
+  validator_contracts_exact:
+  - V1_scope_charter
+  - V2_source_traceability
+  - V3_evidence_quality
+  - V4_claim_evidence_entailment
+  - V5_contradiction_alignment
+  - V6_unknown_assumption
+  - V7_adversarial_dissent
+  - V8_causal_simulation
+  - V9_publication_authority
+  blocker_policy: fail_closed
+  information_gate_before_evidence_ledger: true
+  analysis_gate_after_synthesis: true
+  critic_findings_must_be_consumed: true
+  full_delivery_index:
+    formula: D1_evidence_sufficiency*D2_adversarial_pressure*D3_logical_coherence*D4_synthesis_provenance
+    use: delivery_qualification_only
+    prohibited_interpretations:
+    - success_probability
+    - correctness_probability
+    - forecast_confidence
+sandbox_mapping:
+  enabled_for:
+  - full
+  source_schema: urn:ludus:method:hardtech-market-direction:simulation-seeds:1.1.0
+  minimum_candidate_nodes: 8
+  minimum_candidate_edges: 10
+  node_types:
+  - decision
+  - lever
+  - constraint
+  - external
+  - unknown
+  - intermediate
+  - outcome
+  - indicator
+  mappings:
+    options: decision
+    controllable_capabilities_and_actions: lever
+    cash_procurement_safety_and_capacity_limits: constraint
+    market_regulatory_and_supply_conditions: external
+    unresolved_assumptions: unknown
+    delivery_and_conversion_steps: intermediate
+    pilot_contract_cash_and_mission_results: outcome
+    leading_indicators: indicator
+  edge_requirements:
+  - polarity
+  - strength
+  - delay_steps
+  - relationship_quality_score
+  - claim_ids
+  - evidence_ids
+  - assumption_ids
+  - rationale
+  - draft_status
+  scenario_source_lens_type: scenario_planning
+  minimum_scenario_candidates: 3
+  maximum_scenario_candidates: 4
+  required_scenario_structure:
+    baseline_count: 1
+    minimum_structural_breaks: 2
+    minimum_strategy_killed_count: 1
+    early_signals_per_scenario:
+      minimum: 3
+      maximum: 5
+  generic_optimistic_base_pessimistic_as_formal_scenarios: forbidden
+  scenario_version_requires_user_review: true
+  required_sensitivity_driver: procurement_cycle
+  graph_status_on_generation: draft
+  deterministic_engine_required: true
+  custom_factor_policy:
+    enabled: true
+    available_in: full_model_only
+    natural_language_candidate_generation: true
+    candidate_requires_user_review: true
+    allowed_node_types:
+    - lever
+    - constraint
+    - external
+    - unknown
+    - intermediate
+    - outcome
+    - indicator
+    decision_node_user_creation: false
+    required_fields:
+    - label
+    - type
+    - baseline
+    - current
+    - min
+    - max
+    - unit
+    - controllability
+    - evidence_status
+    - rationale
+    suggested_edges_require_review: true
+    unsupported_evidence_defaults_to: assumed
+    preview_mode: experimental_preview
+    preview_target_p95_ms: 1000
+    preview_may_be_formal_source: false
+    formal_run_requires_saved_confirmed_graph_version: true
+evals:
+- id: spherical-robot
+  path: evals/spherical-robot.json
+  required_route: exact
+  required_level: full
+- id: bci-platform-seed
+  path: evals/bci-platform-seed.json
+  required_route: exact
+  required_level: full
+- id: bci-platform-angel
+  path: evals/bci-platform-angel.json
+  required_route: exact
+  required_level: full
+- id: partial-missing-decision-contract
+  path: evals/partial-missing-decision-contract.json
+  required_route: partial
+  required_level: full
+- id: unsupported-marketing-optimization
+  path: evals/unsupported-marketing-optimization.json
+  required_route: unsupported
+  required_level: focused
+- id: cynefin-gate-routes
+  path: evals/cynefin-gate-routes.json
+  required_route: gate_contract
+  required_level: full
+source_skills:
+- name: framework-selector
+  version: 6.12.7
+  path: 探讨/skills/research/framework-selector/SKILL.md
+- name: full-mode-composer
+  version: 5.6.2
+  path: 探讨/skills/research/full-mode-composer/SKILL.md
+- name: v6-rag-pool
+  version: 2.0.0
+  path: 探讨/skills/research/v6-rag-pool/SKILL.md
+- name: v6-analysis-agent
+  version: 1.3.1
+  path: 探讨/skills/research/v6-analysis-agent/SKILL.md
+- name: v6-safety-anchor
+  version: 1.3.0
+  path: 探讨/skills/research/v6-safety-anchor/SKILL.md
+- name: v6-strategy-synthesis
+  version: 1.2.1
+  path: 探讨/skills/research/v6-strategy-synthesis/SKILL.md
+- name: v6-chief-of-staff
+  version: 1.2.0
+  path: 探讨/skills/research/v6-chief-of-staff/SKILL.md
+- name: v6-devils-advocate
+  version: 1.1.0
+  path: 探讨/skills/research/v6-devils-advocate/SKILL.md
+- name: v6-pipeline-coordinator
+  version: 1.0.0
+  path: 探讨/skills/research/v6-pipeline-coordinator/SKILL.md
+- name: analysis-quality-gate
+  version: 2.4.1
+  path: 探讨/skills/research/analysis-quality-gate/SKILL.md
+- name: business-diagnosis-ten-questions
+  version: 1.3.0
+  path: 探讨/skills/research/business-diagnosis-ten-questions/SKILL.md
+- name: deliverable-standards
+  version: 1.3.0
+  path: 探讨/skills/research/deliverable-standards/SKILL.md
+- name: pre-mortem
+  version: 1.0.0
+  path: 探讨/skills/research/pre-mortem/SKILL.md
+- name: scenario-planning
+  version: 1.0.0
+  path: 探讨/skills/research/scenario-planning/SKILL.md
+- name: porter-five-forces
+  version: 1.0.0
+  path: 探讨/skills/research/porter-five-forces/SKILL.md
+- name: counterparty-response-matrix
+  version: 1.0.0
+  path: 探讨/skills/research/counterparty-response-matrix/SKILL.md
+- name: meadows-leverage-points
+  version: 1.0.0
+  path: 探讨/skills/research/meadows-leverage-points/SKILL.md

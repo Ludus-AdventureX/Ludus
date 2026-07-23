@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:quality-gate-result:1.1.0",
+  "title": "Hardtech Market Direction Quality Gate Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "methodId",
+    "methodVersion",
+    "analysisRunId",
+    "analysisLevel",
+    "status",
+    "passed",
+    "informationGateSummary",
+    "evidenceVerdicts",
+    "checks",
+    "qualityProfile",
+    "deliveryGate",
+    "blockedOutputs",
+    "checkedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "methodId": { "const": "hardtech-market-direction" },
+    "methodVersion": { "const": "1.1.0" },
+    "analysisRunId": { "$ref": "#/$defs/id" },
+    "analysisLevel": { "enum": ["focused", "full"] },
+    "status": { "enum": ["pass", "warning", "blocked"] },
+    "passed": { "type": "boolean" },
+    "informationGateSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted", "conditional", "leadOnly", "rejected", "criticalConflicts"],
+      "properties": {
+        "accepted": { "type": "integer", "minimum": 0 },
+        "conditional": { "type": "integer", "minimum": 0 },
+        "leadOnly": { "type": "integer", "minimum": 0 },
+        "rejected": { "type": "integer", "minimum": 0 },
+        "criticalConflicts": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evidenceVerdicts": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidenceId", "verdict", "reasonCodes"],
+        "properties": {
+          "evidenceId": { "$ref": "#/$defs/id" },
+          "verdict": { "enum": ["accepted", "conditional", "lead_only", "rejected"] },
+          "reasonCodes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["authenticity", "source_grade", "relevance", "freshness", "applicability", "independence", "bias", "completeness", "conflict", "extraction_reliability", "policy_injection"]
+            }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["checkId", "status", "severity", "finding", "affectedIds", "repairStage", "repairAction"],
+        "properties": {
+          "checkId": { "type": "string", "pattern": "^(IQ-[0-9]{2}|AG-[0-9]{2}|LQ-(PREMORTEM|SCENARIO|FIVEFORCES|COUNTERPARTY|MEADOWS))$" },
+          "status": { "enum": ["pass", "warning", "fail", "not_applicable"] },
+          "severity": { "enum": ["info", "low", "medium", "high", "critical"] },
+          "finding": { "$ref": "#/$defs/longText" },
+          "affectedIds": { "$ref": "#/$defs/idArray" },
+          "repairStage": { "enum": ["research", "critic", "synthesis", "validation", "user_confirmation", "none"] },
+          "repairAction": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "qualityProfile": { "$ref": "#/$defs/qualityProfile" },
+    "deliveryGate": { "$ref": "#/$defs/deliveryGate" },
+    "blockedOutputs": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": { "enum": ["ready_focused_result", "structured_report", "html_export", "pdf_export", "formal_sandbox"] }
+    },
+    "checkedAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "type": "object", "properties": { "status": { "const": "blocked" } }, "required": ["status"] },
+      "then": { "type": "object", "properties": { "passed": { "const": false } } },
+      "else": { "type": "object", "properties": { "passed": { "const": true } } }
+    },
+    {
+      "if": { "type": "object", "properties": { "analysisLevel": { "const": "focused" } }, "required": ["analysisLevel"] },
+      "then": { "type": "object", "properties": { "deliveryGate": { "$ref": "#/$defs/focusedDeliveryGate" } } },
+      "else": { "type": "object", "properties": { "deliveryGate": { "$ref": "#/$defs/fullDeliveryGate" } } }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$" },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "idArray": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "rationale"],
+      "properties": {
+        "level": { "enum": ["strong", "adequate", "weak", "blocked"] },
+        "rationale": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "qualityProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidenceAvailability", "claimSupport", "assumptionStability", "causalReliability", "strategicRobustness", "processQuality", "weakestDimension"],
+      "properties": {
+        "evidenceAvailability": { "$ref": "#/$defs/dimension" },
+        "claimSupport": { "$ref": "#/$defs/dimension" },
+        "assumptionStability": { "$ref": "#/$defs/dimension" },
+        "causalReliability": { "$ref": "#/$defs/dimension" },
+        "strategicRobustness": { "$ref": "#/$defs/dimension" },
+        "processQuality": { "$ref": "#/$defs/dimension" },
+        "weakestDimension": {
+          "enum": ["evidence_availability", "claim_support", "assumption_stability", "causal_reliability", "strategic_robustness", "process_quality"]
+        }
+      }
+    },
+    "scoreOrNull": {
+      "oneOf": [
+        { "enum": [0.1, 0.4, 0.7, 1.0] },
+        { "type": "null" }
+      ]
+    },
+    "deliveryDimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["D1EvidenceSufficiency", "D2AdversarialPressure", "D3LogicalCoherence", "D4SynthesisProvenance"],
+      "properties": {
+        "D1EvidenceSufficiency": { "$ref": "#/$defs/scoreOrNull" },
+        "D2AdversarialPressure": { "$ref": "#/$defs/scoreOrNull" },
+        "D3LogicalCoherence": { "$ref": "#/$defs/scoreOrNull" },
+        "D4SynthesisProvenance": { "$ref": "#/$defs/scoreOrNull" }
+      }
+    },
+    "deliveryGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicable", "formula", "dimensions", "index", "qualification", "multiplicativeUse", "notSuccessProbability", "rationale"],
+      "properties": {
+        "applicable": { "type": "boolean" },
+        "formula": { "const": "D1*D2*D3*D4" },
+        "dimensions": { "$ref": "#/$defs/deliveryDimensions" },
+        "index": { "oneOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }] },
+        "qualification": { "enum": ["pass", "warning", "blocked", "not_applicable"] },
+        "multiplicativeUse": { "const": "delivery_qualification_only" },
+        "notSuccessProbability": { "const": true },
+        "rationale": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/longText" }
+        }
+      }
+    },
+    "focusedDeliveryGate": {
+      "allOf": [
+        { "$ref": "#/$defs/deliveryGate" },
+        {
+          "type": "object",
+          "properties": {
+            "applicable": { "const": false },
+            "dimensions": {
+              "type": "object",
+              "properties": {
+                "D1EvidenceSufficiency": { "type": "null" },
+                "D2AdversarialPressure": { "type": "null" },
+                "D3LogicalCoherence": { "type": "null" },
+                "D4SynthesisProvenance": { "type": "null" }
+              }
+            },
+            "index": { "type": "null" },
+            "qualification": { "const": "not_applicable" }
+          }
+        }
+      ]
+    },
+    "fullDeliveryGate": {
+      "allOf": [
+        { "$ref": "#/$defs/deliveryGate" },
+        {
+          "type": "object",
+          "properties": {
+            "applicable": { "const": true },
+            "dimensions": {
+              "type": "object",
+              "properties": {
+                "D1EvidenceSufficiency": { "enum": [0.1, 0.4, 0.7, 1.0] },
+                "D2AdversarialPressure": { "enum": [0.1, 0.4, 0.7, 1.0] },
+                "D3LogicalCoherence": { "enum": [0.1, 0.4, 0.7, 1.0] },
+                "D4SynthesisProvenance": { "enum": [0.1, 0.4, 0.7, 1.0] }
+              }
+            },
+            "index": { "type": "number", "minimum": 0, "maximum": 1 },
+            "qualification": { "enum": ["pass", "warning", "blocked"] }
+          }
+        }
+      ]
+    }
+  }
+}

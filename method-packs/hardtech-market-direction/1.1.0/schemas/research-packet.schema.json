@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ludus:method:hardtech-market-direction:research-packet:1.1.0",
+  "title": "Hardtech Market Direction Research Packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "workspaceId",
+    "decisionCaseId",
+    "analysisRunId",
+    "role",
+    "factor",
+    "frameworkUsed",
+    "conclusion",
+    "direction",
+    "claimSupportScore",
+    "evidenceIds",
+    "discardedClaims",
+    "remainingGaps",
+    "createdAt"
+  ],
+  "properties": {
+    "id": { "$ref": "#/$defs/id" },
+    "workspaceId": { "$ref": "#/$defs/id" },
+    "decisionCaseId": { "$ref": "#/$defs/id" },
+    "analysisRunId": { "$ref": "#/$defs/id" },
+    "role": { "const": "research" },
+    "factor": { "$ref": "#/$defs/text" },
+    "frameworkUsed": { "$ref": "#/$defs/text" },
+    "conclusion": { "$ref": "#/$defs/longText" },
+    "direction": {
+      "enum": ["supports_option", "opposes_option", "mixed", "neutral", "blocks_option"]
+    },
+    "claimSupportScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Single-dimension claim support quality; never a correctness or success probability."
+    },
+    "evidenceIds": { "$ref": "#/$defs/idArray" },
+    "discardedClaims": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/longText" }
+    },
+    "remainingGaps": {
+      "type": "array",
+      "maxItems": 30,
+      "items": { "$ref": "#/$defs/longText" }
+    },
+    "disclaimer": { "$ref": "#/$defs/longText" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "text": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "idArray": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    }
+  }
+}
