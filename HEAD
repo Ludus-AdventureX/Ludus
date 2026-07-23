@@ -1,10 +1,46 @@
-# Work Log: idle
+# Work Log: in_progress
 
-- Status: idle.
-- Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Next Task Planning and Branch Policy - 2026-07-23 (Asia/Shanghai)`.
+- Started: 2026-07-23 (Asia/Shanghai).
+- Status: in_progress (acceptance and publication audit passed; remote publication and final archive remain).
+- Objective: perform a fresh acceptance and secret/IP/push-scope audit of the fully integrated local `main`, then fast-forward publish it to the controlled private GitHub `main` before Task 19A begins.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Next approved task: Task 19A on a new `codex/task-19a-canonical-contracts` branch created from the finalized local `main`.
-- Constraint: do not continue development on completed Task 6 branches or on `codex/governance-next-task-policy`.
-- Remote state: `origin/main` is not updated by this governance task.
+- Branch: codex/release-main-sync-after-task6
+- Base local main commit: 57e3457cf2baea12f09fbea17f4afcb575e7fbdf
+- Live GitHub main before publication: 5cb42f9a8b568428d19ddebe4e06881a5ff3f4d2
+
+## Fresh mainline acceptance
+
+- Full API/model/Task 6 suite with warnings treated as errors: 68 passed in 94.37 seconds.
+- Ruff over `services/api` and `scripts`: PASS.
+- Python compileall over API app/tests and scripts: PASS.
+- OpenAPI/TypeScript drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: all 7 groups PASS; DAG acyclic, 26 tasks, ways 1.1.0 active / 1.0.0 historical.
+- Alembic check: `No new upgrade operations detected.`
+- Method source/runtime validation: 41 source files; published content hash `92e41e56c75bb7ad77a726b5ef91f83e3ff1f2c845c5af3ea4ffcde34c1ef482`.
+- Docker Postgres `postgres:16-alpine`: healthy; `pg_isready` accepted connections.
+
+## Publication scope audit
+
+- Publish range: `5cb42f9a8b568428d19ddebe4e06881a5ff3f4d2..57e3457cf2baea12f09fbea17f4afcb575e7fbdf`.
+- Commit count: 19.
+- Final changed-path count: 88.
+- Required Task 2 QA R2, Task 6 implementation, and Task 6 QA commits are all ancestors of the publish candidate.
+- New-history object scan: 162 objects, 76 text/blob candidates scanned, zero secret-like filenames and zero high-confidence secret content findings.
+- Current tracked-tree content scan: 231 files, zero high-confidence secret content findings.
+- Initial filename scan false positives were limited to the allowed `.env.example` and the non-secret `design/tokens/**` directory; refined filename scan found zero findings.
+- Root `LICENSE`/`LICENSE.md` remain absent; `LICENSING.md` and `COPYRIGHT` remain present.
+- No publish/registry credential configuration enters the range.
+- The only detected MIT marker is in the approved product-plan description of future Hermes Extract & adapt obligations; no third-party source implementation is introduced by this range.
+- `origin/codex/contract-lead-task2-19a` remains the sole remote tip not present by ancestry; its unique tip changes only `HEAD` and `HISTORY`, while its substantive parent `a6393f2` is already in `main`. It is intentionally treated as superseded archive-only history and is not merged.
+
+## Review conclusion
+
+- Result: can publish local `main` to the controlled private GitHub `main` as a fast-forward update.
+- No product code change is included in this release-sync branch; only this active `HEAD` record will be committed before the first push.
+
+## Remaining
+
+- Commit this in-progress publication evidence, fast-forward local `main`, verify the remote has not advanced unexpectedly, push `main`, and verify the live GitHub SHA.
+- After the first successful push, finalize and archive this work record, fast-forward/push the final lifecycle commit, then create Task 19A from the synchronized `main`.
+
 - Secret policy: no credentials are stored in this file.
