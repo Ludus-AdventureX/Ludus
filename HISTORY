@@ -1404,3 +1404,32 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Decision OS verifier re-run on the combined HEAD: PASS (validators=9, tasks=26, ways 1.1.0 active).
 - Remote status of this candidate branch is recorded below after push; failures are recorded as blocked, never fabricated.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Envelope P1 Fix - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data Owner (Task 3 P1 fix lane).
+- Objective: fix QA P1 in services/api/app/security/envelope.py line 91.
+- Base: aa240f78edf812e6f3b1d98a356dea5c56264e9d (frozen Task 3 implementation candidate); fresh branch codex/task-03-auth-envelope-p1-fix in worktree decision-lab-task03-p1-fix; the old implementation branch was not rewritten.
+
+## Defect and fix
+
+- On the locked stack (FastAPI 0.139.2 / Pydantic 2.13.4 / Starlette 1.3.1), RequestValidationError.errors() has signature (self) and rejects include_url/include_input kwargs; the handler's TypeError let malformed request bodies escape the uniform envelope as unenveloped 500s. Reproduced red on the base SHA (TypeError: ValidationException.errors() got an unexpected keyword argument 'include_url').
+- Fix: call exc.errors() without kwargs and pass the result through a new _sanitize_validation_errors projection that keeps type/loc/msg, coerces loc parts to str/int, keeps only JSON-scalar ctx values, and drops url/input entirely (input can echo submitted secrets; non-scalar ctx values such as wrapped exceptions are dropped rather than stringified because their reprs can embed raw input fragments). ApiFailure and the ok/error envelope structure are unchanged.
+
+## Verification
+
+- Malformed-payload ASGI probe (decision-lab-G0/task03-p1-fix-probe/probe_malformed_payload.py, uncommitted): red on base, then TASK03_P1_MALFORMED_PAYLOAD_PROBE_OK 6/6 after the fix (broken JSON body, wrong field types, missing required fields, constraint violation without echoing the submitted value, malformed login body, malformed workspaceId path param all return enveloped responses with no input/url keys).
+- ruff check app: PASS. compileall: PASS.
+- alembic upgrade head on disposable Postgres 16 (port 55435, removed afterwards): PASS.
+- Full services/api pytest suite: 84 passed.
+- git diff --check: PASS. Changed paths: services/api/app/security/envelope.py + HEAD/HISTORY only; app/main.py, contracts, migrations, web, and QA tests untouched.
+
+## Boundary
+
+- QA-owned permanent red-to-green regression stays on the QA branch and was not modified.
+- No merge into main is performed or claimed; remote push result is recorded in the P1_FIX_HANDOFF.
+- No credentials or secret values are recorded here.
