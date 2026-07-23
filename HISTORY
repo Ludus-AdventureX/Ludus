@@ -591,3 +591,47 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - A first full-test attempt without dotenv produced 46 passes and 10 PostgreSQL authentication setup errors; rerun with the approved local environment passed 68/68. No credential value was recorded.
 
 - Secret policy: no credentials are stored in this file.
+
+## Archive Task 6 QA Acceptance - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: perform the independent QA/Release acceptance for Task 6 on top of implementation commit `8cdd329f0472a86ccb6aa63a193298f37e738f5b`, without modifying implementation-owner files or merging.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/qa-task-06-method-pack
+- Base implementation branch: codex/task-06-method-pack
+- Base implementation commit: 8cdd329f0472a86ccb6aa63a193298f37e738f5b
+
+## QA changes
+
+- Added `services/api/tests/test_method_pack.py` for deterministic source/runtime validation, immutable installation, catalog escape rejection, hash parity, manifest drift rejection, and executable route fixtures.
+- Added `services/api/tests/test_method_router.py` for exact/partial/unsupported routing, canonical requested-level aliases, confirmation semantics, and prohibited-material authorization behavior.
+- Added `services/api/tests/test_cynefin_gate.py` for manifest-locked Cynefin defaults, safe-to-fail requirements, requested-level handling, and auditable override enforcement.
+- Kept the QA branch owner-clean: no implementation-owner file was modified.
+
+## Verification
+
+- Task 6 targeted suite: 49 passed.
+- Full API/model/Task 6 suite: 68 passed using the approved local dotenv-loaded environment; no environment value was printed or recorded.
+- Ruff: PASS.
+- Python compileall: PASS.
+- Method-pack CLI installation executed twice: PASS with identical result and content hash `92e41e56c75bb7ad77a726b5ef91f83e3ff1f2c845c5af3ea4ffcde34c1ef482`.
+- OpenAPI/TypeScript contract drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: 7/7 groups PASS.
+- Alembic check: `No new upgrade operations detected.`
+- QA staged-scope audit before lifecycle archival: only `HEAD` and the three QA-owned test files were staged; no implementation-owner path was present.
+- Secret scan before lifecycle archival: zero secret-like filenames and zero high-confidence findings; `.env` and credential values were not read by the scan.
+- `git diff --cached --check`: PASS.
+- No unstaged differences were present before lifecycle archival.
+
+## Review and remaining risks
+
+- The QA tests validate the implementation branch as release-ready for Task 6, subject to the required stacked merge order and product-owner approval.
+- Required merge order: first `codex/task-06-method-pack`, then `codex/qa-task-06-method-pack`.
+- The QA branch must be committed and pushed after this lifecycle archive; Codex will not merge either branch.
+- Full Task 19A remains prohibited until both Task 6 branches are reviewed and merged by the product owner.
+- The existing validation archives under `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\archives` remain intentionally preserved.
+
+- Secret policy: no credentials are stored in this file.
