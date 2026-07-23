@@ -1329,3 +1329,40 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - This commit is lifecycle-log-only (HEAD/HISTORY); no product source, test, migration, or contract file changed.
 - After push, remote main SHA will be re-read live and recorded in the CONTRACT_FREEZE message; parallel lanes must branch from that frozen SHA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Authentication and Workspace Isolation - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data Owner (parallel lanes phase).
+- Objective: Task 3 Authentication and Workspace isolation.
+- Base: CONTRACT_FREEZE_SHA 239620681f88c525912c2e1d8b23483a5f362a5e.
+- Branch: codex/task-03-auth-workspace; worktree decision-lab-case-api-48h.
+
+## Delivered
+
+- app/auth: config (AUTH_* env, non-secret dev defaults), Argon2 passwords with timing-equalizing dummy hash, HS256 JWT limited to sub/session_id/iat/exp, UserSession lifecycle (atomic idempotent revoke, active resolution, last-seen touch), require_authenticated_principal with uniform 401, routes for csrf/register/login/logout/session per doc 10.
+- app/security: envelope (ok/data | ok/error, ApiFailure, register_error_handlers, uniform workspace_not_found/session_rejected) and csrf (double-submit + exact Origin / same-origin Referer + constant-time compare).
+- app/tenancy: WorkspaceContext with owner-full / member-subset capability projection (doc 26 section 8), require_workspace_context uniform 404, require_capability 403 factory, workspace_router mount point.
+- Register creates user + first workspace + owner membership (stored grants empty; full set projected from role) + revocable session cookie (HttpOnly, SameSite=Lax, Secure configurable).
+
+## Verification
+
+- ruff: PASS. compileall: PASS.
+- alembic upgrade head on disposable Postgres 16: PASS (f850d361ee42); no schema change needed.
+- Existing pytest suite: 84 passed (non-regression).
+- ASGI end-to-end probe: TASK03_AUTH_WORKSPACE_PROBE_OK, 23/23 PASS (CSRF block, owner capability projection, duplicate-email uniform 422, cross-tenant 404 WORKSPACE_NOT_FOUND with byte-identical foreign/nonexistent bodies, uniform AUTH_INVALID_CREDENTIALS, logout revocation, revoked-JWT replay rejected before exp, revoked session blocked on workspace routes).
+- git diff --check PASS; changed paths confined to app/auth/**, app/tenancy/**, app/security/**, HEAD, HISTORY.
+
+## Contract gaps handed to Contract Lead (implementation not blocked)
+
+- Mount routers + register_error_handlers in app/main.py and regenerate packages/contracts.
+- Canonize AUTH_INVALID_CREDENTIALS (401) and WORKSPACE_NOT_FOUND (404) in doc 10.
+- Add AUTH_* placeholders to .env.example.
+
+## Known gaps
+
+- Login rate limiting deferred to security slice; token_version rotation flow not yet used; QA acceptance tests to be authored by QA/Release on their branch.
+- No credentials or secret values are recorded here.

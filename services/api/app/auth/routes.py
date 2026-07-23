@@ -1,0 +1,343 @@
+"""Auth endpoints from the canonical API contract (docs/product-plan/10).
+
+| GET  /api/auth/csrf     | issue/refresh readable CSRF token + cookie |
+| POST /api/auth/register | register and create the first revocable UserSession |
+| POST /api/auth/login    | login and create a revocable UserSession |
+| POST /api/auth/logout   | revoke the current UserSession, then clear cookies |
+| GET  /api/auth/session  | current user, session state, membership summary |
+
+Routers are mounted into ``app.main`` by the Contract Lead together with
+``app.security.envelope.register_error_handlers`` (see the accompanying
+CONTRACT_CHANGE_REQUEST); this module must not import ``app.main``.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Annotated, Literal
+
+from fastapi import APIRouter, Depends, Request, Response
+from pydantic import StringConstraints
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.config import get_auth_settings
+from app.auth.deps import AuthenticatedPrincipal, require_authenticated_principal
+from app.auth.passwords import DUMMY_PASSWORD_HASH, hash_password, verify_password
+from app.auth.sessions import create_user_session, revoke_user_session, utc_now
+from app.auth.tokens import TokenDecodeError, decode_session_token, encode_session_token
+from app.contracts.schemas import CanonicalModel, NonEmptyText
+from app.db import get_session
+from app.models import User, UserSession, Workspace, WorkspaceMembership
+from app.security.csrf import issue_csrf_token, require_csrf
+from app.security.envelope import ApiFailure
+from app.tenancy.context import project_capabilities
+from app.types import (
+    UserStatus,
+    WorkspaceCapability,
+    WorkspaceMembershipStatus,
+    WorkspaceRole,
+    WorkspaceStatus,
+)
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_DEFAULT_WORKSPACE_NAME = "Personal Workspace"
+
+EmailField = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        to_lower=True,
+        min_length=3,
+        max_length=320,
+        pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+    ),
+]
+PasswordField = Annotated[str, StringConstraints(min_length=8, max_length=200)]
+
+
+class RegisterRequest(CanonicalModel):
+    email: EmailField
+    password: PasswordField
+    workspace_name: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+        | None
+    ) = None
+
+
+class LoginRequest(CanonicalModel):
+    email: EmailField
+    password: Annotated[str, StringConstraints(min_length=1, max_length=200)]
+
+
+class CsrfTokenData(CanonicalModel):
+    csrf_token: NonEmptyText
+
+
+class CsrfEnvelope(CanonicalModel):
+    ok: Literal[True] = True
+    data: CsrfTokenData
+
+
+class UserSummary(CanonicalModel):
+    id: str
+    email: str
+    status: UserStatus
+    created_at: datetime
+
+
+class SessionSummary(CanonicalModel):
+    id: str
+    created_at: datetime
+    last_seen_at: datetime
+    expires_at: datetime
+
+
+class MembershipSummary(CanonicalModel):
+    workspace_id: str
+    workspace_name: str
+    role: WorkspaceRole
+    capabilities: list[WorkspaceCapability]
+    status: WorkspaceMembershipStatus
+
+
+class AuthSessionData(CanonicalModel):
+    user: UserSummary
+    session: SessionSummary
+    memberships: list[MembershipSummary]
+
+
+class AuthSessionEnvelope(CanonicalModel):
+    ok: Literal[True] = True
+    data: AuthSessionData
+
+
+class LogoutData(CanonicalModel):
+    logged_out: Literal[True] = True
+
+
+class LogoutEnvelope(CanonicalModel):
+    ok: Literal[True] = True
+    data: LogoutData
+
+
+def _registration_rejected() -> ApiFailure:
+    # One generic message for duplicates and race losers alike, so the
+    # endpoint cannot be used to enumerate registered emails.
+    return ApiFailure(
+        "VALIDATION_FAILED",
+        "Registration could not be completed with the provided details.",
+        http_status=422,
+    )
+
+
+def _invalid_credentials() -> ApiFailure:
+    return ApiFailure(
+        "AUTH_INVALID_CREDENTIALS",
+        "Email or password is incorrect.",
+        http_status=401,
+    )
+
+
+def _set_session_cookie(response: Response, token: str, expires_at: datetime) -> None:
+    settings = get_auth_settings()
+    max_age = max(int((expires_at - utc_now()).total_seconds()), 0)
+    response.set_cookie(
+        key=settings.session_cookie_name,
+        value=token,
+        max_age=max_age,
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    settings = get_auth_settings()
+    response.delete_cookie(
+        key=settings.session_cookie_name,
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
+        path="/",
+    )
+
+
+async def _membership_summaries(db: AsyncSession, user_id) -> list[MembershipSummary]:
+    rows = (
+        await db.execute(
+            select(WorkspaceMembership, Workspace)
+            .join(Workspace, Workspace.id == WorkspaceMembership.workspace_id)
+            .where(
+                WorkspaceMembership.user_id == user_id,
+                WorkspaceMembership.status == WorkspaceMembershipStatus.ACTIVE,
+                Workspace.status == WorkspaceStatus.ACTIVE,
+            )
+            .order_by(Workspace.created_at)
+        )
+    ).all()
+    return [
+        MembershipSummary(
+            workspace_id=str(workspace.id),
+            workspace_name=workspace.name,
+            role=membership.role,
+            capabilities=sorted(
+                project_capabilities(membership.role, membership.capabilities),
+                key=lambda capability: capability.value,
+            ),
+            status=membership.status,
+        )
+        for membership, workspace in rows
+    ]
+
+
+async def _session_envelope(
+    db: AsyncSession, user: User, session: UserSession
+) -> AuthSessionEnvelope:
+    return AuthSessionEnvelope(
+        data=AuthSessionData(
+            user=UserSummary(
+                id=str(user.id),
+                email=user.email,
+                status=user.status,
+                created_at=user.created_at,
+            ),
+            session=SessionSummary(
+                id=str(session.id),
+                created_at=session.created_at,
+                last_seen_at=session.last_seen_at,
+                expires_at=session.expires_at,
+            ),
+            memberships=await _membership_summaries(db, user.id),
+        )
+    )
+
+
+@router.get("/csrf", response_model=CsrfEnvelope)
+async def get_csrf_token(response: Response) -> CsrfEnvelope:
+    token = issue_csrf_token(response)
+    return CsrfEnvelope(data=CsrfTokenData(csrf_token=token))
+
+
+@router.post(
+    "/register",
+    response_model=AuthSessionEnvelope,
+    status_code=201,
+    dependencies=[Depends(require_csrf)],
+)
+async def register(
+    body: RegisterRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_session),
+) -> AuthSessionEnvelope:
+    existing = await db.scalar(select(User.id).where(User.email == body.email))
+    if existing is not None:
+        raise _registration_rejected()
+
+    user = User(email=body.email, password_hash=hash_password(body.password))
+    db.add(user)
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise _registration_rejected() from None
+
+    workspace = Workspace(
+        name=body.workspace_name or _DEFAULT_WORKSPACE_NAME,
+        created_by_user_id=user.id,
+    )
+    db.add(workspace)
+    await db.flush()
+    db.add(
+        WorkspaceMembership(
+            workspace_id=workspace.id,
+            user_id=user.id,
+            role=WorkspaceRole.OWNER,
+            # Stored grants stay empty for owners: the full capability set is
+            # projected from the role on every read (docs/product-plan/26 §8).
+            capabilities=[],
+        )
+    )
+    session = await create_user_session(db, user.id)
+    token = encode_session_token(
+        user_id=user.id,
+        session_id=session.id,
+        issued_at=utc_now(),
+        expires_at=session.expires_at,
+    )
+    envelope = await _session_envelope(db, user, session)
+    await db.commit()
+    _set_session_cookie(response, token, session.expires_at)
+    return envelope
+
+
+@router.post(
+    "/login",
+    response_model=AuthSessionEnvelope,
+    dependencies=[Depends(require_csrf)],
+)
+async def login(
+    body: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_session),
+) -> AuthSessionEnvelope:
+    user = await db.scalar(select(User).where(User.email == body.email))
+    if user is None:
+        # Equalize timing with a real Argon2 verification, then fail uniformly.
+        verify_password(DUMMY_PASSWORD_HASH, body.password)
+        raise _invalid_credentials()
+    if not verify_password(user.password_hash, body.password):
+        raise _invalid_credentials()
+    if user.status != UserStatus.ACTIVE:
+        raise _invalid_credentials()
+
+    session = await create_user_session(db, user.id)
+    token = encode_session_token(
+        user_id=user.id,
+        session_id=session.id,
+        issued_at=utc_now(),
+        expires_at=session.expires_at,
+    )
+    envelope = await _session_envelope(db, user, session)
+    await db.commit()
+    _set_session_cookie(response, token, session.expires_at)
+    return envelope
+
+
+@router.post(
+    "/logout",
+    response_model=LogoutEnvelope,
+    dependencies=[Depends(require_csrf)],
+)
+async def logout(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_session),
+) -> LogoutEnvelope:
+    # Revocation happens before the cookie is cleared (plan 18 Task 3 Step 4).
+    # An absent or undecodable token still clears the cookie and succeeds, so
+    # logout stays idempotent and leaks no session state.
+    settings = get_auth_settings()
+    token = request.cookies.get(settings.session_cookie_name)
+    if token:
+        try:
+            claims = decode_session_token(token, settings)
+        except TokenDecodeError:
+            claims = None
+        if claims is not None:
+            await revoke_user_session(db, claims.session_id)
+            await db.commit()
+    _clear_session_cookie(response)
+    return LogoutEnvelope(data=LogoutData())
+
+
+@router.get("/session", response_model=AuthSessionEnvelope)
+async def read_session(
+    principal: AuthenticatedPrincipal = Depends(require_authenticated_principal),
+    db: AsyncSession = Depends(get_session),
+) -> AuthSessionEnvelope:
+    return await _session_envelope(db, principal.user, principal.session)
+
