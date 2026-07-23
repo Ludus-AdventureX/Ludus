@@ -1,15 +1,13 @@
 import { defineConfig } from "vitest/config";
-import path from "node:path";
 
 export default defineConfig({
+  oxc: {
+    jsx: {
+      runtime: "automatic",
+      importSource: "react"
+    }
+  },
   test: {
-    environment: "jsdom",
-    globals: true,
-    setupFiles: ["./test-support/setup.ts"],
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "."),
-    },
-  },
+    environment: "jsdom"
+  }
 });

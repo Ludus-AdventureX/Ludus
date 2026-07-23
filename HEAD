@@ -2,6 +2,6 @@
 
 - Status: idle.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Look V7 Accessibility Repair - 2026-07-24 (Asia/Shanghai)`.
+- Last archive entry: `Archive Look V7 Accessibility QA - 2026-07-24 (Asia/Shanghai)`.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

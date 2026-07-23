@@ -973,3 +973,38 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - `pnpm --dir apps/web test` is still expected to fail until the separate QA-owned branch adds real Vitest/Testing Library coverage.
 - No remote push, pull request, or GitHub merge was performed on this branch.
 - Secret policy: no credentials are stored in this record.
+
+
+## Archive Look V7 Accessibility QA - 2026-07-24 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai).
+- Completed: 2026-07-24 (Asia/Shanghai).
+- Status: completed.
+- Objective: add QA-owned automated regression coverage for the Look V7 empty-workspace and drawer accessibility release gates.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/qa-look-v7-accessibility
+- Baseline local main: 00bb12ede85f3595578fbd10a48ebbaae21b852f
+- Owner: qa_release
+
+## Changes
+
+- Added `apps/web/tests/decision-shell-accessibility.test.tsx` with five real Vitest/Testing Library regressions for Look V7 release gates.
+- Added minimal QA-owned `apps/web/vitest.config.ts` so Vitest/OXC transforms the Next/React TSX component under the existing `jsx: preserve` Next tsconfig.
+- Covered empty submit focus, example prompt fill, draft-only state, theme drawer naming/focus movement/focus trap/Escape return, theme persistence, project drawer focus return, and 44x44 touch-target CSS locks.
+- Did not modify product source, schema, contracts, or CSS on this QA branch.
+
+## Validation
+
+- `git diff --check`: PASS.
+- `pnpm --dir apps/web test`: PASS; 1 test file, 5 tests.
+- `pnpm --dir apps/web typecheck`: PASS.
+- `pnpm --dir apps/web lint`: PASS.
+- `pnpm --dir apps/web build`: PASS; `/` and `/_not-found` statically prerendered.
+- Secret policy: no credentials are stored in this record.
+
+## Remaining risk
+
+- Browser production validation remains covered by the immediately preceding Web UX branch and will be rerun again after local mainline integration.
+- No remote push, pull request, or GitHub merge was performed on this branch.
