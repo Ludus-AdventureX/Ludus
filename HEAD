@@ -1,11 +1,11 @@
 # Work Log: idle
 
-- Last archived: 2026-07-23 (Asia/Shanghai)
-- Archive file: HISTORY
-- Archive marker: Task 6 Implementation
+- Status: idle.
+- Last archived: 2026-07-23 (Asia/Shanghai).
+- Last archive entry: `Archive Task 6 QA Acceptance - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Branch: codex/task-06-method-pack
-- State: owner-clean implementation complete; awaiting implementation commit/push and independent QA branch handoff.
-- Next work: commit and push this implementation branch, then create `codex/qa-task-06-method-pack` for the archived QA tests; do not merge automatically.
-- Constraint: do not start full Task 19A before Task 6 implementation and QA branches are reviewed and merged by the product owner.
+- Current branch: codex/qa-task-06-method-pack
+- Waiting for: final commit/push and product-owner review of the stacked Task 6 branches.
+- Required merge order: `codex/task-06-method-pack`, then `codex/qa-task-06-method-pack`.
+- Constraint: do not merge branches and do not start full Task 19A before both Task 6 branches are reviewed and merged.
 - Secret policy: no credentials are stored in this file.
