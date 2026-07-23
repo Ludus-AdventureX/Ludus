@@ -939,3 +939,48 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 
 - Commit and push this Contract Lead implementation branch after remote URL/SHA verification.
 - Create a new QA r2 branch from the implementation commit; do not reuse the old QA branch and do not modify product source from QA.
+
+
+## Archive QA r2 Task 19A Canonical Contract Hardening - 2026-07-23 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; QA verdict PASS for controlled integration.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/qa-task-19a-canonical-contracts-r2
+- Base implementation commit: fc1dd152e8941806b4f77014471884fe7fff92f1
+- Archived first-round QA source: 54ebf80 (tests extracted only; old branch remains archive-only).
+- Owner: qa_release
+
+## QA changes
+
+- Updated the exact SQLAlchemy table inventory for the five Task 19A tables.
+- Restored independent Pydantic, OpenAPI, persistence, tenant/Case binding, numeric-bound, signoff, Source/SourceSpan, and canonical-identifier regressions.
+- Added second-round coverage for PostgreSQL NaN epsilon, both AnalysisRun supersession directions, DeepAnalysis negative infinity, and the generated OpenAPI ContentHash pattern.
+- QA changed only `services/api/tests/test_models.py`, `services/api/tests/test_decision_os_invariants.py`, and required lifecycle records; no product source, migration, generated contract, or product-plan file was modified.
+
+## Final acceptance evidence
+
+- Directed Task 19A model/contract/database suite: `34 passed` with warnings treated as errors.
+- Full API suite: `84 passed` with warnings treated as errors.
+- Ruff over API/tests/scripts/contract builder: PASS.
+- Python compileall over app/tests/migrations/scripts/contract builder: PASS.
+- Contract drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: PASS for all 7 groups; DAG acyclic, 26 tasks, DeepAnalysis 06/26 exact, 18 Signoff fields, zero legacy wire IDs.
+- Alembic QA lifecycle: PASS for upgrade head, downgrade `6b246c283d7a`, re-upgrade, downgrade `0001`, re-upgrade, `alembic check`, and final current=`f850d361ee42 (head)`.
+- QA owner-scope audit: PASS. Changed-tree high-confidence secret scan: PASS. `git diff --check`: PASS.
+- Behavioral regressions confirmed rejection of fabricated human/case RawArtifact references, internal-whitespace ContentHash, non-finite DeepAnalysis budgets, cross-Case supersession in both directions, and non-finite Simulation epsilon; corresponding legal cases remain accepted.
+
+## Review verdict
+
+- P0 findings: 0.
+- P1 findings: 0.
+- Product/contract/migration verdict: PASS and approved for controlled merge.
+- Latest local/remote-tracking main is `0dde4ab46220fc4a61e2a67561430af92a986c47`; its only post-stack-base change is the GitHub governance documentation commit. A three-way preview shows expected content conflicts only in lifecycle files `HEAD` and `HISTORY`, with no product-source, migration, contract, or test conflict. The designated Mainline Audit/Integration owner must preserve the governance entry and both Task 19A archives when resolving those logs, then rerun final mainline acceptance.
+- Required branch order remains implementation `codex/task-19a-contract-hardening-fixes` followed by stacked QA `codex/qa-task-19a-canonical-contracts-r2`; do not merge the old QA archive branch.
+
+## Remote status and remaining risk
+
+- Canonical Private origin URL was verified, but live GitHub access failed with a port 443 connection error before branch upload. No remote push, PR, check, review, or merge is claimed.
+- Remaining risk is operational only: remote publication and final mainline integration verification await network availability and product-owner-controlled merge. No known P0/P1 product defect remains.
+- No credentials or secret values are recorded here.

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 from app.db import Base, get_database_url
 from app.models import (
+    AnalysisRun,
     Conversation,
     DecisionCase,
     DecisionSubject,
@@ -20,6 +21,10 @@ from app.models import (
     Initiative,
     Message,
     QuickAnalysisResult,
+    SignoffRequest as SignoffRequestModel,
+    SimulationRun as SimulationRunModel,
+    SourceRecord as SourceRecordModel,
+    SourceSpan as SourceSpanModel,
     User,
     UserSession,
     Workspace,
@@ -86,6 +91,11 @@ def test_core_table_set_and_workspace_scope() -> None:
         "candidate_revisions",
         "quick_analysis_results",
         "domain_events",
+        "analysis_runs",
+        "source_records",
+        "source_spans",
+        "simulation_runs",
+        "signoff_requests",
     }
     assert set(Base.metadata.tables) == expected
 
@@ -486,3 +496,381 @@ async def test_quick_analysis_case_must_match_its_conversation(
             )
         )
     await savepoint.rollback()
+
+async def seed_analysis_run(
+    connection: AsyncConnection,
+    workspace_id: object,
+    decision_case_id: object,
+) -> object:
+    return (
+        await connection.execute(
+            insert(AnalysisRun)
+            .values(
+                workspace_id=workspace_id,
+                decision_case_id=decision_case_id,
+                charter_id=uuid4(),
+                charter_version=1,
+                run_manifest_id=uuid4(),
+                run_manifest_hash="sha256:run-manifest",
+                cynefin_gate_result_id=uuid4(),
+                analysis_level="focused",
+                status="queued",
+                progress=0,
+                origin_modes=["fixture"],
+                case_version=1,
+                case_snapshot_hash="sha256:case-snapshot",
+                dossier_snapshot_version=1,
+                dossier_snapshot_hash="sha256:dossier-snapshot",
+                method_id="method-1",
+                method_version="1.1.0",
+                method_content_hash="sha256:method-1",
+                attempt=1,
+                max_attempts=1,
+                idempotency_key=f"analysis-{uuid4()}",
+            )
+            .returning(AnalysisRun.analysis_run_id)
+        )
+    ).scalar_one()
+
+
+@pytest.mark.asyncio
+async def test_task_19a_source_scope_and_cross_case_bindings_are_rejected(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    case_a = await seed_case(connection, workspace_id, subject_a)
+    case_b = await seed_case(connection, workspace_id, subject_b)
+    run_a = await seed_analysis_run(connection, workspace_id, case_a)
+    run_b = await seed_analysis_run(connection, workspace_id, case_b)
+
+    source_a_id = uuid4()
+    await connection.execute(
+        insert(SourceRecordModel).values(
+            id=source_a_id,
+            workspace_id=workspace_id,
+            decision_case_id=case_a,
+            source_scope="pre_run",
+            kind="human_input",
+            canonical_uri="ludus://case/source-a",
+            title="Case A source",
+            content_hash="sha256:source-a",
+            source_version="1",
+            origin_mode="fixture",
+        )
+    )
+    source_b_id = uuid4()
+    await connection.execute(
+        insert(SourceRecordModel).values(
+            id=source_b_id,
+            workspace_id=workspace_id,
+            decision_case_id=case_b,
+            source_scope="pre_run",
+            kind="human_input",
+            canonical_uri="ludus://case/source-b",
+            title="Case B source",
+            content_hash="sha256:source-b",
+            source_version="1",
+            origin_mode="fixture",
+        )
+    )
+    await connection.execute(
+        insert(SourceRecordModel).values(
+            id=uuid4(),
+            workspace_id=workspace_id,
+            decision_case_id=case_b,
+            source_scope="run_frozen",
+            analysis_run_id=run_b,
+            frozen_from_source_record_id=source_b_id,
+            frozen_at=datetime.now(timezone.utc),
+            kind="human_input",
+            canonical_uri="ludus://case/source-b/frozen",
+            title="Case B frozen source",
+            content_hash="sha256:source-b-frozen",
+            source_version="1",
+            origin_mode="fixture",
+        )
+    )
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(SourceRecordModel).values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                decision_case_id=case_a,
+                source_scope="pre_run",
+                analysis_run_id=run_a,
+                kind="human_input",
+                canonical_uri="ludus://case/illegal-pre-run",
+                title="Illegal pre-run source",
+                content_hash="sha256:illegal-pre-run",
+                source_version="1",
+                origin_mode="fixture",
+            )
+        )
+    await savepoint.rollback()
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(SourceRecordModel).values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                decision_case_id=case_a,
+                source_scope="run_frozen",
+                analysis_run_id=run_b,
+                frozen_from_source_record_id=source_a_id,
+                frozen_at=datetime.now(timezone.utc),
+                kind="human_input",
+                canonical_uri="ludus://case/cross-case-frozen",
+                title="Cross-case frozen source",
+                content_hash="sha256:cross-case-frozen",
+                source_version="1",
+                origin_mode="fixture",
+            )
+        )
+    await savepoint.rollback()
+
+    savepoint = await connection.begin_nested()
+    with pytest.raises(IntegrityError):
+        await connection.execute(
+            insert(SourceSpanModel).values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                decision_case_id=case_a,
+                source_record_id=source_b_id,
+                source_scope="pre_run",
+                locator={"caseFieldPath": "decisionQuestion"},
+                quote="Cross-case source span",
+                quote_hash="sha256:cross-case-span",
+            )
+        )
+    await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_task_19a_source_span_locator_and_quote_constraints_are_enforced(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_id = (
+        await connection.execute(
+            insert(DecisionSubject)
+            .values(
+                workspace_id=workspace_id,
+                name="Span subject",
+                slug=f"span-subject-{uuid4()}",
+            )
+            .returning(DecisionSubject.id)
+        )
+    ).scalar_one()
+    case_id = await seed_case(connection, workspace_id, subject_id)
+    source_id = uuid4()
+    await connection.execute(
+        insert(SourceRecordModel).values(
+            id=source_id,
+            workspace_id=workspace_id,
+            decision_case_id=case_id,
+            source_scope="pre_run",
+            kind="human_input",
+            canonical_uri="ludus://case/span-source",
+            title="Span source",
+            content_hash="sha256:span-source",
+            source_version="1",
+            origin_mode="fixture",
+        )
+    )
+
+    for invalid_values in (
+        {"locator": {}, "quote": "valid quote"},
+        {"locator": {"caseFieldPath": "question"}, "quote": ""},
+    ):
+        savepoint = await connection.begin_nested()
+        with pytest.raises(IntegrityError):
+            await connection.execute(
+                insert(SourceSpanModel).values(
+                    id=uuid4(),
+                    workspace_id=workspace_id,
+                    decision_case_id=case_id,
+                    source_record_id=source_id,
+                    source_scope="pre_run",
+                    quote_hash="sha256:invalid-span",
+                    **invalid_values,
+                )
+            )
+        await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_task_19a_simulation_replay_numeric_constraints_are_enforced(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_id = (
+        await connection.execute(
+            insert(DecisionSubject)
+            .values(
+                workspace_id=workspace_id,
+                name="Simulation subject",
+                slug=f"simulation-subject-{uuid4()}",
+            )
+            .returning(DecisionSubject.id)
+        )
+    ).scalar_one()
+    case_id = await seed_case(connection, workspace_id, subject_id)
+
+    base_values = {
+        "id": uuid4(),
+        "workspace_id": workspace_id,
+        "decision_case_id": case_id,
+        "graph_id": uuid4(),
+        "graph_version_id": uuid4(),
+        "strategy_version_id": uuid4(),
+        "scenario_version_id": uuid4(),
+        "score_definition_id": uuid4(),
+        "score_definition_version": "1.0.0",
+        "decision_maker_profile_id": uuid4(),
+        "decision_maker_profile_version": 1,
+        "risk_tolerance": 0.5,
+        "engine_version": "1.0.0",
+        "scenario_id": uuid4(),
+        "simulation_mode": "formal",
+        "epsilon": 0.001,
+        "max_steps": 20,
+        "steps": 10,
+        "input_hash": "sha256:simulation-input",
+        "node_results": {"outcome-1": 0.5},
+        "option_scores": [{"optionId": "option-1", "score": 0.5}],
+        "top_drivers": [{"nodeId": "driver-1", "scoreDelta": 0.1}],
+        "recommendation_shift": "No change",
+        "convergence_status": "converged",
+        "origin_modes": ["fixture"],
+    }
+    await connection.execute(insert(SimulationRunModel).values(base_values))
+
+    for overrides in (
+        {"steps": 21},
+        {"risk_tolerance": -0.01},
+        {"risk_tolerance": 1.01},
+        {"epsilon": 0},
+        {"epsilon": float("inf")},
+        {"epsilon": float("nan")},
+        {"max_steps": 0},
+        {"decision_maker_profile_version": 0},
+    ):
+        invalid_values = {**base_values, "id": uuid4(), **overrides}
+        savepoint = await connection.begin_nested()
+        with pytest.raises(IntegrityError):
+            await connection.execute(insert(SimulationRunModel).values(invalid_values))
+        await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_task_19a_signoff_expiry_and_signed_timestamp_constraints_are_enforced(
+    connection: AsyncConnection,
+) -> None:
+    user_id, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_id = (
+        await connection.execute(
+            insert(DecisionSubject)
+            .values(
+                workspace_id=workspace_id,
+                name="Signoff subject",
+                slug=f"signoff-subject-{uuid4()}",
+            )
+            .returning(DecisionSubject.id)
+        )
+    ).scalar_one()
+    case_id = await seed_case(connection, workspace_id, subject_id)
+    issued_at = datetime(2026, 7, 23, 12, 0, tzinfo=timezone.utc)
+    base_values = {
+        "id": uuid4(),
+        "workspace_id": workspace_id,
+        "decision_case_id": case_id,
+        "requested_by_user_id": user_id,
+        "payload": {"caseVersion": 1},
+        "payload_hash": "sha256:signoff",
+        "status": "pending",
+        "nonce_hash": "sha256:nonce",
+        "nonce_issued_at": issued_at,
+        "expires_at": issued_at + timedelta(hours=1),
+    }
+    await connection.execute(insert(SignoffRequestModel).values(base_values))
+
+    for overrides in (
+        {"expires_at": issued_at},
+        {"status": "signed", "signed_at": None},
+    ):
+        invalid_values = {**base_values, "id": uuid4(), **overrides}
+        savepoint = await connection.begin_nested()
+        with pytest.raises(IntegrityError):
+            await connection.execute(insert(SignoffRequestModel).values(invalid_values))
+        await savepoint.rollback()
+
+@pytest.mark.asyncio
+async def test_task_19a_human_and_case_sources_cannot_persist_raw_artifacts(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_id = (
+        await connection.execute(
+            insert(DecisionSubject)
+            .values(
+                workspace_id=workspace_id,
+                name="Raw artifact subject",
+                slug=f"raw-artifact-subject-{uuid4()}",
+            )
+            .returning(DecisionSubject.id)
+        )
+    ).scalar_one()
+    decision_case_id = await seed_case(connection, workspace_id, subject_id)
+
+    for source_kind in ("human_input", "case_snapshot"):
+        savepoint = await connection.begin_nested()
+        try:
+            with pytest.raises(IntegrityError):
+                await connection.execute(
+                    insert(SourceRecordModel).values(
+                        id=uuid4(),
+                        workspace_id=workspace_id,
+                        decision_case_id=decision_case_id,
+                        source_scope="pre_run",
+                        kind=source_kind,
+                        raw_artifact_id=uuid4(),
+                        canonical_uri=f"ludus://case/fabricated-{source_kind}",
+                        title="Fabricated raw artifact reference",
+                        content_hash="sha256:fabricated",
+                        source_version="1",
+                        origin_mode="fixture",
+                    )
+                )
+        finally:
+            await savepoint.rollback()
+
+
+@pytest.mark.asyncio
+async def test_task_19a_run_supersession_cannot_cross_decision_cases(
+    connection: AsyncConnection,
+) -> None:
+    _, workspace_id, _ = await seed_user_and_workspaces(connection)
+    subject_a, subject_b = await seed_subject_pair(connection, workspace_id)
+    case_a = await seed_case(connection, workspace_id, subject_a)
+    case_b = await seed_case(connection, workspace_id, subject_b)
+    run_a = await seed_analysis_run(connection, workspace_id, case_a)
+    run_b = await seed_analysis_run(connection, workspace_id, case_b)
+
+    for relation_field in (
+        "supersedes_analysis_run_id",
+        "superseded_by_analysis_run_id",
+    ):
+        savepoint = await connection.begin_nested()
+        try:
+            with pytest.raises(IntegrityError):
+                await connection.execute(
+                    update(AnalysisRun)
+                    .where(AnalysisRun.analysis_run_id == run_a)
+                    .values(**{relation_field: run_b})
+                )
+        finally:
+            await savepoint.rollback()

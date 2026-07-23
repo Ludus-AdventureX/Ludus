@@ -1,12 +1,12 @@
 # Work Log: idle
 
-- Status: idle after completing the Contract Lead implementation for Task 19A hardening.
+- Status: idle after independent QA r2 completion for Task 19A.
 - Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Contract Lead Task 19A Hardening Fixes - 2026-07-23 (Asia/Shanghai)`.
+- Last archive entry: `Archive QA r2 Task 19A Canonical Contract Hardening - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Current branch: codex/task-19a-contract-hardening-fixes
-- Owner result: implementation and owner-scoped verification complete; no merge approval yet.
-- Next approved work: commit/push this implementation tip, then create fresh `codex/qa-task-19a-canonical-contracts-r2` from it and run QA-owned regressions.
-- QA boundary: QA may change only `services/api/tests/**` and lifecycle/handoff records; product-source defects return to Contract Lead.
-- Remote policy: verify the canonical private origin and live remote SHA before any push; do not merge automatically.
+- Current branch: codex/qa-task-19a-canonical-contracts-r2
+- QA verdict: PASS; P0=0, P1=0; implementation stack is approved for controlled integration.
+- Required merge order: `codex/task-19a-contract-hardening-fixes`, then `codex/qa-task-19a-canonical-contracts-r2`; old QA branch `codex/qa-task-19a-canonical-contracts` is archive-only.
+- Mainline note: preserve main governance commit `0dde4ab` and resolve only the expected `HEAD/HISTORY` lifecycle-log conflicts before final mainline verification.
+- Remote status: canonical origin verified, but GitHub port 443 connectivity was blocked; no upload or remote merge is claimed.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
