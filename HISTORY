@@ -939,3 +939,42 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 
 - Commit and push this Contract Lead implementation branch after remote URL/SHA verification.
 - Create a new QA r2 branch from the implementation commit; do not reuse the old QA branch and do not modify product source from QA.
+
+
+## Archive Task 19A Fresh Re-Verification and Remote Upload - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai).
+- Completed: 2026-07-24 (Asia/Shanghai).
+- Status: completed.
+- Role: Task 19A Implementation Owner (Contract Lead lane, 48h Narrow Prototype).
+- Objective: independently re-verify the Task 19A implementation stack (336956e + fc1dd15) with fresh acceptance runs and upload `codex/task-19a-contract-hardening-fixes` to origin with live remote SHA verification.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-task19a-impl
+- Branch: codex/task-19a-contract-hardening-fixes (implementation tip fc1dd152e8941806b4f77014471884fe7fff92f1)
+- Base main observed: ab5fd33019ec00cc55aaafa6f0b881c298dccba8 (local == origin/main == live remote via git ls-remote).
+
+## Branch topology audit
+
+- `codex/task-19a-canonical-contracts` (336956e) is no longer the latest implementation candidate; `codex/task-19a-contract-hardening-fixes` (fc1dd15) adds one implementation-scope hardening fix on top of it.
+- `codex/qa-task-19a-canonical-contracts-r2` (32d9e14) contains only QA-owned tests and lifecycle records on top of fc1dd15; QA verdict PASS with P0=0/P1=0.
+- main advanced past the 19A base (cf9e093) only with Look V7 web/docs commits; zero overlap with services/api, packages/contracts, or scripts.
+- No task-19a branch existed on origin before this session (prior GitHub 443 blockage).
+
+## Fresh verification results
+
+- Contract shape review: PASS (canonical wire IDs only, Source freeze unions, RawArtifact rejection for human_input/case_snapshot, UserSession revocation, Membership capabilities, SignoffPayload/nonce, SimulationRun replay fields with finite-number checks).
+- pytest test_models.py + test_decision_os_invariants.py: 17 passed, 1 failed; the failure is the known QA-owned stale exact-table assertion fixed on QA r2.
+- Alembic on clean disposable Postgres 16: upgrade head PASS (f850d361ee42), downgrade -1 + re-upgrade + alembic check PASS; disposable container removed afterwards.
+- Contract drift: OPENAPI_DRIFT_OK and TYPESCRIPT_DRIFT_OK via freshly exported OpenAPI and openapi-typescript 7.13.0 from the sibling installed checkout (this worktree has no node_modules; no new dependency installation was performed).
+- git diff --check PASS; changed-path audit main...HEAD confined to Task 19A write scope (16 paths).
+
+## Remote upload
+
+- Push and post-push `git ls-remote` SHA verification results are recorded in the session LANE_HANDOFF; see the lifecycle commit on this branch.
+
+## Boundary and policy
+
+- No QA-owned tests, apps/web, or other lanes' files were modified; no merge into main was performed or claimed.
+- Required merge order remains: implementation branch first, then `codex/qa-task-19a-canonical-contracts-r2`.
+- No credentials or secret values are recorded here.

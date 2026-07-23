@@ -1,12 +1,13 @@
 # Work Log: idle
 
-- Status: idle after completing the Contract Lead implementation for Task 19A hardening.
-- Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Contract Lead Task 19A Hardening Fixes - 2026-07-23 (Asia/Shanghai)`.
-- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Status: idle after Task 19A fresh re-verification and remote upload session.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Task 19A Fresh Re-Verification and Remote Upload - 2026-07-24 (Asia/Shanghai)`.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-task19a-impl
 - Current branch: codex/task-19a-contract-hardening-fixes
-- Owner result: implementation and owner-scoped verification complete; no merge approval yet.
-- Next approved work: commit/push this implementation tip, then create fresh `codex/qa-task-19a-canonical-contracts-r2` from it and run QA-owned regressions.
-- QA boundary: QA may change only `services/api/tests/**` and lifecycle/handoff records; product-source defects return to Contract Lead.
-- Remote policy: verify the canonical private origin and live remote SHA before any push; do not merge automatically.
+- Owner result: implementation stack (336956e + fc1dd15) re-verified fresh; QA r2 verdict PASS (P0=0/P1=0).
+- Remote status: `codex/task-19a-contract-hardening-fixes` pushed to origin; live `git ls-remote` confirmed remote SHA fc1dd152e8941806b4f77014471884fe7fff92f1 equals the local implementation tip. GitHub connectivity is intermittent (443 timeouts recur); retries succeeded.
+- Concurrency warning: evidence of a second session writing HEAD/HISTORY and installing packages/contracts/node_modules in this same worktree was observed during this session; lifecycle records may interleave and integration should treat fc1dd15 as the canonical implementation tip.
+- Required merge order: `codex/task-19a-contract-hardening-fixes`, then `codex/qa-task-19a-canonical-contracts-r2`; merge authority rests with the Mainline Audit / Contract Integration Lead only.
+- Next work for this lane: wait for CONTRACT_FREEZE_SHA + START_PARALLEL_LANES, then switch to the Case/API/Data role on a fresh branch from the frozen main; do not reuse this branch.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
