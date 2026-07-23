@@ -1366,3 +1366,41 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 
 - Login rate limiting deferred to security slice; token_version rotation flow not yet used; QA acceptance tests to be authored by QA/Release on their branch.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; Task 3 integration candidate built, CCR-20260724-005 executed, full acceptance passed on the combined HEAD; awaiting QA release-gate re-review before any main merge.
+- Role: Mainline Audit / Contract Integration Lead (contract_lead scope execution)
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/task-03-contract-integration
+- base_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e (== CONTRACT_FREEZE_SHA; live ls-remote verified at session start; no concurrent advancement)
+- implementation_sha: aa240f78edf812e6f3b1d98a356dea5c56264e9d (codex/task-03-auth-workspace; remote live-verified; aa240f7~2 == freeze SHA; merged unmodified — combined tree byte-identical to aa240f7 across services/api/app before the CCR commit)
+- qa_reference: codex/qa-task-03-auth-workspace @ b5611d1 (local only; remote upload blocked by GitHub 443 per QA disclosure); TASK03_QA_HANDOFF.md read and cross-checked; IMPLEMENTATION_QA_VERDICT PASS (P0=0, P1=0), RELEASE_GATE BLOCKED solely on contract_lead prerequisites
+
+## CCR-20260724-005 execution (accepted, recorded at docs/product-plan/docs/contract-changes/CCR-20260724-005.md)
+
+- services/api/app/main.py: mounted app.auth.routes:router and app.tenancy.routes:workspace_router; registered register_error_handlers(app).
+- docs/product-plan/10-api-and-events.md: added AUTH_INVALID_CREDENTIALS (401) and WORKSPACE_NOT_FOUND (404) rows. Verified SESSION_REVOKED_OR_EXPIRED, CSRF_VALIDATION_FAILED, MEMBERSHIP_CAPABILITY_REQUIRED, VALIDATION_FAILED already exist in the canonical table — no second CCR needed (QA note resolved).
+- .env.example: added AUTH_JWT_SECRET/AUTH_COOKIE_SECURE/AUTH_SESSION_TTL_MINUTES/AUTH_ALLOWED_ORIGINS placeholders only. QA's configurability question answered in the CCR: cookie/header names are fixed P0 contract values, not configurable.
+- packages/contracts: regenerated openapi.json + types.gen.ts (CONTRACT_GENERATION_OK); both now contain the five /api/auth/* endpoints.
+
+## Acceptance on combined HEAD (all fresh, disposable PG16 @55432, removed afterwards)
+
+- Endpoint reachability probe on canonical app.main: PASS (ENDPOINT_REACHABILITY_OK) — /health 200; GET /api/auth/csrf 200 envelope with csrfToken; unauthenticated GET /api/auth/session 401 SESSION_REVOKED_OR_EXPIRED envelope; POST /api/auth/register without CSRF 403 CSRF_VALIDATION_FAILED; openapi.json contains all five auth paths.
+- Full product pytest -q -W error: 84 passed.
+- Alembic: upgrade head + alembic check clean (no new migration, as expected).
+- Contract drift: CONTRACT_DRIFT_OK.
+- Ruff (app/tests/migrations/scripts/contract builder): PASS. compileall: PASS.
+- Changed-path/owner-scope audit: contract-lead delta beyond aa240f7 is exactly {app/main.py, doc-10, CCR-005, .env.example, openapi.json, types.gen.ts}; implementation files byte-identical to aa240f7; no publish-scope file touched.
+- Secret scan over freeze..tip diff: 0 findings. git diff --check: only the known P3 EOF blank line at app/auth/routes.py:343 (implementation-owned cosmetic, recorded by QA, intentionally not touched here).
+
+## Boundary and next steps
+
+- This candidate is NOT merged to main. Main merge requires Task 3 QA to re-run release-gate on this combined HEAD (endpoint reachability, generate_contracts.ps1 -Check, full suite including QA tests, CT-01 flip) and return RELEASE_GATE_VERDICT: PASS.
+- P2 follow-ups remain with case_api_data: QA-TASK03-001 (Postgres-backed login rate limiting before public exposure), QA-TASK03-002 (tokenVersion request-path enforcement; QA xfail flips green when fixed).
+- Decision OS verifier re-run on the combined HEAD: PASS (validators=9, tasks=26, ways 1.1.0 active).
+- Remote status of this candidate branch is recorded below after push; failures are recorded as blocked, never fabricated.
+- No credentials or secret values are recorded here.

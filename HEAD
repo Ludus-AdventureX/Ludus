@@ -1,26 +1,9 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Contract Integration Lead (contract_lead scope execution for Task 3 CCR)
-- objective: Build the auditable Task 3 integration candidate: merge implementation aa240f7 unmodified, execute the QA-endorsed CONTRACT_CHANGE_REQUEST inside contract_lead scope (mount auth/workspace routers + register_error_handlers in app.main, add AUTH_INVALID_CREDENTIALS/WORKSPACE_NOT_FOUND to doc-10 error table, add AUTH_* placeholders to .env.example, regenerate canonical OpenAPI/TypeScript), run full acceptance on the combined HEAD, push the candidate, and hand it back to Task 3 QA for release-gate re-review. This session does NOT merge to main; main merge requires RELEASE_GATE_VERDICT: PASS from QA on the combined HEAD.
-- base_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e (== CONTRACT_FREEZE_SHA; live ls-remote verified this session, no concurrent advancement)
-- branch: codex/task-03-contract-integration
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
-- write_scope: merge of codex/task-03-auth-workspace (unmodified); services/api/app/main.py; docs/product-plan/10-api-and-events.md error-code table; docs/product-plan/docs/contract-changes/CCR-20260724-005.md (new accepted CCR record); .env.example; packages/contracts/** regeneration; HEAD/HISTORY lifecycle records.
-- forbidden_scope: any edit to app/auth/**, app/security/**, app/tenancy/** business logic (implementation-owned, must land byte-identical from aa240f7); QA-owned tests; merging to main before QA release-gate PASS; force-push; history rewrite.
-- dependencies:
-  - implementation: codex/task-03-auth-workspace @ aa240f78edf812e6f3b1d98a356dea5c56264e9d (remote live-verified; aa240f7~2 == freeze SHA; commits f05e665 + aa240f7 only)
-  - qa: codex/qa-task-03-auth-workspace @ b5611d1 local (remote upload blocked by GitHub 443 per QA disclosure; local handoff TASK03_QA_HANDOFF.md read and independently cross-checked); IMPLEMENTATION_QA_VERDICT PASS (P0=0, P1=0), RELEASE_GATE BLOCKED on contract_lead prerequisites only
-- acceptance_commands:
-  - full pytest -q -W error (product suite on combined HEAD)
-  - canonical app.main endpoint reachability probe (5 auth endpoints + workspace router mount + error envelope)
-  - powershell scripts/generate_contracts.ps1 -Check (after regeneration)
-  - alembic upgrade head + check on disposable PG16 (no new migration expected)
-  - ruff + compileall; changed-path/owner-scope audit; secret/publish-scope scan; git diff --check
-  - git ls-remote before/after candidate push
-- known_initial_risks:
-  - doc-10 already defines the 5 auth endpoints and 4 of the 6 error codes QA listed; only AUTH_INVALID_CREDENTIALS and WORKSPACE_NOT_FOUND are missing from the table — QA's "second CCR" concern is already satisfied; will document rather than duplicate rows.
-  - AUTH_SESSION_COOKIE_NAME / AUTH_CSRF_* configurability question: default position is fixed non-configurable contract values for P0 (only the four QA-verified placeholders enter .env.example); recorded for product owner review, not silently expanded.
-  - GitHub 443 intermittent: candidate push may need retries; remote status recorded honestly, blocked if it fails.
-  - P2 findings QA-TASK03-001 (login rate limiting) and QA-TASK03-002 (tokenVersion enforcement) remain owned by case_api_data; not fixed here, must be tracked before public exposure.
-- secret_policy: no credentials, API keys, tokens, cookies, or connection strings are recorded in HEAD/HISTORY, commits, or .env.example (placeholders only).
+- Status: idle after building the Task 3 contract integration candidate.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Task 3 Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/task-03-contract-integration (implementation aa240f7 merged unmodified + CCR-20260724-005 executed); full contract-lead acceptance PASS; NOT merged to main.
+- Gate condition: main merge requires Task 3 QA RELEASE_GATE_VERDICT: PASS on this combined HEAD.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
