@@ -872,3 +872,57 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Required review/merge order: implementation branch first, then the stacked QA branch; no automatic merge.
 
 - Secret policy: no credentials are stored in this file.
+
+
+## Archive Task 19A QA Review (cannot merge) - 2026-07-23 (Asia/Shanghai)
+
+# Work Log: in_progress
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Status: in_progress (independent QA compatibility and regression coverage pending).
+- Objective: update QA-owned tests for the stacked Task 19A canonical contract implementation, add focused regressions for the repaired shapes and persistence invariants, and provide a merge approval without modifying product source.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/qa-task-19a-canonical-contracts
+- Base implementation commit: 336956eeafaf0c32307b3b121bf27d7ed248b648
+- Underlying synchronized main: cf9e093651d67784ecbd8a9de55632ccbca807f8
+- Owner: qa_release
+- Stack order: `codex/task-19a-canonical-contracts`, then this QA branch.
+- Remote note: the implementation branch commit exists locally; its first push is pending because GitHub HTTPS connectivity is intermittent.
+
+## Authorized write scope
+
+- `services/api/tests/**`
+- Lifecycle records: `HEAD` and append-only `HISTORY`.
+- No product-source, schema, model, migration, generated-contract, manifest, or documentation changes are authorized on this QA branch.
+
+## QA plan
+
+- Update the Task 2 exact-table expectation to include the five authorized Task 19A tables without weakening tenant-scope assertions.
+- Add Pydantic regression coverage for required Source discriminators, pre-run/run-frozen separation, SystemRecommendation abstain semantics, the exact 18-field SignoffPayload, 06/26 DeepAnalysis I/O, sensitive response-field exclusion, and Simulation replay fields.
+- Add PostgreSQL regression coverage for Source scope checks, same-Workspace cross-Case Run/Source rejection, replay numeric constraints, and canonical table/column presence.
+- Run the manifest tests, all API/model/method tests with warnings as errors, migration upgrade/downgrade/re-upgrade, Alembic drift, contract drift, Decision OS verifier, Ruff, compileall, scope audit, append-only lifecycle audit, and secret scan.
+- Review the combined implementation + QA stack and issue an explicit `can merge` / `cannot merge` conclusion; do not merge automatically.
+
+- Secret policy: no credentials are stored in this file.
+
+## QA progress — 2026-07-23
+
+- Confirmed the only current failure is the stale exact-table assertion in `services/api/tests/test_models.py`; the five Task 19A tables are authorized additions, not a product regression.
+- Before touching tests, preserved the QA-only boundary: changes will remain under `services/api/tests/**`, plus `HEAD`/append-only `HISTORY`.
+- Next edit: update the table inventory and add regression coverage for canonical Pydantic discriminators, abstain/signoff semantics, DeepAnalysis IDs, replay bounds, and PostgreSQL tenant/scope constraints.
+
+## QA blocking-finding update — 2026-07-23
+
+- Independent negative probes confirmed three product defects against the Task 19A canonical contract: human/case source records can persist a fabricated raw artifact reference; AnalysisRun supersession can cross DecisionCase boundaries inside a Workspace; and PostgreSQL accepts non-finite SimulationRun epsilon values.
+- Schema inspection also found `validate_content_hash()` is not wired into `ContentHash`, and DeepAnalysis budget accepts `NaN`/`Infinity`.
+- Before modifying QA tests, the next changes will encode these defects as negative regression expectations only. No product source, migration, generated artifact, or manifest will be changed on this QA branch.
+- Current approval state: cannot merge until a separate Contract Lead repair branch corrects the failing product behavior and the stacked QA acceptance is green.
+
+## QA review conclusion — 2026-07-23
+
+- Fixed the stale Task 2 exact-table expectation by adding the five authorized Task 19A tables; added contract, generated OpenAPI, sensitive-field, DeepAnalysis, Source/Span, Signoff, Simulation, and PostgreSQL tenant/integrity regressions.
+- Green evidence before the new negative-review cases: focused manifest suite `29 passed`; full API suite `79 passed`; Ruff and compileall PASS; `CONTRACT_DRIFT_OK`; Decision OS verifier 7/7 PASS; Alembic `upgrade head -> downgrade 0001 -> re-upgrade head -> check` PASS at `6b246c283d7a`.
+- Independent negative regression evidence then exposed six failures, not test-environment failures: Pydantic accepts fabricated `rawArtifactId` for `human_input`/`case_snapshot`; ContentHash accepts internal whitespace because `validate_content_hash()` is not wired; DeepAnalysis budget accepts `NaN`/`Infinity`; PostgreSQL accepts fabricated RawArtifact rows, cross-DecisionCase AnalysisRun supersession, and `SimulationRun.epsilon = Infinity`.
+- Review conclusion: **cannot merge** the current Task 19A implementation/QA stack. The defects must be repaired by Contract Lead on a separate product-source branch; QA must not modify source, migration, generated contracts, or manifest.
+- Handoff scope for Contract Lead: canonical Pydantic validation, database constraints/migration for source and run/simulation invariants, regenerated OpenAPI/TypeScript if schema changes, and fresh owner acceptance. A new QA r2 branch must be based on the repair tip and re-run all regressions before approval.
+- Secret policy: no credentials are stored in this file.
