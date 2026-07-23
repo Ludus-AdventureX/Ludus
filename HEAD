@@ -1,35 +1,10 @@
-# Work Log: in_progress
+# Work Log: idle
 
-- Started: 2026-07-23 (Asia/Shanghai).
-- Status: in_progress.
-- Objective: integrate the approved Task 6 implementation and QA branches in order, run post-merge mainline acceptance, and fast-forward the validated integration result into the local `main` branch.
+- Status: idle.
+- Last archived: 2026-07-23 (Asia/Shanghai).
+- Last archive entry: `Archive Task 6 Local Main Integration - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Branch: codex/integrate-task-06-method-pack
-- Base main commit: b488ecb50be8985761d416232b35536892c83c42
-
-## Merge order
-
-1. `codex/task-06-method-pack` at `8cdd329f0472a86ccb6aa63a193298f37e738f5b`.
-2. `codex/qa-task-06-method-pack` at `f2e21a80b959fbb223fe33b451cffcd40ac217e0`.
-3. After acceptance, fast-forward the validated integration branch into local `main`.
-
-## Acceptance scope
-
-- Verify both approved commits are preserved in ancestry and no unexpected path enters the integration.
-- Run the Task 6 targeted suite and full API/model/Task 6 regression suite.
-- Run Ruff, Python compileall, method-pack CLI idempotence, contract drift, Decision OS verifier, Alembic check, secret scan, and Git diff integrity checks.
-- Review the final integration diff and issue a local-main merge decision.
-
-## Constraints
-
-- Do not modify either completed Task 6 owner branch.
-- Do not mix implementation-owner fixes into this integration branch; any defect must return to a new owner-specific branch.
-- Do not perform a GitHub web merge or push local `main` unless separately requested.
-- Do not start full Task 19A before Task 6 is merged and mainline acceptance passes.
-- Do not print, copy, commit, or record credentials.
-
-## Next
-
-- Commit this lifecycle start record, merge the two approved branches in order, resolve only lifecycle-record conflicts, and run acceptance.
-
+- Local main state: Task 6 implementation and QA are integrated and mainline acceptance passed.
+- Remote state: `origin/main` was not updated by this task.
+- Next work: begin the next approved task from finalized local `main` on a new branch; do not continue development on completed Task 6 branches.
 - Secret policy: no credentials are stored in this file.

@@ -635,3 +635,55 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - The existing validation archives under `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\archives` remain intentionally preserved.
 
 - Secret policy: no credentials are stored in this file.
+
+## Archive Task 6 Local Main Integration - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: integrate the approved Task 6 implementation and QA branches in order, run post-merge mainline acceptance, and fast-forward the validated result into local `main`.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Integration branch: codex/integrate-task-06-method-pack
+- Base main commit: b488ecb50be8985761d416232b35536892c83c42
+
+## Local integration
+
+- Recorded the integration lifecycle before modifying code history in commit `0eb3f61ae46643d60ccdc466717f57c4ce72aa4d`.
+- Merged `codex/task-06-method-pack` at `8cdd329f0472a86ccb6aa63a193298f37e738f5b` through merge commit `c2c8d58bc0d9b83f12a3683acb3efa16506f5d23`.
+- Merged `codex/qa-task-06-method-pack` at `f2e21a80b959fbb223fe33b451cffcd40ac217e0` through merge commit `6335aec7f3c44457a41b0214b93bec775f91176d`.
+- The only conflicts in both merges were the expected `HEAD` lifecycle record; the active integration record was retained. No implementation or test conflict occurred.
+- Both approved commits remain present in the final ancestry.
+- Local `main` was fast-forwarded from `b488ecb50be8985761d416232b35536892c83c42` to validated integration commit `6335aec7f3c44457a41b0214b93bec775f91176d` before this final lifecycle archive.
+
+## Verification
+
+- Task 6 targeted suite: 49 passed in 40.30 seconds.
+- Full API/model/Task 6 suite with warnings treated as errors: 68 passed in 83.20 seconds.
+- Ruff over `services/api` and `scripts`: PASS.
+- Python compileall over API app/tests and scripts: PASS.
+- Method-pack CLI repeated installation: deterministic and idempotent; `hardtech-market-direction@1.1.0`, status `published`, content hash `92e41e56c75bb7ad77a726b5ef91f83e3ff1f2c845c5af3ea4ffcde34c1ef482`.
+- CLI validation catalog: `E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\task6-integration-cli-20260723`.
+- OpenAPI/TypeScript drift: `CONTRACT_DRIFT_OK`.
+- Decision OS verifier: all 7 groups PASS; active ways `1.1.0`, historical `1.0.0`.
+- Alembic check: `No new upgrade operations detected.`
+- Docker Postgres 16-alpine was healthy during database-backed acceptance.
+- Integration scope: 66 expected files; no unexpected path.
+- Before lifecycle finalization, the integration tree differed from the approved QA tip only in the active `HEAD` record.
+- Integration secret scan: 66 files, zero secret-like filenames and zero high-confidence content findings.
+- Git diff integrity and approved-commit ancestry checks: PASS.
+
+## Review conclusion
+
+- Result: can merge to local `main`.
+- No release-blocking, owner-boundary, contract-drift, migration-drift, secret, or integration-conflict finding remains.
+- No implementation-owner fix was added on the integration branch.
+
+## Not performed / remaining boundaries
+
+- No GitHub web merge was performed.
+- Local `main` has not been pushed to `origin/main`; remote publication requires a separate explicit action.
+- The validation archive and prior Task 6 archives under `decision-lab-G0` remain preserved.
+- Any next development task must start from the finalized local `main` on a new task branch; completed Task 6 branches must not be reused.
+
+- Secret policy: no credentials are stored in this file.
