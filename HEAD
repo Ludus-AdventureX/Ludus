@@ -1,10 +1,12 @@
 # Work Log: idle
 
-- Status: idle after building the Task 3 contract integration candidate.
+- Status: idle after Task 3 release-gate QA round 2 (combined candidate).
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)`.
-- Candidate: codex/task-03-contract-integration (implementation aa240f7 merged unmodified + CCR-20260724-005 executed); full contract-lead acceptance PASS; NOT merged to main.
-- Remote status: BLOCKED - four push attempts for codex/task-03-contract-integration failed with GitHub port 443 connection errors (last attempt also broke ls-remote); no upload is claimed; local tip f6d211b is intact; retry and live SHA verification required once the network recovers.
-- Gate condition: main merge requires Task 3 QA RELEASE_GATE_VERDICT: PASS on this combined HEAD.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- Last archive entry: `Archive Task 3 Release-Gate QA r2 - 2026-07-24 (Asia/Shanghai)`.
+- Audited candidate: codex/task-03-contract-integration @ 9555ae68c8e65013272aeb5530e72252a6ebec64 (impl aa240f7 + CCR-20260724-005; base = frozen main 2396206).
+- Verdicts: IMPLEMENTATION_QA BLOCKED; RELEASE_CONTENT BLOCKED — single blocker is new P1 QA-TASK03-003 (envelope.py:91 RequestValidationError.errors kwargs TypeError → malformed bodies return unhandled 500 instead of the enveloped 422); REMOTE_PUBLISH BLOCKED (candidate branch not on origin; live remote main = 2396206, unadvanced).
+- Everything else PASS: canonical app.main reachability + error handlers, full QA gate suites (111 passed, 1 xfailed), alembic, contract/type drift (script-equivalent normalized compare), ruff, compileall, owner-scope/secret/publish-scope audits, CCR execution endorsed.
+- Mainline merge NOT cleared until case_api_data fixes QA-TASK03-003, QA re-runs green on the revised combined HEAD, and the candidate is uploaded with live remote verification.
+- Standing P2 backlog unchanged: QA-TASK03-001 (login rate limiting before public exposure), QA-TASK03-002 (tokenVersion enforcement, xfail in place).
+- Evidence: docs/handoffs/TASK03_RELEASE_GATE_QA_HANDOFF.md on this branch.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
