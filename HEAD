@@ -1,27 +1,8 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Contract Integration Lead (sole mainline merge and publication owner)
-- objective: Task 19A gate — verify Implementation + QA handoffs, merge both onto an isolated integration branch, run full mainline acceptance, fast-forward-safe update of main, push, live-verify remote main, publish CONTRACT_FREEZE_SHA.
-- base_main_sha: ab5fd33019ec00cc55aaafa6f0b881c298dccba8 (local main == origin/main == live remote main, verified via git ls-remote)
-- branch: codex/mainline-task-19a-integration
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
-- write_scope: integration branch merge commits; HEAD/HISTORY lifecycle records; conflict resolution limited to HEAD/HISTORY; mainline gate records; main update + push.
-- forbidden_scope: product source edits, QA-owned tests, ways/method-packs content, other owners' branches/worktrees (especially E:\Temp\xiayu\Documents\adventure-x\decision-lab which holds QA lane), force-push, history rewrite.
-- dependencies:
-  - implementation handoff: codex/task-19a-contract-hardening-fixes @ fc1dd152e8941806b4f77014471884fe7fff92f1 (verified in branch HISTORY; owner-clean, no merge approval claimed)
-  - qa handoff: codex/qa-task-19a-canonical-contracts-r2 @ 32d9e1438e64498cb5e0bd4c5735651158a34fa8 (QA PASS, P0=0, P1=0; base = fc1dd15, ancestry verified)
-- acceptance_commands:
-  - uv run --project services/api pytest -q -W error (full API suite)
-  - directed test_models.py + test_decision_os_invariants.py
-  - alembic upgrade head; downgrade/re-upgrade roundtrip; alembic check
-  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
-  - Decision OS verifier script
-  - ruff check; python -m compileall
-  - changed-path audit; secret/IP/publish-scope scan; git diff --check
-  - git ls-remote origin refs/heads/main before and after push
-- known_initial_risks:
-  - main advanced past QA-recorded 0dde4ab to ab5fd33 (Look V7 frontend); expected conflicts limited to HEAD/HISTORY lifecycle files; must preserve Look V7 archives plus both Task 19A archives.
-  - this worktree has no services/api .venv yet; environment creation (repo-local, git-ignored) authorized by the integration task instruction and recorded here.
-  - remote pushes previously blocked by port 443 issues in other lanes; remote status must be written as blocked if push fails, never fabricated.
-- secret_policy: no credentials, API keys, tokens, cookies, or connection strings are recorded in HEAD/HISTORY or commits.
+- Status: idle.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Task 19A Mainline Integration Gate - 2026-07-24 (Asia/Shanghai)`.
+- Task 19A gate verdict: GO; integration branch codex/mainline-task-19a-integration fully passed mainline acceptance and is the mainline publication candidate.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
