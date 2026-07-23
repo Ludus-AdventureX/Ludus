@@ -1462,3 +1462,30 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Remote status: BLOCKED (GitHub 443 blockage disclosed by all lanes persists; per instruction no repeated push this session; local commits intact and recoverable).
 - Next step: hand the recomposed candidate to Task 3 QA for the final release re-review on this exact HEAD (QA overlays its tests from codex/qa-task-03-auth-workspace, flips CT-01 and the envelope xfail-class checks as applicable). Main merge only after RELEASE_GATE_VERDICT: PASS, network recovery, push, and live remote SHA verification.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Final Release-Gate QA r3 - 2026-07-24 (Asia/Shanghai)
+
+### Inherited integration-lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after recomposing the Task 3 combined candidate with the envelope P1 fix.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Task 3 Recomposed Candidate with Envelope P1 Fix - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/task-03-contract-integration = 9555ae6 content (implementation aa240f7 + CCR-20260724-005 + generated contracts) + envelope P1 fix 36ee13b (via merge of bdc30cd); full acceptance re-passed; NOT merged to main.
+- Remote status: BLOCKED (GitHub 443 persists; no push attempted this session per instruction; local commits intact).
+- Gate condition: main merge requires Task 3 QA RELEASE_GATE_VERDICT: PASS on this recomposed HEAD, then network recovery, push, and live remote SHA verification.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA r3 completion record
+
+- Role: QA/Release Owner; branch codex/qa-task-03-release-gate-r3 from recomposed candidate 9205835e1932821f92937f6161a953fc4489ce31.
+- exact_tested_head: this branch tip = 9205835 product tree (byte-identical) + QA overlay from 5ffe61a + r3 validation-envelope negative battery.
+- Full suite: 118 passed, 1 xfailed, 0 failed with warnings as errors on a disposable migrated PostgreSQL 16.
+- P1 QA-TASK03-003 closed by 36ee13b: regression green; malformed JSON / wrong types / missing fields / constraint / illegal path-param all return uniform 422 VALIDATION_FAILED with no input/url/secret echo.
+- Verdicts: P1_REGRESSION PASS; IMPLEMENTATION_QA PASS; RELEASE_CONTENT PASS; REMOTE_PUBLISH BLOCKED (GitHub 443 blocked again this round; candidate upload unverified; no remote claim).
+- Standing P2s unchanged: QA-TASK03-001 (login rate limiting before public exposure), QA-TASK03-002 (tokenVersion enforcement, xfail).
+- Evidence: docs/handoffs/TASK03_FINAL_RELEASE_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
