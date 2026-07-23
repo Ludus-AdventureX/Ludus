@@ -2,10 +2,9 @@
 
 - Status: idle.
 - Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Verified Main Publication after Task 6 - 2026-07-23 (Asia/Shanghai)`.
+- Last archive entry: `Archive GitHub Remote Protocol Governance - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Publication result: Task 2, Task 6, their QA/integration records, and the post-Task-6 branch policy were fast-forward published to the controlled private GitHub `main`; the live remote was verified at `bd76d245e4277ef5c5890e296e2a16b7a6f5c70a` before this lifecycle archive.
-- Repository location note: GitHub redirects the configured origin to `https://github.com/Ludus-AdventureX/Ludus.git`.
-- Next approved task: create `codex/task-19a-canonical-contracts` from the final synchronized local `main`, then write a new active `HEAD` before any Task 19A project-file modification.
-- Constraint: do not continue development on completed Task 6, governance, integration, QA, or release-sync branches.
+- Branch policy: do not reuse `codex/governance-github-remote-protocol` for product implementation, QA, integration, or release work.
+- Next approved work: continue the separately-owned Task 19A QA/integration flow from the latest verified mainline baseline.
+- Remote policy: `AGENTS.md` section 19 controls GitHub credential handling, remote verification, review, merge, and publication claims.
 - Secret policy: no credentials are stored in this file.

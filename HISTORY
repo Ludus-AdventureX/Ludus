@@ -800,3 +800,19 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - No force push, GitHub branch merge, history rewrite, product code modification, or credential publication was performed by this release-sync task.
 
 - Secret policy: no credentials are stored in this file.
+
+## Archive GitHub Remote Protocol Governance - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: add a durable GitHub remote, review, merge, and publication protocol to AGENTS.md without changing product implementation, tests, or main.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/governance-github-remote-protocol
+- Scope: AGENTS.md and the required HEAD/HISTORY work-log records only.
+- Completed: added AGENTS.md section 19, defining the canonical private origin, secure credential handling, live remote-SHA evidence, owner separation, mainline merge gates, PR/check review, no-force-push requirements, and post-write remote verification records.
+- Verification: UTF-8 protocol-content assertion PASS; `git diff --check` PASS; changed-path audit PASS and limited to AGENTS.md plus required HEAD/HISTORY records.
+- Not verified: live GitHub Plugin access and GitHub network access remain unavailable in this environment; the protocol requires such status to be reported as blocked rather than inferred.
+- Next step: do not reuse this governance branch for product work; continue the separately-owned Task 19A QA/integration flow from a fresh mainline baseline.
+- Secret policy: no credentials are stored in this file.
