@@ -883,3 +883,51 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Remote publication: not performed. `origin/main` remains at 0dde4ab46220fc4a61e2a67561430af92a986c47 until a separately authorized push/publication task.
 - Remaining functional risk: the current web slice presents the Look V7 empty-project state; real Case-backed Decision OS screens remain outside this change.
 - Secret policy: no credentials are stored in this record.
+
+## Archive Look V7 Release Gate Audit - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed (independent audit completed; remote publication withheld because release gates failed).
+- Objective: independently audit local `main` range `0dde4ab..e2ed9c6`, rerun relevant frontend and repository acceptance, and publish the already-approved local mainline only if all release gates and live remote checks pass.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/audit-look-v7-release-gate
+- Audited main candidate: e2ed9c67d25909d0fc1081f4f66cd325aaaa7e59
+- Cached remote main at audit start: 0dde4ab46220fc4a61e2a67561430af92a986c47
+- Integrated frontend merge: 9369ff2011ceed2cbfa97bb09ac3cc93fc11258d; feature tip 1ea9a5dd65125086f6eaff167132394255b46bda.
+- Owner: mainline_audit_integration
+
+## Scope and topology review
+
+- Confirmed the feature tip is an ancestor of the local main candidate and the release range contains the expected eight commits.
+- Changed paths are limited to lifecycle records and the Look V7 web shell/CSS/logo asset.
+- `git diff --check` passed; no merge-content conflict remains in frontend files.
+- SVG asset review passed: no script, `foreignObject`, external reference, `rect`/background layer, or suspicious white canvas path.
+
+## Fresh validation evidence
+
+- Web typecheck: PASS.
+- Web ESLint: PASS.
+- Next.js production build and static prerender of `/`: PASS.
+- API regression: `68 passed in 35.45s` with warnings treated as errors.
+- Look V7 snapshot and token checks: PASS.
+- Contract drift check: PASS.
+- Decision OS verifier: PASS, 7/7.
+- Desktop 1440x900 and mobile 390x844 rendered checks: no framework overlay, console error/warn, page error, failed HTTP response, or horizontal overflow; logo dimensions and transparent rendering passed.
+- Empty submit focus, example fill, draft state, theme application/query persistence, Escape close, and asynchronous trigger focus return passed.
+
+## Release-blocking findings
+
+- P1: `apps/web/components/shell/DecisionShell.tsx` drawer dialog has no accessible name on the `role="dialog"` node, does not move focus inside on open, and does not trap Tab/Shift+Tab; keyboard focus reaches background controls while the modal drawer is open.
+- P1: `pnpm --dir apps/web test` fails with `No test files found, exiting with code 1`; required Vitest/Testing Library regression coverage is absent.
+- P1: mobile touch targets violate the 44x44 CSS pixel contract: `#openMobileCaseMenu` measured 34x34 and `#openThemeDrawer` measured 38x38 at 390x844.
+- Release verdict: NOT READY; P0=0, P1=3.
+
+## Publication decision and next step
+
+- No remote push, pull request, or remote merge was performed or claimed.
+- The authorized condition for pushing `main` was not met, so live remote-write verification was intentionally deferred.
+- Repair must occur on new owner-specific branches from the latest local `main`: Web UX fixes product source/CSS; QA/Release adds tests without patching product source. Final mainline acceptance and a fresh remote SHA/visibility check are required before a normal non-force push.
+- Secret policy: no credentials are stored in this record.

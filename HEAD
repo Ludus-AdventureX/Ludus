@@ -2,8 +2,6 @@
 
 - Status: idle.
 - Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Local Main Look V7 Fast-forward - 2026-07-23 (Asia/Shanghai)`.
-- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Local main: contains the accepted Ludus Look V7 frontend integration and transparent SVG logo.
-- Remote publication: not performed; `origin/main` remains at 0dde4ab46220fc4a61e2a67561430af92a986c47.
-- Secret policy: no credentials are stored in this file.
+- Last archive entry: `Archive Look V7 Release Gate Audit - 2026-07-23 (Asia/Shanghai)`.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
