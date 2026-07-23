@@ -687,3 +687,62 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Any next development task must start from the finalized local `main` on a new task branch; completed Task 6 branches must not be reused.
 
 - Secret policy: no credentials are stored in this file.
+
+## Archive Next Task Planning and Branch Policy - 2026-07-23 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-23 (Asia/Shanghai).
+- Completed: 2026-07-23 (Asia/Shanghai).
+- Status: completed.
+- Objective: identify the next authorized development task after Task 6, document its execution plan, and add a durable branch-baseline constraint to `AGENTS.md`.
+- Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
+- Branch: codex/governance-next-task-policy
+- Base local main commit: e3ac8a468cf03ea11b5350467234a776ddad57cf
+
+## Governance change
+
+- Added a MUST-level rule to `AGENTS.md` section 13 requiring every development task after Task 6 to start from the latest local `main` on a new task branch.
+- Explicitly prohibited further modification or commits on `codex/task-06-method-pack`, `codex/qa-task-06-method-pack`, `codex/integrate-task-06-method-pack`, or any other completed Task 6 worktree/branch.
+- Required each new task to confirm a clean local `main`, record its base commit, and write `HEAD` before modifying project files.
+
+## Selected next task
+
+- Next task: Task 19A — Canonical schema, IDs, Source and migrations.
+- Owner: Contract Lead.
+- Required implementation branch: create `codex/task-19a-canonical-contracts` from the finalized local `main`; do not reuse this governance branch or a completed Task 6 branch.
+- Manifest dependencies: `task-02` and `task-06`; both are complete on local `main`.
+- Task 19A is selected ahead of other currently dependency-ready work because the previously approved sequence explicitly deferred full Task 19A until Task 6 completion.
+
+## Task 19A implementation plan
+
+1. Record the new branch baseline and freeze an exact 06/10/26 shape checklist for canonical IDs and wire names.
+2. Audit the existing Task 2 SQLAlchemy baseline before editing. Preserve the current User, WorkspaceMembership, UserSession, DecisionSubject and DecisionCase invariants rather than recreating them.
+3. Add or align Contract Lead-owned Pydantic schemas under `services/api/app/**/schemas.py` for canonical `decisionCaseId`/`analysisRunId`, Membership/Session capability shapes, discriminated Source union, SystemRecommendation, the complete SignoffPayload, and Simulation replay fields.
+4. Extend only Task 19A-owned SQLAlchemy types/models and Alembic migrations needed to persist those canonical shapes. Do not implement Task 19B behavior such as session revocation services, pre-run freeze orchestration, signoff transactions, no-run-no-report, or append-only Decision policy.
+5. Regenerate `packages/contracts/openapi.json` and `packages/contracts/src/types.gen.ts` using the canonical generation pipeline; do not hand-edit generated output.
+6. Run the manifest acceptance: model/invariant pytest, Alembic upgrade and drift checks, OpenAPI/TypeScript drift, Decision OS verifier, Ruff, compileall, migration downgrade/re-upgrade in an isolated validation database when safe, scope audit, and secret scan.
+7. Review the implementation branch. If product defects require changes outside Contract Lead scope or tests require QA-owned edits, stop and create a separate owner-specific handoff/branch rather than mixing fixes.
+
+## Baseline observations for Task 19A
+
+- Task 2 already provides the initial SQLAlchemy User, WorkspaceMembership, UserSession, DecisionSubject, DecisionCase and same-Subject constraints plus migration `0001_core_tenancy_and_dossiers.py`.
+- No Task 19A domain `schemas.py` files currently exist under `services/api/app`, and the generated TypeScript contract does not yet expose the required named SourceRecord, SystemRecommendation or SignoffPayload shapes; Task 19A is therefore not a no-op.
+- Task 19B and Task 19C depend on Task 19A but also have additional unfinished dependencies; they must not be started merely because Task 19A begins.
+
+## Verification
+
+- `AGENTS.md` strict UTF-8 decoding: PASS; no BOM introduced.
+- New branch rule appears exactly once and names all three completed Task 6 branches.
+- Task 19A manifest owner, dependency, write-scope and downstream dependency assertions: PASS.
+- Decision OS verifier: all 7 groups PASS; DAG acyclic and 26 task IDs valid.
+- Governance diff scope before lifecycle archival: only `AGENTS.md` and `HEAD`.
+- Git diff integrity: PASS.
+- Secret scan: zero high-confidence findings.
+
+## Review conclusion and boundaries
+
+- Result: can merge this governance change into local `main`.
+- No Task 19A implementation, product schema, migration, generated contract or QA test was modified in this task.
+- No remote `main` push or GitHub merge was performed.
+
+- Secret policy: no credentials are stored in this file.

@@ -261,6 +261,7 @@ AnalysisRun:     queued | planning | retrieving | analyzing | criticizing |
 - 不得把 mock、fixture、禁用按钮、通用 Prompt 或预生成产物描述成已完成的生产能力。
 - 新增/修改 schema、API、事件或环境变量时，必须在同一变更中更新 migration、类型、fixture、测试、`.env.example` 和受影响文档。
 - Git 提交应小而连贯，不混合无关格式化、依赖升级、生成产物和业务行为；禁止提交缓存、虚拟环境、依赖目录、测试 trace、本地数据库或未批准的大二进制。
+- 自 Task 6 已完成本地集成起，所有后续新开发 MUST 以最新本地 `main` 为基线创建新的任务分支（默认使用 `codex/<task-name>`）；MUST NOT 在 `codex/task-06-method-pack`、`codex/qa-task-06-method-pack`、`codex/integrate-task-06-method-pack` 或任何已完成的 Task 6 工作树/分支上继续修改或提交。新任务开始前必须确认本地 `main` 工作树干净、记录基线 commit，并先写入 `HEAD`。
 - 保留已有用户修改；没有明确授权不得执行 destructive reset、checkout 或清理命令。
 
 ## 14. 测试与验证门

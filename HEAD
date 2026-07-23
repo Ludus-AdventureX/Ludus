@@ -2,9 +2,9 @@
 
 - Status: idle.
 - Last archived: 2026-07-23 (Asia/Shanghai).
-- Last archive entry: `Archive Task 6 Local Main Integration - 2026-07-23 (Asia/Shanghai)`.
+- Last archive entry: `Archive Next Task Planning and Branch Policy - 2026-07-23 (Asia/Shanghai)`.
 - Repository: E:\Temp\xiayu\Documents\adventure-x\decision-lab
-- Local main state: Task 6 implementation and QA are integrated and mainline acceptance passed.
-- Remote state: `origin/main` was not updated by this task.
-- Next work: begin the next approved task from finalized local `main` on a new branch; do not continue development on completed Task 6 branches.
+- Next approved task: Task 19A on a new `codex/task-19a-canonical-contracts` branch created from the finalized local `main`.
+- Constraint: do not continue development on completed Task 6 branches or on `codex/governance-next-task-policy`.
+- Remote state: `origin/main` is not updated by this governance task.
 - Secret policy: no credentials are stored in this file.
