@@ -96,6 +96,8 @@ def test_core_table_set_and_workspace_scope() -> None:
         "source_spans",
         "simulation_runs",
         "signoff_requests",
+        # CCR-20260724-Ways-01: persisted five-lens outputs.
+        "strategic_lens_artifacts",
     }
     assert set(Base.metadata.tables) == expected
 

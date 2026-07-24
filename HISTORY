@@ -1723,3 +1723,28 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - After QA PASS: merge to main via this lead with live reads; then Ways persistence wiring unlocks and the simulation graph-side CCR may be submitted (linear migration chain after d7e2a91c5b48).
 - Remote status of this branch recorded after push below; failures marked blocked, never fabricated.
 - No credentials or secret values are recorded here.
+
+
+## Archive CCR-Ways-01 QA - 2026-07-24 (Asia/Shanghai)
+
+### Inherited execution-lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after executing CCR-20260724-Ways-01.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive CCR-20260724-Ways-01 Execution - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/ccr-ways-01-execution (StrategicLensArtifact schema + migration d7e2a91c5b48 + ConnectorStatus enum + 18-plan write-scope repair + accepted CCR record); verification complete; the single pytest failure is the QA-owned exact-table assertion pending strategic_lens_artifacts adoption (19A round-1 pattern); NOT merged to main.
+- Gate condition: dialogue 3 QA verdict PASS on this candidate (including its exact-table assertion update and lens-artifact negative regressions), then live-read publication by this lead.
+- Ways persistence wiring and the simulation graph-side CCR remain locked until this candidate reaches main.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA completion record
+
+- Role: QA/Release Owner; branch codex/qa-ccr-ways-01 from candidate e57e4747e34d4fcc787e9e44aaa4d8cd90d85a25 (base main 2c5e79c; remote branch+main live-verified by QA).
+- QA changes: test_models.py exact-table assertion adds strategic_lens_artifacts; new tests/test_strategic_lens_artifacts.py with 12 negative regressions (composite FKs, ready-witness CHECK, partial unique ready index, draft/rejected audit history, content_hash CHECK, origin_mode rejection, exact ConnectorStatus seven-value set, exact artifact status set, lens_type enum reuse, no parallel ConnectorStatus source scan).
+- Verdicts: MIGRATION PASS (clean DB head d7e2a91c5b48, full roundtrips, alembic check clean); MODEL/MIGRATION PARITY PASS; RELEASE_GATE PASS (P0/P1/P2=0); mainline merge permitted for this exact tested combination.
+- Full suite: 199 passed, 0 failed, 0 skipped (-W error) on a pure-migration clean DB; ruff/compileall PASS; OpenAPI semantic drift OK; scope/secret/diff-check clean.
+- Evidence: docs/handoffs/CCR_WAYS_01_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
