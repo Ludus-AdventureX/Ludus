@@ -1,11 +1,9 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Artifact IO Integration Lead
-- objective: Assemble codex/lens-artifact-io-integration-r1 from live-verified main 4de362835f728ab155fc197b9f11b9ac248f2936 in a fresh dedicated worktree: --no-ff merge of codex/qa-ways-lens-persistence-r2-p2-fix @ b5890f4 (contains persistence product 009e0dfd03ae766b201ef5f6aeede1255671e5c4 + final QA tests) then codex/qa-lens-artifact-read-path-r2 @ b44ec92 (contains read-path product 2f0fe40e11e82bfe1f639e105fd3892a453d3756 + QA tests); lifecycle conflicts resolved binary-safe append-only; byte-identity gates on repository.py / lens_artifact_reads.py / both QA test sets; combined verification incl. semantic probes; push + live verify; hand exact head to dialogue 3. NOT merged to main this round; SIM-01 candidate 4d45391 not mixed in.
-- base_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936 (this lane's first command was the live ls-remote; exact expected value)
-- branch: codex/lens-artifact-io-integration-r1
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-io-r1 (fresh; no reuse of persistence/read-path/SIM or older integration worktrees)
-- ancestry_audit: 009e0df ancestor of b5890f4; 2f0fe40 ancestor of b44ec92; both QA bases on 4de3628; persistence QA delta = {HISTORY, PERSISTENCE_FIX_FINAL_QA_HANDOFF.md, tests/lens_lanes/test_lens_persistence_qa.py}; read-path QA delta = {HISTORY, READ_PATH_R2_QA_HANDOFF.md, tests/test_lens_artifact_read_path.py} - tests/handoff/lifecycle only, so the QA heads are merged directly and 911bf87/830e858/009e0df/2f0fe40 are not re-merged.
-- forbidden_scope: models.py/types.py/**/schemas.py/migrations/**/packages/contracts/**/routers/reports/**/app/agents/**/lens behavior-registry-adapters/simulation graph candidate/main.
-- secret_policy: no credentials recorded here.
+- Status: idle after assembling the lens artifact IO integration candidate (r1).
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Lens Artifact IO Integration (r1) - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/lens-artifact-io-integration-r1 (persistence QA head b5890f4 + read-path QA head b44ec92 assembled --no-ff on main 4de3628; byte gates exact; 331 passed / 121 lens_lanes / probes 5/5; CONTRACT_DRIFT_OK; migration head d7e2a91c5b48); NOT merged to main.
+- Gate condition: dialogue 3 exact-head QA on this candidate, then live-read publication by the lead; SIM-01 candidate 4d45391 remains separate and unmixed.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.

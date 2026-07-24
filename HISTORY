@@ -2241,3 +2241,18 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); mainline merge permitted for candidate + this QA tip.
 - Evidence: docs/handoffs/READ_PATH_R2_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Lens Artifact IO Integration (r1) - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; combined lens artifact IO candidate assembled and verified on codex/lens-artifact-io-integration-r1; NOT merged to main; handed to dialogue 3 for exact-head QA.
+- Role: Mainline Audit / Artifact IO Integration Lead.
+- base_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936 (lane's first command was the live ls-remote; exact expected value; fresh worktree decision-lab-lens-io-r1, no reuse of persistence/read-path/SIM/older integration worktrees).
+- Assembly (fixed order, --no-ff, audit chains preserved): ba9e475 (start) -> f7f81c8 merge codex/qa-ways-lens-persistence-r2-p2-fix @ b5890f4 (contains persistence product 009e0dfd03ae766b201ef5f6aeede1255671e5c4) -> 9cff0f3 merge codex/qa-lens-artifact-read-path-r2 @ b44ec92 (contains read-path product 2f0fe40e11e82bfe1f639e105fd3892a453d3756). Ancestry audited before assembly; QA deltas were tests/handoff/lifecycle only, so 911bf87/830e858/009e0df/2f0fe40 were not re-merged. Conflicts confined to HEAD/HISTORY, resolved binary-safe append-only; SIM-01 candidate 4d45391 not mixed in.
+- Byte-identity gates: repository.py == 009e0df; lens_artifact_reads.py == 2f0fe40; persistence QA tests == b5890f4; read-path QA tests == b44ec92 - all exact. Forbidden paths (models/types/schemas/migrations/contracts/routers/reports/agents/lens behavior-registry-adapters) untouched vs main.
+- Verification (fresh, disposable PG16 @55432, removed afterwards; executed against the exact candidate SHA via detached checkout in the tooled lead worktree): clean-DB alembic upgrade -> d7e2a91c5b48 (head) + check clean; pytest tests app/simulations/tests -W error = 331 passed (matches main 304 + persistence 16 + read path 11); tests/lens_lanes on a clean DB = 121 passed (an interim 6-failure run was database residue from the preceding full run - absolute-count assertions - and vanished on a clean DB; recorded honestly); persistence directed 16 passed; read-path directed 11 passed; ruff/compileall PASS; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; secret scan + git diff --check PASS; conflict-marker scan zero real hits (single grep match is prose inside the pre-existing WAYS_R3_QA_HANDOFF.md describing the scan itself).
+- Combined semantic probes 5/5 OK: draft invisible to ready-only reads; draft->ready visible; draft->rejected hidden from consumption but visible to review-capability audit; foreign workspace/case/run uniformly 404 and non-enumerable; persisted artifact id stably readable under the exact three-level anchors.
+- Next: push + live branch verification + main re-read recorded below; dialogue 3 runs exact-head QA on this candidate; main merge only after that verdict via the standard live-read publication flow.
+- No credentials or secret values are recorded here.
