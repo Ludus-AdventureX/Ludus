@@ -48,21 +48,32 @@
     - Lens specialists must rebase/branch from this r2 seam, not from the stale
       48f7db2 candidate.
 - ways_lens_integration_queue (assembly order fixed; completion order does not reorder):
-    1. porter_five_forces (conv 7) - PENDING
-    2. counterparty_response_matrix (conv 9) - PENDING
-    3. pre_mortem (conv 8) - PENDING
-    4. scenario_planning (conv 10) - PENDING
-    5. meadows_leverage_points (conv 11) - ACCEPTED_QUEUED @ codex/lens-meadows-r2
-       7fd12f75d67a462888f6579916d6920f4fe38a1a (fetch-verified; base=main 258a94df;
-       self-contained module, no seam dependency; independent rerun: 15 lens tests
-       PASS, ruff PASS, 49 method-pack/router/cynefin regression PASS).
-       Recorded deviations: module path strategic_lenses/meadows.py instead of
-       lenses/meadows_leverage_points.py; neutral import-free strategic_lenses/__init__.py
-       added; lens-specific pytest under services/api/tests/ (QA to adopt);
-       standalone expected/negative fixture JSONs deferred to Task 15 extraction.
-       P2 finding: explicit SERVER_INJECTED_FIELDS list omits charterVersion/caseVersion/
-       caseSnapshotHash/schemaVersion (still fail-closed via extra=forbid; seam guard
-       will front-run at integration).
+    1. porter_five_forces (conv 7) - ACCEPTED_QUEUED @ codex/lens-porter-r2 8103284
+       (seam descendant; independent rerun 30 tests PASS + ruff PASS; deviation:
+       colocated test inside app package, to relocate at integration)
+    2. counterparty_response_matrix (conv 9) - ACCEPTED_QUEUED @ codex/lens-counterparty-r2 1ea56ca
+       (not seam descendant; disposable triage merge with seam cce4d70 clean except
+       lifecycle HEAD; real-seam rerun 26 tests PASS, structural stand-in confirmed
+       yielding to app.agents.lenses; formal re-run required again on integration branch)
+    3. pre_mortem (conv 8) - CONTENT_ACCEPTED_REMOTE_BLOCKED @ local 97f35bc
+       (independent rerun: compile+ruff PASS, expected fixture PASS, negative hits
+       PM_TOP_RISK_CONTROL_MISSING/_DUPLICATED; remote branch absent (443);
+       DB-backed suite 16 setup ERROR without Postgres - must re-run in QA env)
+    4. scenario_planning (conv 10) - ACCEPTED_QUEUED @ integration point 66b1ea1
+       (seam descendant; compile+ruff PASS, protocol isinstance PASS, owner smoke
+       29 checks PASS; e1ef2d7 is lifecycle-only and still unpushed - not the
+       integration point; lane smoke lives in G0 and must be converted to a
+       repo test at integration)
+    5. meadows_leverage_points (conv 11) - ACCEPTED_QUEUED @ 7fd12f75 (previously registered)
+- package_layout_ruling: canonical layout is services/api/app/strategic_lenses/lenses/<lens_id>.py;
+  meadows.py and pre_mortem.py will be git mv'd under lenses/ at integration; both
+  __init__.py files (package + lenses/) are Coordinator-owned and will be rewritten
+  neutral (five branches currently carry five distinct __init__ blobs = guaranteed
+  add/add conflicts that only the Coordinator resolves).
+- test_location_ruling: lane-authored behavior tests converge to
+  services/api/tests/lens_lanes/test_<lens_id>.py at integration as a staging home;
+  final ownership adjudicated by QA (conv 3) which owns services/api/tests/**;
+  no test file may remain inside app/**.
 - secret_policy: >
     No credentials, API keys, tokens, cookies, connection strings, or .env contents
     are read, echoed, logged, or committed. Fixture provider requires no keys.
