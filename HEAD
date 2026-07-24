@@ -1,11 +1,12 @@
-# Work Log: idle
+# Work Log: active
 
-- Status: idle; post-auth wave (Task 12 + Task 7) published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Post-Auth Wave Main Publication (Task 12 + Task 7) - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 8e18cd3b177891496dcb13f2d18bb6e4d747f612 + this archive commit (live ls-remote verified per merge; ancestors b7060d5 / cce4d70 / 966b7f7 / 8e18cd3 all confirmed).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
-- Ways integration: AUTHORIZED for dialogue 6 (new main contains the Task 7 seam); five lens branches stay frozen until the single WAYS_INTEGRATION_HANDOFF passes dialogue 3 QA and returns here; CCR-20260724-Ways-01 adjudication scheduled with that window.
-- Web r2: REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Mainline Audit / Contract Integration Lead (CCR-20260724-Ways-01 execution)
+- objective: Execute the accepted CCR-20260724-Ways-01 on codex/ccr-ways-01-execution from live-verified main 2c5e79ceb8373a196e96ff86be442ecb52041d5c: ConnectorStatus + StrategicLensArtifactStatus + LensProducerRole enums in types.py; StrategicLensArtifact ORM in models.py (19A composite-FK hardening pattern, Validation-gated ready, partial-unique ready-per-run-lens index); Alembic revision d7e2a91c5b48 (down c4a1f0b2d9e7); 18-plan Task 7/8/10 write-scope repair per manifest; accepted CCR record on disk. No API/router/contracts/agents/web/tests changes; no persistence wiring; NOT merged to main - handed to dialogue 3 QA after verification.
+- base_main_sha: 2c5e79ceb8373a196e96ff86be442ecb52041d5c (live ls-remote verified this session)
+- branch: codex/ccr-ways-01-execution
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- write_scope: services/api/app/types.py; services/api/app/models.py; services/api/migrations/versions/d7e2a91c5b48_add_strategic_lens_artifacts.py; docs/product-plan/docs/contract-changes/CCR-20260724-Ways-01.md; docs/product-plan/18-detailed-development-plan.md; HEAD/HISTORY.
+- forbidden_scope: app/agents/**, strategic_lenses/**, lens branches, packages/contracts/**, API/routers, apps/web/**, QA tests, persistence service/report wiring, main merge.
+- acceptance_commands: clean-DB upgrade/downgrade/upgrade/check; Base.metadata vs migration consistency (alembic check); full pytest -W error; test_models + test_decision_os_invariants; generate_contracts.ps1 -Check (expect no drift); ruff; compileall; scope/secret/diff-check; push + live branch verification.
+- secret_policy: no credentials recorded here.

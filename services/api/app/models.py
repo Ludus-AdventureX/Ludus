@@ -37,6 +37,7 @@ from app.types import (
     EntryStatus,
     FormalAnalysisLevel,
     InitiativeStatus,
+    LensProducerRole,
     MessageRole,
     OriginMode,
     QuickAnalysisFormality,
@@ -45,6 +46,8 @@ from app.types import (
     SimulationMode,
     SourceKind,
     SourceScope,
+    StrategicLensArtifactStatus,
+    StrategicLensType,
     SubjectStatus,
     UserStatus,
     WorkspaceCapability,
@@ -474,6 +477,101 @@ class AnalysisRun(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StrategicLensArtifact(Base):
+    """Immutable persisted output of one strategic lens (CCR-20260724-Ways-01).
+
+    Identity, method snapshot, originModes, contentHash, and createdAt are
+    server-injected from the frozen run context (AGENTS section 7); the model
+    layer must reject any self-reported identity fields. claim/evidence/
+    assumption references are JSON reference lists resolved and validated by
+    the server against run-frozen objects before insertion. ``ready`` requires
+    Validation acceptance, witnessed by ``validation_accepted_at``.
+    """
+
+    __tablename__ = "strategic_lens_artifacts"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "strategic_lens_artifact_id",
+            name="uq_strategic_lens_artifacts_workspace_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_strategic_lens_artifacts_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_strategic_lens_artifacts_workspace_case_run",
+            ondelete="CASCADE",
+        ),
+        # Only one Validation-accepted artifact per lens per run; drafts and
+        # rejected artifacts keep their audit history without colliding.
+        Index(
+            "uq_strategic_lens_artifacts_ready_per_run_lens",
+            "workspace_id",
+            "analysis_run_id",
+            "lens_type",
+            unique=True,
+            postgresql_where=text("status = 'ready'"),
+        ),
+        CheckConstraint(
+            "status <> 'ready' OR validation_accepted_at IS NOT NULL",
+            name="ready_requires_validation_acceptance",
+        ),
+        CheckConstraint("content_hash <> ''", name="content_hash_not_empty"),
+        Index(
+            "ix_strategic_lens_artifacts_workspace_run",
+            "workspace_id",
+            "analysis_run_id",
+        ),
+    )
+
+    strategic_lens_artifact_id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    analysis_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    charter_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    lens_type: Mapped[StrategicLensType] = mapped_column(
+        enum_type(StrategicLensType, "strategic_lens_type"),
+        nullable=False,
+    )
+    producer_role: Mapped[LensProducerRole] = mapped_column(
+        enum_type(LensProducerRole, "lens_producer_role"),
+        nullable=False,
+    )
+    status: Mapped[StrategicLensArtifactStatus] = mapped_column(
+        enum_type(StrategicLensArtifactStatus, "strategic_lens_artifact_status"),
+        nullable=False,
+        default=StrategicLensArtifactStatus.DRAFT,
+        server_default=StrategicLensArtifactStatus.DRAFT.value,
+    )
+    method_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    method_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    method_content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::origin_mode[]"),
+    )
+    content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    payload: Mapped[dict[str, Any]] = json_object_column()
+    claim_refs: Mapped[list[str]] = json_list_column()
+    evidence_refs: Mapped[list[str]] = json_list_column()
+    assumption_refs: Mapped[list[str]] = json_list_column()
+    validation_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = created_at_column()
 
 
 class SourceRecord(Base):

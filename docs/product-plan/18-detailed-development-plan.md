@@ -840,10 +840,9 @@ Commit: `feat: validate and install hardtech method source`
 - Create: `services/api/app/agents/runner.py`
 - Create: `services/api/app/agents/tools/web_search.py`
 - Create: `services/api/app/agents/tools/fixture_search.py`
-- Create: `services/api/app/connectors/providers/exa.py`
-- Create: `services/api/app/connectors/providers/firecrawl.py`
-- Create: `services/api/app/connectors/providers/tavily.py`
 - Test: `services/api/tests/test_agent_runtime.py`
+
+> Write-scope 修正（CCR-20260724-Ways-01，以 `agent-work-manifest.yaml` 为准）：Task 7 的写入范围仅为 `services/api/app/agents/**`。`app/connectors/providers/*`（Exa/Firecrawl/Tavily 适配器）属于 Task 8 的 `case_api_data` write scope，已移入 Task 8 文件清单；Agent runtime 只通过稳定工具接口消费 provider，不直接拥有其实现。
 
 - [ ] **Step 1: 写工具上下文隔离测试**
 
@@ -902,8 +901,13 @@ Commit: `feat: add scoped agent runtime and execution budgets`
 - Create: `services/api/app/evidence/normalizer.py`
 - Create: `services/api/app/evidence/quality.py`
 - Create: `services/api/app/evidence/routes.py`
-- Generate: `services/api/migrations/versions/0002_evidence.py`
+- Create: `services/api/app/connectors/providers/exa.py`
+- Create: `services/api/app/connectors/providers/firecrawl.py`
+- Create: `services/api/app/connectors/providers/tavily.py`
+- Generate: `services/api/migrations/versions/0002_evidence.py`（canonical migration 由 contract_lead 按 CCR 落地）
 - Test: `services/api/tests/test_evidence_quality.py`
+
+> Write-scope 修正（CCR-20260724-Ways-01）：`app/connectors/providers/**` 属于本任务的 `case_api_data` write scope（自 Task 7 清单移入）。ConnectorStatus 枚举的唯一 canonical 定义在 `services/api/app/types.py`，所有消费方只准 import，禁止平行定义。
 
 - [ ] **Step 1: 写同源去重与质量阻断测试**
 
@@ -1016,21 +1020,22 @@ Commit: `feat: add durable deep analysis workflow`
 ## Task 10: 实现命题、综合、反方与正式质量门
 
 **Files:**
-- Create: `services/api/app/analyses/claims.py`
-- Create: `services/api/app/analyses/synthesis.py`
-- Create: `services/api/app/analyses/devils_advocate.py`
-- Create: `services/api/app/analyses/quality_gate.py`
-- Create: `services/api/app/strategic_lenses/models.py`
+- Create: `services/api/app/analyses/claims.py`（属 task-09 `app/analyses/**` scope，由 `case_api_data` 落盘）
+- Create: `services/api/app/analyses/synthesis.py`（同上）
+- Create: `services/api/app/analyses/devils_advocate.py`（同上）
+- Create: `services/api/app/analyses/quality_gate.py`（同上）
 - Create: `services/api/app/strategic_lenses/schemas.py`
 - Create: `services/api/app/strategic_lenses/validators.py`
 - Create: `services/api/app/strategic_lenses/repository.py`
 - Create: `services/api/app/strategic_lenses/service.py`
-- Create: `services/api/app/strategic_lenses/routes.py`
+- Create: `services/api/app/strategic_lenses/routes.py`（router 挂载仍由 contract_lead 执行）
 - Create: `services/api/app/reports/models.py`
 - Create: `services/api/app/reports/schemas.py`
-- Generate: `services/api/migrations/versions/0004_analysis_outputs.py`
+- Generate: `services/api/migrations/versions/0004_analysis_outputs.py`（canonical migration 由 contract_lead 按 CCR 落地）
 - Test: `services/api/tests/test_analysis_quality_gate.py`
 - Test: `services/api/tests/test_strategic_lenses.py`
+
+> Write-scope 修正（CCR-20260724-Ways-01，以 manifest 为准）：task-10 的 `ways_agent_pipeline` 写入范围为 `app/strategic_lenses/**`、`app/reports/**` 与 `ways/**`；`app/analyses/**` 归 task-09 的 `case_api_data`。canonical `StrategicLensArtifact` ORM 位于 `app/models.py`（contract_lead，migration `d7e2a91c5b48`），原清单中的 `strategic_lenses/models.py` 不再创建平行 canonical 模型，lens 包内只保留行为/校验/服务层。
 
 - [ ] **Step 1: 写“无证据核心判断被阻断”测试**
 

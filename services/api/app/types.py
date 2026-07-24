@@ -166,6 +166,46 @@ FULL_REQUIRED_STRATEGIC_LENSES: Final[tuple[StrategicLensType, ...]] = (
 )
 
 
+class StrategicLensArtifactStatus(StrEnum):
+    """Lifecycle of a persisted lens artifact (CCR-20260724-Ways-01).
+
+    ``ready`` may only be set after the Validation worker accepts the
+    artifact (AGENTS section 7); the database enforces the companion
+    ``validation_accepted_at`` witness column.
+    """
+
+    DRAFT = "draft"
+    READY = "ready"
+    REJECTED = "rejected"
+
+
+class LensProducerRole(StrEnum):
+    """Worker role that produced a lens artifact (AGENTS section 7 mapping:
+    Research -> porter, Critic -> pre_mortem + counterparty,
+    Synthesis -> scenario + meadows). Validation checks but never produces.
+    """
+
+    RESEARCH = "research"
+    CRITIC = "critic"
+    SYNTHESIS = "synthesis"
+
+
+class ConnectorStatus(StrEnum):
+    """Canonical connector status set (AGENTS section 8; CCR-20260724-Ways-01).
+
+    This is the only authoritative definition; lanes must import it and must
+    not declare parallel enums or string-literal sets.
+    """
+
+    AVAILABLE = "available"
+    MISSING_CREDENTIALS = "missing_credentials"
+    INVALID_CREDENTIALS = "invalid_credentials"
+    RATE_LIMITED = "rate_limited"
+    QUOTA_EXHAUSTED = "quota_exhausted"
+    PROVIDER_ERROR = "provider_error"
+    DISABLED = "disabled"
+
+
 class UserStatus(StrEnum):
     ACTIVE = "active"
     DISABLED = "disabled"
