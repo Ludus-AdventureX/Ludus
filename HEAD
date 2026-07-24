@@ -13,3 +13,4 @@
 - Remote note: candidate-branch remote SHAs were claimed live-verified by their owners; QA's own ls-remote re-reads were intermittently 443-blocked and are recorded as unverified-by-QA where applicable.
 - Next: review each further IMPLEMENTATION_HANDOFF in a fresh worktree and emit one QA_HANDOFF per candidate.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
+- Auth final QA (this round): combined candidate 609a780 (impl ac084c7 + migration c4a1f0b2d9e7 + env placeholders) - AUTH_SECURITY_QA PASS, MIGRATION PASS, RELEASE_GATE content PASS, REMOTE BLOCKED (443); 129 passed / 2 skipped / 0 failed on a pure-migration clean DB; QA-TASK03-001 and QA-TASK03-002 CLOSED; xfail promoted to formal green regression. Evidence: docs/handoffs/TASK_AUTH_SECURITY_FINAL_QA_HANDOFF.md.
