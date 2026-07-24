@@ -1,8 +1,6 @@
-"""Strategic-lens specialist implementations.
+"""Strategic lens runtime behaviors.
 
-Each lane conversation (7-11) owns exactly one ``LensImplementation`` under
-``strategic_lenses/lenses/``. This package holds no shared runtime, schema,
-manifest or persistence logic - those belong to the Ways Coordinator seam in
-``app.agents`` and to contract_lead / case_api_data. The Ways Coordinator wires
-the implementations into the shared ``LensRegistry`` during assembly.
+Coordinator-owned package init. Deliberately free of lens imports, side effects
+and registries: five lens lanes develop in parallel and explicit assembly happens
+only in :mod:`app.strategic_lenses.registry`. Do not add per-lens imports here.
 """
