@@ -1,11 +1,11 @@
 # Work Log: idle
 
-- Status: idle after Strategic Lens Artifact read-path delivery.
+- Status: idle after Strategic Lens Artifact read-path delivery and ordering correction.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Strategic Lens Artifact Read Path - 2026-07-24 (Asia/Shanghai)`.
+- Last archive entry: `Archive Read-Path Ordering Correction - 2026-07-24 (Asia/Shanghai)`.
 - Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-read-path
 - Current branch: codex/task-lens-artifact-read-path (base 4de3628, live-verified)
-- Owner result: read-only repository/service in services/api/app/analyses/lens_artifact_reads.py; ready-only consumption with review-gated audit reads; uniform CASE_NOT_FOUND 404 across missing/foreign/non-consumable; canonical five-lens ordering; DB-backed probe 23/23 green; full suite 276 passed; ruff/compileall PASS.
+- Owner result: read-only repository/service in services/api/app/analyses/lens_artifact_reads.py; ready-only consumption with review-gated audit reads; uniform CASE_NOT_FOUND 404 across missing/foreign/non-consumable; canonical EXECUTION ordering porter -> counterparty -> pre_mortem -> scenario -> meadows (corrected per READ_PATH_ORDER_CORRECTION_REQUIRED; Counterparty strictly before Pre-Mortem); DB-backed probe 24/24 green; full suite 276 passed; ruff/compileall PASS.
 - Boundary kept: no ORM/migration/enum change, no strategic_lenses/** change, no write path, no HTTP router, no contracts change; Session 6 persistence files untouched.
 - Contract dependency: HTTP exposure of these reads requires Session 1 router/contract adjudication (CONTRACT_DEPENDENCY recorded in the lane handoff); in-process consumption by Report/Run needs no contract change.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.

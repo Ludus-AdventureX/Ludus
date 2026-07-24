@@ -2117,3 +2117,25 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Session 6 files (strategic_lenses/**, write path, Validation transitions) untouched; ORM/enums/migrations consumed as frozen surfaces.
 - CONTRACT_DEPENDENCY: any HTTP endpoint or wire schema for these reads goes to Session 1 for router/API contract adjudication; not implemented here by design.
 - No credentials or secret values are recorded here.
+
+
+## Archive Read-Path Ordering Correction - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data - Strategic Lens Artifact Read-Path Owner.
+- Trigger: READ_PATH_ORDER_CORRECTION_REQUIRED against candidate 285795a (ready_for_qa was NO).
+- Branch: codex/task-lens-artifact-read-path (appended commits only; no rebase/reset/rewrite).
+
+## Defect and fix
+
+- The deterministic ordering wrongly used types.FULL_REQUIRED_STRATEGIC_LENSES (porter, pre_mortem, counterparty, ...), which is a required-SET contract, not the execution order. The canonical runtime/registry/Ways order is porter -> counterparty -> pre_mortem -> scenario -> meadows (AGENTS section 7; frozen registry assembly in app/strategic_lenses/registry.py; PRE_MORTEM LensSpec trigger "after_counterparty_matrix_..." in app/agents/lenses.py). Counterparty must precede the Pre-Mortem that consumes its result.
+- Fix (services/api/app/analyses/lens_artifact_reads.py only): introduced module-local _CANONICAL_LENS_EXECUTION_ORDER with the corrected sequence and source citations; no importable order tuple exists on the frozen surfaces and importing the registry would drag in every lens implementation, so a documented local constant is used per the correction instructions. No model/migration/contract/strategic_lenses/persistence change; no router.
+
+## Verification (fresh, post-fix)
+
+- DB probe rerun on disposable Postgres: LENS_READ_PATH_PROBE_OK 24/24, including the corrected canonical_ordering expectation and the new counterparty_strictly_before_pre_mortem assertion.
+- ruff check app: PASS. compileall: PASS. Full services/api pytest suite: 276 passed.
+- git diff --check: PASS. Changed paths this correction: lens_artifact_reads.py + HEAD/HISTORY + disposable probe update (G0, uncommitted).
+- No credentials or secret values are recorded here.
