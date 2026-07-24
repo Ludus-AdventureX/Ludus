@@ -1,11 +1,11 @@
 # Work Log: idle
 
-- Status: idle; Ways five-lens integration published to remote main and live-verified.
+- Status: idle after Strategic Lens Artifact read-path delivery.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Ways Five-Lens Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 8fd24518d12c9c9b103265542c8a019815c8f053 + this archive commit (live ls-remote verified; five-lens content byte-identical to frozen 69bbc5d; migration head d7e2a91c5b48).
-- Archive-only from now on: codex/ways-five-lens-integration-r2 (69bbc5d) and the five single-lens branches.
-- Unlocked: Ways persistence wiring slice (dialogue 6, from this new baseline); simulation graph-side CCR submission (dialogue 5). Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- Last archive entry: `Archive Strategic Lens Artifact Read Path - 2026-07-24 (Asia/Shanghai)`.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-read-path
+- Current branch: codex/task-lens-artifact-read-path (base 4de3628, live-verified)
+- Owner result: read-only repository/service in services/api/app/analyses/lens_artifact_reads.py; ready-only consumption with review-gated audit reads; uniform CASE_NOT_FOUND 404 across missing/foreign/non-consumable; canonical five-lens ordering; DB-backed probe 23/23 green; full suite 276 passed; ruff/compileall PASS.
+- Boundary kept: no ORM/migration/enum change, no strategic_lenses/** change, no write path, no HTTP router, no contracts change; Session 6 persistence files untouched.
+- Contract dependency: HTTP exposure of these reads requires Session 1 router/contract adjudication (CONTRACT_DEPENDENCY recorded in the lane handoff); in-process consumption by Report/Run needs no contract change.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.

@@ -2084,3 +2084,36 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Unlocked: Ways persistence wiring slice (dialogue 6) from this new baseline; simulation graph-side CCR submission window remains open (dialogue 5).
 - Subsequent lanes must branch from main >= 8fd2451 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+## Archive Strategic Lens Artifact Read Path - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data - Strategic Lens Artifact Read-Path Owner.
+- Objective: read-only repository/service for StrategicLensArtifact consumption.
+- Base: 4de362835f728ab155fc197b9f11b9ac248f2936 (live ls-remote verified as the first lane command; Ways five-lens publication tip).
+- Branch: codex/task-lens-artifact-read-path; worktree decision-lab-lens-read-path.
+
+## Delivered
+
+- services/api/app/analyses/lens_artifact_reads.py (new, single product file):
+  - StrategicLensArtifactReadRepository: workspace-bound SELECTs plus case/run anchor existence checks; no writes anywhere in the module.
+  - StrategicLensArtifactReadService: list_ready_for_workspace / list_ready_for_case / list_ready_for_run / get_ready_artifact (ready-only consumption) and list_for_audit (draft/rejected visible only here, gated by the projected review capability, anchors checked before capability so 403s cannot confirm foreign resources).
+  - LensArtifactView frozen dataclass projection with defensive payload deep copy and tuple refs; internal-only, wire DTOs stay with generated contracts.
+  - Deterministic total ordering: canonical lens order (porter, pre_mortem, counterparty, scenario, meadows) -> created_at -> artifact id, rendered in SQL with enum-typed CASE keys (VARCHAR keys break asyncpg enum comparison; fixed during probe).
+  - Uniform denial: CASE_NOT_FOUND 404 with one shared message for missing/foreign anchors, missing artifacts, and non-ready artifacts on the consumption path.
+
+## Verification
+
+- DB-backed probe (decision-lab-G0/lens-read-path-probe/probe_lens_read_path.py, uncommitted) on disposable Postgres: LENS_READ_PATH_PROBE_OK 23/23 - ready-only default, canonical ordering (inserted out of order), stable ordering across calls, exact lens filter, workspace/case scoping, draft-vs-missing byte-identical 404 bodies, foreign-vs-ghost anchor byte-identical 404 bodies, leaked-ID enumeration under own anchors rejected, mixed-tenant anchor combination rejected, audit capability 403, audit foreign-anchor 404-before-403, defensive payload copy.
+- ruff check app: PASS. compileall: PASS. Full services/api pytest suite: 276 passed (zero regression).
+- alembic upgrade head on the disposable database: PASS (schema from frozen migrations only; no new migration).
+- git diff --check: PASS. Changed paths: the new read module + HEAD/HISTORY only.
+
+## Boundary and dependencies
+
+- Session 6 files (strategic_lenses/**, write path, Validation transitions) untouched; ORM/enums/migrations consumed as frozen surfaces.
+- CONTRACT_DEPENDENCY: any HTTP endpoint or wire schema for these reads goes to Session 1 for router/API contract adjudication; not implemented here by design.
+- No credentials or secret values are recorded here.
