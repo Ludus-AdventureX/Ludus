@@ -1696,6 +1696,9 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
   verbatim below before starting the porter lens lane HEAD. The coordinator's
   own lane continues on its own branch; this archive only rotates the file on
   the porter branch.
+## Archive inherited Ways Coordinator in-progress HEAD at lens-scenario-r2 branch creation - 2026-07-24 (Asia/Shanghai)
+
+The following record was inherited from seam commit cce4d70 (codex/task-07-agent-runtime-r2) when branch codex/lens-scenario-r2 was created. It belongs to the Ways Coordinator lane and is archived here unmodified so this lane can write its own HEAD. The coordinator lane's own lifecycle is untouched.
 
 # Work Log: in_progress
 
