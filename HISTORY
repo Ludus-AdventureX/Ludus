@@ -2070,3 +2070,17 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); mainline merge permitted for faaf44c.
 - Evidence: docs/handoffs/WAYS_R3_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Ways Five-Lens Main Publication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Final integrated HEAD: 8fd24518d12c9c9b103265542c8a019815c8f053 = refresh candidate faaf44ca21db674104d050cb4cd95bb345e59d3e (product integration point; frozen 69bbc5d five-lens content merged unmodified onto post-CCR main db23bbb) fast-forwarded to QA head codex/qa-ways-five-lens-r3 @ 8fd2451 (QA delta audited: WAYS_R3_QA_HANDOFF.md + append-only HISTORY only; zero product/test changes, so the product tree remains byte-identical to faaf44c/69bbc5d lens content).
+- QA verdicts: RELEASE_CONTENT_VERDICT PASS; 304 passed / 0 failed / 0 skipped (-W error); lens_lanes 105 passed; P0/P1/P2 = 0/0/0; migration head d7e2a91c5b48 lifecycle PASS; ancestry + three-tree byte identity + forbidden-path audit PASS; QA live-verified main/candidate refs before review.
+- Lead fresh re-verification on 8fd2451: clean-DB upgrade + alembic check; pytest tests + app/simulations/tests = 304 passed; lens_lanes 105 passed; official generate_contracts.ps1 -Check full chain (QA environment lacked node_modules) = CONTRACT_DRIFT_OK; ruff/compileall; secret scan + git diff --check PASS.
+- Remote sequence (all live): main/candidate/QA refs read and matched -> QA HISTORY byte-prefix append verification -> candidate ff to QA head -> candidate pushed and verified = 8fd2451 -> pre-merge main re-read db23bbb -> merge --ff-only -> push (no force) -> re-read main = 8fd2451.
+- old_remote_main_sha: db23bbb48b6dc0d18c1aee0a8703430ff28bc226; new_remote_main_sha: 8fd24518d12c9c9b103265542c8a019815c8f053.
+- Five single-lens branches (porter 8103284, counterparty 1ea56ca, pre_mortem 97f35bc, scenario 66b1ea1, meadows 7fd12f7) are now merged into main via the assembly chain and become archive-only; old r2 candidate 69bbc5d is archive-only.
+- Unlocked: Ways persistence wiring slice (dialogue 6) from this new baseline; simulation graph-side CCR submission window remains open (dialogue 5).
+- Subsequent lanes must branch from main >= 8fd2451 as the sole baseline.
+- No credentials or secret values are recorded here.
