@@ -47,6 +47,22 @@
       until a push window opens. No remote state is claimed without ls-remote.
     - Lens specialists must rebase/branch from this r2 seam, not from the stale
       48f7db2 candidate.
+- ways_lens_integration_queue (assembly order fixed; completion order does not reorder):
+    1. porter_five_forces (conv 7) - PENDING
+    2. counterparty_response_matrix (conv 9) - PENDING
+    3. pre_mortem (conv 8) - PENDING
+    4. scenario_planning (conv 10) - PENDING
+    5. meadows_leverage_points (conv 11) - ACCEPTED_QUEUED @ codex/lens-meadows-r2
+       7fd12f75d67a462888f6579916d6920f4fe38a1a (fetch-verified; base=main 258a94df;
+       self-contained module, no seam dependency; independent rerun: 15 lens tests
+       PASS, ruff PASS, 49 method-pack/router/cynefin regression PASS).
+       Recorded deviations: module path strategic_lenses/meadows.py instead of
+       lenses/meadows_leverage_points.py; neutral import-free strategic_lenses/__init__.py
+       added; lens-specific pytest under services/api/tests/ (QA to adopt);
+       standalone expected/negative fixture JSONs deferred to Task 15 extraction.
+       P2 finding: explicit SERVER_INJECTED_FIELDS list omits charterVersion/caseVersion/
+       caseSnapshotHash/schemaVersion (still fail-closed via extra=forbid; seam guard
+       will front-run at integration).
 - secret_policy: >
     No credentials, API keys, tokens, cookies, connection strings, or .env contents
     are read, echoed, logged, or committed. Fixture provider requires no keys.
