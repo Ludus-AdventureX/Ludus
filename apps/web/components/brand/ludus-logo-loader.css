@@ -18,29 +18,8 @@
   overflow: visible;
 }
 
-.ludus-logo-loader__segment {
-  opacity: 0;
-  animation: ludus-loader-segment 4.8s cubic-bezier(.22, .61, .36, 1) infinite;
-}
-
-.ludus-logo-loader__segment--2 { animation-delay: .28s; }
-.ludus-logo-loader__segment--3 { animation-delay: .56s; }
-.ludus-logo-loader__segment--4 { animation-delay: .84s; }
-.ludus-logo-loader__segment--5 { animation-delay: 1.12s; }
-
-.ludus-logo-loader__tracer {
-  display: none;
-  stroke: #171817;
-  stroke-width: 6;
-  stroke-linecap: round;
-  stroke-dasharray: 342;
-  stroke-dashoffset: 342;
-  animation: ludus-loader-tracer 4.8s cubic-bezier(.22, .61, .36, 1) infinite;
-}
-.ludus-logo-loader__segment--2 .ludus-logo-loader__tracer { animation-delay: .28s; }
-.ludus-logo-loader__segment--3 .ludus-logo-loader__tracer { animation-delay: .56s; }
-.ludus-logo-loader__segment--4 .ludus-logo-loader__tracer { animation-delay: .84s; }
-.ludus-logo-loader__segment--5 .ludus-logo-loader__tracer { animation-delay: 1.12s; }
+.ludus-logo-loader__letter { font: 800 270px Arial Black, Arial, sans-serif; letter-spacing: 8px; fill: transparent; stroke: #171817; stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ludus-loader-draw 4.8s cubic-bezier(.22,.61,.36,1) infinite; }
+.ludus-logo-loader__letter--2 { animation-delay: .28s; } .ludus-logo-loader__letter--3 { animation-delay: .56s; } .ludus-logo-loader__letter--4 { animation-delay: .84s; } .ludus-logo-loader__letter--5 { animation-delay: 1.12s; }
 
 .ludus-logo-loader__fill {
   opacity: 0;
@@ -48,7 +27,7 @@
   animation: ludus-loader-resolve 4.8s ease-in-out infinite;
 }
 
-.ludus-logo-loader[data-loading="false"] .ludus-logo-loader__segment,
+.ludus-logo-loader[data-loading="false"] .ludus-logo-loader__letter,
 .ludus-logo-loader[data-loading="false"] .ludus-logo-loader__fill {
   animation-iteration-count: 1;
   animation-fill-mode: forwards;
@@ -75,16 +54,11 @@
   to { opacity: 0; }
 }
 
-@keyframes ludus-loader-segment {
-  0%, 8% { opacity: 0; clip-path: inset(0 100% 0 0); }
-  42%, 64% { opacity: 1; clip-path: inset(0 0 0 0); }
-  76%, 100% { opacity: 1; clip-path: inset(0 0 0 0); }
-}
-
-@keyframes ludus-loader-tracer {
-  0%, 8% { stroke-dashoffset: 342; opacity: 1; }
-  42%, 64% { stroke-dashoffset: 0; opacity: 1; }
-  76%, 100% { stroke-dashoffset: 0; opacity: 0; }
+@keyframes ludus-loader-draw {
+  0%, 8% { stroke-dashoffset: 1; fill: transparent; opacity: 1; }
+  42%, 58% { stroke-dashoffset: 0; fill: #171817; opacity: 1; }
+  72% { opacity: .35; }
+  88%, 100% { stroke-dashoffset: 0; fill: #171817; opacity: 1; }
 }
 
 @keyframes ludus-loader-resolve {
@@ -95,6 +69,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ludus-logo-loader__tracer { display: none; }
-  .ludus-logo-loader__segment { animation: none; opacity: 1; clip-path: none; }
+  .ludus-logo-loader__letter { animation: none; fill: #171817; stroke: none; opacity: 1; }
 }

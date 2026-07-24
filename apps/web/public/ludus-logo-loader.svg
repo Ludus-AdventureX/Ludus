@@ -3,19 +3,15 @@
   <title id="title">Ludus</title>
   <desc id="desc">Ludus logo drawn from left to right while loading.</desc>
   <style>
-    .segment { opacity: 0; animation: reveal 4.8s cubic-bezier(.22,.61,.36,1) infinite; }
+    .letter { font: 800 270px Arial Black,Arial,sans-serif; letter-spacing: 8px; fill: transparent; stroke: #171817; stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 4.8s cubic-bezier(.22,.61,.36,1) infinite; }
     .g2 { animation-delay: .28s; } .g3 { animation-delay: .56s; } .g4 { animation-delay: .84s; } .g5 { animation-delay: 1.12s; }
     .fill { opacity: 0; animation: resolve 4.8s ease-in-out infinite; }
-    @keyframes reveal { 0%,8% { opacity: 0; clip-path: inset(0 100% 0 0); } 42%,64% { opacity: 1; clip-path: inset(0 0 0 0); } 76%,100% { opacity: 1; clip-path: inset(0 0 0 0); } }
+    @keyframes draw { 0%,8% { stroke-dashoffset: 1; fill: transparent; opacity: 1; } 42%,58% { stroke-dashoffset: 0; fill: #171817; opacity: 1; } 72% { opacity: .35; } 88%,100% { stroke-dashoffset: 0; fill: #171817; opacity: 1; } }
     @keyframes resolve { 0%,44% { opacity: 0; } 56%,66% { opacity: 1; } 73% { opacity: .35; } 86%,100% { opacity: 1; } }
-    @media (prefers-reduced-motion: reduce) { .segment { animation: none; opacity: 1; clip-path: none; } .fill { animation: none; opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .letter { animation: none; fill: #171817; stroke: none; opacity: 1; } .fill { display: none; } }
   </style>
   <g aria-hidden="true">
-    <g class="segment"><clipPath id="c1"><rect x="0" y="0" width="296" height="406" /></clipPath><image href="/logo.svg" width="1478" height="406" clip-path="url(#c1)" /></g>
-    <g class="segment g2"><clipPath id="c2"><rect x="296" y="0" width="296" height="406" /></clipPath><image href="/logo.svg" width="1478" height="406" clip-path="url(#c2)" /></g>
-    <g class="segment g3"><clipPath id="c3"><rect x="592" y="0" width="296" height="406" /></clipPath><image href="/logo.svg" width="1478" height="406" clip-path="url(#c3)" /></g>
-    <g class="segment g4"><clipPath id="c4"><rect x="888" y="0" width="296" height="406" /></clipPath><image href="/logo.svg" width="1478" height="406" clip-path="url(#c4)" /></g>
-    <g class="segment g5"><clipPath id="c5"><rect x="1184" y="0" width="294" height="406" /></clipPath><image href="/logo.svg" width="1478" height="406" clip-path="url(#c5)" /></g>
+    <text class="letter" x="6" y="285">L</text><text class="letter g2" x="290" y="285">U</text><text class="letter g3" x="580" y="285">D</text><text class="letter g4" x="870" y="285">U</text><text class="letter g5" x="1160" y="285">S</text>
   </g>
   <image class="fill" href="/logo.svg" x="0" y="0" width="1478" height="406" preserveAspectRatio="xMidYMid meet" />
 </svg>
