@@ -5,6 +5,9 @@
 - Last archive entry: `Archive Pre-Mortem Lens R2 Implementation - 2026-07-24 (Asia/Shanghai)`.
 - Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-premortem-r2
 - Branch: codex/lens-pre-mortem-r2 (base 258a94d; implementation commit bd84b54).
+- Remote status: BLOCKED - 4 push attempts failed with GitHub port 443 connection
+  timeouts (intermittent; one interleaved ls-remote succeeded). No upload, PR, or
+  merge is claimed. Resume: ls-remote main, push branch, live-verify branch SHA.
 - Deliverables: services/api/app/strategic_lenses/pre_mortem.py behavior gate,
   spherical-robot expected/negative Pre-Mortem fixtures; handoff target is the
   Ways Coordinator (conversation 6).

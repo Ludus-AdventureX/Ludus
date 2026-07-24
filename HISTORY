@@ -1560,3 +1560,12 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Contract change requested: NO. No gaps found in the compiled pre_mortem schema branch for the assigned behaviors.
 - Remote publication: push attempt and live verification recorded in the lifecycle commit that follows the push step.
 - Secret policy honored: no credentials, keys, tokens, cookies, or connection strings read or recorded; fixtures contain only public demo-safe spherical-robot content.
+
+
+## Archive Pre-Mortem Lens R2 Blocked Remote Publication - 2026-07-24 (Asia/Shanghai)
+
+- Branch codex/lens-pre-mortem-r2 (local head 3168397 lifecycle + bd84b54 implementation) could NOT be uploaded.
+- Evidence: 4 push attempts over ~2 minutes all failed with "Failed to connect to github.com port 443 after ~21s"; one interleaved git ls-remote of refs/heads/codex/lens-pre-mortem-r2 succeeded (exit 0, ref absent remotely), confirming intermittent connectivity, not authentication failure.
+- Per protocol no upload, PR, review, or merge is claimed; remote_branch_sha is BLOCKED.
+- Safe recovery: local branch intact; resume with (1) git ls-remote origin refs/heads/main (investigate if advanced past 258a94d), (2) git push -u origin codex/lens-pre-mortem-r2, (3) live ls-remote verify branch == local head, then notify Ways Coordinator.
+- No credentials or secret values are recorded here.
