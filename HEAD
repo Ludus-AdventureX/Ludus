@@ -1,20 +1,14 @@
-# Work Log: simulation repository/service r1 mainline integration
+# Work Log: simulation repository/service r1 integration - acceptance complete
 
-- Status: active; assembling integration candidate codex/simulation-repository-service-integration-r1.
+- Status: acceptance complete on candidate 568417db2681e0103b4b37298610a6cc4dcaf53f; publication to remote main pending final live re-read + ff-only push.
 - Role: Mainline Audit / Simulation Repository-Service Integration Lead.
-- Baseline: remote main 3ed23b92e0b2a1326518a6f550984abb02f11179 (live ls-remote verified at kickoff).
-- Inputs (all live ls-remote verified exact):
-  - Addendum A1: codex/ccr-sim-01-addendum-a1 @ b28dda67f9794d705e79ac45c2a1cf2458d7cf7b (merge-base = main; delta = HISTORY + CCR-20260724-SIM-01-ADDENDUM-A1.md only).
-  - Product: codex/task-simulation-repository-service-r1-doc-refresh @ 9cc4e8736bf59a1761d5de4f38081faed0081b07 (parent 7844a1631c0747e2f39e2cbfb73088ed010c98ae, doc-only refresh).
-  - Functional QA: codex/qa-simulation-repository-service-r1 @ a2cc9878d8444565b100a6ecd088d02ecc169edf.
-  - QA contract closure: codex/qa-simulation-repository-service-r1-contract-closure @ f12bea6d464e980dc232b1d3fded92571e6838e0 (direct child of a2cc987; delta = HISTORY + closure handoff only).
-- Ancestry proven at kickoff: 3ed23b9 -> 7844a16 -> 9cc4e87 -> a2cc987 -> f12bea6 (rev-parse parent checks + merge-base --is-ancestor).
-- Release authorization: independent QA RELEASE_CONTENT_VERDICT PASS; P0/P1/P2 = 0/0/0; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK.
-- Plan: kickoff -> --no-ff merge Addendum A1 b28dda6 -> --no-ff merge QA closure f12bea6 -> byte gates -> isolated PG16 full acceptance (expect 417 / lens_lanes 121) -> official contract check -> static/scope audits -> acceptance archive -> ff-only publication.
-- No cherry-picks of 7844a16 / 9cc4e87 / a2cc987 (already ancestors of f12bea6); no product code changes during integration.
-- Migration head expected unchanged: a3f8c2d47e19.
-- Incorporated lane HEAD records (QA closure f12bea6 side, preserved here per three-party lifecycle rule):
-  - Product lane: idle after doc-refresh 9cc4e87 (DOC-ONLY domain.py docstring correction on frozen parent 7844a16; DOMAIN_EXECUTABLE_AST_EQUIVALENT; 52/402/121 baselines unchanged; Addendum A1 consumed read-only).
-  - Functional QA lane: a2cc987 RELEASE_CONTENT_VERDICT PASS (P0/P1/P2 = 0/0/0; 15-battery repository/service QA).
-  - Contract closure lane: f12bea6 = a2cc987 + closure handoff + HISTORY (append-only), product/tests byte-identical.
+- Candidate topology: 3ed23b9 -> 4a9659c (kickoff, lifecycle-only) -> c6cad96 (--no-ff merge Addendum A1 b28dda6) -> 568417d (--no-ff merge QA closure f12bea6 carrying 7844a16 -> 9cc4e87 -> a2cc987); 8 commits over main, all original SHAs, no cherry-picks, no history rewrite.
+- Ancestry gate: all six required ancestors proven (3ed23b9 / b28dda6 / 7844a16 / 9cc4e87 / a2cc987 / f12bea6); 9cc4e87^=7844a16; f12bea6^=a2cc987.
+- Byte gates: ALL_PASS (5 product files + owner test == 9cc4e87; QA test == a2cc987 == f12bea6; 3 handoffs == their refs; Addendum A1 file == b28dda6; types/models/schemas/engine/migration a3f8c2d47e19/openapi.json/types.gen.ts == main 3ed23b9; strategic_lenses/analyses/agents/workers/routers/apps/web/packages/contracts/scripts/migrations untouched vs main).
+- DOMAIN_EXECUTABLE_AST_EQUIVALENT re-proven for domain.py doc-refresh (7844a16 vs 9cc4e87); stale wire-contract claim zero hits in services/**.
+- Addendum A1 verdicts preserved: UUID identity (workspace_id, graph_version_id, id) + ORDER BY id ASC; "=" fail-closed score_constraint_operator_unsupported; enabledEdgeIds fail-closed strategy_edge_gating_unsupported; app.types enum authority; no fail-closed behavior implemented during integration.
+- Fresh acceptance on detached 568417d with disposable PG16 @55432 (no volume): alembic heads/current = a3f8c2d47e19 single head, upgrade + check clean, no new migration; owner 52; Task 12 engine 28 (+11 acceptance); persistence directed 16; read-path + IO semantics 16; QA battery 15; full suite exact 417 passed / 0 failed / 0 xfailed / 0 xpassed (-W error -rxX); same-db lens_lanes 121 immediately after full run (no table wipe; workspace-scope isolation holds).
+- Official contract gate: powershell -File scripts/generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK (full TS chain, trusted read-only toolchain; packages/contracts git-clean).
+- Static/security: ruff check services/api PASS; compileall PASS; git diff --check clean; conflict-marker scan clean; changed-path audit = exact authorized 13-path set; HISTORY append-only proven byte-prefix; secret scan of integration delta clean.
+- Next: live re-read remote main (must still be 3ed23b9) -> ff-only merge -> push -> re-read -> publication archive.
 - Secret policy: do not record credentials here.
