@@ -1533,3 +1533,61 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Subsequent lanes must branch from main f5b43c9 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+## Archive inherited Ways Coordinator in-progress HEAD at lens-scenario-r2 branch creation - 2026-07-24 (Asia/Shanghai)
+
+The following record was inherited from seam commit cce4d70 (codex/task-07-agent-runtime-r2) when branch codex/lens-scenario-r2 was created. It belongs to the Ways Coordinator lane and is archived here unmodified so this lane can write its own HEAD. The coordinator lane's own lifecycle is untouched.
+
+# Work Log: in_progress
+
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Ways / Agent Pipeline Coordinator
+- status: in_progress
+- objective: >
+    Reapply the Task 7 agent-runtime + five-lens contract seam (previously built as
+    codex/task-07-agent-runtime @ 48f7db2 on the 2396206 freeze) onto the current
+    main baseline that now includes Task 3 Auth/Workspace (CCR-20260724-005). This
+    r2 branch supersedes the old candidate for integration purposes; the old branch
+    and its lifecycle are left untouched as history. Re-audit the runtime seam
+    against the new auth/tenancy contracts, re-verify the five lens IO contracts,
+    and dispatch LENS_ASSIGNMENT_R2 to lane conversations 7-11.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae
+- supersedes_branch: codex/task-07-agent-runtime (48f7db25e7036b996508c3a95de2679f1aa57b0b)
+- branch: codex/task-07-agent-runtime-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-runtime-48h-r2
+- write_scope:
+    - services/api/app/agents/**
+    - HEAD (this branch) and HISTORY (append-only)
+- forbidden_scope:
+    - services/api/app/**/schemas.py, services/api/migrations/**, packages/contracts/** (contract_lead)
+    - services/api/app/{auth,tenancy,security,connectors,evidence,analyses}/** (case_api_data)
+    - services/api/tests/**, e2e/** (qa_release); apps/web/** (web_ux)
+    - services/api/app/simulations/** (simulation_graph)
+    - method-packs/** and published ways/** (immutable without SemVer + contract approval)
+- baseline_audit_findings:
+    - StrategicLensArtifact canonical Pydantic schema and migration are STILL absent
+      on main (types.py/analyses/schemas.py/manifest byte-identical to 2396206 for
+      these surfaces); persistence remains blocked pending a CCR to contract_lead.
+    - ConnectorStatus canonical enum is STILL absent; provider_adapter.py keeps the
+      tool-facing Literal projection only.
+    - Task 3 added auth/deps.py + tenancy/context.py (server-side capability
+      projection, uniform 404) and security/{csrf,envelope}.py; the runtime does not
+      perform HTTP auth and only trusts a server-authorized frozen
+      DeepAnalysisRequest, so no seam change is required.
+    - method-packs/ways trees unchanged; lens contract pins remain
+      hardtech-market-direction@1.1.0, strategic-lens-output schema 1.1.0,
+      sourceSkillVersion const "1.0.0".
+- acceptance_commands:
+    - py -3.12 -m compileall services/api/app/agents (syntax gate)
+    - repo .venv python functional smoke (14 checks) with PYTHONPATH=<r2>/services/api
+    - .venv python -m ruff check services/api/app/agents
+    - changed-path audit: only HEAD + services/api/app/agents/**
+- known_initial_risks:
+    - GitHub 443 connectivity is intermittent; remote verification may be BLOCKED
+      until a push window opens. No remote state is claimed without ls-remote.
+    - Lens specialists must rebase/branch from this r2 seam, not from the stale
+      48f7db2 candidate.
+- secret_policy: >
+    No credentials, API keys, tokens, cookies, connection strings, or .env contents
+    are read, echoed, logged, or committed. Fixture provider requires no keys.

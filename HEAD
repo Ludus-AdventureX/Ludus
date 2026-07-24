@@ -1,52 +1,60 @@
 # Work Log: in_progress
 
 - started_at: 2026-07-24 (Asia/Shanghai)
-- role: Ways / Agent Pipeline Coordinator
+- role: Synthesis / Scenario Planning Specialist (lane 9, LENS_ASSIGNMENT_R2)
 - status: in_progress
 - objective: >
-    Reapply the Task 7 agent-runtime + five-lens contract seam (previously built as
-    codex/task-07-agent-runtime @ 48f7db2 on the 2396206 freeze) onto the current
-    main baseline that now includes Task 3 Auth/Workspace (CCR-20260724-005). This
-    r2 branch supersedes the old candidate for integration purposes; the old branch
-    and its lifecycle are left untouched as history. Re-audit the runtime seam
-    against the new auth/tenancy contracts, re-verify the five lens IO contracts,
-    and dispatch LENS_ASSIGNMENT_R2 to lane conversations 7-11.
-- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae
-- supersedes_branch: codex/task-07-agent-runtime (48f7db25e7036b996508c3a95de2679f1aa57b0b)
-- branch: codex/task-07-agent-runtime-r2
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-runtime-48h-r2
+    Implement the scenario_planning strategic lens runtime behavior against the
+    frozen method-pack contract (hardtech-market-direction@1.1.0) and the Ways
+    Coordinator r2 agents seam (app/agents/lenses.py LensImplementation):
+    prompt-input assembly, behavior validation (predetermined elements, exactly two
+    axes, 3-4 structurally distinct frames with exactly one baseline and >=2
+    structural breaks, per-frame timeline / >=3 stakeholder states / 3-5 early
+    signals, per-strategy testing with at least one killed result), facts-vs-
+    assumptions separation, and the contract-allowed deterministic scenarioCandidate
+    simulation-seed mapping (simulation-seeds.schema.json $defs/scenarioCandidate).
+    No canonical schema, migration, API, shared agents runtime, other lens,
+    Simulation shared code, Charter semantics or QA test changes.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (== origin/main tracking
+  ref, matches expected 258a94d; live ls-remote re-check pending 443 window)
+- branched_from: cce4d70 (codex/task-07-agent-runtime-r2 seam tip, per Ways
+  Coordinator HEAD instruction that lens specialists branch from the r2 seam)
+- branch: codex/lens-scenario-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-scenario-r2
 - write_scope:
-    - services/api/app/agents/**
+    - services/api/app/strategic_lenses/__init__.py (minimal package marker)
+    - services/api/app/strategic_lenses/lenses/__init__.py (minimal package marker)
+    - services/api/app/strategic_lenses/lenses/scenario_planning.py
     - HEAD (this branch) and HISTORY (append-only)
 - forbidden_scope:
-    - services/api/app/**/schemas.py, services/api/migrations/**, packages/contracts/** (contract_lead)
-    - services/api/app/{auth,tenancy,security,connectors,evidence,analyses}/** (case_api_data)
-    - services/api/tests/**, e2e/** (qa_release); apps/web/** (web_ux)
+    - services/api/app/agents/** (ways coordinator seam)
+    - services/api/app/**/schemas.py, services/api/migrations/**,
+      packages/contracts/** (contract_lead)
     - services/api/app/simulations/** (simulation_graph)
-    - method-packs/** and published ways/** (immutable without SemVer + contract approval)
-- baseline_audit_findings:
-    - StrategicLensArtifact canonical Pydantic schema and migration are STILL absent
-      on main (types.py/analyses/schemas.py/manifest byte-identical to 2396206 for
-      these surfaces); persistence remains blocked pending a CCR to contract_lead.
-    - ConnectorStatus canonical enum is STILL absent; provider_adapter.py keeps the
-      tool-facing Literal projection only.
-    - Task 3 added auth/deps.py + tenancy/context.py (server-side capability
-      projection, uniform 404) and security/{csrf,envelope}.py; the runtime does not
-      perform HTTP auth and only trusts a server-authorized frozen
-      DeepAnalysisRequest, so no seam change is required.
-    - method-packs/ways trees unchanged; lens contract pins remain
-      hardtech-market-direction@1.1.0, strategic-lens-output schema 1.1.0,
-      sourceSkillVersion const "1.0.0".
+    - services/api/tests/**, e2e/** (qa_release)
+    - apps/web/** (web_ux); other lens implementations (lanes 7/8/10/11)
+    - method-packs/** and published ways/** (immutable)
+- dependencies:
+    - codex/task-07-agent-runtime-r2 @ cce4d70 (LensRequest/LensPromptInputs/
+      StrategicLensStageOutput/LensBehaviorReport/LensImplementation seam)
+    - ways/hardtech-market-direction/1.1.0 scenario-planning prompt,
+      strategic-lens-output schema (scenarioPlanningContent branch) and
+      simulation-seeds schema (scenarioCandidate) - read-only contract pins
 - acceptance_commands:
-    - py -3.12 -m compileall services/api/app/agents (syntax gate)
-    - repo .venv python functional smoke (14 checks) with PYTHONPATH=<r2>/services/api
-    - .venv python -m ruff check services/api/app/agents
-    - changed-path audit: only HEAD + services/api/app/agents/**
+    - <repo .venv python> -m compileall services/api/app/strategic_lenses
+    - <repo .venv python> -m ruff check services/api/app/strategic_lenses
+    - <repo .venv python> decision-lab-G0/lens-scenario-r2/smoke_scenario_lens.py
+      (functional checks incl. jsonschema validation against the frozen pack schemas)
+    - changed-path audit: only HEAD/HISTORY + services/api/app/strategic_lenses/**
 - known_initial_risks:
-    - GitHub 443 connectivity is intermittent; remote verification may be BLOCKED
-      until a push window opens. No remote state is claimed without ls-remote.
-    - Lens specialists must rebase/branch from this r2 seam, not from the stale
-      48f7db2 candidate.
+    - GitHub 443 connectivity intermittent; remote verification may be BLOCKED.
+      No remote state is claimed without a live ls-remote read.
+    - StrategicLensArtifact canonical persistence is still absent on main (per
+      coordinator baseline audit); this lane delivers runtime behavior only and
+      does not add schema/migration surfaces.
+    - scenarioCandidate driver-state mapping matches axis state text exactly;
+      unresolved states map to shift 0.0 deterministically (documented in code).
 - secret_policy: >
-    No credentials, API keys, tokens, cookies, connection strings, or .env contents
-    are read, echoed, logged, or committed. Fixture provider requires no keys.
+    No credentials, API keys, tokens, cookies, connection strings, or .env
+    contents are read, echoed, logged, or committed. No model keys are required;
+    behavior validation and seed mapping are pure functions.
