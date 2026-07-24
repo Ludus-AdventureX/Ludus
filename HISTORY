@@ -2160,3 +2160,84 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Fresh runs on clean DB (head d7e2a91c5b48, alembic check clean): directed 16 passed; full 320 passed / 0 failed (-W error); lens_lanes 121; ruff/compileall PASS; scope/secret/diff-check/marker scans clean.
 - Evidence: docs/handoffs/PERSISTENCE_FIX_FINAL_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Strategic Lens Artifact Read Path - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data - Strategic Lens Artifact Read-Path Owner.
+- Objective: read-only repository/service for StrategicLensArtifact consumption.
+- Base: 4de362835f728ab155fc197b9f11b9ac248f2936 (live ls-remote verified as the first lane command; Ways five-lens publication tip).
+- Branch: codex/task-lens-artifact-read-path; worktree decision-lab-lens-read-path.
+
+## Delivered
+
+- services/api/app/analyses/lens_artifact_reads.py (new, single product file):
+  - StrategicLensArtifactReadRepository: workspace-bound SELECTs plus case/run anchor existence checks; no writes anywhere in the module.
+  - StrategicLensArtifactReadService: list_ready_for_workspace / list_ready_for_case / list_ready_for_run / get_ready_artifact (ready-only consumption) and list_for_audit (draft/rejected visible only here, gated by the projected review capability, anchors checked before capability so 403s cannot confirm foreign resources).
+  - LensArtifactView frozen dataclass projection with defensive payload deep copy and tuple refs; internal-only, wire DTOs stay with generated contracts.
+  - Deterministic total ordering: canonical lens order (porter, pre_mortem, counterparty, scenario, meadows) -> created_at -> artifact id, rendered in SQL with enum-typed CASE keys (VARCHAR keys break asyncpg enum comparison; fixed during probe).
+  - Uniform denial: CASE_NOT_FOUND 404 with one shared message for missing/foreign anchors, missing artifacts, and non-ready artifacts on the consumption path.
+
+## Verification
+
+- DB-backed probe (decision-lab-G0/lens-read-path-probe/probe_lens_read_path.py, uncommitted) on disposable Postgres: LENS_READ_PATH_PROBE_OK 23/23 - ready-only default, canonical ordering (inserted out of order), stable ordering across calls, exact lens filter, workspace/case scoping, draft-vs-missing byte-identical 404 bodies, foreign-vs-ghost anchor byte-identical 404 bodies, leaked-ID enumeration under own anchors rejected, mixed-tenant anchor combination rejected, audit capability 403, audit foreign-anchor 404-before-403, defensive payload copy.
+- ruff check app: PASS. compileall: PASS. Full services/api pytest suite: 276 passed (zero regression).
+- alembic upgrade head on the disposable database: PASS (schema from frozen migrations only; no new migration).
+- git diff --check: PASS. Changed paths: the new read module + HEAD/HISTORY only.
+
+## Boundary and dependencies
+
+- Session 6 files (strategic_lenses/**, write path, Validation transitions) untouched; ORM/enums/migrations consumed as frozen surfaces.
+- CONTRACT_DEPENDENCY: any HTTP endpoint or wire schema for these reads goes to Session 1 for router/API contract adjudication; not implemented here by design.
+- No credentials or secret values are recorded here.
+
+
+## Archive Read-Path Ordering Correction - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data - Strategic Lens Artifact Read-Path Owner.
+- Trigger: READ_PATH_ORDER_CORRECTION_REQUIRED against candidate 285795a (ready_for_qa was NO).
+- Branch: codex/task-lens-artifact-read-path (appended commits only; no rebase/reset/rewrite).
+
+## Defect and fix
+
+- The deterministic ordering wrongly used types.FULL_REQUIRED_STRATEGIC_LENSES (porter, pre_mortem, counterparty, ...), which is a required-SET contract, not the execution order. The canonical runtime/registry/Ways order is porter -> counterparty -> pre_mortem -> scenario -> meadows (AGENTS section 7; frozen registry assembly in app/strategic_lenses/registry.py; PRE_MORTEM LensSpec trigger "after_counterparty_matrix_..." in app/agents/lenses.py). Counterparty must precede the Pre-Mortem that consumes its result.
+- Fix (services/api/app/analyses/lens_artifact_reads.py only): introduced module-local _CANONICAL_LENS_EXECUTION_ORDER with the corrected sequence and source citations; no importable order tuple exists on the frozen surfaces and importing the registry would drag in every lens implementation, so a documented local constant is used per the correction instructions. No model/migration/contract/strategic_lenses/persistence change; no router.
+
+## Verification (fresh, post-fix)
+
+- DB probe rerun on disposable Postgres: LENS_READ_PATH_PROBE_OK 24/24, including the corrected canonical_ordering expectation and the new counterparty_strictly_before_pre_mortem assertion.
+- ruff check app: PASS. compileall: PASS. Full services/api pytest suite: 276 passed.
+- git diff --check: PASS. Changed paths this correction: lens_artifact_reads.py + HEAD/HISTORY + disposable probe update (G0, uncommitted).
+- No credentials or secret values are recorded here.
+
+
+## Archive Lens Artifact Read-Path R2 QA - 2026-07-24 (Asia/Shanghai)
+
+### Inherited lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after Strategic Lens Artifact read-path delivery and ordering correction.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Read-Path Ordering Correction - 2026-07-24 (Asia/Shanghai)`.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-read-path
+- Current branch: codex/task-lens-artifact-read-path (base 4de3628, live-verified)
+- Owner result: read-only repository/service in services/api/app/analyses/lens_artifact_reads.py; ready-only consumption with review-gated audit reads; uniform CASE_NOT_FOUND 404 across missing/foreign/non-consumable; canonical EXECUTION ordering porter -> counterparty -> pre_mortem -> scenario -> meadows (corrected per READ_PATH_ORDER_CORRECTION_REQUIRED; Counterparty strictly before Pre-Mortem); DB-backed probe 24/24 green; full suite 276 passed; ruff/compileall PASS.
+- Boundary kept: no ORM/migration/enum change, no strategic_lenses/** change, no write path, no HTTP router, no contracts change; Session 6 persistence files untouched.
+- Contract dependency: HTTP exposure of these reads requires Session 1 router/contract adjudication (CONTRACT_DEPENDENCY recorded in the lane handoff); in-process consumption by Report/Run needs no contract change.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
+
+### QA completion record
+
+- Role: QA/Release Owner; fresh branch codex/qa-lens-artifact-read-path-r2 from candidate 2f0fe40e11e82bfe1f639e105fd3892a453d3756 (hard gate: first command ls-remote main = 4de3628 exact; candidate ref live-verified exact).
+- QA additions: tests/test_lens_artifact_read_path.py (11 formal tests converting the lane's 24-item DB probe): canonical ordering porter->counterparty->pre_mortem->scenario->meadows with created_at/id tie-breakers, uniform CASE_NOT_FOUND 404 anti-enumeration (foreign/ghost/mixed/foreign-artifact anchors, anchor-404 before capability-403), ready-only consumption with identical draft/rejected/missing signatures, review-capability audit gating, frozen deep-copied projection.
+- Verification: clean DB upgrade head d7e2a91c5b48 + alembic check; full suite 315 passed / 0 failed (-W error); lens_lanes 105; ruff/compileall PASS; scope/secret/diff-check/marker scans clean; changed set = lifecycle + app/analyses/lens_artifact_reads.py only.
+- Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); mainline merge permitted for candidate + this QA tip.
+- Evidence: docs/handoffs/READ_PATH_R2_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
