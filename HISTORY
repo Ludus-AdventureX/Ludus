@@ -2030,3 +2030,17 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Temporary .git/info/attributes 'HISTORY merge=union' was set for the merge sequence and fully removed afterwards.
 - No lens branch was handed to Mainline individually; main was never modified; no force push.
 - Secret policy honored: no credentials, keys, tokens, cookies, or connection strings read or recorded.
+
+
+## Archive Ways Post-CCR Refresh Candidate (r3) - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; Ways refresh candidate built and verified on codex/ways-five-lens-integration-r3; NOT merged to main; handed to dialogue 3 QA.
+- Role: Mainline Audit / Contract Integration Lead (Ways sequence Step 3).
+- base_main_sha: db23bbb48b6dc0d18c1aee0a8703430ff28bc226 (live ls-remote verified; contains CCR-Ways-01).
+- Composition: --no-ff merge of frozen codex/ways-five-lens-integration-r2 @ 69bbc5df55cc527bd1edaa2e37e65695938e97cc (sole five-lens product source, unmodified); conflicts confined to HEAD/HISTORY, resolved binary-safe append-only; dialogue 6's r2 worktree/branch untouched.
+- Byte verification vs 69bbc5d: strategic_lenses/** identical; tests/lens_lanes/** identical; fixtures/** identical; 69bbc5d is an ancestor of the candidate; zero overlap with models.py/types.py/migrations/packages/contracts/app/agents relative to main.
+- Verification (fresh, disposable PG16 @55432, removed afterwards): alembic upgrade -> d7e2a91c5b48 (head) + check clean; pytest tests + app/simulations/tests = 304 passed / 0 failed / 0 skipped (-W error; = post-CCR 199 baseline + 105 lens_lanes); lens_lanes standalone 105 passed; official generate_contracts.ps1 -Check full chain = CONTRACT_DRIFT_OK; ruff/compileall PASS; secret scan + git diff --check PASS.
+- Next: dialogue 3 independent QA on the exact refresh head; main merge only after that verdict plus live reads. Persistence remains locked until then; five single-lens branches stay frozen.
+- No credentials or secret values are recorded here.
