@@ -11,6 +11,7 @@ credentials.json
 
 # Repository-local tools
 .tools/
+.worktrees/
 
 # Python
 .venv/
