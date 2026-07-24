@@ -1,10 +1,13 @@
-# Work Log: idle
+# Work Log: active
 
-- Status: idle after building the Auth Security contract integration candidate.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Auth Security Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)`.
-- Candidate: codex/task-auth-security-contract-integration = ac084c7 (P2-001/P2-002 implementation, unmodified) + CCR-20260724-006 (login_rate_buckets migration c4a1f0b2d9e7, env.py metadata registration, AUTH_LOGIN_RATE_* placeholders); full acceptance PASS (118 passed + 1 xpassed; migration roundtrip/check clean; RATE_LIMIT_PROBE_OK); NOT merged to main.
-- Gate condition: main merge requires QA release verdict PASS on this combined HEAD plus a fresh live remote main read (this window's reads were 443-blocked).
-- Remote status: recorded in the lifecycle commit after the push attempt.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Mainline Audit / Contract Integration Lead (Auth Security final mainline release gate)
+- objective: Build the final Auth Security integration HEAD = merge of contract candidate 609a780cffb3184a44e185a6831d64a6b4ec301e (product, unchanged) + QA coverage codex/qa-mainline-258a94d @ aa8cda73641a4c1a76f86aaeaf2b49e9d981dc35 (QA gate tests for auth/task7/task12, handoffs, xfail removal); re-run full acceptance on the final HEAD; then live-read remote main (expect 258a94d), push and live-verify candidate and QA branches, ff-merge main, push, live re-read, publish AUTH_SECURITY_MAINLINE_UPDATE.
+- topology_note: aa8cda7 does NOT contain the candidate product tree (QA branch carries only QA-owned files on the 258a94d baseline; the tested combination existed as a worktree overlay). The exact tested combination is reconstructed here as a single auditable merge commit; merge-base of both sides is 258a94d so product changes arrive only from the candidate side and test/handoff changes only from the QA side.
+- branch: codex/task-auth-security-contract-integration
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- write_scope: merge commit; HEAD/HISTORY append-only resolution; main ff + push after all gates.
+- forbidden_scope: any product or test content edit beyond the merge itself; force-push; history rewrite; main merge before fresh live remote reads succeed.
+- qa_verdicts: AUTH_SECURITY_QA_VERDICT PASS; RELEASE_GATE_VERDICT (content) PASS; migration c4a1f0b2d9e7 PASS; 129 passed / 0 failed / 2 skipped (importorskip for absent task7/12 modules); P0=0 P1=0 P2=0; QA-TASK03-001 and QA-TASK03-002 CLOSED.
+- remote_precondition: QA push of aa8cda7 got a server ack (4f2e22f..aa8cda7) but no successful independent ls-remote re-read; candidate branch never remote-verified by QA. I must complete my own live reads (main + candidate + QA branch) before any main merge; no inherited readings.
+- secret_policy: no credentials recorded here.
