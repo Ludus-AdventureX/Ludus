@@ -1533,3 +1533,38 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Subsequent lanes must branch from main f5b43c9 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+## Archive Auth Security Hardening P2-001 P2-002 - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai). Completed: 2026-07-24 (Asia/Shanghai).
+- Role: Case/API/Data Security Owner.
+- Objective: P2-001 Postgres-backed login rate limiting + P2-002 per-request tokenVersion validation.
+- Base: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (local main == local origin/main; live remote re-read blocked by 443 at task start, retried at push time).
+- Branch: codex/task-auth-security-hardening; worktree decision-lab-auth-hardening.
+
+## Delivered
+
+- app/security/rate_limits.py (new): login_rate_buckets Core Table on module-local MetaData (canonical migration deferred to Contract Lead), SHA-256 digest bucket keys (no raw IP/email in store), minute-slice sliding window, atomic INSERT..ON CONFLICT increments, dual IP/account limits, REQUEST_RATE_LIMITED 429 with retryAfterSeconds only, fail-closed on any store failure, account-dimension reset on successful login, best-effort expired-slice cleanup that never widens the limit, ensure_login_rate_schema helper for pre-migration environments.
+- app/auth/routes.py: login meters the attempt before any credential work; success releases only the account dimension.
+- app/auth/config.py: AUTH_LOGIN_RATE_WINDOW_MINUTES / _IP_MAX_ATTEMPTS / _ACCOUNT_MAX_ATTEMPTS with safe defaults (15 min / 20 / 5).
+- app/auth/sessions.py: resolve_active_session rejects sessions whose token_version differs from the issuance value (ISSUED_TOKEN_VERSION=1; JWT claim set stays {sub, session_id, iat, exp} per the QA-locked contract; a bump is administrative invalidation).
+
+## Verification
+
+- Disposable-Postgres probe (decision-lab-G0/auth-hardening-probe/probe_auth_hardening.py, uncommitted): AUTH_HARDENING_PROBE_OK 27/27, covering token_version bump rejection with uniform 401, account limit trip incl. correct-password block while limited, success-reset then re-metering, IP limit across many accounts, missing-table fail-closed 429.
+- Full services/api pytest suite: 118 passed + 1 xpassed; the XPASS is exactly QA-TASK03-002 (strict=False xfail flipping green as designed); QA login tests are not throttled by default limits.
+- ruff check app: PASS. compileall: PASS. alembic upgrade head on the disposable database: PASS.
+- git diff --check: PASS. Changed paths: app/auth/{config,routes,sessions}.py, app/security/rate_limits.py, HEAD, HISTORY only.
+
+## Contract gap handed to Contract Lead
+
+- login_rate_buckets requires a canonical Alembic migration (exact DDL in the lane CONTRACT_CHANGE_REQUEST); until it lands, login fails CLOSED (429) where the table is missing. Integration order: migration first or together with this branch.
+
+## Known gaps
+
+- Client IP is taken from the direct connection; proxy-aware IP extraction is deferred and recorded as a risk.
+- Mutation/user+workspace burst limits and connector/model budgets from doc 22 are separate future slices.
+- No credentials or secret values are recorded here.
