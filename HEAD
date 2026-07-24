@@ -1,12 +1,12 @@
-# Work Log: idle
+# Work Log: CCR-SIM-02A run API contract adjudication
 
-- Status: idle; simulation repository/service r1 published to remote main and live-verified.
-- Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive Simulation Repository/Service R1 Main Publication - 2026-07-25 (Asia/Shanghai)`.
-- Remote main: 82b6180784caf3065a2f903144718dbff61ddacf + this archive commit (live ls-remote verified; tenant-scoped simulation repository/service + Addendum A1 contract adjudication on main; migration head unchanged a3f8c2d47e19).
-- Stage: Simulation Repository/Service Foundation Complete (post Canonical Simulation Graph Foundation).
-- Archive-only now: codex/ccr-sim-01-addendum-a1 (b28dda6), codex/task-simulation-repository-service-r1 (7844a16), codex/task-simulation-repository-service-r1-doc-refresh (9cc4e87), codex/qa-simulation-repository-service-r1 (a2cc987), codex/qa-simulation-repository-service-r1-contract-closure (f12bea6), codex/simulation-repository-service-integration-r1 (82b6180).
-- Unlocked: CCR-SIM-02 (routes/API contract; must keep both fail-closed stable errors score_constraint_operator_unsupported and strategy_edge_gating_unsupported) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Status: adjudication complete on codex/ccr-sim-02a-run-api-contract; contract frozen, awaiting prerequisite implementation lanes. TEXT-ONLY: no product code, migrations, contracts, or scripts touched.
+- Role: Contract/Mainline Lead - Simulation Run API Contract Owner.
+- Baseline: remote main 387041d40442faf16557b266ef3f844b7af8fb69 (live ls-remote verified at gate zero); migration head a3f8c2d47e19 (single head verified); main untouched by this lane.
+- Deliverables: docs/product-plan/docs/contract-changes/CCR-20260724-SIM-02A.md (normative) + docs/handoffs/CCR_SIM_02A_RUN_API_CONTRACT_HANDOFF.md (index).
+- Core verdicts: route_scope = RUN_CREATE_AND_REPLAY_ONLY (SIM-02B/03/04/05/06 deferred); profile_authority = PROFILE_PERSISTENCE_PREREQUISITE with public_post_run_blocked_by_profile = true; input_hash = ENGINE_HASH_FIX_REQUIRED with engine_ccr_required = true (CCR-ENG-02, ENGINE_VERSION bump); idempotency = GENERIC_IDEMPOTENCY_RECORDS with migration_required = true (forward revision over a3f8c2d47e19, never rewritten); non-convergence = persist + 409 SIMULATION_NOT_CONVERGED with simulationRunId details; capability matrix POST=contribute / GET=membership; POST behind CSRF + fail-closed per-(workspace,user) rate limit + budget guard SIMULATION_BUDGET_EXCEEDED.
+- Addendum A1 preserved verbatim: strategy_edge_gating_unsupported and score_constraint_operator_unsupported appear as literal envelope error codes (422); nothing implemented "on the way".
+- Error mapping is type/code-based only; SimulationAuthorizationError -> GRAPH_NOT_CONFIRMED 409 closes the prior P3; uniform CASE_NOT_FOUND 404 for every existence/anchor denial.
+- Next: Simulation/Graph Owner (Fable5) runs PREREQUISITE P1 (profile persistence) / P2 (engine hash CCR-ENG-02) / P3 (idempotency migration) from remote-verified main >= 387041d; then I1; Contract Lead I2; QA I3; Mainline Lead integrates.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
