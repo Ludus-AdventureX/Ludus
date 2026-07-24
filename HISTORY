@@ -2542,3 +2542,17 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verdict: RELEASE_CONTENT PASS; merge object = 9cc4e87 + this QA tip.
 - Evidence: docs/handoffs/SIM_REPOSITORY_SERVICE_R1_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Simulation Repository-Service R1 QA Contract Closure - 2026-07-25 (Asia/Shanghai)
+
+- Role: QA/Release Owner; QA GATE CLOSURE ONLY follow-up. Branch codex/qa-simulation-repository-service-r1-contract-closure, direct child of prior QA head a2cc9878d8444565b100a6ecd088d02ecc169edf (fresh clean worktree; no amend, no force push).
+- Hard gate first command: ls-remote live-verified all four refs exact (main 3ed23b9 / prior QA a2cc987 / product 9cc4e87 / Addendum A1 b28dda6); no BASELINE_STALE.
+- Gap closed: prior handoff reported only OPENAPI_SEMANTIC_DRIFT_OK; the official full TypeScript contract chain had not been run. This closure ran, from the closure worktree repo root, the official command `powershell -File scripts/generate_contracts.ps1 -Check` and obtained the official stdout token CONTRACT_DRIFT_OK (exit 0). No manual OpenAPI comparison substituted.
+- Environment: preset read-only toolchain only (main-checkout .tools\uv 0.11.30 and packages/contracts node_modules/.bin openapi-typescript 7.13.0 prepended to process PATH; worktree .venv as junction to preset venv, UV_NO_SYNC=1 + UV_OFFLINE=1; zero install, zero network, node_modules never copied or committed). Dependency-definition equivalence proven by identical blob OIDs for services/api/pyproject.toml (0f94168) and packages/contracts/package.json (1faea8d).
+- Contracts artifacts zero Git diff (openapi.json, src/types.gen.ts); git status shows no contracts changes (only untracked .contract-check/ regeneration evidence, not committed; known .gitignore literal-backtick-r-n quirk on that line recorded honestly, .gitignore untouched).
+- Byte/inheritance gate: services/api/app, services/api/tests, app/simulations/tests, services/api/migrations, packages/contracts, scripts, apps/web all byte-identical vs a2cc987 (diff empty); git diff --check clean; scope audit hits only docs/handoffs + HISTORY. Prior functional test evidence inherited by exact code/test byte identity: full 417 passed / 0 failed / 0 xfailed / 0 xpassed; lens_lanes 121.
+- Prior PASS marked: superseded for release gating by this contract-closure result. Findings unchanged: P0/P1/P2 = 0; P3 formal_authorization_rejected mapping deferred to CCR-SIM-02.
+- Final: RELEASE_CONTENT_VERDICT: PASS. Merge object unchanged = 9cc4e87 + a2cc987 (+ this closure head for the evidence chain). Mainline Lead must re-read remote main (still 3ed23b9) immediately before merge.
+- Evidence: docs/handoffs/SIM_REPOSITORY_SERVICE_R1_QA_CONTRACT_CLOSURE.md.
+- No credentials or secret values are recorded here.
