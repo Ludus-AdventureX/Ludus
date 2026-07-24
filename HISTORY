@@ -2383,3 +2383,14 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Stage: Canonical Simulation Graph Foundation Complete. Unlocked next: Simulation repository/service lane + CCR-SIM-02 (routes), branching from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED.
 - Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
 - No credentials or secret values are recorded here.
+
+## Simulation Repository/Service R1 Mainline Integration Kickoff - 2026-07-25 (Asia/Shanghai)
+
+- Role: Mainline Audit / Simulation Repository-Service Integration Lead.
+- Gate zero: git ls-remote origin refs/heads/main = 3ed23b92e0b2a1326518a6f550984abb02f11179 (matches authorized baseline); all five input refs live-verified exact (Addendum A1 b28dda67f9794d705e79ac45c2a1cf2458d7cf7b; product 9cc4e8736bf59a1761d5de4f38081faed0081b07; product parent 7844a1631c0747e2f39e2cbfb73088ed010c98ae; functional QA a2cc9878d8444565b100a6ecd088d02ecc169edf; QA closure f12bea6d464e980dc232b1d3fded92571e6838e0).
+- Ancestry proven: 9cc4e87^ = 7844a16; f12bea6^ = a2cc987; 3ed23b9 ancestor of 7844a16; 9cc4e87 ancestor of a2cc987. QA closure delta vs a2cc987 = HISTORY + docs/handoffs/SIM_REPOSITORY_SERVICE_R1_QA_CONTRACT_CLOSURE.md only. Addendum A1 merge-base with main = main itself; delta = HISTORY + docs/product-plan/docs/contract-changes/CCR-20260724-SIM-01-ADDENDUM-A1.md only.
+- New worktree decision-lab-sim-repo-svc-integration-r1 on fresh branch codex/simulation-repository-service-integration-r1 anchored exactly at 3ed23b9; no archived worktree reused.
+- Assembly plan: this kickoff lifecycle commit -> --no-ff merge Addendum A1 (independent contract adjudication chain) -> --no-ff merge QA closure f12bea6 (carries product -> functional QA -> contract closure chain) -> byte gates -> isolated disposable PG16 acceptance (expected exact full suite 417 passed / 0 failed / 0 xfailed / 0 xpassed with -W error; same-db lens_lanes 121) -> official generate_contracts.ps1 -Check (CONTRACT_DRIFT_OK required) -> static/security/scope audits -> acceptance archive -> ff-only publication to main.
+- Addendum A1 verdicts to preserve verbatim: UUID_IDENTITY_CONFIRMED (workspace_id, graph_version_id, id; ORDER BY id ASC); "=" fail-closed score_constraint_operator_unsupported; enabledEdgeIds fail-closed strategy_edge_gating_unsupported; app.types enum authority; future equality/edge-gating extension requires an independent engine CCR. None of these fail-closed behaviors may be implemented during integration.
+- No force-push, no amend, no rebase, no history rewrite, no cherry-pick duplication, no product/test modification in this lane.
+- No credentials or secret values are recorded here.

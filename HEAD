@@ -1,12 +1,16 @@
-# Work Log: idle
+# Work Log: simulation repository/service r1 mainline integration
 
-- Status: idle; CCR-SIM-01 published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive CCR-SIM-01 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 4c4b35f1aa5bf7cccc9be4376df0306e7514ec74 + this archive commit (live ls-remote verified; canonical simulation graph contract - 8 tables, 6 PG enums, wire schemas with evidence/claim/self-loop discipline at both wire and DB layers, 4 frozen-reference FKs - all on main; migration head a3f8c2d47e19).
-- Stage: Canonical Simulation Graph Foundation Complete.
-- Archive-only: all six SIM-01 product/QA branches (4d45391 / 1ff2cc9 / 49c0321 / 228dd5d / 9658e31 / 4c4b35f); the decision-lab-sim01-r2 worktree is retired.
-- Unlocked: Simulation repository/service lane + CCR-SIM-02 (routes) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Status: active; assembling integration candidate codex/simulation-repository-service-integration-r1.
+- Role: Mainline Audit / Simulation Repository-Service Integration Lead.
+- Baseline: remote main 3ed23b92e0b2a1326518a6f550984abb02f11179 (live ls-remote verified at kickoff).
+- Inputs (all live ls-remote verified exact):
+  - Addendum A1: codex/ccr-sim-01-addendum-a1 @ b28dda67f9794d705e79ac45c2a1cf2458d7cf7b (merge-base = main; delta = HISTORY + CCR-20260724-SIM-01-ADDENDUM-A1.md only).
+  - Product: codex/task-simulation-repository-service-r1-doc-refresh @ 9cc4e8736bf59a1761d5de4f38081faed0081b07 (parent 7844a1631c0747e2f39e2cbfb73088ed010c98ae, doc-only refresh).
+  - Functional QA: codex/qa-simulation-repository-service-r1 @ a2cc9878d8444565b100a6ecd088d02ecc169edf.
+  - QA contract closure: codex/qa-simulation-repository-service-r1-contract-closure @ f12bea6d464e980dc232b1d3fded92571e6838e0 (direct child of a2cc987; delta = HISTORY + closure handoff only).
+- Ancestry proven at kickoff: 3ed23b9 -> 7844a16 -> 9cc4e87 -> a2cc987 -> f12bea6 (rev-parse parent checks + merge-base --is-ancestor).
+- Release authorization: independent QA RELEASE_CONTENT_VERDICT PASS; P0/P1/P2 = 0/0/0; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK.
+- Plan: kickoff -> --no-ff merge Addendum A1 b28dda6 -> --no-ff merge QA closure f12bea6 -> byte gates -> isolated PG16 full acceptance (expect 417 / lens_lanes 121) -> official contract check -> static/scope audits -> acceptance archive -> ff-only publication.
+- No cherry-picks of 7844a16 / 9cc4e87 / a2cc987 (already ancestors of f12bea6); no product code changes during integration.
+- Migration head expected unchanged: a3f8c2d47e19.
 - Secret policy: do not record credentials here.
