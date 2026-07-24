@@ -1,11 +1,13 @@
-# Work Log: idle
+# Work Log: active
 
-- Status: idle; Auth Security published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Auth Security Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 946c825a8b865a7b161ef5b7241f0cb01478ee33 (contract candidate 609a780 product + QA coverage aa8cda7, reconstructed as one audited merge; live ls-remote verified).
-- P2-001 / P2-002: CLOSED on main. Login public-exposure gate LIFTED for environments migrated to c4a1f0b2d9e7; unmigrated environments stay fail-closed 429 by design.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 946c825).
-- Pending queue: Task 12 (b7060d5, QA PASS) and Task 7 (cce4d70, QA PASS) are next in line for integration; Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push; Ways-01 + simulation graph CCR adjudication is the next contract window.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Mainline Audit / Contract Integration Lead (Task 12 then Task 7 mainline integration, strict order)
+- objective: Build and verify the Task 12 integration candidate (merge codex/task-12-simulation-engine-r2 @ b7060d5 onto current main 2c43bff, run integration regression on the combined HEAD), then stack the Task 7 integration candidate on the Task-12-integrated state (merge full lifecycle tip 742d252; QA product point cce4d70; cce4d70..742d252 audited as HEAD-lifecycle-only, zero product drift). Publication order on network recovery: live-read main -> push/verify Task 12 candidate -> ff main -> push -> re-read -> push/verify Task 7 candidate -> ff main -> push -> re-read -> publish new main SHA and authorize Ways integration.
+- base_main_sha: 2c43bfffd847c2e2d5b523b93ae27d603897d7e7 (Auth Security publication; live-verified at publication time; this window's reads are 443-blocked - fresh reads MANDATORY before each main merge)
+- branches: codex/task-12-mainline-integration (from main), then codex/task-07-mainline-integration (from Task 12 tip)
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- write_scope: merge commits; HEAD/HISTORY append-only resolution; main ff + push after live verification.
+- forbidden_scope: any edit to app/simulations/** or app/agents/** content (must land byte-identical); QA-owned tests content; five lens branches (frozen, not merged this window); force-push.
+- qa_verdicts: Task 12 PASS (157/0/1, P0=P1=P2=0; QA acceptance tests already on main via aa8cda7); Task 7 PASS (137/0/1, P0=P1=P2=0; test_agent_runtime.py already on main).
+- notes: sibling branches are based on 258a94d, NOT fast-forwardable onto current main - integrated via --no-ff merges with expected lifecycle-only conflicts; regression re-run on each combined HEAD; the 2 skipped importorskip tests are expected to activate (task 12 first, then task 7).
+- secret_policy: no credentials recorded here.
