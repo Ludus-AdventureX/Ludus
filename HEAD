@@ -1,11 +1,47 @@
-# Work Log: idle
+# Work Log: in_progress
 
-- Status: idle; Ways five-lens integration published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Ways Five-Lens Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 8fd24518d12c9c9b103265542c8a019815c8f053 + this archive commit (live ls-remote verified; five-lens content byte-identical to frozen 69bbc5d; migration head d7e2a91c5b48).
-- Archive-only from now on: codex/ways-five-lens-integration-r2 (69bbc5d) and the five single-lens branches.
-- Unlocked: Ways persistence wiring slice (dialogue 6, from this new baseline); simulation graph-side CCR submission (dialogue 5). Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Ways Persistence Owner
+- status: in_progress
+- objective: >
+    Wire the StrategicLensArtifact write path on top of the CCR-20260724-Ways-01
+    canonical model (06c58cf, migration d7e2a91c5b48): server identity injection
+    from the frozen AnalysisRun row, rejection of model self-reported identity
+    fields, lens stage-output schema+behavior validation via the assembled
+    registry, reference resolution against worker-supplied frozen ledgers, and
+    Validation-driven draft -> ready/rejected status wiring with immutability.
+    Workspace/case/run tenancy is enforced with uniform not-found semantics.
+- base_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936
+- base_verification: >
+    First lane command was live `git ls-remote origin refs/heads/main` and
+    returned exactly 4de362835f728ab155fc197b9f11b9ac248f2936; new main contains
+    the frozen five-lens candidate (69bbc5d) and executed CCR-20260724-Ways-01.
+- branch: codex/ways-lens-persistence-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-persistence-r2
+- write_scope:
+    - services/api/app/strategic_lenses/repository.py (new; write path only)
+    - services/api/tests/lens_lanes/test_lens_persistence.py (staged; QA adjudicates)
+    - HEAD (this branch) and HISTORY (append-only)
+- forbidden_scope:
+    - StrategicLensArtifact model/schema redefinition; ConnectorStatus additions
+    - five lens behavior modules and adapters/registry semantics (consumed as-is)
+    - services/api/migrations/** (published; consumed), services/api/app/**/schemas.py
+    - AnalysisRun row mutation (strategic_lens_artifact_ids maintenance belongs to
+      the Run owner lane), Run/Report query surface, router mounting, Web UI
+- dependencies:
+    - canonical StrategicLensArtifact + enums (app.models/app.types @ 4de3628)
+    - assembled registry (app.strategic_lenses.registry.build_lens_registry)
+    - seam guards (app.agents.lenses.StrategicLensStageOutput.from_payload)
+- acceptance_commands:
+    - pytest tests/lens_lanes/test_lens_persistence.py (DB-backed, Postgres 55433)
+    - pytest tests app/simulations/tests (full regression)
+    - ruff + compileall over changed surfaces; scope/secret/diff-check audit
+    - alembic current == head on the QA database
+- known_initial_risks:
+    - Evidence/Claim ledger tables do not exist yet (Task 8 pending): reference
+      resolution is fail-closed against worker-supplied frozen ledger sets, with
+      DB-backed resolution to follow the evidence owner lane.
+    - GitHub 443 is intermittent; every remote claim requires a fresh ls-remote.
+- secret_policy: >
+    No credentials, API keys, tokens, cookies, connection strings, or .env
+    contents are read, echoed, logged, or committed.
