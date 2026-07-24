@@ -159,11 +159,17 @@ def build_qa_app():
     return app
 
 
-def qa_client() -> httpx.AsyncClient:
-    """Async client over the assembled app with a same-origin header."""
+def qa_client(client_ip: str | None = None) -> httpx.AsyncClient:
+    """Async client over the assembled app with a same-origin header.
 
+    Each client gets its own simulated source address by default so the
+    Postgres-backed per-IP login throttle (auth hardening lane) never couples
+    unrelated tests through a shared 127.0.0.1 budget.
+    """
+
+    address = client_ip or f"10.77.{uuid4().bytes[0]}.{uuid4().bytes[1]}"
     return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=build_qa_app()),
+        transport=httpx.ASGITransport(app=build_qa_app(), client=(address, 51234)),
         base_url=QA_ORIGIN,
         headers={"Origin": QA_ORIGIN},
     )

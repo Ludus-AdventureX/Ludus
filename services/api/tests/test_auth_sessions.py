@@ -94,17 +94,13 @@ async def test_expired_session_is_rejected_before_revocation() -> None:
         assert replay.json()["error"]["code"] == "SESSION_REVOKED_OR_EXPIRED"
 
 
-@pytest.mark.xfail(
-    reason=(
-        "QA-TASK03-002 (P2): plan 18 Task 3 Step 2 requires per-request "
-        "tokenVersion validation, but the delivered resolver checks only "
-        "revocation and expiry; disclosed in the implementation handoff as a "
-        "known risk. Routed to case_api_data; xfail flips when fixed."
-    ),
-    strict=False,
-)
 async def test_token_version_bump_invalidates_live_session() -> None:
-    """A-05 (deferred half): bumping token_version must reject old tokens."""
+    """A-05: bumping token_version must reject outstanding tokens.
+
+    Formerly the QA-TASK03-002 xfail; promoted to a formal green regression
+    when the auth security hardening lane shipped per-request tokenVersion
+    validation (commit 60ef51c, combined candidate 609a780).
+    """
 
     async with qa_client() as client:
         await register_user(client)
