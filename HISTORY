@@ -2342,3 +2342,32 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verification (fresh, disposable PG16 @55432, removed afterwards; executed against the exact candidate SHA via detached checkout in the tooled lead worktree): alembic heads = exactly a3f8c2d47e19; clean-DB upgrade / downgrade d7e2a91c5b48 / re-upgrade / alembic check all clean; orphan preflight probe NEGATIVE_CASE_OK + POSITIVE_CASE_OK with all 4 simulation_runs composite FKs pg_constraint-convalidated; Task 12 engine 28 passed; full pytest -W error (tests + app/simulations/tests) = 334 passed / 2 failed - exactly the two known QA-owned failures (exact-table set missing the 8 SIM tables; replay-test fixture must create graph/strategy/scenario/score rows before inserting simulation_runs) and nothing else regressed from the 336 Artifact IO baseline; ruff/compileall PASS; generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; scope/secret/diff-check/conflict-marker scans clean (single marker grep hit is the pre-existing prose in WAYS_R3_QA_HANDOFF.md).
 - Next: push + live branch verification + main re-read recorded below; dialogue 3 runs final QA on this refreshed exact head (updating the two QA-owned tests on its QA branch); publication then follows the standard live-read ff-only flow.
 - No credentials or secret values are recorded here.
+
+
+## Archive SIM-01 R2 Integration QA - 2026-07-24 (Asia/Shanghai)
+
+### Inherited integration-lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after assembling the refreshed SIM-01 integration candidate (r2).
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive SIM-01 Post-Artifact-IO Refresh Integration (r2) - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/ccr-sim-01-integration-r2 (frozen 4d45391 merged --no-ff onto main 3ab888a; product byte gates and Artifact IO anti-regression gates all exact; migration head a3f8c2d47e19; 334 passed + exactly the 2 known QA-owned failures; CONTRACT_DRIFT_OK); NOT merged to main.
+- Gate condition: dialogue 3 final QA on this refreshed exact head (QA branch updates the exact-table set and the replay fixture), then live-read ff-only publication by the lead.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA completion record
+
+- Role: QA/Release Owner; branch codex/qa-ccr-sim-01-integration-r2 from candidate 1ff2cc9e37e8c8c14c9f1758a311ceae13662e26 (hard gate: main 3ab888a / candidate / frozen source 4d45391 all live-verified exact).
+- Structure: base + frozen source + Artifact IO combination 3ee8e0a + SIM audit chain ad8f9d3/d05abd3 all ancestors; 5 SIM paths byte-identical to 4d45391; IO paths byte-identical to main; HISTORY pure-append 46/0; zero conflict markers.
+- QA fixes (tests/test_models.py): exact table set extended with the 8 canonical SIM tables (exactness kept); simulation replay fixture rebuilt on a full legal same-workspace reference stack (seed_simulation_reference_stack) satisfying all four composite FKs with the original numeric battery preserved.
+- New QA batteries: tests/test_sim01_graph_contract_qa.py (enum/PG-enum exactness, cross-workspace frozen-ref attacks, edge same-version discipline, graph-version confirmation rules incl. no confirmed partial unique, scenario lens tenancy, score hygiene) and tests/test_sim01_wire_schemas_qa.py (extra=forbid, riskTolerance rejection, damping/multiplier/shift bounds, node/edge value bounds, graph version uniqueness/reference resolution).
+- Migration lifecycle on clean qa_sim01: single head a3f8c2d47e19; up/down/up + check clean; orphan preflight negative (RuntimeError abort) and positive proven; downgrade removes 8 tables / 6 enums / 4 FKs, keeps origin_mode; 4 sim FKs convalidated=true.
+- Fresh counts: full 374 passed / 0 failed / 4 xfailed (-W error) = owner 336 after fixes + 38 new QA green + 4 xfail probes; same-db lens_lanes after full suite 121; Task 12 engine 28; ruff/compileall PASS; OpenAPI semantic drift OK; scope/secret/diff-check clean.
+- Findings: QA-SIM01-001/002/003 (P2, routed to sim graph contract lane): wire evidence-discipline gaps (supported-without-evidence; confirmed-edge-without-claims/all-refs-empty) and missing self-loop rejection at both DB and wire; tracked as strict=False xfail probes.
+- Request-text staleness recorded: canonical enums are the Factor* family and ConstraintComparison has five symbols incl '=' per accepted CCR and 06-data-model; QA asserted the canonical set.
+- Verdict: RELEASE_CONTENT PASS; mainline merge permitted for candidate + this QA tip.
+- Evidence: docs/handoffs/SIM_01_R2_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
