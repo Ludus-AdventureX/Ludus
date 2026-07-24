@@ -1,10 +1,17 @@
 # Work Log: idle
 
-- Status: idle; Task 3 published to remote main and live-verified.
+- Status: idle after Task 12 engine re-application onto new mainline (r2).
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 91a0d67aa71f4bd8e01057635d7ac7947051b57b (Task 3 content tip f95fda3 + publication lifecycle records; live ls-remote verified).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 91a0d67); the old freeze baseline 2396206 is superseded.
-- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Last archive entry: `Archive Task 12 Engine Re-Application onto New Mainline (r2) - 2026-07-24 (Asia/Shanghai)`.
+- Role: Simulation/Graph Owner.
+- Branch: codex/task-12-simulation-engine-r2 (base main SHA 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae).
+- Task 12 status: verified engine slice (domain/engine/sensitivity/graph_builder + 28 owner
+  tests) re-applied byte-identical from old candidate fc36b33; pytest/ruff/compileall all PASS.
+  No canonical schema/migration/API/generated-contract change.
+- Deferred (needs Contract Lead CCR via conversation 1): graph-side wire types, migration
+  0005, persistence, API routes, Task 13 web simulation UI.
+- Exposure constraint remains: login endpoint must not be publicly exposed until P2-001
+  (Postgres-backed login rate limiting, case_api_data) lands; P2-002 xfail remains tracked.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
+  replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

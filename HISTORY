@@ -1533,3 +1533,47 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Subsequent lanes must branch from main f5b43c9 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 12 Engine Re-Application onto New Mainline (r2) - 2026-07-24 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-24 (Asia/Shanghai).
+- Completed: 2026-07-24 (Asia/Shanghai).
+- Status: completed.
+- Role: Simulation/Graph Owner.
+- Objective: re-apply the verified contract-clean Task 12 deterministic simulation engine
+  slice from old candidate fc36b33 (codex/task-12-simulation-engine) onto the new mainline
+  baseline, per Mainline Lead instruction; no rewrite, no canonical change.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (== local main == origin/main
+  tracking ref == Lead-provided expected baseline; live ls-remote of main was network-blocked
+  at task start and is re-attempted at push time).
+- Branch: codex/task-12-simulation-engine-r2
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-simulation-48h-r2
+
+## Migration method
+
+- Verified zero diff between old freeze 2396206 and new baseline 258a94df on all engine
+  dependencies (services/api/app/types.py, app/contracts/schemas.py, app/simulations/**).
+- git checkout fc36b33 -- {domain,engine,graph_builder,sensitivity}.py +
+  tests/test_simulation_engine.py; byte-identical to the old verified candidate
+  (git diff fc36b33 -- services/api/app/simulations is empty).
+- Old branch/worktree left untouched; old HEAD/HISTORY records were NOT carried over.
+- No graph wire types, migration, or API routes were added; those remain a CCR for
+  conversation 1 (Contract Lead) before any canonical work starts.
+
+## Validation (main-worktree venv Python 3.12.7 + pytest 9.1.1; no new environment)
+
+- pytest app/simulations/tests -q: PASS (28 passed; includes determinism, inputHash,
+  positive/negative edges, delay, clipping/bounds, converged/max_steps/saturated/invalid,
+  hard constraints, spherical-robot flip, formal/experimental authorization).
+- ruff check app/simulations: PASS (All checks passed).
+- python -m compileall app/simulations: PASS (exit 0).
+- Changed-path/owner-scope audit: only HEAD/HISTORY + services/api/app/simulations/** changed.
+
+## Remaining risk / not verified
+
+- Live remote reads (fetch/ls-remote) were blocked by the local network at task start;
+  push and remote branch SHA verification results are recorded in the handoff.
+- Persistence/migration/routes/web UI remain deferred pending Contract Lead CCR.
+- Secret policy: no credentials, tokens, keys, or .env values are recorded.
