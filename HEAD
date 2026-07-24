@@ -1,21 +1,18 @@
 # Work Log: idle
 
-- Status: idle after Simulation repository/service implementation (r1).
+- Status: idle after Simulation repository/service doc refresh (DOC-ONLY follow-up).
 - Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive Simulation Repository/Service Implementation (r1) - 2026-07-25 (Asia/Shanghai)`.
+- Last archive entry: `Archive Simulation Repository/Service Doc Refresh - 2026-07-25 (Asia/Shanghai)`.
 - Role: Simulation/Graph Owner (Fable5 throughout).
-- Branch: codex/task-simulation-repository-service-r1 (base main SHA 3ed23b92e0b2a1326518a6f550984abb02f11179; migration head a3f8c2d47e19 unchanged).
-- Delivered: tenant-scoped SimulationInputRepository, deterministic ORM->Task 12 domain
-  assembly, SimulationRunService (compute-then-insert, double authorization gate, canonical
-  inputHash preserved, uniform CASE_NOT_FOUND scope denial), canonical enum import switch in
-  domain.py, and 24 owner DB tests. Validation: 52 owner tests, 402 mainline (-W error),
-  121 lens_lanes, ruff/compileall clean, alembic heads/upgrade/check clean, OpenAPI
-  semantically equal to committed contract; TS regeneration NOT_RUN (tool unavailable
-  without new dependency install) - recorded for QA.
-- Contract dependencies: StrategyVersion.enabledEdgeIds engine semantics; ConstraintComparison
-  EQ "=" engine semantics (both fail fast with stable codes; future CCR).
-- Next: independent QA by 对话 3; after QA PASS, a mainline integration candidate is created.
-  No direct mainline handoff from this lane.
+- Branch: codex/task-simulation-repository-service-r1-doc-refresh, direct child of frozen
+  product parent 7844a1631c0747e2f39e2cbfb73088ed010c98ae (parent branch untouched).
+- Delivered: domain.py module docstring correction only (stale "graph-side wire types do
+  not yet exist" claim removed; canonical schema/enum authority and fail-closed semantics
+  stated accurately) + handoff doc. Zero executable change proven by
+  DOMAIN_EXECUTABLE_AST_EQUIVALENT and a 12-file git-blob byte gate; 52/402/121 test
+  baselines unchanged; ruff/compileall/diff-check clean; packages/contracts zero-diff.
+- Addendum A1 (b28dda6) consumed read-only; its five rulings preserved verbatim.
+- Next: independent QA; Mainline Lead assembles integration wave.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
   replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

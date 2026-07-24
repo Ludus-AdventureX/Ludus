@@ -2458,3 +2458,50 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
   ordering is anchored on the unique primary key (documented in assembly).
 - No API routes/generated-contract exposure; that is CCR-SIM-02.
 - Secret policy: no credentials, tokens, keys, or .env values are recorded.
+
+
+## Archive Simulation Repository/Service Doc Refresh - 2026-07-25 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-25 (Asia/Shanghai).
+- Completed: 2026-07-25 (Asia/Shanghai).
+- Status: completed.
+- Role: Simulation/Graph Owner — Repository/Service Documentation Refresh (Fable5 throughout).
+- Task type: DOC-ONLY follow-up; zero behavior/contract/test-semantics change.
+- Parent (frozen product): 7844a1631c0747e2f39e2cbfb73088ed010c98ae on
+  codex/task-simulation-repository-service-r1 (not moved, not amended, not force-pushed).
+- Branch: codex/task-simulation-repository-service-r1-doc-refresh (direct child of 7844a16).
+- Addendum A1 read-only dependency: codex/ccr-sim-01-addendum-a1 @ b28dda67f9794d705e79ac45
+  c2a1cf2458d7cf7b — not merged, not cherry-picked, not modified.
+- Remote main at start: 3ed23b92e0b2a1326518a6f550984abb02f11179 (live ls-remote, exact).
+
+## Changes
+
+- services/api/app/simulations/domain.py: module docstring only — removed the stale claim
+  that graph-side wire types "do not yet exist"; now states the canonical schemas live in
+  app.simulations.schemas since CCR-20260724-SIM-01, domain dataclasses are engine-internal
+  (not ORM/wire, no I/O) and assembled by app.simulations.assembly, canonical enum
+  authority is app.types (7 enums incl. Controllability/EvidenceStatus aliases),
+  ElementStatus/Normalization/Comparison stay internal, "=" and enabledEdgeIds stay
+  fail-closed with their stable codes.
+- docs/handoffs/SIM_REPOSITORY_SERVICE_DOC_REFRESH_HANDOFF.md: handoff document.
+- Addendum A1 five rulings preserved verbatim (UUID identity; "=" fail-closed;
+  enabledEdgeIds fail-closed; import-alias enum authority; zero schema/contract change).
+
+## Validation
+
+- DOMAIN_EXECUTABLE_AST_EQUIVALENT: PASS (module-docstring-stripped ast.dump equality
+  between 7844a16 and the new tree).
+- Byte gate via git blob OIDs vs 7844a16: PASS for repository.py, assembly.py, service.py,
+  errors.py, engine.py, schemas.py, test_simulation_repository_service.py, types.py,
+  models.py, migration a3f8c2d47e19, packages/contracts/openapi.json, types.gen.ts.
+- git diff 7844a16..worktree --name-only: exactly domain.py (before lifecycle/handoff adds).
+- Stale-statement scan "graph-side wire types do not yet exist": 0 hits.
+- pytest app/simulations/tests -q: 52 passed. pytest tests app/simulations/tests -q
+  -W error: 402 passed. pytest tests/lens_lanes -q: 121 passed.
+- ruff check services/api: PASS. compileall: PASS. git diff --check: PASS.
+- packages/contracts/**: zero git diff; generate_contracts TS substep NOT_RUN
+  (openapi-typescript unavailable without new dependency install); byte gate proves zero
+  contract change; full chain closes in independent QA.
+- Scope audit: only domain.py + handoff doc + HEAD/HISTORY. Secret scan: clean.
+- Secret policy: no credentials, tokens, keys, or .env values are recorded.

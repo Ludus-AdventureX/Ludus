@@ -1,19 +1,28 @@
 """Internal domain value objects for the deterministic causal simulation engine.
 
-These are *engine-internal* immutable value objects, not the canonical wire contract.
-The canonical wire schema lives in ``app.simulations.schemas`` (Contract Lead owned) and
-currently only defines the ``SimulationRun`` replay envelope. The graph-side wire types
-(GraphVersion / CausalNode / CausalEdge / StrategyVersion / ScenarioVersion /
-ScoreDefinition / OptionOutcomeMapping / RiskWeight / ConstraintRule / GraphBranch) do
-not yet exist in the frozen canonical contract, so the pure engine operates on the frozen
-dataclasses below. They are intentionally decoupled from persistence and API surface:
+The canonical graph wire schemas (GraphVersion / CausalNode / CausalEdge /
+StrategyVersion / ScenarioVersion / ScoreDefinition / OptionOutcomeMapping / RiskWeight /
+ConstraintRule / GraphBranch) exist on main since CCR-20260724-SIM-01 and live in
+``app.simulations.schemas``. The dataclasses below are a separate, engine-internal layer:
 
-* No I/O, no database, no framework imports — keeps the engine a deterministic pure
-  function per ``09-simulation-engine.md`` and ``26`` invariants.
-* Canonical enums (``NodeType``, ``SimulationMode``, ``SimulationConvergenceStatus``,
-  ``OriginMode``) are reused from ``app.types``; only the not-yet-canonical graph enums
-  (polarity / element status / normalization / controllability / evidence status) are
-  defined here and are flagged for a future CCR before they become wire types.
+* They are *engine-internal* immutable value objects — NOT ORM rows and NOT wire DTOs.
+  They perform no I/O and import no database/framework code, keeping the engine a
+  deterministic pure function per ``09-simulation-engine.md`` and ``26`` invariants.
+* They are assembled deterministically by the assembly layer
+  (``app.simulations.assembly``) from already-validated canonical persistence/wire data;
+  callers never hand-build them from untrusted input.
+* Canonical enum authority is ``app.types``: ``NodeType``, ``SimulationMode``,
+  ``SimulationConvergenceStatus``, ``EdgePolarity``, ``GraphVersionStatus``,
+  ``FactorControllability`` (imported as ``Controllability``) and
+  ``FactorEvidenceStatus`` (imported as ``EvidenceStatus``) — pure import aliases,
+  never parallel enums.
+* ``ElementStatus``, ``Normalization`` and ``Comparison`` remain engine-internal.
+* ``Comparison`` is the currently executable operator subset (``>``, ``>=``, ``<``,
+  ``<=``). The canonical ``ConstraintComparison`` additionally defines ``=``, which the
+  engine does NOT execute; the assembly layer fails closed with
+  ``score_constraint_operator_unsupported``.
+* Strategy edge gating is NOT implemented: non-empty ``enabledEdgeIds`` fail closed with
+  ``strategy_edge_gating_unsupported``.
 """
 
 from __future__ import annotations
