@@ -621,8 +621,22 @@ async def test_run_level_parameters_each_change_input_hash(session) -> None:
     service = SimulationRunService(session)
     baseline = await service.run_and_record(world.context, request_for(world))
     hashes = {baseline.input_hash}
+
+    # SIM-02A P1: riskTolerance is no longer a request field. The only way a
+    # caller moves it is by selecting a different frozen profile version; the
+    # server-resolved value is engine input, so the hash must move through the
+    # FULL service path.
+    await SimulationInputRepository(session).insert_decision_maker_profile(
+        workspace_id=world.workspace_id,
+        profile_id=world.profile_id,
+        version=2,
+        user_id=world.user_id,
+        display_name="qa rt v2",
+        preference_weights={"traction": 0.7, "cash": 0.3},
+        risk_tolerance=0.61,
+    )
     for overrides in (
-        {"risk_tolerance": 0.61},
+        {"decision_maker_profile_version": 2},  # frozen riskTolerance 0.5 -> 0.61
         {"epsilon": 0.002},
         {"max_steps": 17},
     ):
@@ -632,21 +646,22 @@ async def test_run_level_parameters_each_change_input_hash(session) -> None:
         assert view.input_hash not in hashes, f"{overrides} must change the inputHash"
         hashes.add(view.input_hash)
 
-    # Frozen Task 12 rule (engine.compute_input_hash): the hash covers
-    # engineVersion/mode/epsilon/maxSteps/riskTolerance/graph/strategy/scenario/
-    # scoreDefinition/nodeOverrides. Decision-maker profile id/version are run
-    # METADATA outside the hash by contract - their influence enters only via
-    # the frozen riskTolerance value - so they must NOT change the hash.
+    # SIM-02A P1: ghost profile version / ghost profile id are no longer silent
+    # metadata - the frozen reference must resolve, so both collapse into the
+    # uniform 404 with zero persisted rows for the failed attempts.
+    persisted_before = await scoped_run_count(session, world)
+    signatures = set()
     for overrides in (
-        {"decision_maker_profile_version": 2},
+        {"decision_maker_profile_version": 99},
         {"decision_maker_profile_id": uuid4()},
     ):
-        view = await service.run_and_record(
-            world.context, request_for(world, **overrides)
+        signatures.add(
+            await _expect_uniform_404(
+                service, world.context, request_for(world, **overrides)
+            )
         )
-        assert view.input_hash == baseline.input_hash, (
-            f"{overrides} is contract-excluded metadata and must not change the hash"
-        )
+    assert signatures == {NOT_FOUND_SIGNATURE}
+    assert await scoped_run_count(session, world) == persisted_before
 
 
 # ---------------------------------------------------------------------------
