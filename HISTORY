@@ -1533,3 +1533,30 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Subsequent lanes must branch from main f5b43c9 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+## Archive Pre-Mortem Lens R2 Implementation - 2026-07-24 (Asia/Shanghai)
+
+- Role: Critic / Pre-Mortem Specialist (Lens L2, R2). Trigger: START_LENS_IMPLEMENTATION_R2 per LENS_ASSIGNMENT_R2 (conversation 6). Status: completed.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (live ls-remote verified; fast-forward descendant of ab5fd330, 27 commits, no history rewrite).
+- branch: codex/lens-pre-mortem-r2; worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-premortem-r2.
+- implementation_commit: bd84b54e4314c15e335fd1c30b1ef748e23f5cb3 "feat: add pre-mortem lens behavior gate and spherical-robot fixtures".
+- Changed paths (all inside lens owner scope; no shared schema/manifest/API/migration/Charter/other-lens/QA-test writes):
+  - services/api/app/strategic_lenses/__init__.py (minimal package init)
+  - services/api/app/strategic_lenses/pre_mortem.py (behavior gate + fixture self-check CLI)
+  - fixtures/spherical-robot/expected/strategic-lenses/pre_mortem.json
+  - fixtures/spherical-robot/negative/strategic-lenses/pre_mortem_missing_top_risk_control.json
+  - HEAD (this lane's lifecycle record)
+- Behavior gates implemented (structured blocker codes for Validation consumption): PM_LENS_TYPE/PM_PHASE envelope; PM_MODEL_SELF_REPORTED_IDENTITY (server-owned field rejection); PM_REFERENCES/PM_UNGROUNDED/PM_EVIDENCE_ASSUMPTION_OVERLAP/PM_UNKNOWN_EVIDENCE_ID/PM_UNKNOWN_ASSUMPTION_ID (cause/evidence/assumption discipline, optional frozen-ledger resolution); PM_HORIZON/PM_FAILURE_STATEMENT/PM_PERSPECTIVE_SET/PM_PERSPECTIVE_COVERAGE (three perspectives declared and actually used); PM_CAUSE_COUNT >=5, PM_CAUSE_ID uniqueness, PM_LABEL_ONLY_CAUSE, PM_NO_DOWNSTREAM, PM_RISK_ARITHMETIC (riskScore==likelihood*impact), PM_PROBABILITY_SMUGGLING (ordinals, not probabilities); topRisks exactly 3 with unique ranks/causes, PM_TOP_RISK_CONTROL_MISSING/_DUPLICATED (prevention != contingency, non-blank detection indicator), PM_TOP_RISK_NOT_HIGHEST (tie-tolerant highest-riskScore selection); PM_VERDICT/PM_VERDICT_RATIONALE, PM_MISSING_EVIDENCE_LIST (validate_first requires missing info), PM_FATAL_CAUSE_AVERAGED_AWAY (impact-5 uncontrollable cause blocks 'continue'; modify/abandon/validate_first stay open, preserving abstain compatibility).
+- Verification (all run fresh on this change, repo .venv Python 3.12.7):
+  - python -m compileall services/api/app/strategic_lenses -> PASS (exit 0)
+  - python -m ruff check services/api/app/strategic_lenses -> PASS ("All checks passed!")
+  - python -m app.strategic_lenses.pre_mortem <expected> --negative <negative> -> expected PASS; negative FAIL exactly on PM_TOP_RISK_CONTROL_MISSING + PM_TOP_RISK_CONTROL_DUPLICATED (exit 0)
+  - jsonschema Draft202012 structural validation against method-packs/.../strategic-lens-output.schema.json -> expected 0 errors, negative 0 errors (negative is schema-valid by design; fails only the behavior gate)
+  - 7 behavior probes (fatal-uncontrollable continue, evidence/assumption overlap, underranked top risk, validate_first without missing info, self-reported identity, perspective mutation pass/fail pair) -> all hit the exact expected blocker codes
+  - pytest tests/test_models.py tests/test_method_pack.py -> 26 passed; 16 ERROR all at fixture setup engine.connect() because local Postgres is not running (environment-limited, pre-existing, unrelated to this change; no DB container was started per environment policy)
+  - git diff --cached --check -> clean; changed-path audit -> 5 files, all in owner scope
+- Not verified / remaining risks: DB-backed suites not run (no local Postgres); shared harness wiring (persistence, reference resolution against frozen Run ledger, Validation orchestration) is owned by Ways/Agent Pipeline + Contract Lead and intentionally not implemented here; strategic_lenses/__init__.py may need trivial merge with sibling lens branches (kept minimal on purpose); Counterparty-before-Pre-Mortem ordering is enforced by the worker pipeline owner, not this module.
+- Contract change requested: NO. No gaps found in the compiled pre_mortem schema branch for the assigned behaviors.
+- Remote publication: push attempt and live verification recorded in the lifecycle commit that follows the push step.
+- Secret policy honored: no credentials, keys, tokens, cookies, or connection strings read or recorded; fixtures contain only public demo-safe spherical-robot content.
