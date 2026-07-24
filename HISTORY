@@ -2256,3 +2256,29 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Combined semantic probes 5/5 OK: draft invisible to ready-only reads; draft->ready visible; draft->rejected hidden from consumption but visible to review-capability audit; foreign workspace/case/run uniformly 404 and non-enumerable; persisted artifact id stably readable under the exact three-level anchors.
 - Next: push + live branch verification + main re-read recorded below; dialogue 3 runs exact-head QA on this candidate; main merge only after that verdict via the standard live-read publication flow.
 - No credentials or secret values are recorded here.
+
+
+## Archive Lens Artifact IO Integration QA - 2026-07-24 (Asia/Shanghai)
+
+### Inherited integration-lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after assembling the lens artifact IO integration candidate (r1).
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Lens Artifact IO Integration (r1) - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/lens-artifact-io-integration-r1 (persistence QA head b5890f4 + read-path QA head b44ec92 assembled --no-ff on main 4de3628; byte gates exact; 331 passed / 121 lens_lanes / probes 5/5; CONTRACT_DRIFT_OK; migration head d7e2a91c5b48); NOT merged to main.
+- Gate condition: dialogue 3 exact-head QA on this candidate, then live-read publication by the lead; SIM-01 candidate 4d45391 remains separate and unmixed.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA completion record
+
+- Role: QA/Release Owner; branch codex/qa-lens-artifact-io-integration-r1 from candidate 239bb7de7fde967aae31dd6e99e5580f6219c4db (hard gate: ls-remote main = 4de3628 exact after 443 retries; candidate ref exact).
+- Structure: base + four QA'd points (009e0df/b5890f4/2f0fe40/b44ec92) all ancestors; SIM-01 4d45391 excluded; assembly persistence->read path; four byte gates empty; zero-change zones empty; HISTORY pure-append 172/0; zero conflict markers.
+- Isolation special: reproduced the disclosed 6-failure shape on a shared dirty DB; root cause = unscoped global artifact count in QA-owned test_lens_persistence.py; fixed by workspace-scoped counting (7 call sites, cross-workspace case now asserts both workspaces); proven on dirty DB, consecutive same-DB runs, reordered batches, and a fresh clean DB - no business-table truncation used.
+- New permanent QA: tests/test_lens_artifact_io_semantics.py (5 combined write->read semantics tests).
+- Fresh results: clean DB head d7e2a91c5b48 + check clean; full 336 passed (candidate tree alone 331 = claim); lens_lanes 121; persistence 16; read-path 11; io semantics 5; ruff/compileall PASS; OpenAPI semantic drift OK; scope/secret/diff-check clean.
+- Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); QA-WAYS-PERSIST-001 remains CLOSED; mainline merge permitted for candidate + this QA tip.
+- Evidence: docs/handoffs/LENS_ARTIFACT_IO_INTEGRATION_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.

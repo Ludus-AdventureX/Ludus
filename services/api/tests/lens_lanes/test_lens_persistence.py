@@ -147,9 +147,18 @@ async def _seed_run(
     ).scalar_one()
 
 
-async def _artifact_count(connection: AsyncConnection) -> int:
+async def _artifact_count(connection: AsyncConnection, workspace_id) -> int:
+    # Scoped to the test's own workspace: absolute global counts break the
+    # moment any committed-data test (e.g. a real concurrency race) has run
+    # against the same database. Every caller seeds a unique workspace, so a
+    # workspace-scoped count expresses exactly the intended invariant while
+    # staying immune to leftovers from earlier suites (QA isolation fix).
     return (
-        await connection.execute(select(func.count()).select_from(StrategicLensArtifact))
+        await connection.execute(
+            select(func.count())
+            .select_from(StrategicLensArtifact)
+            .where(StrategicLensArtifact.workspace_id == workspace_id)
+        )
     ).scalar_one()
 
 
@@ -223,7 +232,7 @@ async def test_persist_is_idempotent_for_identical_content(
     )
     assert second.created is False
     assert second.strategic_lens_artifact_id == first.strategic_lens_artifact_id
-    assert await _artifact_count(db_connection) == 1
+    assert await _artifact_count(db_connection, workspace_id) == 1
 
 
 @pytest.mark.asyncio
@@ -245,7 +254,7 @@ async def test_self_reported_identity_fields_are_rejected_before_write(
             payload=payload,
             ledger=_ledger_for(_payload()),
         )
-    assert await _artifact_count(db_connection) == 0
+    assert await _artifact_count(db_connection, workspace_id) == 0
 
 
 @pytest.mark.asyncio
@@ -267,7 +276,7 @@ async def test_behavior_gate_failure_persists_nothing(
             ledger=_ledger_for(negative),
         )
     assert "PM_TOP_RISK_CONTROL_MISSING" in excinfo.value.reason_codes
-    assert await _artifact_count(db_connection) == 0
+    assert await _artifact_count(db_connection, workspace_id) == 0
 
 
 @pytest.mark.asyncio
@@ -296,7 +305,7 @@ async def test_unresolved_frozen_reference_fails_closed(
             payload=payload,
             ledger=incomplete,
         )
-    assert await _artifact_count(db_connection) == 0
+    assert await _artifact_count(db_connection, workspace_id) == 0
 
 
 @pytest.mark.asyncio
@@ -317,7 +326,9 @@ async def test_cross_workspace_run_is_uniform_not_found(
             payload=payload,
             ledger=_ledger_for(payload),
         )
-    assert await _artifact_count(db_connection) == 0
+    # neither the attacker's workspace nor the anchor workspace gained a row
+    assert await _artifact_count(db_connection, workspace_a) == 0
+    assert await _artifact_count(db_connection, workspace_b) == 0
 
 
 @pytest.mark.asyncio
@@ -462,7 +473,7 @@ async def test_rejected_verdict_keeps_audit_row(
         accepted=False,
     )
     assert status is StrategicLensArtifactStatus.REJECTED
-    assert await _artifact_count(db_connection) == 1
+    assert await _artifact_count(db_connection, workspace_id) == 1
     row = (
         await db_connection.execute(
             select(StrategicLensArtifact.validation_accepted_at).where(
