@@ -27,6 +27,7 @@ from .domain import (
     GraphVersionStatus,
     Normalization,
     OptionScore,
+    ProfileFingerprint,
     ScenarioVersion,
     ScoreDefinition,
     SimulationAuthorizationError,
@@ -35,7 +36,9 @@ from .domain import (
     StrategyVersion,
 )
 
-ENGINE_VERSION = "sim-engine-1.0.0"
+# CCR-20260724-ENG-02: minor bump — the replay-identity contract gains the frozen
+# profile block below; numeric propagation/scoring/convergence are UNCHANGED.
+ENGINE_VERSION = "sim-engine-1.1.0"
 
 _STRATEGY_NODE_TYPES = frozenset({NodeType.DECISION, NodeType.LEVER})
 _TIE_EPSILON = 1e-9
@@ -317,8 +320,22 @@ def compute_input_hash(
     node_overrides: dict[str, float],
     epsilon: float,
     max_steps: int,
+    *,
+    profile: ProfileFingerprint | None = None,
 ) -> str:
-    """SHA-256 over the canonical JSON of every frozen input; replay-exact only."""
+    """SHA-256 over the canonical JSON of every frozen input; replay-exact only.
+
+    CCR-ENG-02: when a verified :class:`ProfileFingerprint` is supplied (the service
+    ALWAYS supplies it for every persisted run), the payload gains exactly one nested
+    top-level ``profile`` object; ``riskTolerance`` stays a separate top-level key
+    with unchanged Task 12 semantics. Bare dicts are rejected: the fingerprint must
+    be the assembly-verified value object, never caller-constructed data.
+    """
+
+    if profile is not None and not isinstance(profile, ProfileFingerprint):
+        raise SimulationInputError(
+            "profile must be the assembly-verified ProfileFingerprint value object"
+        )
 
     payload = {
         "engineVersion": ENGINE_VERSION,
@@ -338,6 +355,12 @@ def compute_input_hash(
         "scoreDefinition": _score_fingerprint(score_definition),
         "nodeOverrides": {k: _round_floats(v) for k, v in sorted(node_overrides.items())},
     }
+    if profile is not None:
+        payload["profile"] = {
+            "id": profile.id,
+            "version": profile.version,
+            "contentHash": profile.content_hash,
+        }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return "sha256:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -352,6 +375,8 @@ def run_simulation(
     node_overrides: dict[str, float] | None = None,
     epsilon: float = 0.001,
     max_steps: int = 12,
+    *,
+    profile: ProfileFingerprint | None = None,
 ) -> SimulationResult:
     """Run the deterministic propagation and produce an immutable :class:`SimulationResult`."""
 
@@ -372,7 +397,8 @@ def run_simulation(
     max_delay = max((edge.delay_steps for edge in edges), default=0)
 
     input_hash = compute_input_hash(
-        graph, strategy, scenario, score_definition, risk_tolerance, mode, overrides, epsilon, max_steps
+        graph, strategy, scenario, score_definition, risk_tolerance, mode, overrides, epsilon, max_steps,
+        profile=profile,
     )
 
     # t = 0 initialization.

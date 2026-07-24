@@ -1,28 +1,31 @@
 # Work Log: idle
 
-- Status: idle after CCR-SIM-02A prerequisites P1 + P3 implementation (r1); ready_for_qa=YES.
+- Status: idle after CCR-ENG-02 P2 profile-aware input hash implementation (r1); ready_for_independent_qa=YES.
 - Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive CCR-SIM-02A Prerequisite P1+P3 Implementation (r1) - 2026-07-25 (Asia/Shanghai)`.
+- Last archive entry: `Archive CCR-ENG-02 Profile-Aware Input Hash Implementation (r1) - 2026-07-25 (Asia/Shanghai)`.
 - Role: Simulation/Graph Owner (Fable5 throughout).
-- Branch: codex/sim-02a-profile-idempotency-r1 (base main SHA 387041d40442faf16557b266ef3f844b7af8fb69;
-  contract codex/ccr-sim-02a-run-api-contract @ 0289b2e consumed read-only; migration head
-  a3f8c2d47e19 untouched -> new single head b2c7e9d4a1f6).
-- Delivered: immutable decision_maker_profiles (UNIQUE(workspace_id, profile_id, version),
-  server-side canonical-JSON content_hash, append-only, no update/delete surface), generic
-  idempotency_records persistence schema (UNIQUE(workspace_id, route_key, idempotency_key),
-  schema only - no replay flow), one combined forward migration with SIM-01 discipline
-  (orphan preflight -> NOT VALID -> VALIDATE -> convalidated assertion), tenant-scoped frozen
-  profile FK on simulation_runs, service-side riskTolerance resolution (risk_tolerance removed
-  from SimulationRunRequest; unresolvable profile refs uniform CASE_NOT_FOUND fail-closed),
-  17 new owner tests. Validation: owner 69, alembic heads/upgrade/check/downgrade-roundtrip
-  clean, convalidated=t, ruff/compileall clean; mainline -W error = 361 passed + 4 KNOWN
-  contract-driven failures in the QA domain (services/api/tests, forbidden zone) - itemized
-  with revision guidance in docs/handoffs/SIM_02A_PROFILE_IDEMPOTENCY_R1_HANDOFF.md §5.
-- Out of scope honored: no engine.py/compute_input_hash/ENGINE_VERSION change (P2 = CCR-ENG-02
-  pending), no routes/HTTP/CSRF/capability/budget/idempotency-replay, no generated contracts,
-  no apps/web, Addendum A1 fail-closed behaviors intact.
-- Next: independent QA by 对话 3 (including the QA-suite revision list); then CCR-ENG-02 (P2)
-  from this lane on a new branch; Mainline Lead assembles the integration wave.
+- Branch: codex/sim-eng-02-profile-aware-input-hash-r1, DIRECT child of the P1/P3 exact QA
+  combination edaa8421c330de7cfe02a53c1e38574533e99c48 (contracts CCR-ENG-02 @ c8c9167 and
+  CCR-SIM-02A @ 0289b2e + Addendum A1 consumed read-only; main 387041d4 untouched; migration
+  head still exactly b2c7e9d4a1f6, migrations untouched).
+- Delivered: ENGINE_VERSION = sim-engine-1.1.0 (single constant); compute_input_hash /
+  run_simulation gain keyword-only verified ProfileFingerprint (frozen domain value object;
+  stable profile_id + version + persisted contentHash); payload delta = exactly engineVersion
+  value + nested profile{id,version,contentHash} block, riskTolerance kept top-level; mandatory
+  content-hash format gate at assembly (fail-closed frozen_reference_incomplete before engine,
+  zero zombie rows); service builds the fingerprint exactly once from the verified row; zero
+  numeric drift (Task 12 suite 28/28 byte-stable); historical sim-engine-1.0.0 rows immutable;
+  Addendum A1 fail-closed codes untouched; 13 new owner tests.
+- Validation: owner 82; engine 28; persistence 16; read-path+IO 16; lens_lanes 121; full
+  unmodified suite -W error -rxX = 458 passed / 1 failed / 0 xfailed / 0 xpassed, sole failure
+  = QA pinned-pending tests/test_sim_02a_profile_idempotency_qa.py::
+  test_p2_engine_hash_gap_is_pinned_pending_dependency (designed CCR-ENG-02 §7.3 signal);
+  filtered regression 458/0; CONTRACT_DRIFT_OK; packages/contracts zero diff; ruff/compileall/
+  diff-check/conflict/secret/scope audits clean. Handoff:
+  docs/handoffs/SIM_ENG_02_PROFILE_AWARE_INPUT_HASH_R1_HANDOFF.md.
+- ready_for_public_route: NO (SIM-02A I1/I2/I3 pending).
+- Next: independent P2 QA lane branches from this head to flip the pinned assertion to
+  permanent green; then Mainline Lead assembles the integration wave.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
   replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

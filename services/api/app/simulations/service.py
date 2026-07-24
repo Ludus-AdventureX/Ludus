@@ -34,6 +34,7 @@ from app.types import (
 from .assembly import (
     AssembledSimulationInput,
     assemble_graph,
+    assemble_profile_fingerprint,
     assemble_scenario,
     assemble_score_definition,
     assemble_strategy,
@@ -182,6 +183,11 @@ class SimulationRunService:
         ):
             raise simulation_scope_not_found()
 
+        # CCR-ENG-02: build the frozen fingerprint EXACTLY ONCE from the verified
+        # row; the format gate inside fails closed (frozen_reference_incomplete)
+        # before any engine or hash work. Base run and sensitivity share it.
+        profile_fingerprint = assemble_profile_fingerprint(profile)
+
         graph = assemble_graph(graph_version, node_rows, edge_rows)
         assembled = AssembledSimulationInput(
             graph=graph,
@@ -196,6 +202,7 @@ class SimulationRunService:
             "origin_modes": list(dict.fromkeys(graph_version.origin_modes)),
             # Server-resolved from the frozen profile; never caller-supplied.
             "risk_tolerance": float(profile.risk_tolerance),
+            "profile_fingerprint": profile_fingerprint,
         }
         return assembled, row_refs
 
@@ -205,6 +212,7 @@ class SimulationRunService:
         assembled, row_refs = await self._load_frozen_input(context, request)
         overrides = dict(request.node_overrides or {})
         risk_tolerance = row_refs["risk_tolerance"]
+        profile_fingerprint = row_refs["profile_fingerprint"]
 
         # Service-level precheck, then the engine re-asserts internally (second gate).
         assert_authorization(assembled.graph, request.simulation_mode)
@@ -219,6 +227,7 @@ class SimulationRunService:
             node_overrides=overrides,
             epsilon=request.epsilon,
             max_steps=request.max_steps,
+            profile=profile_fingerprint,
         )
 
         top_drivers = result.top_drivers
