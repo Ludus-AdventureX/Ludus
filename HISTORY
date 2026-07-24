@@ -1533,3 +1533,70 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Subsequent lanes must branch from main f5b43c9 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+---
+
+## Archive Meadows Lens R2 Implementation - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- started_at: 2026-07-24 (Asia/Shanghai)
+- completed_at: 2026-07-24 (Asia/Shanghai)
+- status: completed
+- role: Synthesis / Meadows Leverage Points Specialist
+- objective: Implement the Meadows leverage-points lens runtime behavior only:
+  stage-output validation (schema mirror of the meadows_leverage_points branch of
+  urn:ludus:method:hardtech-market-direction:strategic-lens-output:1.1.0) plus the
+  manifest behavior contract
+  `system_map_three_or_more_levels_high_leverage_gap_runaway_reinforcing_loop_risk_and_intervention_sequence`,
+  spherical-robot behavior coverage, and downstream sandbox-consumption accessors
+  (simulation lever/edge candidates + intervention sequence) without touching the
+  Simulation canonical model.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (live ls-remote verified 2026-07-24)
+- branch: codex/lens-meadows-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-meadows-r2
+- changed_paths:
+  - services/api/app/strategic_lenses/__init__.py (new, minimal package init, no registry)
+  - services/api/app/strategic_lenses/meadows.py (new, Meadows lens only)
+  - services/api/tests/test_lens_meadows.py (new, lens-owned tests, 15 tests)
+  - HEAD / HISTORY (lifecycle records)
+- delivered_behavior:
+  - MeadowsStageOutput Pydantic mirror of the published schema meadows branch
+    (CanonicalModel camelCase wire contract; extra fields forbidden; level/levelName/
+    strengthBand cross-consistency enforced; 12-level Meadows numbering locked).
+  - Server-identity self-report rejection (workspaceId/analysisRunId/contentHash/...)
+    with structured violation codes before schema parsing.
+  - Behavior contract checks: >=3 distinct intervention levels, levelsCovered
+    consistency, duplicate interventionId rejection, level 1-4 gap with whyAvoided +
+    disruptionRisk (schema-enforced), runaway reinforcing loop with signal + brake
+    (schema-enforced), intervention sequence referential integrity + dense 1..n
+    ordering + precondition/failureSignal, transcend_paradigms pairing rule,
+    evidence-versus-judgment anchoring (evidenceIds/assumptionIds not both empty).
+  - sandbox_consumption() projection for downstream report/sandbox owners covering the
+    eval contract meadowsMustAffect: [simulation_lever_or_edge, intervention_sequence];
+    no Simulation canonical model import.
+  - Spherical-robot golden payload (rescue vs household) validated against both this
+    module and the published method-pack JSON schema (Draft 2020-12 cross-check).
+- verification:
+  - command: uv run --project services/api pytest services/api/tests/test_lens_meadows.py -q
+    result: PASS (15 passed)
+  - command: uv run --project services/api pytest services/api/tests/test_method_pack.py
+      services/api/tests/test_method_router.py services/api/tests/test_cynefin_gate.py
+      services/api/tests/test_lens_meadows.py -q
+    result: PASS (64 passed; no regression in DB-free method-pack/router/gate suites)
+  - command: uv run --project services/api ruff check services/api/app/strategic_lenses
+      services/api/tests/test_lens_meadows.py
+    result: PASS (All checks passed)
+- not_verified:
+  - DB-backed suites (auth/workspace isolation/models) were not run: they require the
+    local Postgres at 55432 and are untouched by this change (new files only).
+  - Live model invocation of the meadows prompt (worker orchestration is another lane).
+  - Remote branch SHA verification pending push (GitHub 443 connectivity intermittent).
+- remaining_risks:
+  - services/api/app/strategic_lenses/__init__.py is a shared seam for other lens
+    lanes; kept content-free by design, integration lead should keep it registry-free.
+  - The behavior checks are structural; semantic quality of tradeoff text is left to
+    Critic/Validation per contract.
+- secret_policy: no credentials, API keys, tokens, cookies, or connection strings are
+  read, recorded, or committed by this lane.
