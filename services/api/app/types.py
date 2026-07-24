@@ -149,6 +149,60 @@ class NodeType(StrEnum):
     INDICATOR = "indicator"
 
 
+# --- CCR-20260724-SIM-01: canonical simulation graph enums -------------------
+# Seven Python enums; six map to PostgreSQL enums. ConstraintComparison is
+# deliberately NOT a PG enum: it lives inside score_definitions JSONB rules
+# and is validated at the wire/service layer only.
+
+
+class GraphVersionStatus(StrEnum):
+    DRAFT = "draft"
+    CONFIRMED = "confirmed"
+    ARCHIVED = "archived"
+
+
+class EdgePolarity(StrEnum):
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+
+
+class FactorAuthorship(StrEnum):
+    GENERATED = "generated"
+    USER_ADDED = "user_added"
+    USER_MODIFIED = "user_modified"
+
+
+class FactorEvidenceStatus(StrEnum):
+    SUPPORTED = "supported"
+    CONDITIONAL = "conditional"
+    ASSUMED = "assumed"
+    UNKNOWN = "unknown"
+
+
+class FactorControllability(StrEnum):
+    CONTROLLABLE = "controllable"
+    PARTIALLY_CONTROLLABLE = "partially_controllable"
+    UNCONTROLLABLE = "uncontrollable"
+
+
+class GraphBranchStatus(StrEnum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class ConstraintComparison(StrEnum):
+    """Canonical constraint operators (06-data-model ConstraintRule.operator).
+
+    Wire values are the comparison symbols; no PostgreSQL enum is created.
+    """
+
+    GT = ">"
+    GE = ">="
+    LT = "<"
+    LE = "<="
+    EQ = "="
+
+
 class StrategicLensType(StrEnum):
     PORTER_FIVE_FORCES = "porter_five_forces"
     PRE_MORTEM = "pre_mortem"
