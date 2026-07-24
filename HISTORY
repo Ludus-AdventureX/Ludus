@@ -2139,3 +2139,29 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - ruff check app: PASS. compileall: PASS. Full services/api pytest suite: 276 passed.
 - git diff --check: PASS. Changed paths this correction: lens_artifact_reads.py + HEAD/HISTORY + disposable probe update (G0, uncommitted).
 - No credentials or secret values are recorded here.
+
+
+## Archive Lens Artifact Read-Path R2 QA - 2026-07-24 (Asia/Shanghai)
+
+### Inherited lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after Strategic Lens Artifact read-path delivery and ordering correction.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Read-Path Ordering Correction - 2026-07-24 (Asia/Shanghai)`.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-read-path
+- Current branch: codex/task-lens-artifact-read-path (base 4de3628, live-verified)
+- Owner result: read-only repository/service in services/api/app/analyses/lens_artifact_reads.py; ready-only consumption with review-gated audit reads; uniform CASE_NOT_FOUND 404 across missing/foreign/non-consumable; canonical EXECUTION ordering porter -> counterparty -> pre_mortem -> scenario -> meadows (corrected per READ_PATH_ORDER_CORRECTION_REQUIRED; Counterparty strictly before Pre-Mortem); DB-backed probe 24/24 green; full suite 276 passed; ruff/compileall PASS.
+- Boundary kept: no ORM/migration/enum change, no strategic_lenses/** change, no write path, no HTTP router, no contracts change; Session 6 persistence files untouched.
+- Contract dependency: HTTP exposure of these reads requires Session 1 router/contract adjudication (CONTRACT_DEPENDENCY recorded in the lane handoff); in-process consumption by Report/Run needs no contract change.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
+
+### QA completion record
+
+- Role: QA/Release Owner; fresh branch codex/qa-lens-artifact-read-path-r2 from candidate 2f0fe40e11e82bfe1f639e105fd3892a453d3756 (hard gate: first command ls-remote main = 4de3628 exact; candidate ref live-verified exact).
+- QA additions: tests/test_lens_artifact_read_path.py (11 formal tests converting the lane's 24-item DB probe): canonical ordering porter->counterparty->pre_mortem->scenario->meadows with created_at/id tie-breakers, uniform CASE_NOT_FOUND 404 anti-enumeration (foreign/ghost/mixed/foreign-artifact anchors, anchor-404 before capability-403), ready-only consumption with identical draft/rejected/missing signatures, review-capability audit gating, frozen deep-copied projection.
+- Verification: clean DB upgrade head d7e2a91c5b48 + alembic check; full suite 315 passed / 0 failed (-W error); lens_lanes 105; ruff/compileall PASS; scope/secret/diff-check/marker scans clean; changed set = lifecycle + app/analyses/lens_artifact_reads.py only.
+- Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); mainline merge permitted for candidate + this QA tip.
+- Evidence: docs/handoffs/READ_PATH_R2_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
