@@ -2505,3 +2505,40 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
   contract change; full chain closes in independent QA.
 - Scope audit: only domain.py + handoff doc + HEAD/HISTORY. Secret scan: clean.
 - Secret policy: no credentials, tokens, keys, or .env values are recorded.
+
+
+## Archive Simulation Repository-Service R1 QA - 2026-07-25 (Asia/Shanghai)
+
+### Inherited lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after Simulation repository/service doc refresh (DOC-ONLY follow-up).
+- Last archived: 2026-07-25 (Asia/Shanghai).
+- Last archive entry: `Archive Simulation Repository/Service Doc Refresh - 2026-07-25 (Asia/Shanghai)`.
+- Role: Simulation/Graph Owner (Fable5 throughout).
+- Branch: codex/task-simulation-repository-service-r1-doc-refresh, direct child of frozen
+  product parent 7844a1631c0747e2f39e2cbfb73088ed010c98ae (parent branch untouched).
+- Delivered: domain.py module docstring correction only (stale "graph-side wire types do
+  not yet exist" claim removed; canonical schema/enum authority and fail-closed semantics
+  stated accurately) + handoff doc. Zero executable change proven by
+  DOMAIN_EXECUTABLE_AST_EQUIVALENT and a 12-file git-blob byte gate; 52/402/121 test
+  baselines unchanged; ruff/compileall/diff-check clean; packages/contracts zero-diff.
+- Addendum A1 (b28dda6) consumed read-only; its five rulings preserved verbatim.
+- Next: independent QA; Mainline Lead assembles integration wave.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
+  replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA completion record
+
+- Role: QA/Release Owner; fresh branch codex/qa-simulation-repository-service-r1 from doc-refresh head 9cc4e8736bf59a1761d5de4f38081faed0081b07 (hard gate: main 3ed23b9 / doc-refresh / impl parent 7844a16 / Addendum A1 b28dda6 all live-verified exact).
+- Structure: base ancestry + direct-parent proven; DOMAIN_EXECUTABLE_AST_EQUIVALENT (docstring-stripped AST equality, programmatic); 12-file byte gate vs 7844a16 empty; main-zone gate vs 3ed23b9 empty; HISTORY pure-append 122/0; stale-sentence zero hits in product code (2 historical scan-record quotes in lifecycle/handoff noted honestly).
+- Addendum A1 verified as accepted behavior: UUID identity (no node_key/edge_key, ORDER BY id ASC, UUID references), '=' operator and enabledEdgeIds fail-closed with stable codes and engine-not-run sentinels, enum authority identity asserts, engine-internal ElementStatus/Normalization/Comparison.
+- QA battery (tests/test_simulation_repository_service_qa.py, 15 tests; owner fixtures loaded by path, zero owner-file modification): 11-shape cross-tenant/ghost/mixed-anchor uniform CASE_NOT_FOUND matrix; same-ws other-case; lens provenance draft/rejected/wrong-type/other-case uniform 404; UUID ordering + shuffled assembly; JSONB defensive copies; persisted graph-v2 full-path inputHash; run-level params change hash while profile id/version stay outside per frozen Task 12 compute_input_hash rule; sensitivity/wire/insert failure zero-zombie paths; SQLAlchemy mapping to simulation_persistence_failed with usable session; formal double gate incl. service-precheck bypass; experimental side-effect-free run; frozen SimulationRunView.
+- Owner suite verdict: ADOPT (24 tests re-run green independently).
+- Fresh counts on clean qa_sim_repo (single head a3f8c2d47e19, check clean, zero migration changes): full 417 passed / 0 failed / 0 xfailed / 0 xpassed (-W error -rxX) = candidate 402 + QA 15; same-db lens_lanes 121; owner 52; engine 28; persistence 16; read-path+IO 16; models+invariants 34; ruff/compileall PASS; OpenAPI semantic drift OK; scope/secret/diff-check/marker scans clean.
+- Findings: P0/P1/P2 = 0; one P3 note (FormalAuthorizationError code formal_authorization_rejected registered but unmapped until CCR-SIM-02 routes; boundary surfaces SimulationAuthorizationError).
+- Verdict: RELEASE_CONTENT PASS; merge object = 9cc4e87 + this QA tip.
+- Evidence: docs/handoffs/SIM_REPOSITORY_SERVICE_R1_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
