@@ -51,7 +51,12 @@ from .sensitivity import analyze_sensitivity
 
 @dataclass(frozen=True, slots=True)
 class SimulationRunRequest:
-    """Frozen references chosen by the caller; ids are anchors, never authority."""
+    """Frozen references chosen by the caller; ids are anchors, never authority.
+
+    CCR-SIM-02A §2: callers select only the frozen profile identity; riskTolerance
+    is resolved server-side from the referenced ``decision_maker_profiles`` row and
+    is deliberately NOT a request field.
+    """
 
     decision_case_id: UUID
     graph_version_id: UUID
@@ -61,7 +66,6 @@ class SimulationRunRequest:
     simulation_mode: SimulationMode
     decision_maker_profile_id: UUID
     decision_maker_profile_version: int
-    risk_tolerance: float
     epsilon: float = 0.001
     max_steps: int = 12
     node_overrides: dict[str, float] | None = None
@@ -163,6 +167,21 @@ class SimulationRunService:
         node_rows = await self._repository.get_graph_nodes(workspace_id, graph_version.id)
         edge_rows = await self._repository.get_graph_edges(workspace_id, graph_version.id)
 
+        # Frozen decision-maker profile (CCR-SIM-02A §2): the reference must resolve
+        # to a real (workspace, profile_id, version) row, and a case-scoped profile
+        # may only be used by its own case. Ghost id, wrong version, foreign
+        # workspace, and wrong case all collapse into the uniform 404 fail-closed.
+        profile = await self._repository.get_decision_maker_profile(
+            workspace_id,
+            request.decision_maker_profile_id,
+            request.decision_maker_profile_version,
+        )
+        if profile is None or (
+            profile.decision_case_id is not None
+            and profile.decision_case_id != request.decision_case_id
+        ):
+            raise simulation_scope_not_found()
+
         graph = assemble_graph(graph_version, node_rows, edge_rows)
         assembled = AssembledSimulationInput(
             graph=graph,
@@ -175,6 +194,8 @@ class SimulationRunService:
             "scenario_id": scenario_row.scenario_id,
             "score_definition_version": score_row.version,
             "origin_modes": list(dict.fromkeys(graph_version.origin_modes)),
+            # Server-resolved from the frozen profile; never caller-supplied.
+            "risk_tolerance": float(profile.risk_tolerance),
         }
         return assembled, row_refs
 
@@ -183,6 +204,7 @@ class SimulationRunService:
     ) -> SimulationRunView:
         assembled, row_refs = await self._load_frozen_input(context, request)
         overrides = dict(request.node_overrides or {})
+        risk_tolerance = row_refs["risk_tolerance"]
 
         # Service-level precheck, then the engine re-asserts internally (second gate).
         assert_authorization(assembled.graph, request.simulation_mode)
@@ -192,7 +214,7 @@ class SimulationRunService:
             assembled.strategy,
             assembled.scenario,
             assembled.score_definition,
-            request.risk_tolerance,
+            risk_tolerance,
             request.simulation_mode,
             node_overrides=overrides,
             epsilon=request.epsilon,
@@ -207,7 +229,7 @@ class SimulationRunService:
                 assembled.strategy,
                 assembled.scenario,
                 assembled.score_definition,
-                request.risk_tolerance,
+                risk_tolerance,
                 request.simulation_mode,
                 node_overrides=overrides,
                 epsilon=request.epsilon,
@@ -242,7 +264,7 @@ class SimulationRunService:
                 "scoreDefinitionVersion": row_refs["score_definition_version"],
                 "decisionMakerProfileId": str(request.decision_maker_profile_id),
                 "decisionMakerProfileVersion": request.decision_maker_profile_version,
-                "riskTolerance": request.risk_tolerance,
+                "riskTolerance": risk_tolerance,
                 "engineVersion": result.engine_version,
                 "scenarioId": str(row_refs["scenario_id"]),
                 "simulationMode": request.simulation_mode.value,
@@ -272,7 +294,7 @@ class SimulationRunService:
             score_definition_version=row_refs["score_definition_version"],
             decision_maker_profile_id=request.decision_maker_profile_id,
             decision_maker_profile_version=request.decision_maker_profile_version,
-            risk_tolerance=request.risk_tolerance,
+            risk_tolerance=risk_tolerance,
             engine_version=result.engine_version,
             scenario_id=row_refs["scenario_id"],
             simulation_mode=request.simulation_mode,
@@ -310,7 +332,7 @@ class SimulationRunService:
             score_definition_version=row_refs["score_definition_version"],
             decision_maker_profile_id=request.decision_maker_profile_id,
             decision_maker_profile_version=request.decision_maker_profile_version,
-            risk_tolerance=request.risk_tolerance,
+            risk_tolerance=risk_tolerance,
             engine_version=result.engine_version,
             scenario_id=row_refs["scenario_id"],
             simulation_mode=request.simulation_mode,

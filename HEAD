@@ -1,12 +1,28 @@
 # Work Log: idle
 
-- Status: idle; simulation repository/service r1 published to remote main and live-verified.
+- Status: idle after CCR-SIM-02A prerequisites P1 + P3 implementation (r1); ready_for_qa=YES.
 - Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive Simulation Repository/Service R1 Main Publication - 2026-07-25 (Asia/Shanghai)`.
-- Remote main: 82b6180784caf3065a2f903144718dbff61ddacf + this archive commit (live ls-remote verified; tenant-scoped simulation repository/service + Addendum A1 contract adjudication on main; migration head unchanged a3f8c2d47e19).
-- Stage: Simulation Repository/Service Foundation Complete (post Canonical Simulation Graph Foundation).
-- Archive-only now: codex/ccr-sim-01-addendum-a1 (b28dda6), codex/task-simulation-repository-service-r1 (7844a16), codex/task-simulation-repository-service-r1-doc-refresh (9cc4e87), codex/qa-simulation-repository-service-r1 (a2cc987), codex/qa-simulation-repository-service-r1-contract-closure (f12bea6), codex/simulation-repository-service-integration-r1 (82b6180).
-- Unlocked: CCR-SIM-02 (routes/API contract; must keep both fail-closed stable errors score_constraint_operator_unsupported and strategy_edge_gating_unsupported) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Last archive entry: `Archive CCR-SIM-02A Prerequisite P1+P3 Implementation (r1) - 2026-07-25 (Asia/Shanghai)`.
+- Role: Simulation/Graph Owner (Fable5 throughout).
+- Branch: codex/sim-02a-profile-idempotency-r1 (base main SHA 387041d40442faf16557b266ef3f844b7af8fb69;
+  contract codex/ccr-sim-02a-run-api-contract @ 0289b2e consumed read-only; migration head
+  a3f8c2d47e19 untouched -> new single head b2c7e9d4a1f6).
+- Delivered: immutable decision_maker_profiles (UNIQUE(workspace_id, profile_id, version),
+  server-side canonical-JSON content_hash, append-only, no update/delete surface), generic
+  idempotency_records persistence schema (UNIQUE(workspace_id, route_key, idempotency_key),
+  schema only - no replay flow), one combined forward migration with SIM-01 discipline
+  (orphan preflight -> NOT VALID -> VALIDATE -> convalidated assertion), tenant-scoped frozen
+  profile FK on simulation_runs, service-side riskTolerance resolution (risk_tolerance removed
+  from SimulationRunRequest; unresolvable profile refs uniform CASE_NOT_FOUND fail-closed),
+  17 new owner tests. Validation: owner 69, alembic heads/upgrade/check/downgrade-roundtrip
+  clean, convalidated=t, ruff/compileall clean; mainline -W error = 361 passed + 4 KNOWN
+  contract-driven failures in the QA domain (services/api/tests, forbidden zone) - itemized
+  with revision guidance in docs/handoffs/SIM_02A_PROFILE_IDEMPOTENCY_R1_HANDOFF.md §5.
+- Out of scope honored: no engine.py/compute_input_hash/ENGINE_VERSION change (P2 = CCR-ENG-02
+  pending), no routes/HTTP/CSRF/capability/budget/idempotency-replay, no generated contracts,
+  no apps/web, Addendum A1 fail-closed behaviors intact.
+- Next: independent QA by 对话 3 (including the QA-suite revision list); then CCR-ENG-02 (P2)
+  from this lane on a new branch; Mainline Lead assembles the integration wave.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
+  replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

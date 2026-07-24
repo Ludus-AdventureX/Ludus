@@ -2604,3 +2604,17 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Stage: Simulation Repository/Service Foundation Complete. Unlocked next: CCR-SIM-02 (routes/API contract) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED.
 - Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
 - No credentials or secret values are recorded here.
+
+
+## Archived work 2026-07-25T05:43:38.1624693+08:00
+
+# Archive CCR-SIM-02A Prerequisite P1+P3 Implementation (r1) - 2026-07-25 (Asia/Shanghai)
+
+- Role: Simulation/Graph Owner (Fable5 throughout); branch codex/sim-02a-profile-idempotency-r1 from live-verified remote main 387041d40442faf16557b266ef3f844b7af8fb69; contract codex/ccr-sim-02a-run-api-contract @ 0289b2e36a7765891e4f1908231ac2384c541318 consumed read-only (no merge/cherry-pick, no contract docs on this branch).
+- Delivered P1: immutable decision_maker_profiles (row UUID PK storage-only; business identity UNIQUE(workspace_id, profile_id, version); server-side canonical-JSON content_hash; append-only, no update/delete surface); tenant-scoped composite FK simulation_runs(workspace_id, decision_maker_profile_id, decision_maker_profile_version) -> decision_maker_profiles(workspace_id, profile_id, version) with SIM-01 discipline (orphan preflight RuntimeError -> ADD CONSTRAINT NOT VALID -> VALIDATE -> pg_constraint.convalidated=true assertion); service-side riskTolerance resolution (risk_tolerance removed from SimulationRunRequest; ghost/wrong-version/foreign-workspace/wrong-case profile refs collapse into uniform CASE_NOT_FOUND 404 fail-closed).
+- Delivered P3: generic idempotency_records persistence schema (UNIQUE(workspace_id, route_key, idempotency_key); enum-checked response_kind string, no PG enum; 48h expires_at retention semantics) - schema only, zero replay/conflict runtime flow by contract.
+- One forward migration b2c7e9d4a1f6 on top of untouched a3f8c2d47e19; reversible; single head verified.
+- Validation (disposable PG16 ludus-pg-sim-02a @55436, main venv): alembic heads/upgrade/check/downgrade-roundtrip clean; convalidated=t; owner suite 69 passed (52 baseline + 17 new); ruff/compileall clean; mainline -W error 361 passed + 4 KNOWN contract-driven failures inside the QA-owned services/api/tests (forbidden zone) - itemized with revision guidance in docs/handoffs/SIM_02A_PROFILE_IDEMPOTENCY_R1_HANDOFF.md (adjudicated: implement per frozen contract, QA Owner revises in I3; contract erratum recorded on "internal callers unaffected").
+- Out of scope honored: engine.py / compute_input_hash / ENGINE_VERSION untouched (P2 = CCR-ENG-02 pending); no routes/HTTP mapping/CSRF/capability/budget/idempotency replay; no generated contracts; no apps/web; Addendum A1 fail-closed behaviors intact.
+- ready_for_qa: YES -> independent QA by 对话 3, then CCR-ENG-02, then Mainline Lead wave assembly.
+- No credentials recorded.

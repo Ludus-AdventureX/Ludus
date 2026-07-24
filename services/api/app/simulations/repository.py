@@ -8,13 +8,15 @@ callers outside this package never receive ORM instances from here.
 
 from __future__ import annotations
 
-from uuid import UUID
+from typing import Any, Mapping
+from uuid import UUID, uuid4
 
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     DecisionCase,
+    DecisionMakerProfile,
     GraphEdge,
     GraphNode,
     GraphVersion,
@@ -24,6 +26,8 @@ from app.models import (
     StrategicLensArtifact,
     StrategyVersion,
 )
+
+from .profile_hash import compute_profile_content_hash
 
 
 class SimulationInputRepository:
@@ -137,6 +141,63 @@ class SimulationInputRepository:
                 == strategic_lens_artifact_id,
             )
         )
+
+    async def get_decision_maker_profile(
+        self, workspace_id: UUID, profile_id: UUID, version: int
+    ) -> DecisionMakerProfile | None:
+        """Exact frozen (workspace, profile, version) row; never a bare-UUID lookup."""
+
+        return await self._db.scalar(
+            select(DecisionMakerProfile).where(
+                DecisionMakerProfile.workspace_id == workspace_id,
+                DecisionMakerProfile.profile_id == profile_id,
+                DecisionMakerProfile.version == version,
+            )
+        )
+
+    async def insert_decision_maker_profile(
+        self,
+        *,
+        workspace_id: UUID,
+        profile_id: UUID,
+        version: int,
+        user_id: UUID,
+        display_name: str,
+        preference_weights: Mapping[str, Any],
+        risk_tolerance: float,
+        decision_case_id: UUID | None = None,
+    ) -> DecisionMakerProfile:
+        """Append-only insert of one immutable profile version (CCR-SIM-02A §2).
+
+        A new version is always a new row; this repository deliberately exposes no
+        profile UPDATE or DELETE. ``content_hash`` is computed here, server-side,
+        over the frozen payload — callers cannot supply one.
+        """
+
+        row = DecisionMakerProfile(
+            id=uuid4(),
+            workspace_id=workspace_id,
+            profile_id=profile_id,
+            decision_case_id=decision_case_id,
+            user_id=user_id,
+            display_name=display_name,
+            version=version,
+            preference_weights=dict(preference_weights),
+            risk_tolerance=risk_tolerance,
+            content_hash=compute_profile_content_hash(
+                workspace_id=workspace_id,
+                profile_id=profile_id,
+                version=version,
+                decision_case_id=decision_case_id,
+                user_id=user_id,
+                display_name=display_name,
+                preference_weights=preference_weights,
+                risk_tolerance=risk_tolerance,
+            ),
+        )
+        self._db.add(row)
+        await self._db.flush()
+        return row
 
     async def insert_simulation_run(self, row: SimulationRun) -> SimulationRun:
         """Stage one fully computed, immutable result row (no partial lifecycle rows)."""
