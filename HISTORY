@@ -1533,3 +1533,38 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Subsequent lanes must branch from main f5b43c9 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+# Archive: Web/UX Task 11 r2 - Client Foundation Rebase onto Task 3 Auth Contract - 2026-07-24 (Asia/Shanghai)
+
+- role: Web / UX Owner
+- objective: Recreate the Web/UX Task 11 slice as r2 on the post-Task-3 main. Migrate the product code of superseded candidate 9a0471e (codex/task-11-web-analysis-shell) and resolve auth interface deltas against the canonical generated contracts.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (local main == cached origin/main == instructed baseline; live ls-remote BLOCKED this session: github.com 443 timeout; old freeze 2396206 is an ancestor)
+- branch: codex/task-11-web-analysis-shell-r2 (fresh; old branch/worktree left intact, not reused)
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-web-ux-48h-r2
+
+- migrated_from_9a0471e (product files only; no old HEAD/HISTORY reused):
+  - apps/web/lib/api/{client,schemas,health,query-client,index}.ts, apps/web/app/providers.tsx,
+    apps/web/components/shell/SessionBootstrap.tsx, app/layout.tsx, app/page.tsx, app/globals.css,
+    apps/web/package.json (@decision-lab/contracts workspace dep).
+- interface_deltas_resolved:
+  - CSRF constants realigned to canonical Task 3 contract: cookie decision_lab_csrf + header X-CSRF-Token (was assumed ludus_csrf); token issued by GET /api/auth/csrf.
+  - Error envelope documented as canonical {ok:false,error:{code,message,retryable,details?}}.
+  - New apps/web/lib/api/auth.ts: typed GET /api/auth/session probe (200=authenticated, 401=unauthenticated per SESSION_REVOKED_OR_EXPIRED, transport failure=offline) + ensureCsrfToken(); consumes only routes present in the generated contract.
+  - schemas.ts re-exports the new generated auth schemas (AuthSessionData/Envelope, UserSummary, SessionSummary, MembershipSummary, Csrf*, Login/Register/Logout).
+  - SessionBootstrap upgraded from /health-only probe to the real session probe with four states (checking/authenticated/unauthenticated/offline); semantic-token dot colors extended.
+  - Login/register/logout mutations intentionally NOT wired into any UI (P2-001 exposure constraint).
+- pnpm-lock.yaml re-synced on this base for the workspace dependency.
+
+- verification (all re-run on this change):
+  - pnpm install: PASS (460 pkgs, reused from store, downloaded 0).
+  - pnpm --dir apps/web run typecheck: PASS.
+  - pnpm --dir apps/web lint: PASS.
+  - pnpm --dir apps/web test (QA-owned, run-only): PASS 5/5, no DecisionShell regression.
+  - pnpm --dir apps/web build: PASS.
+  - py -3.12 scripts/snapshot_look.py --check: PASS (LOOK_V7_SNAPSHOT_OK + LOOK_V7_TOKENS_OK).
+  - git diff --check: clean.
+  - UI check (dev :4012, backend down): PASS - honest offline strip, no fabricated state.
+- failures: none. skipped: live authenticated/unauthenticated strip states (need running API+Postgres) - handed to QA.
+- contract_change_requested: NO. Prior r1 INTEGRATION_QUESTIONs (CSRF naming, session route, error envelope) are now answered by the Task 3 canonical contract and closed.
+- remote_state: recorded truthfully at push time in the handoff; any failure is reported as blocked, never as uploaded.
+- secret_policy: no credentials or secret values recorded here.

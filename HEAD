@@ -1,10 +1,85 @@
-# Work Log: idle
+# Work Log: completed
 
-- Status: idle; Task 3 published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 91a0d67aa71f4bd8e01057635d7ac7947051b57b (Task 3 content tip f95fda3 + publication lifecycle records; live ls-remote verified).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 91a0d67); the old freeze baseline 2396206 is superseded.
-- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Web / UX Owner
+- status: completed
+- objective: >
+    Recreate the Web/UX Task 11 vertical slice as r2 on the latest main baseline
+    (Task 3 Auth/Workspace published). Migrate the product code of the superseded
+    candidate 9a0471e (codex/task-11-web-analysis-shell) onto this base and resolve
+    the interface deltas: adopt canonical CSRF (cookie decision_lab_csrf + header
+    X-CSRF-Token from GET /api/auth/csrf), consume the canonical {ok,data} envelope,
+    and upgrade the session bootstrap from a /health-only probe to a real
+    GET /api/auth/session probe with checking/authenticated/unauthenticated/offline
+    states. No unstable business API is assumed; only routes present in the
+    generated contract are consumed.
+
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae
+  # local main == cached origin/main == instructed baseline; live ls-remote BLOCKED
+  # (github.com 443 timeout); old freeze 2396206 is an ancestor of this base.
+- branch: codex/task-11-web-analysis-shell-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-web-ux-48h-r2
+- superseded_candidate: codex/task-11-web-analysis-shell @ 9a0471e (kept intact, not reused)
+
+- write_scope:
+    - apps/web/lib/api/**
+    - apps/web/components/shell/**
+    - apps/web/app/providers.tsx
+    - apps/web/app/layout.tsx
+    - apps/web/app/page.tsx
+    - apps/web/app/globals.css
+    - apps/web/package.json (workspace dependency only)
+    - pnpm-lock.yaml (dependency sync only)
+    - Web/UX HEAD / HISTORY (this branch)
+
+- forbidden_scope:
+    - apps/web/components/simulation/**
+    - apps/web/tests/** and apps/web/**/*.test.ts(x)   # QA-owned
+    - apps/web/playwright.config.ts
+    - services/api/**                                   # read-only reference
+    - packages/contracts/**                             # generated, Contract Lead owned
+    - look/**
+
+- dependencies:
+    - Task 3 auth/workspace routes in generated contract — PRESENT on this base
+    - Task 1W Look V7 shell + design snapshot — PRESENT on this base
+
+- acceptance_commands:
+    - pnpm --dir apps/web run typecheck
+    - pnpm --dir apps/web lint
+    - pnpm --dir apps/web test          # QA-owned tests; run-only
+    - pnpm --dir apps/web build
+    - py -3.12 scripts/snapshot_look.py --check
+    - UI check via dev server
+
+- known_initial_risks:
+    - Fresh worktree: empty node_modules; pnpm install required to run acceptance
+      (same authorized operation class as the r1 session).
+    - Live remote verification still blocked (github.com 443); push result must be
+      reported truthfully.
+    - GET /api/auth/session defines only 200 in the contract; 401 handling relies on
+      response.status and the documented auth failure envelope.
+
+- secret_policy: >
+    Do not read, print, log or commit tokens, cookies, private keys, Credential
+    Manager contents, DB passwords or .env contents. No secret values recorded here.
+
+- verification_results:
+    - pnpm install: PASS — 460 packages, all reused from local store, downloaded 0.
+    - pnpm --dir apps/web run typecheck: PASS.
+    - pnpm --dir apps/web lint: PASS.
+    - pnpm --dir apps/web test (QA-owned, run-only): PASS — 5/5, no DecisionShell regression.
+    - pnpm --dir apps/web build: PASS — compiled + type-checked + 5/5 static pages.
+    - py -3.12 scripts/snapshot_look.py --check: PASS — LOOK_V7_SNAPSHOT_OK + LOOK_V7_TOKENS_OK.
+    - UI check (dev server :4012, backend down): PASS — session probe falls into the honest
+      offline strip; shell + empty view render with no fabricated state.
+      Screenshot: output/web-ux-r2-offline-shell.png (outside worktree, not committed).
+
+- unverified_and_risks:
+    - authenticated/unauthenticated strip states not exercised against a live API in this
+      session (requires running FastAPI + Postgres); covered by typecheck + code review;
+      handed to QA for live-integration verification.
+    - Login/register/logout mutations intentionally NOT wired into UI: login endpoint must
+      stay unexposed until P2-001 (Postgres-backed login rate limiting) lands.
+    - Live remote verification blocked so far this session (github.com 443); push result
+      recorded truthfully below/in HISTORY.
