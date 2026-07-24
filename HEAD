@@ -1,47 +1,41 @@
 # Work Log: in_progress
 
 - started_at: 2026-07-24 (Asia/Shanghai)
-- role: Ways Persistence Owner
+- role: Ways Persistence Owner (QA-WAYS-PERSIST-001 follow-up fix lane)
 - status: in_progress
 - objective: >
-    Wire the StrategicLensArtifact write path on top of the CCR-20260724-Ways-01
-    canonical model (06c58cf, migration d7e2a91c5b48): server identity injection
-    from the frozen AnalysisRun row, rejection of model self-reported identity
-    fields, lens stage-output schema+behavior validation via the assembled
-    registry, reference resolution against worker-supplied frozen ledgers, and
-    Validation-driven draft -> ready/rejected status wiring with immutability.
-    Workspace/case/run tenancy is enforced with uniform not-found semantics.
+    Remediate QA-WAYS-PERSIST-001 on top of the QA-passed candidate 911bf87
+    (appended, never rewritten): map the ready-slot partial-unique violation in
+    apply_validation_verdict to the stable domain error LensArtifactConflict
+    behind a savepoint (caller transaction stays usable, no raw SQLAlchemy
+    IntegrityError escapes); enforce a rowcount check on the guarded verdict
+    UPDATE with fail-closed re-read (no silent success); preserve the
+    concurrency invariant: exactly one winner, exactly one stable domain error,
+    exactly one ready row.
+- finding_ref: QA-WAYS-PERSIST-001 (renamed; P2-001 belongs to CLOSED Auth rate limiting)
 - base_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936
-- base_verification: >
-    First lane command was live `git ls-remote origin refs/heads/main` and
-    returned exactly 4de362835f728ab155fc197b9f11b9ac248f2936; new main contains
-    the frozen five-lens candidate (69bbc5d) and executed CCR-20260724-Ways-01.
-- branch: codex/ways-lens-persistence-r2
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-persistence-r2
+- product_parent_sha: 911bf8778bc5e09c3861abeb2d7a068a0109b0b1
+- gate_evidence: >
+    First lane command was live `git ls-remote origin refs/heads/main` plus the
+    candidate ref: main = 4de3628 (>= required), candidate still exactly 911bf87.
+- branch: codex/ways-lens-persistence-r2-p2-fix
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-persistence-p2fix
+- contract_closure: >
+    schema_version semantics CLOSED by Contract Lead (option A ACCEPT): short
+    SemVer, equal to the schema URN tail and method_version; no column width,
+    model or migration change in this lane.
 - write_scope:
-    - services/api/app/strategic_lenses/repository.py (new; write path only)
-    - services/api/tests/lens_lanes/test_lens_persistence.py (staged; QA adjudicates)
+    - services/api/app/strategic_lenses/repository.py
     - HEAD (this branch) and HISTORY (append-only)
 - forbidden_scope:
-    - StrategicLensArtifact model/schema redefinition; ConnectorStatus additions
-    - five lens behavior modules and adapters/registry semantics (consumed as-is)
-    - services/api/migrations/** (published; consumed), services/api/app/**/schemas.py
-    - AnalysisRun row mutation (strategic_lens_artifact_ids maintenance belongs to
-      the Run owner lane), Run/Report query surface, router mounting, Web UI
-- dependencies:
-    - canonical StrategicLensArtifact + enums (app.models/app.types @ 4de3628)
-    - assembled registry (app.strategic_lenses.registry.build_lens_registry)
-    - seam guards (app.agents.lenses.StrategicLensStageOutput.from_payload)
-- acceptance_commands:
-    - pytest tests/lens_lanes/test_lens_persistence.py (DB-backed, Postgres 55433)
-    - pytest tests app/simulations/tests (full regression)
-    - ruff + compileall over changed surfaces; scope/secret/diff-check audit
-    - alembic current == head on the QA database
-- known_initial_risks:
-    - Evidence/Claim ledger tables do not exist yet (Task 8 pending): reference
-      resolution is fail-closed against worker-supplied frozen ledger sets, with
-      DB-backed resolution to follow the evidence owner lane.
-    - GitHub 443 is intermittent; every remote claim requires a fresh ls-remote.
+    - tests/lens_lanes/** (qa_release ADOPTED; combined verification uses a
+      disposable tree only), models/types/migrations/contracts, read path,
+      five-lens registry/behavior, HTTP/Report, main
+- verification_plan:
+    - disposable G0 tree combining this head + QA assets 830e858; run the
+      double-ready probe and assert the loser now gets LensArtifactConflict
+    - full DB suite + lane persistence tests on Postgres 55433
+    - ruff / compileall / scope / secret / diff-check; push + live ls-remote
 - secret_policy: >
     No credentials, API keys, tokens, cookies, connection strings, or .env
     contents are read, echoed, logged, or committed.

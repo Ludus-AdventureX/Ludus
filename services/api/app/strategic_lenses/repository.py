@@ -33,6 +33,7 @@ from typing import Any, Final
 from uuid import UUID, uuid4
 
 from sqlalchemy import insert, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.agents.lenses import (
@@ -74,6 +75,10 @@ _PRODUCER_ROLE_BY_WORKER: Final[dict[str, LensProducerRole]] = {
     "critic": LensProducerRole.CRITIC,
     "synthesis": LensProducerRole.SYNTHESIS,
 }
+
+# Partial unique index guarding "at most one ready artifact per run+lens"
+# (migration d7e2a91c5b48). Violations are mapped to LensArtifactConflict.
+_READY_SLOT_CONSTRAINT: Final[str] = "uq_strategic_lens_artifacts_ready_per_run_lens"
 
 
 class LensPersistenceError(RuntimeError):
@@ -375,6 +380,12 @@ async def apply_validation_verdict(
     ``draft -> ready`` records the acceptance witness (DB check enforces it);
     ``draft -> rejected`` keeps the audit row. Any other transition, a foreign
     workspace, or an unknown artifact fails closed. Content is never mutated.
+
+    Concurrency contract (QA-WAYS-PERSIST-001): the guarded UPDATE runs inside
+    a savepoint so a losing racer never poisons the caller's transaction; a
+    ready-slot partial-unique violation surfaces as :class:`LensArtifactConflict`
+    and a zero-row guarded UPDATE re-reads and fails closed - raw database
+    errors and silent no-op successes are both forbidden outcomes.
     """
 
     row = (
@@ -403,14 +414,42 @@ async def apply_validation_verdict(
         new_status = StrategicLensArtifactStatus.REJECTED
         witness = None
 
-    await connection.execute(
-        update(StrategicLensArtifact)
-        .where(
-            StrategicLensArtifact.workspace_id == workspace_id,
-            StrategicLensArtifact.strategic_lens_artifact_id
-            == strategic_lens_artifact_id,
-            StrategicLensArtifact.status == StrategicLensArtifactStatus.DRAFT,
+    savepoint = await connection.begin_nested()
+    try:
+        result = await connection.execute(
+            update(StrategicLensArtifact)
+            .where(
+                StrategicLensArtifact.workspace_id == workspace_id,
+                StrategicLensArtifact.strategic_lens_artifact_id
+                == strategic_lens_artifact_id,
+                StrategicLensArtifact.status == StrategicLensArtifactStatus.DRAFT,
+            )
+            .values(status=new_status, validation_accepted_at=witness)
         )
-        .values(status=new_status, validation_accepted_at=witness)
-    )
+    except IntegrityError as exc:
+        await savepoint.rollback()
+        if _READY_SLOT_CONSTRAINT in str(exc):
+            raise LensArtifactConflict(
+                "another artifact already holds the ready slot for this run and lens"
+            ) from exc
+        raise LensPersistenceError(
+            "lens verdict update violated a database invariant"
+        ) from exc
+    if result.rowcount != 1:
+        await savepoint.rollback()
+        current = (
+            await connection.execute(
+                select(StrategicLensArtifact.status).where(
+                    StrategicLensArtifact.workspace_id == workspace_id,
+                    StrategicLensArtifact.strategic_lens_artifact_id
+                    == strategic_lens_artifact_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if current is None:
+            raise LensRunNotFound("strategic lens artifact not found")
+        raise LensArtifactImmutable(
+            f"artifact status changed concurrently to {current!r}; verdict not applied"
+        )
+    await savepoint.commit()
     return new_status

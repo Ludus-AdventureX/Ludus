@@ -2084,3 +2084,23 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Unlocked: Ways persistence wiring slice (dialogue 6) from this new baseline; simulation graph-side CCR submission window remains open (dialogue 5).
 - Subsequent lanes must branch from main >= 8fd2451 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+---
+
+## Archive Ways Lens Persistence Write Path - 2026-07-24 (Asia/Shanghai)
+
+- Role: Ways Persistence Owner; branch codex/ways-lens-persistence-r2 completed at 911bf877 (write path + validation verdict wiring; 10 directed + 314 full regression PASS on fresh DB at head d7e2a91c5b48).
+- Independent QA (codex/qa-ways-lens-persistence-r2 @ 830e858): RELEASE_CONTENT_VERDICT PASS; P0=0 P1=0; one open finding QA-WAYS-PERSIST-001 (renamed from the QA report's provisional P2-001, which collides with the CLOSED Auth rate-limiting id): double-ready leaks raw IntegrityError instead of a domain error, and the guarded verdict UPDATE lacks a rowcount check.
+- schema_version contract question resolved by Contract Lead: option A ACCEPT - short SemVer (== schema URN tail == method_version); no column/model/migration change.
+- This record is archived by the follow-up fix lane (codex/ways-lens-persistence-r2-p2-fix) which appends the QA-WAYS-PERSIST-001 remediation on top of 911bf87 without rewriting it.
+- No credentials or secret values recorded.
+
+---
+
+## Archive QA-WAYS-PERSIST-001 Fix - 2026-07-24 (Asia/Shanghai)
+
+- Role: Ways Persistence Owner (follow-up fix lane); branch codex/ways-lens-persistence-r2-p2-fix appended on product parent 911bf87 (never rewritten).
+- Fix: apply_validation_verdict now runs the guarded UPDATE inside a savepoint; ready-slot partial-unique violations (uq_strategic_lens_artifacts_ready_per_run_lens) map to LensArtifactConflict; any other invariant violation maps to LensPersistenceError; rowcount != 1 rolls back the savepoint, re-reads and fails closed (LensRunNotFound if gone, LensArtifactImmutable with the observed status otherwise). No raw IntegrityError escapes; no silent no-op success; caller transaction stays usable after a losing race.
+- Contract closure honored: schema_version = short SemVer (Contract Lead option A ACCEPT); no model/types/migration/contracts change; qa_release-ADOPTED tests untouched (combined verification used a disposable G0 tree with QA assets from 830e858).
+- Verification (fresh): combined tree (fix + QA probes) 13 directed passed; double-ready probe returns LensArtifactConflict with ready_count==1 and a usable session afterwards; terminal re-verdict returns LensArtifactImmutable; full suite with -W error 317 passed; ruff PASS; compileall PASS; scope/diff-check/secret scan clean.
+- No credentials or secret values recorded.
