@@ -55,10 +55,14 @@
        (not seam descendant; disposable triage merge with seam cce4d70 clean except
        lifecycle HEAD; real-seam rerun 26 tests PASS, structural stand-in confirmed
        yielding to app.agents.lenses; formal re-run required again on integration branch)
-    3. pre_mortem (conv 8) - CONTENT_ACCEPTED_REMOTE_BLOCKED @ local 97f35bc
-       (independent rerun: compile+ruff PASS, expected fixture PASS, negative hits
-       PM_TOP_RISK_CONTROL_MISSING/_DUPLICATED; remote branch absent (443);
-       DB-backed suite 16 setup ERROR without Postgres - must re-run in QA env)
+    3. pre_mortem (conv 8) - REMOTE_BRANCH_READY @ 97f35bc
+       (controlled proxy publication by Coordinator on owner's written request:
+       pre-flight verified commit object/ref/ancestry/changed-paths, live remote
+       main re-read = 258a94df unchanged (no integration refresh needed),
+       non-force exact-refspec push, immediate ls-remote returned exactly
+       97f35bce78b703c1db5a5846c6f7b09370010b93; owner worktree untouched.
+       Remaining gate: DB-backed suite must re-run in Postgres QA env
+       (16 setup ERROR locally without DB))
     4. scenario_planning (conv 10) - ACCEPTED_QUEUED @ integration point 66b1ea1
        (seam descendant; compile+ruff PASS, protocol isinstance PASS, owner smoke
        29 checks PASS; e1ef2d7 is lifecycle-only and still unpushed - not the
