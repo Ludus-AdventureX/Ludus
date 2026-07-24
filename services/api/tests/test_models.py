@@ -13,18 +13,24 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 from app.db import Base, get_database_url
 from app.models import (
     AnalysisRun,
+    CausalGraph,
     Conversation,
     DecisionCase,
     DecisionSubject,
     DossierEntry,
     DossierVersion,
+    GraphVersion,
     Initiative,
     Message,
     QuickAnalysisResult,
+    ScenarioVersion,
+    ScoreDefinition,
     SignoffRequest as SignoffRequestModel,
     SimulationRun as SimulationRunModel,
     SourceRecord as SourceRecordModel,
     SourceSpan as SourceSpanModel,
+    StrategicLensArtifact,
+    StrategyVersion,
     User,
     UserSession,
     Workspace,
@@ -34,6 +40,7 @@ from app.types import (
     DecisionLifecycleStage,
     EntryStatus,
     EvidenceVerdict,
+    LensProducerRole,
     StatementType,
     StrategicLensType,
 )
@@ -98,6 +105,15 @@ def test_core_table_set_and_workspace_scope() -> None:
         "signoff_requests",
         # CCR-20260724-Ways-01: persisted five-lens outputs.
         "strategic_lens_artifacts",
+        # CCR-20260724-SIM-01: canonical simulation graph contract.
+        "causal_graphs",
+        "graph_versions",
+        "graph_nodes",
+        "graph_edges",
+        "strategy_versions",
+        "scenario_versions",
+        "score_definitions",
+        "graph_branches",
     }
     assert set(Base.metadata.tables) == expected
 
@@ -704,6 +720,149 @@ async def test_task_19a_source_span_locator_and_quote_constraints_are_enforced(
         await savepoint.rollback()
 
 
+async def seed_simulation_reference_stack(
+    connection: AsyncConnection, workspace_id, case_id
+) -> dict:
+    """Create the full legal SIM-01 reference stack in one workspace/case.
+
+    Satisfies all four composite simulation_runs FKs (graph_version,
+    strategy_version, scenario_version, score_definition) plus the scenario's
+    source lens artifact FK, so replay tests exercise the real referential
+    contract instead of random bare UUIDs (QA fix for CCR-20260724-SIM-01).
+    """
+
+    run_id = await seed_analysis_run(connection, workspace_id, case_id)
+    lens_artifact_id = (
+        await connection.execute(
+            insert(StrategicLensArtifact)
+            .values(
+                strategic_lens_artifact_id=uuid4(),
+                workspace_id=workspace_id,
+                decision_case_id=case_id,
+                analysis_run_id=run_id,
+                charter_id=uuid4(),
+                lens_type=StrategicLensType.SCENARIO_PLANNING,
+                producer_role=LensProducerRole.SYNTHESIS,
+                method_id="hardtech-market-direction",
+                method_version="1.1.0",
+                method_content_hash="sha256:method",
+                prompt_version="1.0.0",
+                schema_version="1.1.0",
+                origin_modes=["fixture"],
+                content_hash=f"sha256:lens-{uuid4().hex[:12]}",
+                payload={"summary": "sim stack"},
+                claim_refs=[],
+                evidence_refs=[],
+                assumption_refs=[],
+            )
+            .returning(StrategicLensArtifact.strategic_lens_artifact_id)
+        )
+    ).scalar_one()
+
+    graph_id = (
+        await connection.execute(
+            insert(CausalGraph)
+            .values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                decision_case_id=case_id,
+                report_artifact_id=uuid4(),
+                title="Replay graph",
+                origin_modes=["fixture"],
+            )
+            .returning(CausalGraph.id)
+        )
+    ).scalar_one()
+    graph_version_id = (
+        await connection.execute(
+            insert(GraphVersion)
+            .values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                graph_id=graph_id,
+                decision_case_id=case_id,
+                case_version=1,
+                source_report_artifact_id=uuid4(),
+                version=1,
+                status="confirmed",
+                provenance=[],
+                origin_modes=["fixture"],
+                title="Replay graph v1",
+                content_hash="sha256:graph-v1",
+                created_by=uuid4(),
+                confirmed_at=datetime.now(timezone.utc),
+            )
+            .returning(GraphVersion.id)
+        )
+    ).scalar_one()
+    strategy_version_id = (
+        await connection.execute(
+            insert(StrategyVersion)
+            .values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                graph_id=graph_id,
+                decision_case_id=case_id,
+                version=1,
+                option_id=uuid4(),
+                node_overrides={},
+                enabled_edge_ids=[],
+            )
+            .returning(StrategyVersion.id)
+        )
+    ).scalar_one()
+    scenario_version_id = (
+        await connection.execute(
+            insert(ScenarioVersion)
+            .values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                graph_id=graph_id,
+                decision_case_id=case_id,
+                source_lens_artifact_id=lens_artifact_id,
+                source_strategic_scenario_id="scenario-frame-1",
+                scenario_id=uuid4(),
+                version=1,
+                name="Replay scenario",
+                description="Deterministic replay scenario",
+                default_edge_multiplier=1.0,
+                edge_multipliers={},
+                node_shifts={},
+                strategy_survives=True,
+                early_warning_signals=[],
+                damping=0.8,
+            )
+            .returning(ScenarioVersion.id)
+        )
+    ).scalar_one()
+    score_definition_id = (
+        await connection.execute(
+            insert(ScoreDefinition)
+            .values(
+                id=uuid4(),
+                workspace_id=workspace_id,
+                graph_id=graph_id,
+                decision_case_id=case_id,
+                version="1.0.0",
+                option_outcome_mappings=[],
+                risk_weights=[],
+                constraint_rules=[],
+                content_hash="sha256:score-v1",
+            )
+            .returning(ScoreDefinition.id)
+        )
+    ).scalar_one()
+    return {
+        "analysis_run": run_id,
+        "lens_artifact": lens_artifact_id,
+        "graph": graph_id,
+        "graph_version": graph_version_id,
+        "strategy_version": strategy_version_id,
+        "scenario_version": scenario_version_id,
+        "score_definition": score_definition_id,
+    }
+
+
 @pytest.mark.asyncio
 async def test_task_19a_simulation_replay_numeric_constraints_are_enforced(
     connection: AsyncConnection,
@@ -721,16 +880,17 @@ async def test_task_19a_simulation_replay_numeric_constraints_are_enforced(
         )
     ).scalar_one()
     case_id = await seed_case(connection, workspace_id, subject_id)
+    refs = await seed_simulation_reference_stack(connection, workspace_id, case_id)
 
     base_values = {
         "id": uuid4(),
         "workspace_id": workspace_id,
         "decision_case_id": case_id,
-        "graph_id": uuid4(),
-        "graph_version_id": uuid4(),
-        "strategy_version_id": uuid4(),
-        "scenario_version_id": uuid4(),
-        "score_definition_id": uuid4(),
+        "graph_id": refs["graph"],
+        "graph_version_id": refs["graph_version"],
+        "strategy_version_id": refs["strategy_version"],
+        "scenario_version_id": refs["scenario_version"],
+        "score_definition_id": refs["score_definition"],
         "score_definition_version": "1.0.0",
         "decision_maker_profile_id": uuid4(),
         "decision_maker_profile_version": 1,
