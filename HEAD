@@ -1,11 +1,11 @@
 # Work Log: idle
 
-- Status: idle; Task 12 and Task 7 integration candidates complete, remote publication BLOCKED by GitHub 443.
+- Status: idle; post-auth wave (Task 12 + Task 7) published to remote main and live-verified.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 12 and Task 7 Mainline Integration Candidates - 2026-07-24 (Asia/Shanghai)`.
-- Candidates (stacked, strict order): codex/task-12-mainline-integration @ 966b7f7 (regression 140 passed / 1 skipped + owner 28 passed) -> codex/task-07-mainline-integration (this tip; regression 159 passed / 0 skipped; product trees byte-identical to b7060d5 / cce4d70).
-- main: unchanged at 2c43bfffd847c2e2d5b523b93ae27d603897d7e7 locally; NOT merged - live pre-merge reads are 443-blocked. No remote result claimed.
-- Resume: ls-remote main (expect 2c43bff) -> push/verify Task 12 candidate -> ff main -> push -> re-read -> push/verify Task 7 candidate -> ff main -> push -> re-read -> publish new main SHA -> authorize Ways integration (dialogue 6).
-- Five lens branches frozen; Ways integration waits for the new main SHA.
+- Last archive entry: `Archive Post-Auth Wave Main Publication (Task 12 + Task 7) - 2026-07-24 (Asia/Shanghai)`.
+- Remote main: 8e18cd3b177891496dcb13f2d18bb6e4d747f612 + this archive commit (live ls-remote verified per merge; ancestors b7060d5 / cce4d70 / 966b7f7 / 8e18cd3 all confirmed).
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
+- Ways integration: AUTHORIZED for dialogue 6 (new main contains the Task 7 seam); five lens branches stay frozen until the single WAYS_INTEGRATION_HANDOFF passes dialogue 3 QA and returns here; CCR-20260724-Ways-01 adjudication scheduled with that window.
+- Web r2: REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

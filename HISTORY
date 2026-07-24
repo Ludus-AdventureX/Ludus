@@ -1674,3 +1674,19 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Resume on network recovery (per merge: fresh reads before and after): 1) ls-remote main (expect 2c43bfffd847c2e2d5b523b93ae27d603897d7e7, else audit) 2) push + verify codex/task-12-mainline-integration @ 966b7f7 3) ff main -> push -> re-read 4) push + verify codex/task-07-mainline-integration @ tip 5) ff main -> push -> re-read 6) publish new main SHA containing Task 7 and authorize the Ways integration branch for dialogue 6.
 - Five lens branches remain frozen (porter 8103284, counterparty 1ea56ca, pre_mortem 97f35bc, scenario 66b1ea1, meadows 7fd12f7); none merged this window; Ways integration only after the new main SHA is published.
 - No credentials or secret values are recorded here.
+
+
+## Archive Post-Auth Wave Main Publication (Task 12 + Task 7) - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Remote repository: https://github.com/Ludus-AdventureX/Ludus.git (remote get-url verified).
+- Strict-order publication executed with a live ls-remote before and after every merge; no force-push, no history rewrite, no skipped read.
+- Phase 1: live main read = 2c43bfffd847c2e2d5b523b93ae27d603897d7e7 (expected; no concurrent advancement).
+- Phase 2 (Task 12): pushed codex/task-12-mainline-integration, live-verified = 966b7f7457b40396205c647b3fc9bcb2f3616858 exact; main ff 2c43bff..966b7f7; pushed; live re-read main = 966b7f7. Owner candidate b7060d5 merged byte-identical; regression 140 passed / 1 skipped + owner 28 passed.
+- Phase 3 (Task 7): live main re-read = 966b7f7 (consistent); pushed codex/task-07-mainline-integration, live-verified = 8e18cd3b177891496dcb13f2d18bb6e4d747f612 exact; main ff 966b7f7..8e18cd3; pushed; live re-read main = 8e18cd3. QA product point cce4d70 byte-identical; lifecycle tip 742d252 adopted per audited disclosure (4 HEAD-only commits, zero product drift); regression 159 passed / 0 skipped.
+- Ancestor verification on final remote main 8e18cd3: b7060d5, cce4d70, 966b7f7, 8e18cd3 all confirmed ancestors.
+- QA regression preservation on main: test_simulation_engine_acceptance.py, owner 28 simulation tests, test_agent_runtime.py all present and green.
+- New sole baseline for subsequent lanes: main >= 8e18cd3b177891496dcb13f2d18bb6e4d747f612.
+- Ways integration is now AUTHORIZED for dialogue 6: new main contains the Task 7 seam (cce4d70 ancestor check will pass); five lens branches remain frozen until the single WAYS_INTEGRATION_HANDOFF flows through dialogue 3 QA and this lead.
+- Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push; CCR-20260724-Ways-01 adjudication scheduled with the Ways integration window.
+- No credentials or secret values are recorded here.
