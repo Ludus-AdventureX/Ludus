@@ -8,5 +8,8 @@
 - Objective: re-verify the full regression baseline on the new main and publish acceptance matrices for the Security Hardening, Agent Runtime, Web/UX, Simulation/Graph, and Five Lenses lanes.
 - Scope: services/api/tests/**, apps/web/tests/**, e2e/**, docs/handoffs/**, lifecycle records only; QA never modifies product source; defects route to manifest owners via QA_FINDING.
 - Baseline evidence so far: full suite 118 passed / 1 xfailed (-W error, disposable migrated PG16); alembic upgrade+check clean; Decision OS verifier PASS; OpenAPI/types drift OK; ruff/compileall PASS.
-- Next: commit the QA plan, report QA_BASELINE_READY, then review each IMPLEMENTATION_HANDOFF in a fresh worktree and emit one QA_HANDOFF per candidate.
+- Queue progress: Task 7 agent runtime (cce4d70) QA PASS with 19 new runtime tests (137 passed on candidate); Task 12 simulation engine (b7060d5) QA PASS with 11 acceptance tests + 28 owner tests adopted (157 passed on candidate); auth security hardening (ac084c7) implementation reviewed with 10 prepared rate-limit tests all green (128 passed, 1 xpassed on review tree) - final auth release verdict pending the Contract Lead combined HEAD with the login_rate_buckets migration.
+- Handoffs: docs/handoffs/TASK07_QA_HANDOFF.md, TASK12_QA_HANDOFF.md, TASK_AUTH_SECURITY_QA_PREP.md; new QA tests skip cleanly on this baseline (118 passed, 3 skipped, 1 xfailed).
+- Remote note: candidate-branch remote SHAs were claimed live-verified by their owners; QA's own ls-remote re-reads were intermittently 443-blocked and are recorded as unverified-by-QA where applicable.
+- Next: review each further IMPLEMENTATION_HANDOFF in a fresh worktree and emit one QA_HANDOFF per candidate.
 - Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
