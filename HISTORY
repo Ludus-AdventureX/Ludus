@@ -2044,3 +2044,29 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verification (fresh, disposable PG16 @55432, removed afterwards): alembic upgrade -> d7e2a91c5b48 (head) + check clean; pytest tests + app/simulations/tests = 304 passed / 0 failed / 0 skipped (-W error; = post-CCR 199 baseline + 105 lens_lanes); lens_lanes standalone 105 passed; official generate_contracts.ps1 -Check full chain = CONTRACT_DRIFT_OK; ruff/compileall PASS; secret scan + git diff --check PASS.
 - Next: dialogue 3 independent QA on the exact refresh head; main merge only after that verdict plus live reads. Persistence remains locked until then; five single-lens branches stay frozen.
 - No credentials or secret values are recorded here.
+
+
+## Archive Ways R3 QA - 2026-07-24 (Asia/Shanghai)
+
+### Inherited coordinator HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after building the Ways post-CCR refresh candidate (r3).
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Ways Post-CCR Refresh Candidate (r3) - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/ways-five-lens-integration-r3 (frozen 69bbc5d merged unmodified onto main db23bbb; byte-verified; 304 passed / 0 failed; CONTRACT_DRIFT_OK; migration head d7e2a91c5b48); NOT merged to main.
+- Gate condition: dialogue 3 independent QA on the exact refresh head, then live-read publication by this lead.
+- Persistence wiring and five single-lens branches remain locked/frozen until the refresh candidate reaches main.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA completion record
+
+- Role: QA/Release Owner; fresh branch codex/qa-ways-five-lens-r3 from candidate faaf44ca21db674104d050cb4cd95bb345e59d3e (hard gate: first command ls-remote main = db23bbb exact; candidate ref live-verified exact).
+- Structure: db23bbb and frozen 69bbc5d both ancestors; strategic_lenses/lens_lanes/fixtures byte-identical to 69bbc5d; conflict resolution lifecycle-only (HISTORY pure-append 283/0 and 85/0); zero conflict markers tree-wide; zero models/types/migrations/contracts/agents touches.
+- Clean-DB migration lifecycle: upgrade head -> d7e2a91c5b48; roundtrips c4a1f0b2d9e7 and 0001; alembic check clean.
+- Tests: 304 passed full matrix (matches candidate claim) + 105 lens_lanes; ruff/compileall PASS; OpenAPI+TypeScript drift OK (script-equivalent); diff-check/secret clean.
+- Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); mainline merge permitted for faaf44c.
+- Evidence: docs/handoffs/WAYS_R3_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
