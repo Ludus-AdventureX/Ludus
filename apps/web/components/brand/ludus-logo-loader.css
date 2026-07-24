@@ -18,7 +18,7 @@
   overflow: visible;
 }
 
-.ludus-logo-loader__letter { font: 800 270px Arial Black, Arial, sans-serif; letter-spacing: 8px; fill: transparent; stroke: #171817; stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ludus-loader-draw 4.8s cubic-bezier(.22,.61,.36,1) infinite; }
+.ludus-logo-loader__letter { font: 800 270px Arial Black, Arial, sans-serif; letter-spacing: 8px; fill: transparent; stroke: #171817; stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: ludus-loader-draw 4.8s cubic-bezier(.22,.61,.36,1) infinite; }
 .ludus-logo-loader__letter--2 { animation-delay: .28s; } .ludus-logo-loader__letter--3 { animation-delay: .56s; } .ludus-logo-loader__letter--4 { animation-delay: .84s; } .ludus-logo-loader__letter--5 { animation-delay: 1.12s; }
 
 .ludus-logo-loader__fill {
@@ -55,7 +55,7 @@
 }
 
 @keyframes ludus-loader-draw {
-  0%, 8% { stroke-dashoffset: 1; fill: transparent; opacity: 1; }
+  0%, 8% { stroke-dashoffset: 1200; fill: transparent; opacity: 1; }
   42%, 58% { stroke-dashoffset: 0; fill: #171817; opacity: 1; }
   72% { opacity: .35; }
   88%, 100% { stroke-dashoffset: 0; fill: #171817; opacity: 1; }
