@@ -1,10 +1,12 @@
-# Work Log: idle
+# Work Log: active
 
-- Status: idle; Task 3 published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 91a0d67aa71f4bd8e01057635d7ac7947051b57b (Task 3 content tip f95fda3 + publication lifecycle records; live ls-remote verified).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 91a0d67); the old freeze baseline 2396206 is superseded.
-- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- Started: 2026-07-24 (Asia/Shanghai).
+- Status: active.
+- Role: QA/Release Owner (mainline QA baseline for the post-Task-3 parallel lanes).
+- Branch: codex/qa-mainline-258a94d (worktree E:\Temp\xiayu\Documents\adventure-x\decision-lab-G0\worktrees\qa-mainline-258a94d).
+- Base: main 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (live ls-remote verified equal to refs/heads/main before branching; no Task 3 QA branch reused).
+- Objective: re-verify the full regression baseline on the new main and publish acceptance matrices for the Security Hardening, Agent Runtime, Web/UX, Simulation/Graph, and Five Lenses lanes.
+- Scope: services/api/tests/**, apps/web/tests/**, e2e/**, docs/handoffs/**, lifecycle records only; QA never modifies product source; defects route to manifest owners via QA_FINDING.
+- Baseline evidence so far: full suite 118 passed / 1 xfailed (-W error, disposable migrated PG16); alembic upgrade+check clean; Decision OS verifier PASS; OpenAPI/types drift OK; ruff/compileall PASS.
+- Next: commit the QA plan, report QA_BASELINE_READY, then review each IMPLEMENTATION_HANDOFF in a fresh worktree and emit one QA_HANDOFF per candidate.
+- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
