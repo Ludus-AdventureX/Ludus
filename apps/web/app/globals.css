@@ -1,6 +1,7 @@
 ﻿@import "tailwindcss";
 @import "./look-themes.css";
 @import "./look-styles.css";
+@import "../components/brand/ludus-logo-loader.css";
 
 /* The supplied Ludus artwork replaces the prototype axis mark and wordmark. */
 .brand-lockup { gap: 0; min-width: 0; }

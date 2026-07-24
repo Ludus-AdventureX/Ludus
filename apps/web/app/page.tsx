@@ -1,5 +1,5 @@
-import { DecisionShell } from "@/components/shell/DecisionShell";
+import { LoadingShell } from "@/components/shell/LoadingShell";
 
 export default function Home() {
-  return <DecisionShell />;
+  return <LoadingShell />;
 }
