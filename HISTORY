@@ -1568,3 +1568,36 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Client IP is taken from the direct connection; proxy-aware IP extraction is deferred and recorded as a risk.
 - Mutation/user+workspace burst limits and connector/model budgets from doc 22 are separate future slices.
 - No credentials or secret values are recorded here.
+
+
+## Archive Auth Security Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; Auth Security combined candidate built, CCR-20260724-006 executed, full acceptance passed; awaiting QA final review before any main merge.
+- Role: Mainline Audit / Contract Integration Lead
+- Branch: codex/task-auth-security-contract-integration (worktree E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration)
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (ancestry verified locally; this window's live remote reads hit 443 — a fresh remote main read is MANDATORY before any main merge)
+- implementation_sha: ac084c7ce9e2ac2da3a80ee77a5b9bc7c49fe24d (codex/task-auth-security-hardening, merged unmodified; services/api/app tree byte-identical; P2-001 rate limiting + P2-002 tokenVersion enforcement)
+
+## CCR-20260724-006 execution (accepted, docs/product-plan/docs/contract-changes/CCR-20260724-006.md)
+
+- New Alembic revision c4a1f0b2d9e7 creates login_rate_buckets column-exact with app/security/rate_limits.py (bucket_key VARCHAR(64), slice_start TIMESTAMPTZ, attempts BIGINT, PK(bucket_key, slice_start)).
+- migrations/env.py registers rate_limit_metadata alongside Base.metadata so alembic check/autogenerate treat the throttle table as canonical (table deliberately stays off Base.metadata to keep QA exact-table assertions unchanged).
+- .env.example adds AUTH_LOGIN_RATE_WINDOW_MINUTES/IP_MAX_ATTEMPTS/ACCOUNT_MAX_ATTEMPTS placeholders.
+- No OpenAPI/TypeScript regeneration needed (REQUEST_RATE_LIMITED already canonical; API shape unchanged) — CONTRACT_DRIFT_OK confirms.
+
+## Acceptance on combined HEAD (fresh, disposable PG16 @55432, removed afterwards)
+
+- Alembic: upgrade head -> c4a1f0b2d9e7; downgrade f850d361ee42 / 0001 double roundtrip; alembic check clean (env.py registration effective).
+- Full pytest -q -W error: 118 passed + 1 xpassed (the xpass is QA-TASK03-002's xfail flipping green by design — P2-002 fixed; QA should remove the xfail marker in its review).
+- Contract drift: CONTRACT_DRIFT_OK. Ruff: PASS. compileall: PASS.
+- P2-001 behavior probe on migrated DB: PASS (RATE_LIMIT_PROBE_OK) — repeated wrong-password logins trip 429 REQUEST_RATE_LIMITED, retryable=true, details limited to retryAfterSeconds, no raw email echoed; persistent cross-request metering confirmed.
+- Scope audit: lead delta beyond ac084c7 is exactly {env.example, CCR-006, migrations/env.py, new revision}; packages/contracts, apps/web, services/api/tests untouched. Secret scan + git diff --check: PASS.
+
+## Boundary and next steps
+
+- NOT merged to main. QA (dialogue 3) must review the combined HEAD: fixate rate-limit scenarios into services/api/tests/test_rate_limits.py (account trip, correct-password-during-limit, account-dimension reset, cross-account IP limit, missing-table fail-closed, ON CONFLICT concurrency), remove the P2-002 xfail marker, and return a release verdict.
+- Login endpoint may be exposed only after this candidate (with migration) reaches main and QA confirms P2-001; reverse-proxy X-Forwarded-For policy remains a later deployment slice.
+- Remote status recorded below after push attempt; failures marked blocked, never fabricated.
+- No credentials or secret values are recorded here.

@@ -1,17 +1,10 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Contract Integration Lead (Auth Security hardening contract integration)
-- objective: Build the Auth Security contract integration candidate: merge codex/task-auth-security-hardening @ ac084c7 unmodified, execute its CONTRACT_CHANGE_REQUEST as CCR-20260724-006 (canonical Alembic migration for login_rate_buckets column-exact with app/security/rate_limits.py, register rate_limit_metadata in migrations/env.py target metadata so alembic check stays clean, add three AUTH_LOGIN_RATE_* placeholders to .env.example), run clean-database migration roundtrip/check, full pytest, drift, ruff/compileall, scope/secret audits, then hand the combined HEAD to Task QA. No main merge before QA PASS.
-- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (local main == origin/main cache; this window's live ls-remote attempts hit 443 — remote re-read MUST be completed before any main merge; implementation lane recorded a fresh post-push live read of main = 258a94d)
-- branch: codex/task-auth-security-contract-integration
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
-- write_scope: merge of ac084c7 (unmodified); services/api/migrations/versions/** (new revision); services/api/migrations/env.py (target metadata registration); .env.example; docs/product-plan/docs/contract-changes/CCR-20260724-006.md; HEAD/HISTORY lifecycle.
-- forbidden_scope: any edit to app/auth/**, app/security/** business logic (must land byte-identical from ac084c7); QA-owned tests; packages/contracts/** (no API-shape change expected); other lanes' branches; main merge before QA PASS; force-push.
-- dependencies:
-  - implementation: codex/task-auth-security-hardening @ ac084c7ce9e2ac2da3a80ee77a5b9bc7c49fe24d (ancestry verified: merge-base == 258a94d; changed paths exactly auth/security owner scope + lifecycle; lane self-verified remote branch SHA live after push)
-- known_initial_risks:
-  - fail-closed design: without the migration login always answers 429; the migration in this candidate is the release prerequisite.
-  - alembic check would flag the new table as removable if rate_limit_metadata is not added to env.py target metadata; env.py change is part of the CCR execution.
-  - GitHub 443 intermittent this window; candidate push may block — recorded honestly, never fabricated.
-- secret_policy: no credentials, API keys, tokens, cookies, or connection strings are recorded here.
+- Status: idle after building the Auth Security contract integration candidate.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive Auth Security Contract Integration Candidate - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/task-auth-security-contract-integration = ac084c7 (P2-001/P2-002 implementation, unmodified) + CCR-20260724-006 (login_rate_buckets migration c4a1f0b2d9e7, env.py metadata registration, AUTH_LOGIN_RATE_* placeholders); full acceptance PASS (118 passed + 1 xpassed; migration roundtrip/check clean; RATE_LIMIT_PROBE_OK); NOT merged to main.
+- Gate condition: main merge requires QA release verdict PASS on this combined HEAD plus a fresh live remote main read (this window's reads were 443-blocked).
+- Remote status: recorded in the lifecycle commit after the push attempt.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
