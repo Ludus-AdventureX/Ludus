@@ -78,6 +78,24 @@
   services/api/tests/lens_lanes/test_<lens_id>.py at integration as a staging home;
   final ownership adjudicated by QA (conv 3) which owns services/api/tests/**;
   no test file may remain inside app/**.
+- integration_preconditions (updated after TASK07_SEAM_QA_GATE_UPDATE from conv 7):
+    - task7_seam_qa: QA_CONTENT_PASS (independent QA on cce4d70: 137 passed /
+      0 failed / 1 xfailed; P0=0 P1=0 P2=0; covered ToolRegistry fail-closed,
+      allowlist/subset/schema validation, context isolation, delegation
+      intersection+depth, hard budget, single empty-content repair retry,
+      provider-neutral protocol, LensSpec five-set, server-owned field rejection,
+      LensRegistry full-set)
+    - task7_mainline: MAINLINE_INTEGRATION_PENDING (Mainline Lead order:
+      Auth Security -> Task 12 -> Task 7; final Ways integration branch is NOT
+      created until the new remote main SHA containing Task 7 is published and
+      live-verified)
+    - note: QA candidate head cce4d70 equals the remote branch SHA and the product
+      content of this lane; local lifecycle commits after it (74691f7/b546ad1/
+      610fc4c) are non-product and remain push-pending on 443
+    - post_new_main_plan: live-verify new main -> fresh integration worktree/branch
+      from it -> assemble porter -> counterparty -> pre_mortem -> scenario ->
+      meadows -> layout/adapter/registry/test-dir convergence -> Pre-Mortem DB
+      suite in Postgres QA env -> single WAYS_INTEGRATION_HANDOFF
 - secret_policy: >
     No credentials, API keys, tokens, cookies, connection strings, or .env contents
     are read, echoed, logged, or committed. Fixture provider requires no keys.
