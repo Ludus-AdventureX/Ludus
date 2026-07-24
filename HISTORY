@@ -2327,3 +2327,18 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Dialogue 3 QA: update the exact-table assertion (+8 tables), fix the replay-test fixture to satisfy the frozen-reference FKs, add negative regressions (cross-workspace FK rejection for the 4 simulation_runs references, same-version edge FK rejection, confirmed-without-timestamp rejection, scenario riskTolerance wire rejection, damping/multiplier bounds), rerun combined acceptance.
 - Publication holds until the Artifact IO wave; at final integration this candidate is refreshed to the then-latest remote main per the standing rule.
 - No credentials or secret values are recorded here.
+
+
+## Archive SIM-01 Post-Artifact-IO Refresh Integration (r2) - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; refreshed SIM-01 integration candidate assembled and verified on codex/ccr-sim-01-integration-r2; NOT merged to main; handed to dialogue 3 for final exact-head QA.
+- Role: Mainline Audit / Contract Integration Lead.
+- base_main_sha: 3ab888a32083fc86c5aa4a6372bc7585e7eb946a (lane's first command was the live ls-remote; exact expected value; migration head measured d7e2a91c5b48 pre-merge - Artifact IO shipped no migration). Fresh worktree decision-lab-sim01-r2; no reuse of the SIM implementation worktree, the Artifact IO worktree, or older integration worktrees.
+- Assembly: 4b6da0b (start) -> 995bc83 --no-ff merge of the frozen SIM-01 candidate codex/ccr-sim-01-execution @ 4d45391805ce8c880959b20ab8a1b5ea279f0a03 (product ad8f9d3 + d05abd3; audit chain preserved; frozen source unmodified). Conflicts confined to HEAD/HISTORY, resolved binary-safe append-only.
+- Product byte gates vs 4d45391 (all exact): app/types.py, app/models.py, app/simulations/schemas.py, migrations/versions/a3f8c2d47e19_add_canonical_simulation_graph_contract.py, docs/product-plan/docs/contract-changes/CCR-20260724-SIM-01.md.
+- Artifact IO anti-regression gates vs main 3ab888a (all exact): strategic_lenses/repository.py, analyses/lens_artifact_reads.py, persistence/read-path/IO QA tests incl. the workspace-scoped _artifact_count fix and test_lens_artifact_io_semantics.py. Forbidden paths (contracts/web/agents/lens behavior/engine files/SIM repository-service/routes) untouched.
+- Verification (fresh, disposable PG16 @55432, removed afterwards; executed against the exact candidate SHA via detached checkout in the tooled lead worktree): alembic heads = exactly a3f8c2d47e19; clean-DB upgrade / downgrade d7e2a91c5b48 / re-upgrade / alembic check all clean; orphan preflight probe NEGATIVE_CASE_OK + POSITIVE_CASE_OK with all 4 simulation_runs composite FKs pg_constraint-convalidated; Task 12 engine 28 passed; full pytest -W error (tests + app/simulations/tests) = 334 passed / 2 failed - exactly the two known QA-owned failures (exact-table set missing the 8 SIM tables; replay-test fixture must create graph/strategy/scenario/score rows before inserting simulation_runs) and nothing else regressed from the 336 Artifact IO baseline; ruff/compileall PASS; generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; scope/secret/diff-check/conflict-marker scans clean (single marker grep hit is the pre-existing prose in WAYS_R3_QA_HANDOFF.md).
+- Next: push + live branch verification + main re-read recorded below; dialogue 3 runs final QA on this refreshed exact head (updating the two QA-owned tests on its QA branch); publication then follows the standard live-read ff-only flow.
+- No credentials or secret values are recorded here.

@@ -1,11 +1,9 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Contract Integration Lead (SIM-01 post-Artifact-IO refresh, r2)
-- objective: Assemble codex/ccr-sim-01-integration-r2 from live-verified main 3ab888a32083fc86c5aa4a6372bc7585e7eb946a (migration head measured d7e2a91c5b48, unchanged by Artifact IO): --no-ff merge of the frozen SIM-01 candidate codex/ccr-sim-01-execution @ 4d45391805ce8c880959b20ab8a1b5ea279f0a03 (product ad8f9d3 + d05abd3; 4d45391 lifecycle-only tail; migration a3f8c2d47e19), preserving the SIM-01 audit chain; lifecycle conflicts append-only only; product byte gates vs 4d45391 on the five SIM paths; Artifact IO anti-regression gates vs main; full migration verification incl. orphan probes and 4 FK convalidated; regressions incl. engine 28 and the 336 Artifact IO baseline with the two known QA-owned failures reported honestly; push + live verify; hand exact head to dialogue 3 final QA. NOT merged to main.
-- base_main_sha: 3ab888a32083fc86c5aa4a6372bc7585e7eb946a (this lane's first command was the live ls-remote; exact expected value)
-- branch: codex/ccr-sim-01-integration-r2
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-sim01-r2 (fresh; no reuse of the SIM implementation worktree, the Artifact IO worktree, or older integration worktrees)
-- forbidden_scope: any modification of frozen 4d45391 content; SIM repository/service; Task 12 engine edits; CCR-SIM-02 routes; packages/contracts/**; apps/web/**; Ways/Lens behavior edits; Artifact IO product edits; QA tests; main merge.
-- known_expected_failures (QA-owned, not fixed here): test_core_table_set_and_workspace_scope (exact set needs the 8 SIM tables) and test_task_19a_simulation_replay_numeric_constraints_are_enforced (fixture must create graph/strategy/scenario/score rows before inserting simulation_runs).
-- secret_policy: no credentials recorded here.
+- Status: idle after assembling the refreshed SIM-01 integration candidate (r2).
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive SIM-01 Post-Artifact-IO Refresh Integration (r2) - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/ccr-sim-01-integration-r2 (frozen 4d45391 merged --no-ff onto main 3ab888a; product byte gates and Artifact IO anti-regression gates all exact; migration head a3f8c2d47e19; 334 passed + exactly the 2 known QA-owned failures; CONTRACT_DRIFT_OK); NOT merged to main.
+- Gate condition: dialogue 3 final QA on this refreshed exact head (QA branch updates the exact-table set and the replay fixture), then live-read ff-only publication by the lead.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
