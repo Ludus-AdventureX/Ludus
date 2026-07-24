@@ -1,11 +1,52 @@
-# Work Log: idle
+# Work Log: in_progress
 
-- Status: idle; post-auth wave (Task 12 + Task 7) published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Post-Auth Wave Main Publication (Task 12 + Task 7) - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 8e18cd3b177891496dcb13f2d18bb6e4d747f612 + this archive commit (live ls-remote verified per merge; ancestors b7060d5 / cce4d70 / 966b7f7 / 8e18cd3 all confirmed).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
-- Ways integration: AUTHORIZED for dialogue 6 (new main contains the Task 7 seam); five lens branches stay frozen until the single WAYS_INTEGRATION_HANDOFF passes dialogue 3 QA and returns here; CCR-20260724-Ways-01 adjudication scheduled with that window.
-- Web r2: REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Ways / Agent Pipeline Coordinator (five-lens integration lane)
+- status: in_progress
+- objective: >
+    Assemble the five accepted lens lanes onto the post-auth-wave main
+    (2c5e79c, which contains Task 3 + auth security + Task 12 + Task 7 seam
+    cce4d70) in the fixed order porter -> counterparty -> pre_mortem ->
+    scenario -> meadows; converge package layout, __init__ ownership,
+    adapters, registry and test staging; run the full DB-backed suite on
+    Postgres; produce a single WAYS_INTEGRATION_HANDOFF for full QA (conv 3)
+    and mainline integration (conv 1). Persistence/report wiring is explicitly
+    EXCLUDED: CCR-20260724-Ways-01 is not approved; no schema/migration/enum is
+    invented here.
+- base_main_sha: 2c5e79ceb8373a196e96ff86be442ecb52041d5c
+- base_verification: >
+    Local main and origin/main tracking both equal 2c5e79c; publication chain
+    2c43bff -> 966b7f7 -> 6d2a0a5/8e18cd3 -> 2c5e79c present locally; ancestry
+    verified for b7060d5 (Task 12), cce4d70 (Task 7 seam), 966b7f7, 8e18cd3.
+    Live ls-remote of main attempted three times at trigger time and blocked by
+    GitHub 443; live re-read remains a HARD GATE before any publication claim
+    and will be retried until it returns exactly 2c5e79c or a disclosed pure
+    lifecycle descendant.
+- branch: codex/ways-five-lens-integration-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-ways-integration-r2
+- lens_integration_points:
+    - porter_five_forces: 8103284cc9450b893612d8900db778db11a5c850
+    - counterparty_response_matrix: 1ea56cafddd8da3ed79e50ad26030fd73df033fe
+    - pre_mortem: 97f35bce78b703c1db5a5846c6f7b09370010b93
+    - scenario_planning: 66b1ea11d59a19f67220fc747c000682fe7c92e6 (lifecycle tip e1ef2d7 NOT merged)
+    - meadows_leverage_points: 7fd12f75d67a462888f6579916d6920f4fe38a1a
+- write_scope:
+    - services/api/app/strategic_lenses/** (layout convergence, adapters, registry)
+    - services/api/tests/lens_lanes/** (staging home for lane tests; QA adjudicates)
+    - fixtures/spherical-robot/** (lens fixtures carried from lanes)
+    - HEAD (this branch) and HISTORY (append-only, union of lane records)
+- forbidden_scope:
+    - services/api/app/**/schemas.py, migrations/**, packages/contracts/** (contract_lead)
+    - services/api/app/{auth,tenancy,security,connectors,evidence,analyses,simulations}/**
+    - services/api/app/agents/** (published seam; consumed, not modified)
+    - method-packs/**, published ways/** (immutable)
+    - main (never modified by this lane)
+- merge_conflict_policy: >
+    HEAD resolves to this lane's record (ours); HISTORY resolves by union
+    (append-only, no lane record dropped); the two strategic_lenses __init__.py
+    files are Coordinator-owned and resolve to the neutral rewritten version.
+    A temporary 'HISTORY merge=union' attribute is set in .git/info/attributes
+    for the merge sequence and removed immediately after.
+- secret_policy: >
+    No credentials, API keys, tokens, cookies, connection strings, or .env
+    contents are read, echoed, logged, or committed.
