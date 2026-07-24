@@ -1,11 +1,10 @@
 # Work Log: idle
 
-- Status: idle; Task 3 final content gate COMPLETE, remote publication BLOCKED by GitHub 443.
+- Status: idle; Task 3 published to remote main and live-verified.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Final Mainline Gate - Publication Blocked by Network - 2026-07-24 (Asia/Shanghai)`.
-- Final candidate: codex/task-03-contract-integration @ f95fda385912987fc1ce01a7931feb4acdd03929 (== QA exact_tested_head; fresh regression re-run by the integration lead: 118 passed, 1 xfailed, -W error; alembic/ruff/compileall clean).
-- main: unchanged at 2396206 (CONTRACT_FREEZE_SHA); NOT merged — protocol requires a live pre-merge remote main re-read and candidate-branch remote verification, which GitHub 443 currently prevents. No remote result is claimed.
-- Resume once network recovers: ls-remote main (expect 2396206) -> push -u candidate -> ls-remote verify f95fda3 -> merge --ff-only into main -> push main (no force) -> ls-remote re-read -> publish MAINLINE_UPDATE.
-- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (login rate limiting) lands.
+- Last archive entry: `Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)`.
+- Remote main: 91a0d67aa71f4bd8e01057635d7ac7947051b57b (Task 3 content tip f95fda3 + publication lifecycle records; live ls-remote verified).
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 91a0d67); the old freeze baseline 2396206 is superseded.
+- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
