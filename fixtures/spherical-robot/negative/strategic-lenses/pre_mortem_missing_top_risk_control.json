@@ -1,0 +1,104 @@
+{
+  "lensType": "pre_mortem",
+  "sourceSkillVersion": "1.0.0",
+  "phase": "adversarial_stress",
+  "references": {
+    "sourcePacketIds": ["RP-spherical-robot-001"],
+    "claimIds": ["CL-rescue-priority-01"],
+    "evidenceIds": ["EV-rescue-procurement-cycle-18m", "EV-runway-cash-plan-q3"],
+    "assumptionIds": ["AS-ip68-survives-rubble-field"],
+    "challengeIds": ["CH-safety-anchor-runway-01"]
+  },
+  "researchRequests": [],
+  "content": {
+    "failureHorizon": "18 个月后（2028-01）",
+    "failureStatement": "现在是 2028 年 1 月，球形机器人项目押注救援市场的方向已经彻底失败：没有采购合同，现金耗尽。",
+    "perspectives": ["internal", "external", "systemic_hindsight"],
+    "failureCauses": [
+      {
+        "causeId": "PM-N1-cert-delay",
+        "perspective": "internal",
+        "category": "internal_execution",
+        "cause": "救援装备认证与入围目录流程被低估，窗口期内未取得投标资格。",
+        "downstreamConsequences": ["错过年度采购窗口，管线停留在意向阶段"],
+        "likelihoodScore": 4,
+        "impactScore": 4,
+        "riskScore": 16,
+        "controllability": "partly_controllable"
+      },
+      {
+        "causeId": "PM-N2-procurement-cycle",
+        "perspective": "external",
+        "category": "external",
+        "cause": "政府采购真实周期 12-18 个月，结构性超过 10 个月现金跑道。",
+        "downstreamConsequences": ["中标后首笔回款晚于现金耗尽"],
+        "likelihoodScore": 4,
+        "impactScore": 5,
+        "riskScore": 20,
+        "controllability": "uncontrollable"
+      },
+      {
+        "causeId": "PM-N3-rubble-assumption",
+        "perspective": "internal",
+        "category": "assumption_failure",
+        "cause": "球形外壳废墟连续作业假设未经第三方实测，现场演示失败导致信任崩塌。",
+        "downstreamConsequences": ["关键客户拒绝进入下一轮评审"],
+        "likelihoodScore": 3,
+        "impactScore": 5,
+        "riskScore": 15,
+        "controllability": "partly_controllable"
+      },
+      {
+        "causeId": "PM-N4-household-price-war",
+        "perspective": "external",
+        "category": "timing",
+        "cause": "家庭市场价格战关闭回退退路，库存物料一次性减值。",
+        "downstreamConsequences": ["救援失败后无第二市场退路"],
+        "likelihoodScore": 3,
+        "impactScore": 4,
+        "riskScore": 12,
+        "controllability": "uncontrollable"
+      },
+      {
+        "causeId": "PM-N5-single-bet-runway",
+        "perspective": "systemic_hindsight",
+        "category": "systemic_blind_spot",
+        "cause": "系统性盲区：全部跑道押在单一长周期市场，未设分段止损点。",
+        "downstreamConsequences": ["延迟被解释为个案，止损被持续推迟"],
+        "likelihoodScore": 3,
+        "impactScore": 5,
+        "riskScore": 15,
+        "controllability": "controllable"
+      }
+    ],
+    "topRisks": [
+      {
+        "rank": 1,
+        "causeId": "PM-N2-procurement-cycle",
+        "prevention": "押注前完成 3 省采购周期一手核实，把首笔回款最早日期写入现金计划硬约束。",
+        "contingency": "周期确认超过 12 个月时启动设备租赁模式，把一次性销售改为按月回款。",
+        "detectionIndicator": "立项后第 60 天目标省份预算批复文件中是否出现本品类。"
+      },
+      {
+        "rank": 2,
+        "causeId": "PM-N3-rubble-assumption",
+        "prevention": "投入模具与认证费用前完成第三方废墟场三工况实测。",
+        "contingency": "实测暴露结构缺陷时冻结救援推广，切换降级侦察场景。",
+        "detectionIndicator": "   "
+      },
+      {
+        "rank": 3,
+        "causeId": "PM-N5-single-bet-runway",
+        "prevention": "把跑道拆成两个 5 个月决策段，设定继续/止损门槛，未达标不进入第二段。",
+        "contingency": "把跑道拆成两个 5 个月决策段，设定继续/止损门槛，未达标不进入第二段。",
+        "detectionIndicator": "每月末对照决策段门槛达成率，认证里程碑偏移超过 30 天触发段间评审。"
+      }
+    ],
+    "verdict": "validate_first",
+    "verdictRationale": "存在不可控致命原因与未实测核心假设，应先验证再承诺。",
+    "additionalInformationNeeded": [
+      "3 个目标省份采购周期一手数据",
+      "第三方废墟场实测报告"
+    ]
+  }
+}

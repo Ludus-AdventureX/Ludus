@@ -1,0 +1,202 @@
+{
+  "lensType": "counterparty_response_matrix",
+  "sourceSkillVersion": "1.0.0",
+  "phase": "adversarial_stress",
+  "references": {
+    "sourcePacketIds": ["rp-rescue-procurement-scan", "rp-household-demand-scan"],
+    "claimIds": ["cl-rescue-tender-cycle", "cl-household-price-floor"],
+    "evidenceIds": [
+      "ev-provincial-tender-2025",
+      "ev-incumbent-framework-agreements",
+      "ev-household-robot-price-survey"
+    ],
+    "assumptionIds": [
+      "asm-procurement-cycle-9mo",
+      "asm-cert-first-mover",
+      "asm-household-willingness-to-pay",
+      "asm-runway-12mo"
+    ],
+    "challengeIds": ["ch-safety-anchor-subsidy-war", "ch-safety-anchor-cert-lockout"]
+  },
+  "researchRequests": [
+    {
+      "requestId": "rr-verify-tender-cycle",
+      "question": "What is the actual end-to-end cycle time from pre-qualification to award for provincial emergency-response robot tenders in the last two years?",
+      "evidenceNeed": "procurement",
+      "priority": "high",
+      "affectedClaimIds": ["cl-rescue-tender-cycle"]
+    },
+    {
+      "requestId": "rr-household-price-tolerance",
+      "question": "At what retail price do household service robot purchase intentions collapse in current consumer surveys, and how do platform subsidies shift that threshold?",
+      "evidenceNeed": "current_market",
+      "priority": "high",
+      "affectedClaimIds": ["cl-household-price-floor"]
+    }
+  ],
+  "content": {
+    "maxResponseDepth": 1,
+    "counterparties": [
+      {
+        "counterpartyId": "cp-rescue-incumbent",
+        "identity": "Established rescue-robotics integrator holding provincial framework agreements",
+        "coreInterest": "Defend framework-agreement revenue and procurement relationships against a cheaper spherical entrant; keep certification requirements aligned with its own tracked platforms.",
+        "responseTools": [
+          "Bundle discounts across its tracked-robot fleet inside existing framework agreements",
+          "Lobby certification bodies to add tracked-platform-biased field-test criteria",
+          "Accelerate tender timing with incumbent-friendly spec lock-in"
+        ],
+        "constraints": [
+          "18-month internal hardware refresh cycle limits fast counter-launches",
+          "Recent field failures make aggressive public claims reputationally risky",
+          "Thin software team cannot quickly match autonomy features"
+        ]
+      },
+      {
+        "counterpartyId": "cp-household-platform",
+        "identity": "Consumer smart-home platform vendor able to subsidize household robots",
+        "coreInterest": "Own the household entry point and its data; prevent an independent robot brand from establishing a direct consumer relationship.",
+        "responseTools": [
+          "Subsidized hardware bundles tied to platform subscriptions",
+          "App-store and voice-assistant distribution control",
+          "Exclusive supplier agreements with shared component vendors"
+        ],
+        "constraints": [
+          "No rescue or industrial certification track record",
+          "Hardware margin pressure caps subsidy depth per quarter",
+          "Antitrust scrutiny limits overt exclusivity enforcement"
+        ]
+      }
+    ],
+    "ourActions": [
+      {
+        "actionId": "act-rescue-pilot",
+        "actionType": "active",
+        "description": "Commit engineering and the remaining certification budget to one provincial emergency-bureau rescue pilot, targeting the next tender window.",
+        "observability": "high",
+        "irreversibility": "medium",
+        "coreAssumptionIds": ["asm-procurement-cycle-9mo", "asm-cert-first-mover"]
+      },
+      {
+        "actionId": "act-household-launch",
+        "actionType": "active",
+        "description": "Launch a household service configuration through consumer channels with tooling and initial inventory committed this quarter.",
+        "observability": "high",
+        "irreversibility": "high",
+        "coreAssumptionIds": ["asm-household-willingness-to-pay"]
+      },
+      {
+        "actionId": "act-hold-observe",
+        "actionType": "active",
+        "description": "Defer market commitment for two quarters, keep the dual-use prototype line, and spend only on certification pre-study and demand probes.",
+        "observability": "low",
+        "irreversibility": "low",
+        "coreAssumptionIds": ["asm-runway-12mo"]
+      }
+    ],
+    "responseMatrix": [
+      {
+        "counterpartyId": "cp-rescue-incumbent",
+        "actionId": "act-rescue-pilot",
+        "optimalResponse": "Immediately lobby the certification body to insert tracked-platform field criteria and pre-announce a framework-agreement discount, raising our qualification cost before the tender opens.",
+        "worstResponseForUs": "Certification criteria amended to require multi-terrain track records we cannot show, excluding the spherical platform from the next two tender rounds.",
+        "mostLikelyResponse": "Quiet bundle discounts to the emergency bureau plus informal doubts about spherical-platform durability, without formal spec changes this cycle.",
+        "responseWindow": "1-2 quarters, bounded by the published tender calendar",
+        "optimalLikelyGap": "The optimal lobbying play needs public attention on certification, which its recent field failures make risky; informal price and doubt tactics are cheaper and deniable.",
+        "ourCounterResponse": "Pre-file third-party field-test evidence with the bureau and lock a reference deployment letter before the tender publishes; budget already reserved in the pilot plan.",
+        "fallbackCost": "One extra field demonstration and roughly one month of schedule slack already inside the pilot budget envelope.",
+        "strategyInvalidated": false
+      },
+      {
+        "counterpartyId": "cp-rescue-incumbent",
+        "actionId": "act-household-launch",
+        "optimalResponse": "Publicly reframe us as a consumer toy vendor in procurement circles, cementing its rescue-market position without spending on price.",
+        "worstResponseForUs": "Procurement contacts treat our rescue ambitions as abandoned, closing warm channels we would need if we later re-enter rescue.",
+        "mostLikelyResponse": "No direct action beyond narrative positioning, since our household move exits its market.",
+        "responseWindow": "Within one quarter of a public consumer launch",
+        "optimalLikelyGap": "Optimal and likely nearly coincide because ignoring us while talking down our seriousness costs it nothing.",
+        "ourCounterResponse": "Maintain a minimal certification pre-study track and one bureau relationship to keep re-entry credible; costs one part-time liaison.",
+        "fallbackCost": "Part-time liaison plus annual certification pre-study fees, sustainable within current runway.",
+        "strategyInvalidated": false
+      },
+      {
+        "counterpartyId": "cp-rescue-incumbent",
+        "actionId": "act-hold-observe",
+        "optimalResponse": "Accelerate the next tender and push spec lock-in now, closing the window while we are uncommitted.",
+        "worstResponseForUs": "Tender brought forward with incumbent-shaped specs, so waiting costs us the very cycle we were saving for.",
+        "mostLikelyResponse": "Continue business as usual; a quiet observer does not trigger its threat model.",
+        "responseWindow": "Tied to the annual tender calendar, roughly 2-4 quarters",
+        "optimalLikelyGap": "Accelerating tenders requires bureau cooperation it cannot unilaterally force, so the likely response is inaction.",
+        "ourCounterResponse": "Monitor tender pre-announcements weekly and keep a 6-week fast-follow pilot package ready; preparation cost only.",
+        "fallbackCost": "Maintaining the fast-follow package costs one engineer-week per month.",
+        "strategyInvalidated": false
+      },
+      {
+        "counterpartyId": "cp-household-platform",
+        "actionId": "act-rescue-pilot",
+        "optimalResponse": "Ignore the rescue niche and lock shared component suppliers into priority contracts as insurance against our later consumer pivot.",
+        "worstResponseForUs": "Key drive-unit supplier capacity reserved by the platform, lengthening our lead times even for rescue units.",
+        "mostLikelyResponse": "No visible reaction; rescue procurement is outside its platform economics.",
+        "responseWindow": "2-4 quarters, driven by its supplier contract renewal cycle",
+        "optimalLikelyGap": "Supplier lock-up costs real margin for a hypothetical threat, so the likely response is monitoring only.",
+        "ourCounterResponse": "Dual-source the drive unit and pre-book pilot-volume capacity; already priced into the pilot bill of materials.",
+        "fallbackCost": "Second-source qualification adds a bounded one-time engineering cost.",
+        "strategyInvalidated": false
+      },
+      {
+        "counterpartyId": "cp-household-platform",
+        "actionId": "act-household-launch",
+        "optimalResponse": "Launch a subsidized bundle at a price below our unit cost, tied to its subscription, timed to our channel launch.",
+        "worstResponseForUs": "A sustained subsidy war plus app-store demotion that our runway cannot outlast, stranding committed tooling and inventory.",
+        "mostLikelyResponse": "Targeted promotional pricing and preferential placement for its own bundle during our launch window, short of a full subsidy war.",
+        "responseWindow": "Within weeks of a public consumer launch",
+        "optimalLikelyGap": "Full subsidy war breaches its quarterly margin cap and invites antitrust attention, so it prefers targeted promotions first.",
+        "ourCounterResponse": "No credible counter within budget: matching subsidies breaches the funding hard constraint, and independent distribution cannot replace platform placement at launch volume.",
+        "fallbackCost": "Exiting after a failed launch strands tooling and inventory and consumes most remaining runway.",
+        "strategyInvalidated": true
+      },
+      {
+        "counterpartyId": "cp-household-platform",
+        "actionId": "act-hold-observe",
+        "optimalResponse": "Pre-announce its own household robot roadmap to freeze consumer demand and deter our later entry.",
+        "worstResponseForUs": "Demand freeze plus supplier priority contracts make a later household entry structurally harder.",
+        "mostLikelyResponse": "Continue roadmap on its own schedule; an uncommitted observer does not justify pre-announcement risk.",
+        "responseWindow": "1-2 quarters around its annual platform event",
+        "optimalLikelyGap": "Pre-announcing against a non-entrant risks osborning its current bundle sales, so silence is likelier.",
+        "ourCounterResponse": "Track its platform event announcements and re-run the household demand probe afterwards; monitoring cost only.",
+        "fallbackCost": "One demand-probe refresh per quarter, negligible against runway.",
+        "strategyInvalidated": false
+      }
+    ],
+    "publicationTest": {
+      "responseChangesIfPublished": true,
+      "newInformationRevealed": "Publication would reveal our 12-month runway ceiling, the rescue-first sequencing logic, and that we treat a platform subsidy war as unanswerable, giving the platform a cheap deterrence playbook.",
+      "informationAsymmetryVulnerability": "medium",
+      "mitigation": "Keep runway figures and tender timing private; publish only capability demonstrations and already-observable pilot facts; refresh this matrix before any public launch commitment."
+    },
+    "downsideAsymmetry": [
+      {
+        "actionId": "act-rescue-pilot",
+        "worstCase": "Certification amendment excludes the spherical platform for two tender rounds after pilot spend is committed.",
+        "downsideFloor": "bounded",
+        "exitPath": "Wind down the pilot after the tender decision, retain certification artifacts and field data for the dual-use prototype.",
+        "exitCost": "Pilot budget minus reusable certification and field-test assets; no inventory exposure."
+      },
+      {
+        "actionId": "act-household-launch",
+        "worstCase": "Subsidy war plus channel demotion during launch quarter with tooling and inventory already committed.",
+        "downsideFloor": "unbounded",
+        "exitPath": "Fire-sale inventory through secondary channels and retool the line back to the dual-use prototype.",
+        "exitCost": "Committed tooling, inventory write-down, and most remaining runway; recovery depends on salvage prices we do not control."
+      },
+      {
+        "actionId": "act-hold-observe",
+        "worstCase": "Tender accelerates with incumbent-shaped specs and household demand is frozen by a platform pre-announcement in the same period.",
+        "downsideFloor": "bounded",
+        "exitPath": "Activate the prepared fast-follow pilot package or pivot the demand probe into a niche vertical.",
+        "exitCost": "Two quarters of calendar time and probe spending; core capital preserved."
+      }
+    ],
+    "reflexivityWarning": "Adopting this matrix makes our tender-window behavior more predictable to anyone who infers it; a leak would hand the incumbent the certification-lobbying trigger and tell the platform that targeted promotions alone deter us. The likely-response estimates are themselves reflexive: any public move by us changes the counterparties' information sets, so this matrix must be re-run after each observable action rather than treated as a static forecast."
+  }
+}
