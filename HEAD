@@ -1,14 +1,12 @@
-# Work Log: simulation repository/service r1 integration - acceptance complete
+# Work Log: idle
 
-- Status: acceptance complete on candidate 568417db2681e0103b4b37298610a6cc4dcaf53f; publication to remote main pending final live re-read + ff-only push.
-- Role: Mainline Audit / Simulation Repository-Service Integration Lead.
-- Candidate topology: 3ed23b9 -> 4a9659c (kickoff, lifecycle-only) -> c6cad96 (--no-ff merge Addendum A1 b28dda6) -> 568417d (--no-ff merge QA closure f12bea6 carrying 7844a16 -> 9cc4e87 -> a2cc987); 8 commits over main, all original SHAs, no cherry-picks, no history rewrite.
-- Ancestry gate: all six required ancestors proven (3ed23b9 / b28dda6 / 7844a16 / 9cc4e87 / a2cc987 / f12bea6); 9cc4e87^=7844a16; f12bea6^=a2cc987.
-- Byte gates: ALL_PASS (5 product files + owner test == 9cc4e87; QA test == a2cc987 == f12bea6; 3 handoffs == their refs; Addendum A1 file == b28dda6; types/models/schemas/engine/migration a3f8c2d47e19/openapi.json/types.gen.ts == main 3ed23b9; strategic_lenses/analyses/agents/workers/routers/apps/web/packages/contracts/scripts/migrations untouched vs main).
-- DOMAIN_EXECUTABLE_AST_EQUIVALENT re-proven for domain.py doc-refresh (7844a16 vs 9cc4e87); stale wire-contract claim zero hits in services/**.
-- Addendum A1 verdicts preserved: UUID identity (workspace_id, graph_version_id, id) + ORDER BY id ASC; "=" fail-closed score_constraint_operator_unsupported; enabledEdgeIds fail-closed strategy_edge_gating_unsupported; app.types enum authority; no fail-closed behavior implemented during integration.
-- Fresh acceptance on detached 568417d with disposable PG16 @55432 (no volume): alembic heads/current = a3f8c2d47e19 single head, upgrade + check clean, no new migration; owner 52; Task 12 engine 28 (+11 acceptance); persistence directed 16; read-path + IO semantics 16; QA battery 15; full suite exact 417 passed / 0 failed / 0 xfailed / 0 xpassed (-W error -rxX); same-db lens_lanes 121 immediately after full run (no table wipe; workspace-scope isolation holds).
-- Official contract gate: powershell -File scripts/generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK (full TS chain, trusted read-only toolchain; packages/contracts git-clean).
-- Static/security: ruff check services/api PASS; compileall PASS; git diff --check clean; conflict-marker scan clean; changed-path audit = exact authorized 13-path set; HISTORY append-only proven byte-prefix; secret scan of integration delta clean.
-- Next: live re-read remote main (must still be 3ed23b9) -> ff-only merge -> push -> re-read -> publication archive.
+- Status: idle; simulation repository/service r1 published to remote main and live-verified.
+- Last archived: 2026-07-25 (Asia/Shanghai).
+- Last archive entry: `Archive Simulation Repository/Service R1 Main Publication - 2026-07-25 (Asia/Shanghai)`.
+- Remote main: 82b6180784caf3065a2f903144718dbff61ddacf + this archive commit (live ls-remote verified; tenant-scoped simulation repository/service + Addendum A1 contract adjudication on main; migration head unchanged a3f8c2d47e19).
+- Stage: Simulation Repository/Service Foundation Complete (post Canonical Simulation Graph Foundation).
+- Archive-only now: codex/ccr-sim-01-addendum-a1 (b28dda6), codex/task-simulation-repository-service-r1 (7844a16), codex/task-simulation-repository-service-r1-doc-refresh (9cc4e87), codex/qa-simulation-repository-service-r1 (a2cc987), codex/qa-simulation-repository-service-r1-contract-closure (f12bea6), codex/simulation-repository-service-integration-r1 (82b6180).
+- Unlocked: CCR-SIM-02 (routes/API contract; must keep both fail-closed stable errors score_constraint_operator_unsupported and strategy_edge_gating_unsupported) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
