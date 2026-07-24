@@ -1,10 +1,9 @@
 # Work Log: idle
 
-- Status: idle; Task 3 published to remote main and live-verified.
+- Status: idle after Counterparty Lens Lane R2 implementation completed on this branch.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 91a0d67aa71f4bd8e01057635d7ac7947051b57b (Task 3 content tip f95fda3 + publication lifecycle records; live ls-remote verified).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 91a0d67); the old freeze baseline 2396206 is superseded.
-- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- Last archive entry: `Archive Counterparty Lens Lane R2 Implementation - 2026-07-24 (Asia/Shanghai)`.
+- Branch: codex/lens-counterparty-r2 (base main 258a94df, live-verified before branching).
+- Deliverables: counterparty lens implementation cfbcd08 plus this lifecycle record; LENS_IMPLEMENTATION_HANDOFF issued to the Ways Coordinator (conversation 6).
+- Integration note: seam types on codex/task-07-agent-runtime-r2 must replace the structural stand-ins at coordinator merge; lane tests must be re-run there.
+- Secret policy: no credentials recorded here.
