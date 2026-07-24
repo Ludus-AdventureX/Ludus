@@ -2383,3 +2383,78 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Stage: Canonical Simulation Graph Foundation Complete. Unlocked next: Simulation repository/service lane + CCR-SIM-02 (routes), branching from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED.
 - Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
 - No credentials or secret values are recorded here.
+
+
+## Archive Simulation Repository/Service Implementation (r1) - 2026-07-25 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-25 (Asia/Shanghai).
+- Completed: 2026-07-25 (Asia/Shanghai).
+- Status: completed.
+- Role: Simulation/Graph Owner — Repository and Service Implementation (Fable5 throughout).
+- Objective: DB-backed Simulation repository/service assembling canonical persisted graph/
+  strategy/scenario/score rows into Task 12 domain inputs deterministically, running the
+  unchanged pure engine, and persisting results into the existing SimulationRun model.
+  No HTTP API/router/Web; no canonical schema/model/migration/contract change.
+- base_main_sha: 3ed23b92e0b2a1326518a6f550984abb02f11179 (live ls-remote verified, exact).
+- migration head: a3f8c2d47e19 (alembic heads verified single).
+- Branch: codex/task-simulation-repository-service-r1
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-simulation-repo-r1
+
+## Changes (all within services/api/app/simulations/** + lifecycle)
+
+- domain.py: canonical enum import switch — EdgePolarity/GraphVersionStatus imported from
+  app.types; FactorControllability/FactorEvidenceStatus imported under original domain
+  aliases (values verbatim-identical; zero behavior change; 28 engine tests green).
+  ElementStatus/Normalization/Comparison stay internal (not promoted verbatim; canonical
+  ConstraintComparison adds EQ "=" which the engine cannot evaluate).
+- errors.py: stable domain errors extending SimulationError with machine codes; uniform
+  scope denial reuses the existing CASE_NOT_FOUND 404 (lens read-path precedent); no new
+  HTTP error code.
+- repository.py: tenant-scoped SELECT layer; every statement binds workspace_id (+case and
+  frozen version id); deterministic ORDER BY unique primary key; single insert staging for
+  fully computed SimulationRun rows.
+- assembly.py: deterministic ORM->domain assembly (sorted keys, defensive JSONB copies,
+  never trusts DB row order); item-by-item validation of strategy overrides (decision/lever
+  only, in-bounds, finite), scenario shifts [-1,1]/multipliers>=0 against the exact graph
+  version, and score-definition JSONB references through the canonical wire schemas;
+  fail-fast on enabledEdgeIds and "=" operators (CONTRACT_DEPENDENCY).
+- service.py: compute-then-insert lifecycle (no partial "running" rows -> engine failure
+  cannot leave zombies); service precheck + engine assert_authorization double gate;
+  scenario lens provenance (same workspace/case + scenario_planning + ready) fail-closed
+  uniform 404; canonical-wire self-check before insert; single-transaction commit with
+  rollback + SimulationPersistenceError on SQLAlchemyError; immutable frozen view returned.
+- tests/test_simulation_repository_service.py: 24 owner DB tests (tenancy, mixed anchors,
+  graph_id mismatch, strategy/scenario/score negative items, formal/experimental, hash
+  sensitivity to all four frozen inputs, determinism, round-trip, zombie-free failure,
+  immutable view); scoped counts only.
+
+## Validation (disposable clean Postgres ludus-pg-sim-repo-r1:55434; main-worktree venv 3.12.7)
+
+- alembic heads: single a3f8c2d47e19. alembic upgrade head: PASS. alembic check: PASS.
+- pytest app/simulations/tests -q: PASS (52 = 28 engine + 24 new; zero engine regression).
+- pytest tests app/simulations/tests -q -W error: PASS (402 = 378 mainline baseline + 24 new).
+- pytest tests/lens_lanes -q: PASS (121, baseline unchanged).
+- ruff check services/api (whole tree): PASS. compileall app: PASS (exit 0).
+- Contracts: OpenAPI exported and compared to committed packages/contracts/openapi.json —
+  semantically EQUAL (json equality; zero schema/path delta; byte diff is formatting only);
+  git shows packages/contracts untouched. TypeScript regeneration step NOT_RUN in this
+  worktree (openapi-typescript binary unavailable without a new dependency install, which
+  is out of scope); recorded honestly for QA.
+- Scope audit: only HEAD/HISTORY + services/api/app/simulations/** changed. git diff
+  --check: PASS. Secret scan on staged diff: placeholders only.
+- Environment note: the Docker Desktop engine died mid-session; it was restarted and a
+  fresh disposable Postgres container was created for this validation; the container is
+  left running for the QA lane and may be removed by QA/ops afterwards.
+
+## Contract dependencies / remaining risk
+
+- StrategyVersion.enabledEdgeIds: persisted contract exists but sim-engine-1.0.0 has no
+  edge-gating semantics; non-empty values fail fast (strategy_edge_gating_unsupported).
+  Needs engine-contract coverage in a future CCR before any lane persists non-empty values.
+- ConstraintComparison EQ "=": rejected fail-fast (score_constraint_operator_unsupported)
+  until the engine scoring contract defines equality semantics.
+- graph_nodes/graph_edges have no node_key/edge_key columns at this baseline; deterministic
+  ordering is anchored on the unique primary key (documented in assembly).
+- No API routes/generated-contract exposure; that is CCR-SIM-02.
+- Secret policy: no credentials, tokens, keys, or .env values are recorded.

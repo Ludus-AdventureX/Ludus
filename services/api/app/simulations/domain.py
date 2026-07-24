@@ -23,6 +23,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from app.types import NodeType, SimulationConvergenceStatus, SimulationMode
+from app.types import EdgePolarity, GraphVersionStatus
+from app.types import FactorControllability as Controllability
+from app.types import FactorEvidenceStatus as EvidenceStatus
 
 
 def _require_finite(label: str, *values: float) -> None:
@@ -30,12 +33,17 @@ def _require_finite(label: str, *values: float) -> None:
         if not math.isfinite(value):
             raise SimulationError(f"{label} must be a finite number, got {value!r}")
 
-# --- Engine-internal enums (NOT yet canonical wire types; require CCR to promote) --------
-
-
-class EdgePolarity(StrEnum):
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
+# --- Engine-internal enums --------------------------------------------------------------
+# CCR-20260724-SIM-01 promoted EdgePolarity, GraphVersionStatus, FactorControllability and
+# FactorEvidenceStatus to app.types with verbatim-identical values; they are imported above
+# (the latter two under their original domain API names). The three enums below were NOT
+# promoted verbatim and stay engine-internal:
+# - ElementStatus: no canonical element-status enum exists; the DB persists the bulk-review
+#   state as CHECK-locked strings (graph_nodes/graph_edges.review_status).
+# - Normalization: the canonical wire contract uses a Literal, the DB a CHECK-locked string.
+# - Comparison: canonical ConstraintComparison adds EQ "=", which sim-engine-1.0.0 scoring
+#   does not evaluate; adopting it would silently misroute "=" to "<=" in the engine's
+#   comparison fall-through. "=" rules are rejected fail-fast at the assembly boundary.
 
 
 class ElementStatus(StrEnum):
@@ -47,28 +55,9 @@ class ElementStatus(StrEnum):
     REJECTED = "rejected"
 
 
-class GraphVersionStatus(StrEnum):
-    DRAFT = "draft"
-    CONFIRMED = "confirmed"
-    ARCHIVED = "archived"
-
-
 class Normalization(StrEnum):
     LINEAR = "linear"
     INVERSE_LINEAR = "inverse_linear"
-
-
-class Controllability(StrEnum):
-    CONTROLLABLE = "controllable"
-    PARTIALLY_CONTROLLABLE = "partially_controllable"
-    UNCONTROLLABLE = "uncontrollable"
-
-
-class EvidenceStatus(StrEnum):
-    SUPPORTED = "supported"
-    CONDITIONAL = "conditional"
-    ASSUMED = "assumed"
-    UNKNOWN = "unknown"
 
 
 class Comparison(StrEnum):
