@@ -21,8 +21,8 @@ Semantics:
   resource "does not exist or is not part of the current Workspace"), so
   existence and lifecycle state cannot be probed;
 - ordering is total and deterministic for Report/Run assembly: canonical
-  lens execution order (AGENTS section 7), then ``created_at``, then
-  ``strategic_lens_artifact_id``.
+  lens EXECUTION order (porter -> counterparty -> pre_mortem -> scenario ->
+  meadows), then ``created_at``, then ``strategic_lens_artifact_id``.
 """
 
 from __future__ import annotations
@@ -40,7 +40,6 @@ from app.models import AnalysisRun, DecisionCase, StrategicLensArtifact
 from app.security.envelope import ApiFailure
 from app.tenancy.context import WorkspaceContext
 from app.types import (
-    FULL_REQUIRED_STRATEGIC_LENSES,
     LensProducerRole,
     OriginMode,
     StrategicLensArtifactStatus,
@@ -48,8 +47,24 @@ from app.types import (
     WorkspaceCapability,
 )
 
+# Canonical lens EXECUTION order. Sources: AGENTS.md section 7 (Research/
+# Porter -> Critic: Counterparty Matrix BEFORE the Pre-Mortem that consumes
+# its result -> Synthesis: Scenario + Meadows), the frozen registry assembly
+# in app/strategic_lenses/registry.py, and the PRE_MORTEM LensSpec trigger
+# "after_counterparty_matrix_..." in app/agents/lenses.py. Kept as a local
+# constant because no importable order tuple exists on the frozen surfaces:
+# types.FULL_REQUIRED_STRATEGIC_LENSES is a required-SET contract (not an
+# order) and importing the registry would drag in every lens implementation.
+_CANONICAL_LENS_EXECUTION_ORDER: tuple[StrategicLensType, ...] = (
+    StrategicLensType.PORTER_FIVE_FORCES,
+    StrategicLensType.COUNTERPARTY_RESPONSE_MATRIX,
+    StrategicLensType.PRE_MORTEM,
+    StrategicLensType.SCENARIO_PLANNING,
+    StrategicLensType.MEADOWS_LEVERAGE_POINTS,
+)
+
 _LENS_ORDER: dict[StrategicLensType, int] = {
-    lens: index for index, lens in enumerate(FULL_REQUIRED_STRATEGIC_LENSES)
+    lens: index for index, lens in enumerate(_CANONICAL_LENS_EXECUTION_ORDER)
 }
 
 
@@ -136,7 +151,7 @@ def _project(row: StrategicLensArtifact) -> LensArtifactView:
 
 
 def _canonical_order():
-    """Total ordering: canonical lens order, createdAt, then artifact id."""
+    """Total ordering: canonical lens EXECUTION order, createdAt, artifact id."""
 
     lens_rank = case(
         # Enum members as keys so bind parameters render with the PG enum type
