@@ -208,7 +208,7 @@ def upgrade() -> None:
         _jsonb('evidence_ids', '[]'),
         _jsonb('assumption_ids', '[]'),
         sa.Column('rationale', sa.Text(), nullable=False),
-        sa.Column('status', sa.String(length=16), nullable=False),
+        sa.Column('review_status', sa.String(length=16), nullable=False),
         sa.Column('editable', sa.Boolean(), server_default=sa.text('true'), nullable=False),
         sa.PrimaryKeyConstraint('id', name=op.f('pk_graph_nodes')),
         sa.UniqueConstraint(
@@ -251,7 +251,7 @@ def upgrade() -> None:
             name=op.f('ck_graph_nodes_node_normalization_valid'),
         ),
         sa.CheckConstraint(
-            "status IN ('draft', 'confirmed', 'rejected')",
+            "review_status IN ('draft', 'confirmed', 'rejected')",
             name=op.f('ck_graph_nodes_node_status_valid'),
         ),
     )
@@ -293,7 +293,7 @@ def upgrade() -> None:
         _jsonb('claim_ids', '[]'),
         _jsonb('evidence_ids', '[]'),
         _jsonb('assumption_ids', '[]'),
-        sa.Column('status', sa.String(length=16), nullable=False),
+        sa.Column('review_status', sa.String(length=16), nullable=False),
         sa.PrimaryKeyConstraint('id', name=op.f('pk_graph_edges')),
         sa.UniqueConstraint(
             'workspace_id', 'graph_version_id', 'id',
@@ -329,7 +329,7 @@ def upgrade() -> None:
             name=op.f('ck_graph_edges_edge_relationship_quality_range'),
         ),
         sa.CheckConstraint(
-            "status IN ('draft', 'confirmed', 'rejected', 'conditional')",
+            "review_status IN ('draft', 'confirmed', 'rejected', 'conditional')",
             name=op.f('ck_graph_edges_edge_status_valid'),
         ),
     )

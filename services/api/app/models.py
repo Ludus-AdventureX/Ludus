@@ -888,7 +888,7 @@ class GraphNode(Base):
             name="node_normalization_valid",
         ),
         CheckConstraint(
-            "status IN ('draft', 'confirmed', 'rejected')",
+            "review_status IN ('draft', 'confirmed', 'rejected')",
             name="node_status_valid",
         ),
         Index("ix_graph_nodes_workspace_version", "workspace_id", "graph_version_id"),
@@ -924,7 +924,10 @@ class GraphNode(Base):
     evidence_ids: Mapped[list[str]] = json_list_column()
     assumption_ids: Mapped[list[str]] = json_list_column()
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Wire field name is "status"; the DB column is review_status because the
+    # bulk-review state is a CHECK-locked string (the CCR fixes PG enums at
+    # six) while lifecycle status columns stay PG-enum-backed.
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False)
     editable: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
@@ -978,7 +981,7 @@ class GraphEdge(Base):
             name="edge_relationship_quality_range",
         ),
         CheckConstraint(
-            "status IN ('draft', 'confirmed', 'rejected', 'conditional')",
+            "review_status IN ('draft', 'confirmed', 'rejected', 'conditional')",
             name="edge_status_valid",
         ),
         Index("ix_graph_edges_workspace_version", "workspace_id", "graph_version_id"),
@@ -1008,7 +1011,8 @@ class GraphEdge(Base):
     claim_ids: Mapped[list[str]] = json_list_column()
     evidence_ids: Mapped[list[str]] = json_list_column()
     assumption_ids: Mapped[list[str]] = json_list_column()
-    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    # See GraphNode.review_status for the naming rationale.
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False)
 
 
 class StrategyVersion(Base):
