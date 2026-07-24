@@ -15,14 +15,14 @@ from typing import Any
 
 import pytest
 
-from app.strategic_lenses.meadows import (
+from app.strategic_lenses.lenses.meadows_leverage_points import (
     MeadowsLensValidationError,
     check_meadows_behavior,
     sandbox_consumption,
     validate_meadows_stage_output,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 PUBLISHED_LENS_SCHEMA = (
     REPO_ROOT
     / "method-packs"

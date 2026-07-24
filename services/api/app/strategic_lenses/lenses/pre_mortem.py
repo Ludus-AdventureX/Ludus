@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
-from ..types import StrategicLensType
+from app.types import StrategicLensType
 
 PRE_MORTEM_LENS_TYPE = StrategicLensType.PRE_MORTEM.value
 REQUIRED_PHASE = "adversarial_stress"
