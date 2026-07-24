@@ -2084,3 +2084,34 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Unlocked: Ways persistence wiring slice (dialogue 6) from this new baseline; simulation graph-side CCR submission window remains open (dialogue 5).
 - Subsequent lanes must branch from main >= 8fd2451 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+
+## Archive CCR-20260724-SIM-01 Execution - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; CCR-SIM-01 executed and verified on codex/ccr-sim-01-execution; NOT merged to main (holds until the Artifact IO wave publication; final QA/integration refreshes to the then-latest remote main).
+- Role: Mainline Audit / Contract Integration Lead (canonical simulation graph contract owner).
+- base_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936 (live ls-remote verified at start; migration head measured d7e2a91c5b48 and used as down_revision).
+- Commits: ad8f9d3 (implementation) + d05abd3 (review_status correction); branch tip after this archive commit.
+
+## Delivered (changed paths exactly the approved scope)
+
+- app/types.py: 7 canonical Python enums (GraphVersionStatus, EdgePolarity, FactorAuthorship, FactorEvidenceStatus, FactorControllability, GraphBranchStatus, ConstraintComparison); 6 become PG enums; ConstraintComparison deliberately has no PG enum; NodeType reused.
+- app/models.py: 8 new tables (causal_graphs, graph_versions, graph_nodes, graph_edges, strategy_versions, scenario_versions, score_definitions, graph_branches) with B-1..B-8: uq_graph_nodes_workspace_version_id; graph_edges same-version composite source/target FKs + uq_graph_edges_workspace_version_id; NO confirmed partial unique on graph_versions; score_definitions.content_hash; ScenarioVersion has no risk_tolerance; source_lens_artifact composite FK to strategic_lens_artifacts; JSONB node references documented as service-validated item-by-item. Node/edge bulk-review state is stored as review_status (CHECK-locked string) so the six-PG-enum budget and the QA status-columns-use-enums policy both hold; the wire field remains "status". simulation_runs gains 4 composite frozen-reference FKs (RESTRICT).
+- app/simulations/schemas.py: canonical wire types CausalGraph/GraphVersion(+GraphProvenanceRef)/CausalNode/CausalEdge/StrategyVersion/ScenarioVersion(+ScenarioEarlyWarningSignal)/OptionOutcomeMapping/RiskWeight/ConstraintRule/ScoreDefinition/GraphBranch; extra="forbid" rejects riskTolerance on ScenarioVersion; finite/bounded validators; not registered in the generated OpenAPI catalog (graph API slice will register under its own CCR step).
+- migrations/versions/a3f8c2d47e19: single linear head after d7e2a91c5b48; the 4 simulation_runs FKs use orphan preflight (abort with a clear error) -> ADD CONSTRAINT ... NOT VALID -> VALIDATE CONSTRAINT; never assumes simulation_runs is empty; downgrade drops 8 tables + 6 new enums only.
+- CCR record: docs/product-plan/docs/contract-changes/CCR-20260724-SIM-01.md.
+
+## Verification (fresh, disposable PG16 @55432, removed afterwards)
+
+- alembic heads: exactly one (a3f8c2d47e19). Clean-DB upgrade / downgrade d7e2a91c5b48 / re-upgrade: PASS. alembic check (model/migration parity): clean.
+- Orphan preflight probe: NEGATIVE_CASE_OK (replica-role orphan insert at the old head aborts the upgrade with the orphan error) and POSITIVE_CASE_OK (after cleanup the upgrade succeeds and all 4 FKs are pg_constraint-validated).
+- Task 12 owner engine suite: 28 passed (engine untouched). Full pytest -W error (tests + app/simulations/tests): 302 passed, 2 failed - both QA-owned: (1) exact-table assertion lacks the 8 new tables; (2) test_task_19a_simulation_replay_numeric_constraints_are_enforced inserts simulation_runs rows with random UUID references, which the new frozen-reference FKs now correctly reject - the QA fixture must create referenced graph/strategy/scenario/score rows. I did not touch QA tests.
+- generate_contracts.ps1 -Check: CONTRACT_DRIFT_OK. Ruff: PASS. compileall: PASS. Changed-path/forbidden-path audit (contracts/web/ways/tests/engine files untouched): PASS. Secret scan + git diff --check: PASS.
+
+## Next steps
+
+- Dialogue 3 QA: update the exact-table assertion (+8 tables), fix the replay-test fixture to satisfy the frozen-reference FKs, add negative regressions (cross-workspace FK rejection for the 4 simulation_runs references, same-version edge FK rejection, confirmed-without-timestamp rejection, scenario riskTolerance wire rejection, damping/multiplier bounds), rerun combined acceptance.
+- Publication holds until the Artifact IO wave; at final integration this candidate is refreshed to the then-latest remote main per the standing rule.
+- No credentials or secret values are recorded here.

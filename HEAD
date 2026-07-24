@@ -1,12 +1,9 @@
-# Work Log: active
+# Work Log: idle
 
-- started_at: 2026-07-24 (Asia/Shanghai)
-- role: Mainline Audit / Contract Integration Lead (CCR-20260724-SIM-01 execution, canonical simulation graph contract owner)
-- objective: Execute CCR-SIM-01 accepted-with-corrections on codex/ccr-sim-01-execution from live-verified main 4de362835f728ab155fc197b9f11b9ac248f2936 (migration head measured d7e2a91c5b48): 7 canonical Python enums (6 PG enums; ConstraintComparison no PG enum), 8 new tables with B-1..B-8 corrections, canonical graph/scenario wire types in app/simulations/schemas.py, linear Alembic revision a3f8c2d47e19 adding 4 composite simulation_runs FKs via orphan preflight -> NOT VALID -> VALIDATE, CCR record on disk. No API/router/contracts/engine/ways/web changes; CCR-SIM-02 not started; NOT merged to main (holds until the Artifact IO wave publication; final QA/integration will refresh to the then-latest remote main).
-- base_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936 (live ls-remote verified this session)
-- branch: codex/ccr-sim-01-execution
-- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
-- write_scope: services/api/app/types.py; services/api/app/models.py; services/api/app/simulations/schemas.py; services/api/migrations/versions/a3f8c2d47e19_*.py; docs/product-plan/docs/contract-changes/CCR-20260724-SIM-01.md; HEAD/HISTORY.
-- forbidden_scope: API/routers; packages/contracts/**; Task 12 engine files (domain/engine/graph_builder/sensitivity); ways/**; apps/web/**; QA tests; CCR-SIM-02 persistence services.
-- acceptance_commands: clean-DB upgrade/downgrade/upgrade; alembic heads exactly one; orphan preflight positive+negative probe (superuser replica-role insert); model/migration parity (alembic check); Task 12 owner 28-test suite; full pytest -W error; generate_contracts.ps1 -Check clean; ruff/compileall/scope/secret/diff-check.
-- secret_policy: no credentials recorded here.
+- Status: idle after executing CCR-20260724-SIM-01.
+- Last archived: 2026-07-24 (Asia/Shanghai).
+- Last archive entry: `Archive CCR-20260724-SIM-01 Execution - 2026-07-24 (Asia/Shanghai)`.
+- Candidate: codex/ccr-sim-01-execution (7 canonical enums / 8 graph tables with B-corrections / canonical wire types / migration a3f8c2d47e19 with orphan-preflighted simulation_runs FKs / CCR record); verification complete; the 2 remaining pytest failures are QA-owned (exact-table set + replay-test fixture vs the new frozen-reference FKs); NOT merged to main.
+- Hold: publication waits for the Artifact IO wave; final QA/integration refreshes to the then-latest remote main.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
