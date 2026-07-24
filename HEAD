@@ -13,4 +13,8 @@
 - Plan: kickoff -> --no-ff merge Addendum A1 b28dda6 -> --no-ff merge QA closure f12bea6 -> byte gates -> isolated PG16 full acceptance (expect 417 / lens_lanes 121) -> official contract check -> static/scope audits -> acceptance archive -> ff-only publication.
 - No cherry-picks of 7844a16 / 9cc4e87 / a2cc987 (already ancestors of f12bea6); no product code changes during integration.
 - Migration head expected unchanged: a3f8c2d47e19.
+- Incorporated lane HEAD records (QA closure f12bea6 side, preserved here per three-party lifecycle rule):
+  - Product lane: idle after doc-refresh 9cc4e87 (DOC-ONLY domain.py docstring correction on frozen parent 7844a16; DOMAIN_EXECUTABLE_AST_EQUIVALENT; 52/402/121 baselines unchanged; Addendum A1 consumed read-only).
+  - Functional QA lane: a2cc987 RELEASE_CONTENT_VERDICT PASS (P0/P1/P2 = 0/0/0; 15-battery repository/service QA).
+  - Contract closure lane: f12bea6 = a2cc987 + closure handoff + HISTORY (append-only), product/tests byte-identical.
 - Secret policy: do not record credentials here.

@@ -1,19 +1,28 @@
 """Internal domain value objects for the deterministic causal simulation engine.
 
-These are *engine-internal* immutable value objects, not the canonical wire contract.
-The canonical wire schema lives in ``app.simulations.schemas`` (Contract Lead owned) and
-currently only defines the ``SimulationRun`` replay envelope. The graph-side wire types
-(GraphVersion / CausalNode / CausalEdge / StrategyVersion / ScenarioVersion /
-ScoreDefinition / OptionOutcomeMapping / RiskWeight / ConstraintRule / GraphBranch) do
-not yet exist in the frozen canonical contract, so the pure engine operates on the frozen
-dataclasses below. They are intentionally decoupled from persistence and API surface:
+The canonical graph wire schemas (GraphVersion / CausalNode / CausalEdge /
+StrategyVersion / ScenarioVersion / ScoreDefinition / OptionOutcomeMapping / RiskWeight /
+ConstraintRule / GraphBranch) exist on main since CCR-20260724-SIM-01 and live in
+``app.simulations.schemas``. The dataclasses below are a separate, engine-internal layer:
 
-* No I/O, no database, no framework imports — keeps the engine a deterministic pure
-  function per ``09-simulation-engine.md`` and ``26`` invariants.
-* Canonical enums (``NodeType``, ``SimulationMode``, ``SimulationConvergenceStatus``,
-  ``OriginMode``) are reused from ``app.types``; only the not-yet-canonical graph enums
-  (polarity / element status / normalization / controllability / evidence status) are
-  defined here and are flagged for a future CCR before they become wire types.
+* They are *engine-internal* immutable value objects — NOT ORM rows and NOT wire DTOs.
+  They perform no I/O and import no database/framework code, keeping the engine a
+  deterministic pure function per ``09-simulation-engine.md`` and ``26`` invariants.
+* They are assembled deterministically by the assembly layer
+  (``app.simulations.assembly``) from already-validated canonical persistence/wire data;
+  callers never hand-build them from untrusted input.
+* Canonical enum authority is ``app.types``: ``NodeType``, ``SimulationMode``,
+  ``SimulationConvergenceStatus``, ``EdgePolarity``, ``GraphVersionStatus``,
+  ``FactorControllability`` (imported as ``Controllability``) and
+  ``FactorEvidenceStatus`` (imported as ``EvidenceStatus``) — pure import aliases,
+  never parallel enums.
+* ``ElementStatus``, ``Normalization`` and ``Comparison`` remain engine-internal.
+* ``Comparison`` is the currently executable operator subset (``>``, ``>=``, ``<``,
+  ``<=``). The canonical ``ConstraintComparison`` additionally defines ``=``, which the
+  engine does NOT execute; the assembly layer fails closed with
+  ``score_constraint_operator_unsupported``.
+* Strategy edge gating is NOT implemented: non-empty ``enabledEdgeIds`` fail closed with
+  ``strategy_edge_gating_unsupported``.
 """
 
 from __future__ import annotations
@@ -23,6 +32,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from app.types import NodeType, SimulationConvergenceStatus, SimulationMode
+from app.types import EdgePolarity, GraphVersionStatus
+from app.types import FactorControllability as Controllability
+from app.types import FactorEvidenceStatus as EvidenceStatus
 
 
 def _require_finite(label: str, *values: float) -> None:
@@ -30,12 +42,17 @@ def _require_finite(label: str, *values: float) -> None:
         if not math.isfinite(value):
             raise SimulationError(f"{label} must be a finite number, got {value!r}")
 
-# --- Engine-internal enums (NOT yet canonical wire types; require CCR to promote) --------
-
-
-class EdgePolarity(StrEnum):
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
+# --- Engine-internal enums --------------------------------------------------------------
+# CCR-20260724-SIM-01 promoted EdgePolarity, GraphVersionStatus, FactorControllability and
+# FactorEvidenceStatus to app.types with verbatim-identical values; they are imported above
+# (the latter two under their original domain API names). The three enums below were NOT
+# promoted verbatim and stay engine-internal:
+# - ElementStatus: no canonical element-status enum exists; the DB persists the bulk-review
+#   state as CHECK-locked strings (graph_nodes/graph_edges.review_status).
+# - Normalization: the canonical wire contract uses a Literal, the DB a CHECK-locked string.
+# - Comparison: canonical ConstraintComparison adds EQ "=", which sim-engine-1.0.0 scoring
+#   does not evaluate; adopting it would silently misroute "=" to "<=" in the engine's
+#   comparison fall-through. "=" rules are rejected fail-fast at the assembly boundary.
 
 
 class ElementStatus(StrEnum):
@@ -47,28 +64,9 @@ class ElementStatus(StrEnum):
     REJECTED = "rejected"
 
 
-class GraphVersionStatus(StrEnum):
-    DRAFT = "draft"
-    CONFIRMED = "confirmed"
-    ARCHIVED = "archived"
-
-
 class Normalization(StrEnum):
     LINEAR = "linear"
     INVERSE_LINEAR = "inverse_linear"
-
-
-class Controllability(StrEnum):
-    CONTROLLABLE = "controllable"
-    PARTIALLY_CONTROLLABLE = "partially_controllable"
-    UNCONTROLLABLE = "uncontrollable"
-
-
-class EvidenceStatus(StrEnum):
-    SUPPORTED = "supported"
-    CONDITIONAL = "conditional"
-    ASSUMED = "assumed"
-    UNKNOWN = "unknown"
 
 
 class Comparison(StrEnum):

@@ -2385,6 +2385,179 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - No credentials or secret values are recorded here.
 
 
+## Archive Simulation Repository/Service Implementation (r1) - 2026-07-25 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-25 (Asia/Shanghai).
+- Completed: 2026-07-25 (Asia/Shanghai).
+- Status: completed.
+- Role: Simulation/Graph Owner — Repository and Service Implementation (Fable5 throughout).
+- Objective: DB-backed Simulation repository/service assembling canonical persisted graph/
+  strategy/scenario/score rows into Task 12 domain inputs deterministically, running the
+  unchanged pure engine, and persisting results into the existing SimulationRun model.
+  No HTTP API/router/Web; no canonical schema/model/migration/contract change.
+- base_main_sha: 3ed23b92e0b2a1326518a6f550984abb02f11179 (live ls-remote verified, exact).
+- migration head: a3f8c2d47e19 (alembic heads verified single).
+- Branch: codex/task-simulation-repository-service-r1
+- Worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-simulation-repo-r1
+
+## Changes (all within services/api/app/simulations/** + lifecycle)
+
+- domain.py: canonical enum import switch — EdgePolarity/GraphVersionStatus imported from
+  app.types; FactorControllability/FactorEvidenceStatus imported under original domain
+  aliases (values verbatim-identical; zero behavior change; 28 engine tests green).
+  ElementStatus/Normalization/Comparison stay internal (not promoted verbatim; canonical
+  ConstraintComparison adds EQ "=" which the engine cannot evaluate).
+- errors.py: stable domain errors extending SimulationError with machine codes; uniform
+  scope denial reuses the existing CASE_NOT_FOUND 404 (lens read-path precedent); no new
+  HTTP error code.
+- repository.py: tenant-scoped SELECT layer; every statement binds workspace_id (+case and
+  frozen version id); deterministic ORDER BY unique primary key; single insert staging for
+  fully computed SimulationRun rows.
+- assembly.py: deterministic ORM->domain assembly (sorted keys, defensive JSONB copies,
+  never trusts DB row order); item-by-item validation of strategy overrides (decision/lever
+  only, in-bounds, finite), scenario shifts [-1,1]/multipliers>=0 against the exact graph
+  version, and score-definition JSONB references through the canonical wire schemas;
+  fail-fast on enabledEdgeIds and "=" operators (CONTRACT_DEPENDENCY).
+- service.py: compute-then-insert lifecycle (no partial "running" rows -> engine failure
+  cannot leave zombies); service precheck + engine assert_authorization double gate;
+  scenario lens provenance (same workspace/case + scenario_planning + ready) fail-closed
+  uniform 404; canonical-wire self-check before insert; single-transaction commit with
+  rollback + SimulationPersistenceError on SQLAlchemyError; immutable frozen view returned.
+- tests/test_simulation_repository_service.py: 24 owner DB tests (tenancy, mixed anchors,
+  graph_id mismatch, strategy/scenario/score negative items, formal/experimental, hash
+  sensitivity to all four frozen inputs, determinism, round-trip, zombie-free failure,
+  immutable view); scoped counts only.
+
+## Validation (disposable clean Postgres ludus-pg-sim-repo-r1:55434; main-worktree venv 3.12.7)
+
+- alembic heads: single a3f8c2d47e19. alembic upgrade head: PASS. alembic check: PASS.
+- pytest app/simulations/tests -q: PASS (52 = 28 engine + 24 new; zero engine regression).
+- pytest tests app/simulations/tests -q -W error: PASS (402 = 378 mainline baseline + 24 new).
+- pytest tests/lens_lanes -q: PASS (121, baseline unchanged).
+- ruff check services/api (whole tree): PASS. compileall app: PASS (exit 0).
+- Contracts: OpenAPI exported and compared to committed packages/contracts/openapi.json —
+  semantically EQUAL (json equality; zero schema/path delta; byte diff is formatting only);
+  git shows packages/contracts untouched. TypeScript regeneration step NOT_RUN in this
+  worktree (openapi-typescript binary unavailable without a new dependency install, which
+  is out of scope); recorded honestly for QA.
+- Scope audit: only HEAD/HISTORY + services/api/app/simulations/** changed. git diff
+  --check: PASS. Secret scan on staged diff: placeholders only.
+- Environment note: the Docker Desktop engine died mid-session; it was restarted and a
+  fresh disposable Postgres container was created for this validation; the container is
+  left running for the QA lane and may be removed by QA/ops afterwards.
+
+## Contract dependencies / remaining risk
+
+- StrategyVersion.enabledEdgeIds: persisted contract exists but sim-engine-1.0.0 has no
+  edge-gating semantics; non-empty values fail fast (strategy_edge_gating_unsupported).
+  Needs engine-contract coverage in a future CCR before any lane persists non-empty values.
+- ConstraintComparison EQ "=": rejected fail-fast (score_constraint_operator_unsupported)
+  until the engine scoring contract defines equality semantics.
+- graph_nodes/graph_edges have no node_key/edge_key columns at this baseline; deterministic
+  ordering is anchored on the unique primary key (documented in assembly).
+- No API routes/generated-contract exposure; that is CCR-SIM-02.
+- Secret policy: no credentials, tokens, keys, or .env values are recorded.
+
+
+## Archive Simulation Repository/Service Doc Refresh - 2026-07-25 (Asia/Shanghai)
+# Work Log: completed
+
+- Started: 2026-07-25 (Asia/Shanghai).
+- Completed: 2026-07-25 (Asia/Shanghai).
+- Status: completed.
+- Role: Simulation/Graph Owner — Repository/Service Documentation Refresh (Fable5 throughout).
+- Task type: DOC-ONLY follow-up; zero behavior/contract/test-semantics change.
+- Parent (frozen product): 7844a1631c0747e2f39e2cbfb73088ed010c98ae on
+  codex/task-simulation-repository-service-r1 (not moved, not amended, not force-pushed).
+- Branch: codex/task-simulation-repository-service-r1-doc-refresh (direct child of 7844a16).
+- Addendum A1 read-only dependency: codex/ccr-sim-01-addendum-a1 @ b28dda67f9794d705e79ac45
+  c2a1cf2458d7cf7b — not merged, not cherry-picked, not modified.
+- Remote main at start: 3ed23b92e0b2a1326518a6f550984abb02f11179 (live ls-remote, exact).
+
+## Changes
+
+- services/api/app/simulations/domain.py: module docstring only — removed the stale claim
+  that graph-side wire types "do not yet exist"; now states the canonical schemas live in
+  app.simulations.schemas since CCR-20260724-SIM-01, domain dataclasses are engine-internal
+  (not ORM/wire, no I/O) and assembled by app.simulations.assembly, canonical enum
+  authority is app.types (7 enums incl. Controllability/EvidenceStatus aliases),
+  ElementStatus/Normalization/Comparison stay internal, "=" and enabledEdgeIds stay
+  fail-closed with their stable codes.
+- docs/handoffs/SIM_REPOSITORY_SERVICE_DOC_REFRESH_HANDOFF.md: handoff document.
+- Addendum A1 five rulings preserved verbatim (UUID identity; "=" fail-closed;
+  enabledEdgeIds fail-closed; import-alias enum authority; zero schema/contract change).
+
+## Validation
+
+- DOMAIN_EXECUTABLE_AST_EQUIVALENT: PASS (module-docstring-stripped ast.dump equality
+  between 7844a16 and the new tree).
+- Byte gate via git blob OIDs vs 7844a16: PASS for repository.py, assembly.py, service.py,
+  errors.py, engine.py, schemas.py, test_simulation_repository_service.py, types.py,
+  models.py, migration a3f8c2d47e19, packages/contracts/openapi.json, types.gen.ts.
+- git diff 7844a16..worktree --name-only: exactly domain.py (before lifecycle/handoff adds).
+- Stale-statement scan "graph-side wire types do not yet exist": 0 hits.
+- pytest app/simulations/tests -q: 52 passed. pytest tests app/simulations/tests -q
+  -W error: 402 passed. pytest tests/lens_lanes -q: 121 passed.
+- ruff check services/api: PASS. compileall: PASS. git diff --check: PASS.
+- packages/contracts/**: zero git diff; generate_contracts TS substep NOT_RUN
+  (openapi-typescript unavailable without new dependency install); byte gate proves zero
+  contract change; full chain closes in independent QA.
+- Scope audit: only domain.py + handoff doc + HEAD/HISTORY. Secret scan: clean.
+- Secret policy: no credentials, tokens, keys, or .env values are recorded.
+
+
+## Archive Simulation Repository-Service R1 QA - 2026-07-25 (Asia/Shanghai)
+
+### Inherited lane HEAD at branch point (preserved verbatim)
+
+# Work Log: idle
+
+- Status: idle after Simulation repository/service doc refresh (DOC-ONLY follow-up).
+- Last archived: 2026-07-25 (Asia/Shanghai).
+- Last archive entry: `Archive Simulation Repository/Service Doc Refresh - 2026-07-25 (Asia/Shanghai)`.
+- Role: Simulation/Graph Owner (Fable5 throughout).
+- Branch: codex/task-simulation-repository-service-r1-doc-refresh, direct child of frozen
+  product parent 7844a1631c0747e2f39e2cbfb73088ed010c98ae (parent branch untouched).
+- Delivered: domain.py module docstring correction only (stale "graph-side wire types do
+  not yet exist" claim removed; canonical schema/enum authority and fail-closed semantics
+  stated accurately) + handoff doc. Zero executable change proven by
+  DOMAIN_EXECUTABLE_AST_EQUIVALENT and a 12-file git-blob byte gate; 52/402/121 test
+  baselines unchanged; ruff/compileall/diff-check clean; packages/contracts zero-diff.
+- Addendum A1 (b28dda6) consumed read-only; its five rulings preserved verbatim.
+- Next: independent QA; Mainline Lead assembles integration wave.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
+  replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+### QA completion record
+
+- Role: QA/Release Owner; fresh branch codex/qa-simulation-repository-service-r1 from doc-refresh head 9cc4e8736bf59a1761d5de4f38081faed0081b07 (hard gate: main 3ed23b9 / doc-refresh / impl parent 7844a16 / Addendum A1 b28dda6 all live-verified exact).
+- Structure: base ancestry + direct-parent proven; DOMAIN_EXECUTABLE_AST_EQUIVALENT (docstring-stripped AST equality, programmatic); 12-file byte gate vs 7844a16 empty; main-zone gate vs 3ed23b9 empty; HISTORY pure-append 122/0; stale-sentence zero hits in product code (2 historical scan-record quotes in lifecycle/handoff noted honestly).
+- Addendum A1 verified as accepted behavior: UUID identity (no node_key/edge_key, ORDER BY id ASC, UUID references), '=' operator and enabledEdgeIds fail-closed with stable codes and engine-not-run sentinels, enum authority identity asserts, engine-internal ElementStatus/Normalization/Comparison.
+- QA battery (tests/test_simulation_repository_service_qa.py, 15 tests; owner fixtures loaded by path, zero owner-file modification): 11-shape cross-tenant/ghost/mixed-anchor uniform CASE_NOT_FOUND matrix; same-ws other-case; lens provenance draft/rejected/wrong-type/other-case uniform 404; UUID ordering + shuffled assembly; JSONB defensive copies; persisted graph-v2 full-path inputHash; run-level params change hash while profile id/version stay outside per frozen Task 12 compute_input_hash rule; sensitivity/wire/insert failure zero-zombie paths; SQLAlchemy mapping to simulation_persistence_failed with usable session; formal double gate incl. service-precheck bypass; experimental side-effect-free run; frozen SimulationRunView.
+- Owner suite verdict: ADOPT (24 tests re-run green independently).
+- Fresh counts on clean qa_sim_repo (single head a3f8c2d47e19, check clean, zero migration changes): full 417 passed / 0 failed / 0 xfailed / 0 xpassed (-W error -rxX) = candidate 402 + QA 15; same-db lens_lanes 121; owner 52; engine 28; persistence 16; read-path+IO 16; models+invariants 34; ruff/compileall PASS; OpenAPI semantic drift OK; scope/secret/diff-check/marker scans clean.
+- Findings: P0/P1/P2 = 0; one P3 note (FormalAuthorizationError code formal_authorization_rejected registered but unmapped until CCR-SIM-02 routes; boundary surfaces SimulationAuthorizationError).
+- Verdict: RELEASE_CONTENT PASS; merge object = 9cc4e87 + this QA tip.
+- Evidence: docs/handoffs/SIM_REPOSITORY_SERVICE_R1_QA_HANDOFF.md. No product source modified by QA.
+- No credentials or secret values are recorded here.
+
+
+## Archive Simulation Repository-Service R1 QA Contract Closure - 2026-07-25 (Asia/Shanghai)
+
+- Role: QA/Release Owner; QA GATE CLOSURE ONLY follow-up. Branch codex/qa-simulation-repository-service-r1-contract-closure, direct child of prior QA head a2cc9878d8444565b100a6ecd088d02ecc169edf (fresh clean worktree; no amend, no force push).
+- Hard gate first command: ls-remote live-verified all four refs exact (main 3ed23b9 / prior QA a2cc987 / product 9cc4e87 / Addendum A1 b28dda6); no BASELINE_STALE.
+- Gap closed: prior handoff reported only OPENAPI_SEMANTIC_DRIFT_OK; the official full TypeScript contract chain had not been run. This closure ran, from the closure worktree repo root, the official command `powershell -File scripts/generate_contracts.ps1 -Check` and obtained the official stdout token CONTRACT_DRIFT_OK (exit 0). No manual OpenAPI comparison substituted.
+- Environment: preset read-only toolchain only (main-checkout .tools\uv 0.11.30 and packages/contracts node_modules/.bin openapi-typescript 7.13.0 prepended to process PATH; worktree .venv as junction to preset venv, UV_NO_SYNC=1 + UV_OFFLINE=1; zero install, zero network, node_modules never copied or committed). Dependency-definition equivalence proven by identical blob OIDs for services/api/pyproject.toml (0f94168) and packages/contracts/package.json (1faea8d).
+- Contracts artifacts zero Git diff (openapi.json, src/types.gen.ts); git status shows no contracts changes (only untracked .contract-check/ regeneration evidence, not committed; known .gitignore literal-backtick-r-n quirk on that line recorded honestly, .gitignore untouched).
+- Byte/inheritance gate: services/api/app, services/api/tests, app/simulations/tests, services/api/migrations, packages/contracts, scripts, apps/web all byte-identical vs a2cc987 (diff empty); git diff --check clean; scope audit hits only docs/handoffs + HISTORY. Prior functional test evidence inherited by exact code/test byte identity: full 417 passed / 0 failed / 0 xfailed / 0 xpassed; lens_lanes 121.
+- Prior PASS marked: superseded for release gating by this contract-closure result. Findings unchanged: P0/P1/P2 = 0; P3 formal_authorization_rejected mapping deferred to CCR-SIM-02.
+- Final: RELEASE_CONTENT_VERDICT: PASS. Merge object unchanged = 9cc4e87 + a2cc987 (+ this closure head for the evidence chain). Mainline Lead must re-read remote main (still 3ed23b9) immediately before merge.
+- Evidence: docs/handoffs/SIM_REPOSITORY_SERVICE_R1_QA_CONTRACT_CLOSURE.md.
+- No credentials or secret values are recorded here.
+
+
 ## Archive CCR-SIM-01 Addendum A1 Adjudication - 2026-07-24 (Asia/Shanghai)
 
 - Role: Contract/Mainline Lead - Simulation canonical contract reconciliation (CONTRACT-FIRST, no main merge).
