@@ -332,6 +332,10 @@ def upgrade() -> None:
             "review_status IN ('draft', 'confirmed', 'rejected', 'conditional')",
             name=op.f('ck_graph_edges_edge_status_valid'),
         ),
+        sa.CheckConstraint(
+            'source_node_id <> target_node_id',
+            name=op.f('ck_graph_edges_no_self_loop'),
+        ),
     )
     op.create_index(
         'ix_graph_edges_workspace_version', 'graph_edges', ['workspace_id', 'graph_version_id']

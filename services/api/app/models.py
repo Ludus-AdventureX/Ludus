@@ -984,6 +984,10 @@ class GraphEdge(Base):
             "review_status IN ('draft', 'confirmed', 'rejected', 'conditional')",
             name="edge_status_valid",
         ),
+        CheckConstraint(
+            "source_node_id <> target_node_id",
+            name="no_self_loop",
+        ),
         Index("ix_graph_edges_workspace_version", "workspace_id", "graph_version_id"),
     )
 
