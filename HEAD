@@ -1,11 +1,11 @@
 # Work Log: idle
 
-- Status: idle after CCR-20260724-Ways-01 execution candidate QA completion.
+- Status: idle; CCR-20260724-Ways-01 published to remote main and live-verified.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive CCR-Ways-01 QA - 2026-07-24 (Asia/Shanghai)`.
-- Audited candidate: codex/ccr-ways-01-execution @ e57e4747e34d4fcc787e9e44aaa4d8cd90d85a25 (base main 2c5e79c; remote branch and main live-verified by QA).
-- Verdicts: MIGRATION PASS (clean-DB head d7e2a91c5b48, roundtrips + alembic check clean); MODEL/MIGRATION PARITY PASS (live \d structural compare); RELEASE_GATE PASS (P0/P1/P2 = 0); mainline merge permitted for the exact tested combination (candidate + this QA branch tip).
-- QA additions: exact-table assertion now includes strategic_lens_artifacts; 12 negative regressions for the new table and enums in tests/test_strategic_lens_artifacts.py.
-- Full suite: 199 passed / 0 failed / 0 skipped (-W error) on a pure-migration clean database.
-- Evidence: docs/handoffs/CCR_WAYS_01_QA_HANDOFF.md on this branch.
-- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
+- Last archive entry: `Archive CCR-20260724-Ways-01 Main Publication - 2026-07-24 (Asia/Shanghai)`.
+- Remote main: 350bd34113c73645093f89dcc97b2179b6fcaf56 + this archive commit (live ls-remote verified; CCR product e57e474 + QA coverage published as the exact tested combination).
+- Migration head: d7e2a91c5b48. Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
+- Unlocked: Ways persistence wiring slice (dialogue 6); simulation graph-side CCR submission (dialogue 5); Ways five-lens refresh candidate rebuild (frozen 69bbc5d as sole product source, next lead task).
+- Web r2: REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.

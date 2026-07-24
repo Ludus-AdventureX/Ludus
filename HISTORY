@@ -1748,3 +1748,16 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Full suite: 199 passed, 0 failed, 0 skipped (-W error) on a pure-migration clean DB; ruff/compileall PASS; OpenAPI semantic drift OK; scope/secret/diff-check clean.
 - Evidence: docs/handoffs/CCR_WAYS_01_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive CCR-20260724-Ways-01 Main Publication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Final integrated HEAD: 350bd34113c73645093f89dcc97b2179b6fcaf56 = e57e4747e34d4fcc787e9e44aaa4d8cd90d85a25 (CCR product, byte-identical: StrategicLensArtifact schema + migration d7e2a91c5b48 + ConnectorStatus enum + 18-plan repair + CCR record) fast-forwarded to QA head codex/qa-ccr-ways-01 @ 350bd34 (exact-table assertion updated with strategic_lens_artifacts, test_strategic_lens_artifacts.py negative regressions, QA handoff; QA delta tests/handoff/lifecycle only). The exact QA-tested combination was published unchanged.
+- QA verdicts: RELEASE_GATE_VERDICT PASS; migration PASS (upgrade head d7e2a91c5b48, full roundtrips, check clean); model/migration parity PASS; 199 passed / 0 failed / 0 skipped -W error; P0/P1/P2 = 0/0/0.
+- Lead fresh re-verification on 350bd34: clean-DB upgrade + alembic check; pytest tests + app/simulations/tests = 199 passed exact reproduction; directed lens-artifact + models suites 30 passed; ruff/compileall PASS; official generate_contracts.ps1 -Check full chain (incl. TypeScript step missing in the QA environment) = CONTRACT_DRIFT_OK.
+- Remote sequence (all live): main/candidate/QA refs read and matched declarations -> candidate pushed to 350bd34 and verified -> pre-merge main re-read 2c5e79c -> merge --ff-only -> push (no force) -> re-read main = 350bd34.
+- old_remote_main_sha: 2c5e79ceb8373a196e96ff86be442ecb52041d5c; new_remote_main_sha: 350bd34113c73645093f89dcc97b2179b6fcaf56.
+- Unlocked by this publication: Ways persistence wiring slice (dialogue 6, consuming the canonical model); simulation graph-side CCR submission window (dialogue 5; migration chain linear after d7e2a91c5b48); Ways five-lens refresh candidate rebuild from this new main with frozen 69bbc5d as the sole product source.
+- Subsequent lanes must branch from main >= 350bd34 as the sole baseline.
+- No credentials or secret values are recorded here.
