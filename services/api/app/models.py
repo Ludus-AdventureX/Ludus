@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum as SAEnum,
@@ -34,8 +35,14 @@ from app.types import (
     DossierScope,
     DossierSourceType,
     DossierStatementType,
+    EdgePolarity,
     EntryStatus,
+    FactorAuthorship,
+    FactorControllability,
+    FactorEvidenceStatus,
     FormalAnalysisLevel,
+    GraphBranchStatus,
+    GraphVersionStatus,
     InitiativeStatus,
     LensProducerRole,
     MessageRole,
@@ -721,6 +728,487 @@ class SourceSpan(Base):
     created_at: Mapped[datetime] = created_at_column()
 
 
+class CausalGraph(Base):
+    """Stable graph aggregate (CCR-20260724-SIM-01); versions are immutable.
+
+    current_graph_version_id is a service-maintained projection pointer and is
+    deliberately not a database FK to avoid a creation cycle with
+    graph_versions; the service validates it on every write.
+    """
+
+    __tablename__ = "causal_graphs"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_causal_graphs_workspace_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_causal_graphs_workspace_case",
+            ondelete="CASCADE",
+        ),
+        Index("ix_causal_graphs_workspace_case", "workspace_id", "decision_case_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    report_artifact_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    current_graph_version_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::origin_mode[]"),
+    )
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+
+class GraphVersion(Base):
+    """Immutable saved graph snapshot; formal runs only reference confirmed ones.
+
+    branch_id is service-validated (no FK) to avoid a circular dependency with
+    graph_branches, whose base/head columns reference graph_versions. There is
+    deliberately no confirmed partial unique index (B-correction): multiple
+    confirmed versions per graph are the normal history model.
+    """
+
+    __tablename__ = "graph_versions"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_graph_versions_workspace_id"),
+        UniqueConstraint(
+            "workspace_id", "graph_id", "version", name="uq_graph_versions_workspace_graph_version"
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_id"],
+            ["causal_graphs.workspace_id", "causal_graphs.id"],
+            name="fk_graph_versions_workspace_graph",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_graph_versions_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "parent_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_graph_versions_workspace_parent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "source_graph_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_graph_versions_workspace_source",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="graph_version_positive"),
+        CheckConstraint("case_version > 0", name="graph_case_version_positive"),
+        CheckConstraint(
+            "status <> 'confirmed' OR confirmed_at IS NOT NULL",
+            name="confirmed_requires_timestamp",
+        ),
+        Index("ix_graph_versions_workspace_graph_status", "workspace_id", "graph_id", "status"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    case_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_report_artifact_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    branch_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    parent_version_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    source_graph_version_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    status: Mapped[GraphVersionStatus] = mapped_column(
+        enum_type(GraphVersionStatus, "graph_version_status"),
+        nullable=False,
+        default=GraphVersionStatus.DRAFT,
+        server_default=GraphVersionStatus.DRAFT.value,
+    )
+    provenance: Mapped[list[dict[str, Any]]] = json_list_column()
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::origin_mode[]"),
+    )
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_by: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class GraphNode(Base):
+    """Per-version immutable node copy. Business units persisted as-is;
+    normalization to [0, 1] happens only inside the pure engine.
+    """
+
+    __tablename__ = "graph_nodes"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "graph_version_id",
+            "id",
+            name="uq_graph_nodes_workspace_version_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_graph_nodes_workspace_version",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "node_type IN ('decision', 'lever', 'constraint', 'external', 'unknown', "
+            "'intermediate', 'outcome', 'indicator')",
+            name="node_type_valid",
+        ),
+        CheckConstraint("min_value < max_value", name="node_bounds_ordered"),
+        CheckConstraint(
+            "baseline_value >= min_value AND baseline_value <= max_value",
+            name="node_baseline_in_bounds",
+        ),
+        CheckConstraint(
+            "current_value >= min_value AND current_value <= max_value",
+            name="node_current_in_bounds",
+        ),
+        CheckConstraint(
+            "sensitivity_step IS NULL OR sensitivity_step > 0",
+            name="node_sensitivity_step_positive",
+        ),
+        CheckConstraint(
+            "evidence_quality_score >= 0 AND evidence_quality_score <= 1",
+            name="node_evidence_quality_range",
+        ),
+        CheckConstraint(
+            "normalization IN ('linear', 'inverse_linear')",
+            name="node_normalization_valid",
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'confirmed', 'rejected')",
+            name="node_status_valid",
+        ),
+        Index("ix_graph_nodes_workspace_version", "workspace_id", "graph_version_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    label: Mapped[str] = mapped_column(String(240), nullable=False)
+    # NodeType stays the canonical Python enum; the six new PG enums of this
+    # CCR are fixed, so node_type is a CHECK-constrained string column.
+    node_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    baseline_value: Mapped[float] = mapped_column(Float, nullable=False)
+    current_value: Mapped[float] = mapped_column(Float, nullable=False)
+    min_value: Mapped[float] = mapped_column(Float, nullable=False)
+    max_value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str | None] = mapped_column(String(80))
+    normalization: Mapped[str] = mapped_column(String(20), nullable=False)
+    sensitivity_step: Mapped[float | None] = mapped_column(Float)
+    controllability: Mapped[FactorControllability] = mapped_column(
+        enum_type(FactorControllability, "factor_controllability"),
+        nullable=False,
+    )
+    authorship: Mapped[FactorAuthorship] = mapped_column(
+        enum_type(FactorAuthorship, "factor_authorship"),
+        nullable=False,
+    )
+    evidence_status: Mapped[FactorEvidenceStatus] = mapped_column(
+        enum_type(FactorEvidenceStatus, "factor_evidence_status"),
+        nullable=False,
+    )
+    evidence_quality_score: Mapped[float] = mapped_column(Float, nullable=False)
+    evidence_ids: Mapped[list[str]] = json_list_column()
+    assumption_ids: Mapped[list[str]] = json_list_column()
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    editable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+
+
+class GraphEdge(Base):
+    """Per-version immutable edge; strength and relationship quality are
+    separate contracts and never merged (AGENTS section 10).
+    """
+
+    __tablename__ = "graph_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "graph_version_id",
+            "id",
+            name="uq_graph_edges_workspace_version_id",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_graph_edges_workspace_version",
+            ondelete="CASCADE",
+        ),
+        # Same-version composite FKs: an edge can only connect nodes that
+        # belong to the same immutable graph version (B-correction).
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_version_id", "source_node_id"],
+            [
+                "graph_nodes.workspace_id",
+                "graph_nodes.graph_version_id",
+                "graph_nodes.id",
+            ],
+            name="fk_graph_edges_same_version_source",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_version_id", "target_node_id"],
+            [
+                "graph_nodes.workspace_id",
+                "graph_nodes.graph_version_id",
+                "graph_nodes.id",
+            ],
+            name="fk_graph_edges_same_version_target",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("strength >= 0 AND strength <= 1", name="edge_strength_range"),
+        CheckConstraint("delay_steps >= 0", name="edge_delay_steps_non_negative"),
+        CheckConstraint(
+            "relationship_quality_score >= 0 AND relationship_quality_score <= 1",
+            name="edge_relationship_quality_range",
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'confirmed', 'rejected', 'conditional')",
+            name="edge_status_valid",
+        ),
+        Index("ix_graph_edges_workspace_version", "workspace_id", "graph_version_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_node_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    target_node_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    polarity: Mapped[EdgePolarity] = mapped_column(
+        enum_type(EdgePolarity, "edge_polarity"),
+        nullable=False,
+    )
+    strength: Mapped[float] = mapped_column(Float, nullable=False)
+    delay_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    authorship: Mapped[FactorAuthorship] = mapped_column(
+        enum_type(FactorAuthorship, "factor_authorship"),
+        nullable=False,
+    )
+    evidence_status: Mapped[FactorEvidenceStatus] = mapped_column(
+        enum_type(FactorEvidenceStatus, "factor_evidence_status"),
+        nullable=False,
+    )
+    relationship_quality_score: Mapped[float] = mapped_column(Float, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    claim_ids: Mapped[list[str]] = json_list_column()
+    evidence_ids: Mapped[list[str]] = json_list_column()
+    assumption_ids: Mapped[list[str]] = json_list_column()
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
+class StrategyVersion(Base):
+    """Immutable set of decision/lever overrides for one option.
+
+    node_overrides / enabled_edge_ids are JSONB node/edge references validated
+    item-by-item by the service against the referenced graph version before
+    persistence; the database does not resolve JSONB references.
+    """
+
+    __tablename__ = "strategy_versions"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_strategy_versions_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "graph_id",
+            "option_id",
+            "version",
+            name="uq_strategy_versions_workspace_graph_option_version",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_id"],
+            ["causal_graphs.workspace_id", "causal_graphs.id"],
+            name="fk_strategy_versions_workspace_graph",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_strategy_versions_workspace_case",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("version > 0", name="strategy_version_positive"),
+        Index("ix_strategy_versions_workspace_graph", "workspace_id", "graph_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    node_overrides: Mapped[dict[str, Any]] = json_object_column()
+    enabled_edge_ids: Mapped[list[str]] = json_list_column()
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class ScenarioVersion(Base):
+    """Immutable external-assumption set projected from an accepted
+    scenario_planning lens frame. riskTolerance is deliberately absent:
+    it belongs to the frozen Profile/Charter/ScoreDefinition contract
+    (AGENTS section 10), never to the scenario.
+
+    edge_multipliers / node_shifts are JSONB references validated item-by-item
+    by the service against the referenced graph version.
+    """
+
+    __tablename__ = "scenario_versions"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_scenario_versions_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "scenario_id",
+            "version",
+            name="uq_scenario_versions_workspace_scenario_version",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_id"],
+            ["causal_graphs.workspace_id", "causal_graphs.id"],
+            name="fk_scenario_versions_workspace_graph",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_scenario_versions_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "source_lens_artifact_id"],
+            [
+                "strategic_lens_artifacts.workspace_id",
+                "strategic_lens_artifacts.strategic_lens_artifact_id",
+            ],
+            name="fk_scenario_versions_workspace_source_lens",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="scenario_version_positive"),
+        CheckConstraint(
+            "default_edge_multiplier >= 0",
+            name="scenario_default_multiplier_non_negative",
+        ),
+        CheckConstraint("damping > 0 AND damping <= 1", name="scenario_damping_range"),
+        Index("ix_scenario_versions_workspace_graph", "workspace_id", "graph_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_lens_artifact_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_strategic_scenario_id: Mapped[str] = mapped_column(String(240), nullable=False)
+    scenario_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(240), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    default_edge_multiplier: Mapped[float] = mapped_column(Float, nullable=False)
+    edge_multipliers: Mapped[dict[str, Any]] = json_object_column()
+    node_shifts: Mapped[dict[str, Any]] = json_object_column()
+    strategy_survives: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    early_warning_signals: Mapped[list[dict[str, Any]]] = json_list_column()
+    damping: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class ScoreDefinition(Base):
+    """Versioned scoring contract; mappings/weights/rules are JSONB whose
+    node/option references are validated item-by-item by the service.
+    ConstraintRule operators use ConstraintComparison wire values only.
+    """
+
+    __tablename__ = "score_definitions"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_score_definitions_workspace_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_id"],
+            ["causal_graphs.workspace_id", "causal_graphs.id"],
+            name="fk_score_definitions_workspace_graph",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_score_definitions_workspace_case",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("content_hash <> ''", name="score_definition_content_hash_not_empty"),
+        Index("ix_score_definitions_workspace_graph", "workspace_id", "graph_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    version: Mapped[str] = mapped_column(String(80), nullable=False)
+    option_outcome_mappings: Mapped[list[dict[str, Any]]] = json_list_column()
+    risk_weights: Mapped[list[dict[str, Any]]] = json_list_column()
+    constraint_rules: Mapped[list[dict[str, Any]]] = json_list_column()
+    content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class GraphBranch(Base):
+    """Named branch over immutable graph versions; rollback creates a new
+    current version from a historical one and never deletes history.
+    """
+
+    __tablename__ = "graph_branches"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_graph_branches_workspace_id"),
+        UniqueConstraint(
+            "workspace_id", "graph_id", "name", name="uq_graph_branches_workspace_graph_name"
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_id"],
+            ["causal_graphs.workspace_id", "causal_graphs.id"],
+            name="fk_graph_branches_workspace_graph",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "base_graph_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_graph_branches_workspace_base_version",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "head_graph_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_graph_branches_workspace_head_version",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("name <> ''", name="branch_name_not_empty"),
+        Index("ix_graph_branches_workspace_graph", "workspace_id", "graph_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    graph_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    base_graph_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    head_graph_version_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    status: Mapped[GraphBranchStatus] = mapped_column(
+        enum_type(GraphBranchStatus, "graph_branch_status"),
+        nullable=False,
+        default=GraphBranchStatus.ACTIVE,
+        server_default=GraphBranchStatus.ACTIVE.value,
+    )
+    created_at: Mapped[datetime] = created_at_column()
+
+
 class SimulationRun(Base):
     __tablename__ = "simulation_runs"
     __table_args__ = (
@@ -736,6 +1224,32 @@ class SimulationRun(Base):
             ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
             name="fk_simulation_runs_workspace_case",
             ondelete="CASCADE",
+        ),
+        # CCR-20260724-SIM-01: frozen simulation inputs are tenant-scoped
+        # references; RESTRICT so historical replay inputs can never vanish.
+        ForeignKeyConstraint(
+            ["workspace_id", "graph_version_id"],
+            ["graph_versions.workspace_id", "graph_versions.id"],
+            name="fk_simulation_runs_workspace_graph_version",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "strategy_version_id"],
+            ["strategy_versions.workspace_id", "strategy_versions.id"],
+            name="fk_simulation_runs_workspace_strategy_version",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "scenario_version_id"],
+            ["scenario_versions.workspace_id", "scenario_versions.id"],
+            name="fk_simulation_runs_workspace_scenario_version",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "score_definition_id"],
+            ["score_definitions.workspace_id", "score_definitions.id"],
+            name="fk_simulation_runs_workspace_score_definition",
+            ondelete="RESTRICT",
         ),
         CheckConstraint("decision_maker_profile_version > 0", name="profile_version_positive"),
         CheckConstraint("risk_tolerance >= 0 AND risk_tolerance <= 1", name="risk_tolerance_range"),
