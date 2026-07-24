@@ -136,6 +136,11 @@ class CausalNode(CanonicalModel):
             raise ValueError("min must be strictly below max")
         if not (self.min <= self.baseline <= self.max and self.min <= self.current <= self.max):
             raise ValueError("baseline and current must lie within [min, max]")
+        # QA-SIM01-001: supported status requires non-empty evidence
+        if self.evidence_status is FactorEvidenceStatus.SUPPORTED and not self.evidence_ids:
+            raise ValueError(
+                "evidenceStatus=supported requires at least one evidenceId"
+            )
         return self
 
 
@@ -154,6 +159,20 @@ class CausalEdge(CanonicalModel):
     evidence_ids: list[Identifier]
     assumption_ids: list[Identifier]
     status: Literal["draft", "confirmed", "rejected", "conditional"]
+
+    @model_validator(mode="after")
+    def evidence_and_claim_discipline(self) -> CausalEdge:
+        # QA-SIM01-002: confirmed edges must carry traceable claims
+        if self.status == "confirmed" and not self.claim_ids:
+            raise ValueError(
+                "confirmed edges must have at least one claimId"
+            )
+        # Every edge must carry at least one traceable source
+        if not self.claim_ids and not self.evidence_ids and not self.assumption_ids:
+            raise ValueError(
+                "edges must have at least one of claimIds, evidenceIds, or assumptionIds"
+            )
+        return self
 
 
 class GraphVersion(CanonicalModel):
@@ -191,6 +210,11 @@ class GraphVersion(CanonicalModel):
         for edge in self.edges:
             if edge.source_node_id not in node_ids or edge.target_node_id not in node_ids:
                 raise ValueError("edges must reference nodes of the same graph version")
+            # QA-SIM01-003: self-loop edges are structurally invalid
+            if edge.source_node_id == edge.target_node_id:
+                raise ValueError(
+                    f"edge {edge.id!r} is a self-loop (source == target)"
+                )
         return self
 
 
