@@ -71,7 +71,7 @@ def _profile_row(**overrides) -> DecisionMakerProfile:
     return DecisionMakerProfile(**values)
 
 
-def _engine_hash(fixture, *, profile=None, risk_tolerance=None) -> str:
+def _engine_hash(fixture, *, profile, risk_tolerance=None) -> str:
     return compute_input_hash(
         fixture.graph,
         fixture.strategies[gb.RESCUE_PILOT],
@@ -172,15 +172,79 @@ def test_numeric_results_do_not_drift_with_profile_fingerprint() -> None:
         fixture.risk_tolerance,
         FORMAL,
     )
-    without = run_simulation(*args)
-    with_fp = run_simulation(*args, profile=_fingerprint())
-    assert with_fp.node_results == without.node_results
-    assert with_fp.option_scores == without.option_scores
-    assert with_fp.convergence_status == without.convergence_status
-    assert with_fp.steps == without.steps
-    assert with_fp.recommended_option_id == without.recommended_option_id
+    # Profile identity is hash-only: two different fingerprints must produce
+    # byte-identical numerics and different replay identities.
+    first = run_simulation(*args, profile=_fingerprint())
+    second = run_simulation(*args, profile=_fingerprint())
+    assert second.node_results == first.node_results
+    assert second.option_scores == first.option_scores
+    assert second.convergence_status == first.convergence_status
+    assert second.steps == first.steps
+    assert second.recommended_option_id == first.recommended_option_id
     # Only the replay identity differs.
-    assert with_fp.input_hash != without.input_hash
+    assert second.input_hash != first.input_hash
+
+
+def test_missing_or_none_profile_is_rejected_no_1_1_0_legacy_mode() -> None:
+    """Fast-fix probes: sim-engine-1.1.0 has no missing-profile hash mode."""
+
+    fixture = gb.spherical_robot_fixture()
+    hash_args = (
+        fixture.graph,
+        fixture.strategies[gb.RESCUE_PILOT],
+        fixture.scenarios["agency_pull"],
+        fixture.score_definition,
+        fixture.risk_tolerance,
+        FORMAL,
+        {},
+        0.001,
+        12,
+    )
+    run_args = hash_args[:6]
+    # 1. compute_input_hash without profile -> rejected at call time.
+    with pytest.raises(TypeError):
+        compute_input_hash(*hash_args)
+    # 2. compute_input_hash(profile=None) -> fail fast.
+    with pytest.raises(SimulationInputError):
+        compute_input_hash(*hash_args, profile=None)
+    # 3. run_simulation without profile -> rejected at call time.
+    with pytest.raises(TypeError):
+        run_simulation(*run_args)
+    # 4. run_simulation(profile=None) -> fail fast.
+    with pytest.raises(SimulationInputError):
+        run_simulation(*run_args, profile=None)
+
+
+def test_sensitivity_sweeps_all_use_the_same_fingerprint(monkeypatch) -> None:
+    """Fast-fix probe: base + every sweep/perturbation carry one identical fingerprint."""
+
+    import app.simulations.sensitivity as sensitivity_module
+
+    fixture = gb.spherical_robot_fixture()
+    fingerprint = _fingerprint()
+    captured: list[object] = []
+    real_run = sensitivity_module.run_simulation
+
+    def _capturing_run(*args, **kwargs):
+        captured.append(kwargs.get("profile", "MISSING"))
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(sensitivity_module, "run_simulation", _capturing_run)
+    result = sensitivity_module.analyze_sensitivity(
+        fixture.graph,
+        fixture.strategies[gb.RESCUE_PILOT],
+        fixture.scenarios["agency_pull"],
+        fixture.score_definition,
+        fixture.risk_tolerance,
+        FORMAL,
+        profile=fingerprint,
+    )
+    assert result.top_drivers, "sweep must have executed"
+    assert len(captured) >= 3, "base + perturbation runs expected"
+    assert all(entry is fingerprint for entry in captured), (
+        "every engine call (base and each sweep) must carry the identical "
+        "verified fingerprint; None/anonymous profiles are forbidden"
+    )
 
 
 def test_bare_dict_fingerprint_is_rejected() -> None:
@@ -278,8 +342,9 @@ async def test_service_run_carries_profile_aware_hash_end_to_end(
         profile=fingerprint,
     )
     assert rederived == view.input_hash
-    # Without the profile block the hash is provably different.
-    without_profile = compute_input_hash(
+    # A different fingerprint provably changes the persisted replay identity.
+    other_fingerprint = _fingerprint()
+    with_other_profile = compute_input_hash(
         assembled.graph,
         assembled.strategy,
         assembled.scenario,
@@ -289,8 +354,9 @@ async def test_service_run_carries_profile_aware_hash_end_to_end(
         {},
         0.001,
         12,
+        profile=other_fingerprint,
     )
-    assert without_profile != view.input_hash
+    assert with_other_profile != view.input_hash
 
 
 async def test_preference_weights_change_moves_content_hash_and_input_hash(

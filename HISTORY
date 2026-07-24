@@ -2645,3 +2645,14 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Handoff: docs/handoffs/SIM_ENG_02_PROFILE_AWARE_INPUT_HASH_R1_HANDOFF.md; ready_for_independent_qa = YES; ready_for_public_route = NO (SIM-02A I1/I2/I3 pending).
 - Next: independent P2 QA lane branches from this head to flip the pinned assertion to permanent green, then the Mainline Lead assembles the integration wave.
 - No credentials recorded.
+
+
+## Archived work 2026-07-25T07:51:35.0875438+08:00
+
+# Archive CCR-ENG-02 Profile Enforcement Fast Fix - 2026-07-25 (Asia/Shanghai)
+
+- Role: Simulation/Graph Owner (Fable5); branch codex/sim-eng-02-profile-enforcement-fast-fix, sole parent = live-resolved P2 head d43e36eb399900e24ec171c8cf02eff3048cf089; main 387041d4 / contract c8c9167b unmoved; fresh worktree; no amend/rebase/force.
+- Fix: ProfileFingerprint mandatory keyword-only on compute_input_hash + run_simulation (omission TypeError; None/bare-dict SimulationInputError fail-fast; profile block unconditional - no sim-engine-1.1.0 missing-profile/legacy/mixed hash mode); sensitivity.py minimal fingerprint pass-through to base + every sweep (numeric algorithm untouched); service passes the fingerprint into analyze_sensitivity; Task 12 owner suite supplied a fixed deterministic canonical OWNER_FP with zero numeric-input changes; +2 probe tests.
+- Fast gates: owner 84/0; four no-profile probes rejected; sensitivity capture 0 None + identical fingerprints; ruff/compileall/diff-check/conflict/scope clean; services/api/tests, migrations, models/types/schemas, packages/contracts, routes/web zero diff. Full battery deferred to the integration gate; QA-owned no-profile acceptance calls now require the P2 QA flip (recorded in handoff).
+- Handoff: docs/handoffs/SIM_ENG_02_PROFILE_ENFORCEMENT_FAST_FIX_HANDOFF.md; ready_for_fast_QA = YES; ready_for_public_route = NO.
+- No credentials recorded.

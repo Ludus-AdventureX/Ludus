@@ -243,6 +243,7 @@ class SimulationRunService:
                 node_overrides=overrides,
                 epsilon=request.epsilon,
                 max_steps=request.max_steps,
+                profile=profile_fingerprint,
             )
             top_drivers = sensitivity.top_drivers
             recommendation_shift = sensitivity.recommendation_shift

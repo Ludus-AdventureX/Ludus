@@ -321,20 +321,21 @@ def compute_input_hash(
     epsilon: float,
     max_steps: int,
     *,
-    profile: ProfileFingerprint | None = None,
+    profile: ProfileFingerprint,
 ) -> str:
     """SHA-256 over the canonical JSON of every frozen input; replay-exact only.
 
-    CCR-ENG-02: when a verified :class:`ProfileFingerprint` is supplied (the service
-    ALWAYS supplies it for every persisted run), the payload gains exactly one nested
-    top-level ``profile`` object; ``riskTolerance`` stays a separate top-level key
-    with unchanged Task 12 semantics. Bare dicts are rejected: the fingerprint must
-    be the assembly-verified value object, never caller-constructed data.
+    CCR-ENG-02 (profile enforcement fast fix): a verified :class:`ProfileFingerprint`
+    is MANDATORY — sim-engine-1.1.0 has no missing-profile or legacy/mixed hash mode.
+    Omitting the keyword fails at call time; passing ``None`` or a bare dict fails
+    fast here. The payload always carries the nested §2 ``profile`` object;
+    ``riskTolerance`` stays a separate top-level key with unchanged Task 12 semantics.
     """
 
-    if profile is not None and not isinstance(profile, ProfileFingerprint):
+    if not isinstance(profile, ProfileFingerprint):
         raise SimulationInputError(
-            "profile must be the assembly-verified ProfileFingerprint value object"
+            "a verified ProfileFingerprint is required: sim-engine-1.1.0 does not "
+            "compute hashes without the frozen profile block"
         )
 
     payload = {
@@ -354,13 +355,12 @@ def compute_input_hash(
         "scenario": _scenario_fingerprint(scenario),
         "scoreDefinition": _score_fingerprint(score_definition),
         "nodeOverrides": {k: _round_floats(v) for k, v in sorted(node_overrides.items())},
-    }
-    if profile is not None:
-        payload["profile"] = {
+        "profile": {
             "id": profile.id,
             "version": profile.version,
             "contentHash": profile.content_hash,
-        }
+        },
+    }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return "sha256:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -376,10 +376,19 @@ def run_simulation(
     epsilon: float = 0.001,
     max_steps: int = 12,
     *,
-    profile: ProfileFingerprint | None = None,
+    profile: ProfileFingerprint,
 ) -> SimulationResult:
-    """Run the deterministic propagation and produce an immutable :class:`SimulationResult`."""
+    """Run the deterministic propagation and produce an immutable :class:`SimulationResult`.
 
+    The verified ``profile`` fingerprint is mandatory (no None, no omission): every
+    sim-engine-1.1.0 hash carries the frozen profile block.
+    """
+
+    if not isinstance(profile, ProfileFingerprint):
+        raise SimulationInputError(
+            "a verified ProfileFingerprint is required: sim-engine-1.1.0 does not "
+            "run without the frozen profile identity"
+        )
     if epsilon <= 0:
         raise SimulationInputError("epsilon must be positive")
     if max_steps <= 0:

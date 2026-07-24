@@ -530,7 +530,7 @@ async def test_graph_content_change_changes_input_hash(session: AsyncSession):
     service = SimulationRunService(session)
     base = await service.run_and_record(world.context, request_for(world))
 
-    assembled, _ = await service._load_frozen_input(world.context, request_for(world))
+    assembled, row_refs = await service._load_frozen_input(world.context, request_for(world))
     changed = assembled.graph.with_value(str(world.driver_id), 0.75)
     changed_hash = compute_input_hash(
         changed,
@@ -542,6 +542,7 @@ async def test_graph_content_change_changes_input_hash(session: AsyncSession):
         {},
         0.001,
         12,
+        profile=row_refs["profile_fingerprint"],
     )
     assert changed_hash != base.input_hash
 
