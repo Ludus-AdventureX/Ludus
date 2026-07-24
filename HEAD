@@ -1,9 +1,12 @@
 # Work Log: idle
 
-- Status: idle after assembling the refreshed SIM-01 integration candidate (r2).
+- Status: idle; CCR-SIM-01 published to remote main and live-verified.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive SIM-01 Post-Artifact-IO Refresh Integration (r2) - 2026-07-24 (Asia/Shanghai)`.
-- Candidate: codex/ccr-sim-01-integration-r2 (frozen 4d45391 merged --no-ff onto main 3ab888a; product byte gates and Artifact IO anti-regression gates all exact; migration head a3f8c2d47e19; 334 passed + exactly the 2 known QA-owned failures; CONTRACT_DRIFT_OK); NOT merged to main.
-- Gate condition: dialogue 3 final QA on this refreshed exact head (QA branch updates the exact-table set and the replay fixture), then live-read ff-only publication by the lead.
+- Last archive entry: `Archive CCR-SIM-01 Main Publication - 2026-07-24 (Asia/Shanghai)`.
+- Remote main: 4c4b35f1aa5bf7cccc9be4376df0306e7514ec74 + this archive commit (live ls-remote verified; canonical simulation graph contract - 8 tables, 6 PG enums, wire schemas with evidence/claim/self-loop discipline at both wire and DB layers, 4 frozen-reference FKs - all on main; migration head a3f8c2d47e19).
+- Stage: Canonical Simulation Graph Foundation Complete.
+- Archive-only: all six SIM-01 product/QA branches (4d45391 / 1ff2cc9 / 49c0321 / 228dd5d / 9658e31 / 4c4b35f); the decision-lab-sim01-r2 worktree is retired.
+- Unlocked: Simulation repository/service lane + CCR-SIM-02 (routes) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.

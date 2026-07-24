@@ -2368,3 +2368,18 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); SIM-01 RELEASE_READY / MAINLINE_INTEGRATION_PENDING; merge object = 9658e31 + this QA tip.
 - Evidence: docs/handoffs/SIM_01_FINAL_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive CCR-SIM-01 Main Publication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Final integrated HEAD: 4c4b35f1aa5bf7cccc9be4376df0306e7514ec74 (QA exact tested combination codex/qa-ccr-sim-01-final) = product 9658e31b02b9c8d554c209c6bf2596f4c765379a (chain 3ab888a -> 1ff2cc9 refresh r2 -> 228dd5d wire P2 fix -> 9658e31 DB self-loop fix) + final QA commit (adopts the full 49c0321 r2 QA asset set, promotes all 4 xfail probes to permanent green, old-fixture fixes, final handoffs, append-only HISTORY). Product files untouched by QA (audited); QA delta exactly tests/handoffs/lifecycle.
+- QA verdicts: RELEASE_CONTENT_VERDICT PASS; 378/0/0/0 -W error; lens_lanes 121; SIM directed 42; engine 28; persistence 16; read-path+IO 16; models+invariants 34; P0/P1/P2 = 0/0/0; QA-SIM01-001/002/003 CLOSED.
+- Lead fresh re-verification on 4c4b35f (detached checkout, disposable PG16 @55432, removed afterwards): clean-DB upgrade -> a3f8c2d47e19 + alembic check clean; full 378 passed / 0 failed / 0 xfailed / 0 xpassed; lens_lanes 121 on the dirty DB right after the full run; SIM directed 42; IO directed 32; engine 28; ruff/compileall PASS; official generate_contracts.ps1 -Check full TS chain = CONTRACT_DRIFT_OK; secret/diff-check/conflict-marker scans clean.
+- Canonical behavior now on main: supported node requires evidenceIds; confirmed edge requires claimIds; every edge requires at least one traceable source; self-loop rejected at BOTH wire (GraphVersion validator) and DB (ck_graph_edges_no_self_loop, convalidated) layers; 8 SIM tables; 6 PG enums + ConstraintComparison Python-only; 4 simulation_runs frozen-reference FKs validated; migration head a3f8c2d47e19 (down_revision d7e2a91c5b48).
+- Remote sequence (all live): four refs read and matched -> pre-merge main re-read 3ab888a -> merge --ff-only -> push (no force, no history rewrite) -> re-read main = 4c4b35f -> this lifecycle-only archive commit -> final re-read recorded in the update.
+- old_remote_main_sha: 3ab888a32083fc86c5aa4a6372bc7585e7eb946a; new_remote_main_sha: 4c4b35f + this archive commit.
+- Now archive-only: codex/ccr-sim-01-execution (4d45391), codex/ccr-sim-01-integration-r2 (1ff2cc9), codex/qa-ccr-sim-01-integration-r2 (49c0321), codex/ccr-sim-01-p2-fix (228dd5d), codex/ccr-sim-01-db-self-loop-fix (9658e31), codex/qa-ccr-sim-01-final (4c4b35f); the decision-lab-sim01-r2 worktree is retired.
+- Stage: Canonical Simulation Graph Foundation Complete. Unlocked next: Simulation repository/service lane + CCR-SIM-02 (routes), branching from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED.
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
+- No credentials or secret values are recorded here.
