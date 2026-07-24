@@ -1,11 +1,12 @@
-# Work Log: idle
+# Work Log: active
 
-- Status: idle; CCR-20260724-Ways-01 published to remote main and live-verified.
-- Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive CCR-20260724-Ways-01 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 350bd34113c73645093f89dcc97b2179b6fcaf56 + this archive commit (live ls-remote verified; CCR product e57e474 + QA coverage published as the exact tested combination).
-- Migration head: d7e2a91c5b48. Baseline rule: all subsequent lanes must branch from the latest remote-verified main.
-- Unlocked: Ways persistence wiring slice (dialogue 6); simulation graph-side CCR submission (dialogue 5); Ways five-lens refresh candidate rebuild (frozen 69bbc5d as sole product source, next lead task).
-- Web r2: REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- started_at: 2026-07-24 (Asia/Shanghai)
+- role: Mainline Audit / Contract Integration Lead (Ways post-CCR refresh candidate, sequence Step 3)
+- objective: Build codex/ways-five-lens-integration-r3 from live-verified main db23bbb48b6dc0d18c1aee0a8703430ff28bc226 by merging (--no-ff) the frozen codex/ways-five-lens-integration-r2 @ 69bbc5df55cc527bd1edaa2e37e65695938e97cc as the sole five-lens product source; resolve lifecycle conflicts only; byte-verify strategic_lenses/** + tests/lens_lanes/** + fixtures/** against 69bbc5d; run full regression + official generate_contracts.ps1 -Check; push and live-verify; output WAYS_REFRESH_INTEGRATION_HANDOFF for dialogue 3 QA. NOT merged to main before that QA.
+- base_main_sha: db23bbb48b6dc0d18c1aee0a8703430ff28bc226 (live ls-remote verified this session; contains CCR-Ways-01: strategic_lens_artifacts + d7e2a91c5b48 + ConnectorStatus)
+- branch: codex/ways-five-lens-integration-r3 (fresh from main; dialogue 6's r2 worktree/branch untouched and not reused)
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration (lead-owned integration worktree)
+- write_scope: merge commit of 69bbc5d; HEAD/HISTORY append-only resolution; nothing else.
+- forbidden_scope: any modification of 69bbc5d content; persistence/report/API wiring; migrations/models/types/contracts/agents edits; five single-lens branches; QA test content changes; main merge before QA verdict.
+- known_initial_risks: expected conflicts only in HEAD/HISTORY (69bbc5d touches strategic_lenses/fixtures/lens_lanes + lifecycle; post-CCR main advanced only in types/models/migrations/tests/docs — zero product-file overlap verified at HOLD registration).
+- secret_policy: no credentials recorded here.
