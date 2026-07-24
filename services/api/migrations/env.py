@@ -8,9 +8,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.db import get_database_url
 from app.models import Base
+from app.security.rate_limits import rate_limit_metadata
 
 config = context.config
-target_metadata = Base.metadata
+# The login throttle table lives on a deliberate module-local MetaData
+# (see app/security/rate_limits.py); include it so autogenerate/check do not
+# propose dropping it.
+target_metadata = [Base.metadata, rate_limit_metadata]
 
 
 def run_migrations_offline() -> None:
