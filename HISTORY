@@ -1690,3 +1690,36 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Ways integration is now AUTHORIZED for dialogue 6: new main contains the Task 7 seam (cce4d70 ancestor check will pass); five lens branches remain frozen until the single WAYS_INTEGRATION_HANDOFF flows through dialogue 3 QA and this lead.
 - Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push; CCR-20260724-Ways-01 adjudication scheduled with the Ways integration window.
 - No credentials or secret values are recorded here.
+
+
+## Archive CCR-20260724-Ways-01 Execution - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- Status: completed; CCR-20260724-Ways-01 executed and verified on codex/ccr-ways-01-execution; NOT merged to main; handed to dialogue 3 QA.
+- Role: Mainline Audit / Contract Integration Lead (contract_lead)
+- base_main_sha: 2c5e79ceb8373a196e96ff86be442ecb52041d5c (live ls-remote verified at session start; no concurrent advancement)
+- Branch: codex/ccr-ways-01-execution; implementation commit 06c58cf.
+
+## Delivered (changed paths exactly the approved scope)
+
+- services/api/app/types.py: ConnectorStatus (7 canonical values per AGENTS section 8), StrategicLensArtifactStatus (draft/ready/rejected), LensProducerRole (research/critic/synthesis).
+- services/api/app/models.py: StrategicLensArtifact entity - server-injected identity + method snapshot + originModes + contentHash + createdAt; composite FKs to decision_cases and analysis_runs (19A pattern); CHECK ready-requires-validation_accepted_at; partial unique index one ready artifact per (workspace, run, lens_type); JSON reference lists claim/evidence/assumption with server-side resolution responsibility documented.
+- services/api/migrations/versions/d7e2a91c5b48_add_strategic_lens_artifacts.py (down_revision c4a1f0b2d9e7; reuses shared origin_mode enum; downgrade drops table + lens enums only).
+- docs/product-plan/18-detailed-development-plan.md: Task 7/8/10 write-scope repair per manifest (connector providers -> Task 8; app/analyses/** annotated task-09 case_api_data; strategic_lenses/models.py removed in favor of canonical ORM; canonical migrations land via contract_lead).
+- docs/product-plan/docs/contract-changes/CCR-20260724-Ways-01.md: accepted record.
+
+## Verification (fresh, disposable PG16 @55432, removed afterwards)
+
+- Alembic: upgrade -> d7e2a91c5b48 (head); downgrade c4a1f0b2d9e7 / 0001 double roundtrip; alembic check "No new upgrade operations detected" (Base.metadata vs migration consistency proven).
+- Full pytest -q -W error: 158 passed, 1 failed - the sole failure is QA-owned test_core_table_set_and_workspace_scope whose exact-table assertion does not yet include strategic_lens_artifacts (same pattern as Task 19A round 1; QA updates its own assertion in review; I did not touch QA tests).
+- Directed test_models + test_decision_os_invariants: same single QA-owned failure; all other assertions pass.
+- Contract drift: CONTRACT_DRIFT_OK (no API surface change, as ruled). Ruff: PASS. compileall: PASS.
+- Scope audit: changed paths exactly {types.py, models.py, new migration, 18-plan, CCR doc, HEAD/HISTORY}; agents/contracts/web/tests untouched. Secret scan + git diff --check: PASS.
+
+## Next steps
+
+- Dialogue 3 QA: review this candidate, update the exact-table assertion (add strategic_lens_artifacts) on a QA branch, add negative regressions (cross-workspace/case/run FK rejection, ready-without-validation_accepted_at rejection, duplicate ready per run+lens rejection), rerun combined acceptance, return verdict.
+- After QA PASS: merge to main via this lead with live reads; then Ways persistence wiring unlocks and the simulation graph-side CCR may be submitted (linear migration chain after d7e2a91c5b48).
+- Remote status of this branch recorded after push below; failures marked blocked, never fabricated.
+- No credentials or secret values are recorded here.
