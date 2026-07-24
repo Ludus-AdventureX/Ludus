@@ -1518,3 +1518,18 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Resume steps once GitHub connectivity returns: (1) git ls-remote origin refs/heads/main — expect 2396206, investigate if advanced; (2) git push -u origin codex/task-03-contract-integration; (3) ls-remote verify branch == f95fda3; (4) git merge --ff-only into main; (5) git push origin main (no force); (6) ls-remote re-read main; (7) publish MAINLINE_UPDATE with the new main SHA as the sole baseline for subsequent lanes.
 - Standing constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting) lands; P2-002 (tokenVersion enforcement) xfail remains tracked for case_api_data.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Remote repository: https://github.com/Ludus-AdventureX/Ludus.git (verified via git remote get-url origin before every remote operation).
+- Network recovery resume executed strictly in order: live ls-remote main (2396206, no concurrent advancement) -> push -u codex/task-03-contract-integration -> live ls-remote branch verify (f5b43c91ec3b03b1e77eff8149685fa3f4821dc2, exact match) -> git merge --ff-only into main -> git push origin main (no force) -> live ls-remote re-read.
+- old_main_sha: 239620681f88c525912c2e1d8b23483a5f362a5e (CONTRACT_FREEZE_SHA).
+- new_remote_main_sha: f5b43c91ec3b03b1e77eff8149685fa3f4821dc2 (live-verified after push; identical to local main and the remote integration branch).
+- integrated_candidate_sha: f5b43c9 (content tip f95fda3 == QA exact_tested_head; f5b43c9 adds only the blocked-publication lifecycle archive).
+- Ancestry: 2396206 -> aa240f7 (implementation, unmodified) -> 9555ae6 (CCR-20260724-005 + generated contracts) -> aee4a43 (envelope P1 fix 36ee13b) -> 9205835 -> f95fda3 (QA r3 coverage, exact tested head) -> f5b43c9; pure fast-forward, no force-push, no history rewrite.
+- Final regression evidence on f95fda3 tree: 118 passed, 1 xfailed (-W error); alembic clean; ruff/compileall PASS; contract drift OK; endpoint reachability and P1 validation-envelope probes PASS.
+- Exposure constraint remains: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
+- Subsequent lanes must branch from main f5b43c9 as the sole baseline.
+- No credentials or secret values are recorded here.
