@@ -1659,3 +1659,18 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
   push and remote branch SHA verification results are recorded in the handoff.
 - Persistence/migration/routes/web UI remain deferred pending Contract Lead CCR.
 - Secret policy: no credentials, tokens, keys, or .env values are recorded.
+
+
+## Archive Task 12 and Task 7 Mainline Integration Candidates - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: blocked (remote publication only; both content gates complete)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Strict order preserved: Task 12 integrated first, Task 7 stacked on the Task-12-integrated state.
+- Task 12 candidate: codex/task-12-mainline-integration @ 966b7f7 = main 2c43bff + merge of codex/task-12-simulation-engine-r2 @ b7060d5a631ac67f67ff8fb0b536c5295b8f5ae9 (app/simulations/** byte-identical; conflicts HEAD/HISTORY only, HISTORY merged binary-safe append-only). Integration regression on 966b7f7: full pytest -W error 140 passed / 1 skipped (simulation acceptance activated; remaining skip is the Task 7 importorskip placeholder); owner suite app/simulations/tests 28 passed; alembic upgrade + check clean; ruff/compileall PASS.
+- Task 7 candidate: codex/task-07-mainline-integration @ 6d2a0a5 = 966b7f7 + merge of codex/task-07-agent-runtime-r2 @ 742d252b99b4058a6e8aad74f33c526e5346d53d (QA product point cce4d7036967532366bb2e64483a21810ef4248d; cce4d70..742d252 audited = 4 commits touching HEAD only, zero product drift; app/agents/** byte-identical to cce4d70). Integration regression on 6d2a0a5: full pytest -W error 159 passed / 0 skipped (both QA gate suites active); ruff/compileall PASS.
+- QA regression preservation: test_simulation_engine_acceptance.py, owner 28 simulation tests, and test_agent_runtime.py are all present and passing on the final stacked HEAD; nothing dropped.
+- Remote status: BLOCKED - this window's ls-remote attempts fail with 443; per protocol no main merge and no push occurred; local branches intact.
+- Resume on network recovery (per merge: fresh reads before and after): 1) ls-remote main (expect 2c43bfffd847c2e2d5b523b93ae27d603897d7e7, else audit) 2) push + verify codex/task-12-mainline-integration @ 966b7f7 3) ff main -> push -> re-read 4) push + verify codex/task-07-mainline-integration @ tip 5) ff main -> push -> re-read 6) publish new main SHA containing Task 7 and authorize the Ways integration branch for dialogue 6.
+- Five lens branches remain frozen (porter 8103284, counterparty 1ea56ca, pre_mortem 97f35bc, scenario 66b1ea1, meadows 7fd12f7); none merged this window; Ways integration only after the new main SHA is published.
+- No credentials or secret values are recorded here.
