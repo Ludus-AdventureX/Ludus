@@ -2282,3 +2282,17 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verdict: RELEASE_CONTENT PASS (P0/P1/P2=0); QA-WAYS-PERSIST-001 remains CLOSED; mainline merge permitted for candidate + this QA tip.
 - Evidence: docs/handoffs/LENS_ARTIFACT_IO_INTEGRATION_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Lens Artifact IO Main Publication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Artifact IO Integration Lead.
+- Final integrated HEAD: 3ee8e0aaf2d848688070b8a1d6d861a82d242626 (QA exact tested combination) = candidate 239bb7de7fde967aae31dd6e99e5580f6219c4db (persistence 009e0df + read-path 2f0fe40 assembled with their QA heads b5890f4/b44ec92) + QA commit 3ee8e0a (workspace-scoped _artifact_count isolation fix in test_lens_persistence.py, permanent combined-semantics regressions test_lens_artifact_io_semantics.py, QA handoff, append-only HISTORY). Product files untouched by QA (audited); SIM-01 4d45391 confirmed NOT an ancestor.
+- QA verdicts: RELEASE_CONTENT_VERDICT PASS; 336 passed / 0 failed / 0 skipped (-W error); lens_lanes 121; persistence 16; read path 11; IO semantics 5; P0/P1/P2 = 0/0/0; QA-WAYS-PERSIST-001 CLOSED.
+- Lead fresh re-verification on 3ee8e0a (detached checkout, disposable PG16 @55432, removed afterwards): clean-DB upgrade -> d7e2a91c5b48 + alembic check clean; full 336 passed; lens_lanes 121 passed on the DIRTY database right after the full run (isolation fix proven effective); directed persistence+read-path+IO-semantics 32 passed; ruff/compileall PASS; official generate_contracts.ps1 -Check full chain = CONTRACT_DRIFT_OK; secret/diff-check/conflict-marker scans clean.
+- Remote sequence (all live): main/candidate/QA refs read and matched -> pre-merge main re-read 4de3628 -> merge --ff-only -> push (no force, no history rewrite) -> re-read main = 3ee8e0a.
+- old_remote_main_sha: 4de362835f728ab155fc197b9f11b9ac248f2936; new_remote_main_sha: 3ee8e0aaf2d848688070b8a1d6d861a82d242626.
+- Now archive-only: codex/ways-lens-persistence-r2-p2-fix, codex/qa-ways-lens-persistence-r2-p2-fix, codex/task-lens-artifact-read-path, codex/qa-lens-artifact-read-path-r2, codex/lens-artifact-io-integration-r1, codex/qa-lens-artifact-io-integration-r1; the decision-lab-lens-io-r1 worktree is retired.
+- Unlocked: SIM-01 candidate 4d45391 may now enter dialogue 3 QA and will be refreshed to this new baseline at final integration per the standing rule; Web r2 remains REMOTE_SYNC_BLOCKED.
+- Subsequent lanes must branch from main >= 3ee8e0a as the sole baseline.
+- No credentials or secret values are recorded here.
