@@ -1591,3 +1591,55 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - secret_policy: >
     No credentials, API keys, tokens, cookies, connection strings, or .env contents
     are read, echoed, logged, or committed. Fixture provider requires no keys.
+
+
+## Archive Scenario Planning Lens r2 Implementation - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: completed
+
+- started_at: 2026-07-24 (Asia/Shanghai)
+- completed_at: 2026-07-24 (Asia/Shanghai)
+- role: Synthesis / Scenario Planning Specialist (lane 9, LENS_ASSIGNMENT_R2)
+- status: completed
+- objective: scenario_planning lens runtime behavior on the r2 agents seam.
+- base_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae (== origin/main tracking
+  ref and the dispatched expectation; post-push live re-read of remote main
+  FAILED on 443/reset and stays an explicitly unverified item)
+- branched_from: cce4d70 (codex/task-07-agent-runtime-r2 seam tip)
+- branch: codex/lens-scenario-r2
+- worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-lens-scenario-r2
+- commits:
+    - 66b1ea11d59a19f67220fc747c000682fe7c92e6 feat: implement scenario_planning
+      lens behavior and seed mapping
+- remote:
+    - push -u origin codex/lens-scenario-r2: SUCCESS
+    - live ls-remote refs/heads/codex/lens-scenario-r2: 66b1ea1 (exact match)
+    - live ls-remote refs/heads/main after push: FAILED (443 timeout, then
+      connection reset); no claim is made about current remote main.
+- changed_paths (audited, scope-clean):
+    - HEAD, HISTORY (append-only, +58/-0 verified)
+    - services/api/app/strategic_lenses/__init__.py
+    - services/api/app/strategic_lenses/lenses/__init__.py
+    - services/api/app/strategic_lenses/lenses/scenario_planning.py
+- verification (fresh, this tree):
+    - .venv python -m compileall services/api/app/strategic_lenses: PASS
+    - .venv python -m ruff check services/api/app/strategic_lenses: PASS
+    - decision-lab-G0/lens-scenario-r2/smoke_scenario_lens.py: 29 checks,
+      0 failures (pack schema positive, 15 behavior negatives, server-owned
+      field rejection, scenarioCandidate schema validation, strategySurvives
+      semantics incl. fail-closed focal option, no riskTolerance, registry
+      wiring, deterministic prompt assembly, option-coverage cross-check)
+    - git diff --check: clean; HISTORY numstat 58 added / 0 deleted
+- not_verified:
+    - live remote main re-read after push (443 blocked at completion time)
+    - end-to-end run through the coordinator runner/worker (registry wiring is
+      coordinator-owned; only local LensRegistry.register was exercised)
+    - persistence of StrategicLensArtifact (canonical schema/migration still
+      absent on baseline per coordinator audit; out of this lane's scope)
+- known_risks:
+    - scenarioCandidate driverStates map axis-state text by exact pole match;
+      unresolved text maps to shift 0.0 (documented in module constants).
+    - axisStates order is assumed to follow the axes array order; the schema
+      does not pin this, flagged to the coordinator in the handoff.
+- secret_policy: no credentials, keys, tokens, cookies, connection strings or
+  .env contents were read, echoed, logged, or committed.
