@@ -1601,3 +1601,17 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Login endpoint may be exposed only after this candidate (with migration) reaches main and QA confirms P2-001; reverse-proxy X-Forwarded-For policy remains a later deployment slice.
 - Remote status recorded below after push attempt; failures marked blocked, never fabricated.
 - No credentials or secret values are recorded here.
+
+
+## Archive Auth Security Main Publication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Mainline Audit / Contract Integration Lead.
+- Remote repository: https://github.com/Ludus-AdventureX/Ludus.git (remote get-url verified before every remote operation).
+- Final integrated HEAD: 946c825a8b865a7b161ef5b7241f0cb01478ee33 = merge of contract candidate 609a780cffb3184a44e185a6831d64a6b4ec301e (product: ac084c7 implementation + CCR-20260724-006 migration c4a1f0b2d9e7 + env placeholders, byte-identical) and QA coverage codex/qa-mainline-258a94d @ aa8cda73641a4c1a76f86aaeaf2b49e9d981dc35 (test_auth_rate_limiting.py, test_agent_runtime.py, test_simulation_engine_acceptance.py, conftest update, xfail removal, 5 handoffs, byte-identical). The exact QA-tested combination was reconstructed as one auditable merge commit; nothing was dropped.
+- QA verdicts: AUTH_SECURITY_QA_VERDICT PASS; RELEASE_GATE_VERDICT PASS; migration verdict PASS; P0=0 P1=0 P2=0; QA-TASK03-001 and QA-TASK03-002 CLOSED.
+- Fresh full acceptance on 946c825 before publication: pytest -q -W error 129 passed / 2 skipped (importorskip placeholders for absent task7/12 modules); clean-DB alembic upgrade/downgrade f850d361ee42/re-upgrade/check; CONTRACT_DRIFT_OK; ruff/compileall PASS; scope/secret/diff-check PASS.
+- Remote sequence (all live): ls-remote main = 258a94d (no concurrent advancement) -> push candidate (one transient disconnect, retry OK) -> ls-remote candidate = 946c825 exact; QA branch = aa8cda7 exact -> pre-merge ls-remote main re-read = 258a94d -> git merge --ff-only -> push main (no force) -> ls-remote main = 946c825 confirmed.
+- old_remote_main_sha: 258a94df9c7663ab2257d54d3a05b5e7e7c1dfae; new_remote_main_sha: 946c825a8b865a7b161ef5b7241f0cb01478ee33.
+- P2-001 (Postgres-backed login rate limiting) and P2-002 (tokenVersion enforcement) are CLOSED on main; the login public-exposure gate is LIFTED for environments migrated to c4a1f0b2d9e7 (missing-table environments remain fail-closed 429 by design; reverse-proxy X-Forwarded-For policy is a later deployment slice).
+- Subsequent lanes must branch from main >= 946c825 as the sole baseline.
+- No credentials or secret values are recorded here.
