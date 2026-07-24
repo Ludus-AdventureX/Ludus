@@ -1,10 +1,12 @@
 # Work Log: idle
 
-- Status: idle; Task 3 published to remote main and live-verified.
+- Status: idle after auth security hardening (P2-001 + P2-002).
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Main Publication - 2026-07-24 (Asia/Shanghai)`.
-- Remote main: 91a0d67aa71f4bd8e01057635d7ac7947051b57b (Task 3 content tip f95fda3 + publication lifecycle records; live ls-remote verified).
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= 91a0d67); the old freeze baseline 2396206 is superseded.
-- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting, case_api_data) lands; P2-002 (tokenVersion enforcement) xfail remains tracked.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- Last archive entry: `Archive Auth Security Hardening P2-001 P2-002 - 2026-07-24 (Asia/Shanghai)`.
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-auth-hardening
+- Current branch: codex/task-auth-security-hardening (base 258a94d)
+- Owner result: P2-001 Postgres-backed login rate limiting (IP + normalized-account sliding window, atomic ON CONFLICT counters, REQUEST_RATE_LIMITED with safe retryAfterSeconds, fail-closed on store failure, account reset on success) live on the login route; P2-002 token_version enforced in resolve_active_session (QA xfail QA-TASK03-002 now XPASSes). Probe 27/27 green; full suite 118 passed + 1 xpassed; ruff/compileall PASS.
+- Contract dependency: login_rate_buckets canonical migration is contract_lead-owned; CONTRACT_CHANGE_REQUEST with the exact DDL is in the lane handoff. Until it lands, environments without the table fail login CLOSED (429), never open.
+- Exposure gate: with P2-001 delivered, the prior "login must not be publicly exposed" constraint can be lifted once this branch and the migration are integrated.
+- Remote status: recorded in the IMPLEMENTATION_HANDOFF (push attempted with retries; BLOCKED if connectivity persists).
+- Secret policy: no credentials recorded; throttle store holds SHA-256 digests only, never raw emails or IPs.
