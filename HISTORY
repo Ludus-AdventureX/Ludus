@@ -2084,3 +2084,19 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Unlocked: Ways persistence wiring slice (dialogue 6) from this new baseline; simulation graph-side CCR submission window remains open (dialogue 5).
 - Subsequent lanes must branch from main >= 8fd2451 as the sole baseline.
 - No credentials or secret values are recorded here.
+
+---
+
+## Archive QA Ways Lens Persistence - 2026-07-24 (Asia/Shanghai)
+
+- Role: QA/Release - Ways Lens Persistence QA; branch codex/qa-ways-lens-persistence-r2.
+- Tested candidate: codex/ways-lens-persistence-r2 @ 911bf8778bc5e09c3861abeb2d7a068a0109b0b1 (live ls-remote verified; main 4de3628 ancestor, single product commit).
+- Fresh database qa_lens_persistence: alembic upgrade head PASS, current = d7e2a91c5b48 (head), alembic check clean.
+- Directed persistence: 13 passed (10 lane + 3 new QA probes). Full suite with -W error: 317 passed. lens_lanes: 118 passed. ruff PASS, compileall PASS.
+- Review A-H: tenancy triple-key + uniform not-found PASS; 6-stage writability PASS; 17 server-owned field rejections PASS; behavior/schema failures persist nothing PASS; five-category frozen-ledger resolution fail-closed PASS; draft->ready witness / draft->rejected audit / terminal immutability / no content UPDATE PASS; producer_role mapping, origin-mode dedup enum, deterministic content hash PASS.
+- Concurrency probe (new, QA-owned): double-ready keeps exactly one ready row (partial unique index holds, fail-closed) BUT leaks raw IntegrityError instead of a domain error; guarded UPDATE also lacks a rowcount check (racing verdicts could silently no-op). Recorded as one P2 finding with two facets for the persistence owner; QA did not modify product source.
+- schema_version stores short semver "1.1.0"; CCR-20260724-Ways-01 groups it under the method snapshot without specifying semver-vs-URN -> CONTRACT_REVIEW flagged to contract_lead; not a defect against the current contract (String(64)).
+- Test ownership: services/api/tests/lens_lanes/test_lens_persistence.py ADOPTED into the QA suite as-is; QA probes live in test_lens_persistence_qa.py.
+- Scope audit: candidate touches only HEAD + repository.py + one test file; no models/types/migration/contracts/read-path/router change; no AnalysisRun mutation; secret scan clean.
+- Verdict: P0=0, P1=0, P2=1 (two-facet error-mapping robustness); RELEASE_CONTENT_VERDICT: PASS.
+- No credentials or secret values recorded.
