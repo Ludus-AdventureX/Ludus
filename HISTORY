@@ -2383,3 +2383,14 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Stage: Canonical Simulation Graph Foundation Complete. Unlocked next: Simulation repository/service lane + CCR-SIM-02 (routes), branching from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED.
 - Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
 - No credentials or secret values are recorded here.
+
+
+## Archive CCR-SIM-01 Addendum A1 Adjudication - 2026-07-24 (Asia/Shanghai)
+
+- Role: Contract/Mainline Lead - Simulation canonical contract reconciliation (CONTRACT-FIRST, no main merge).
+- Hard gate: live ls-remote main = 3ed23b92e0b2a1326518a6f550984abb02f11179 (exact) and candidate codex/task-simulation-repository-service-r1 = 7844a1631c0747e2f39e2cbfb73088ed010c98ae (exact); no BASELINE_STALE.
+- Verdicts (full record in docs/product-plan/docs/contract-changes/CCR-20260724-SIM-01-ADDENDUM-A1.md): identity_contract_verdict = UUID_IDENTITY_CONFIRMED (original Q2 key-column wording formally retired; (workspace_id, graph_version_id, id) is canonical business identity; every published reference surface already UUID-based; future node_key/edge_key requires a new CCR + forward revision, never an in-place rewrite of a3f8c2d47e19); equality_operator_verdict = FAIL_CLOSED_ACCEPTED_FOR_THIS_SLICE (canonical "=" kept, engine gap registered, stable error score_constraint_operator_unsupported audited - no fall-through to "<="); edge_gating_verdict = FAIL_CLOSED_ACCEPTED_FOR_THIS_SLICE (strategy_edge_gating_unsupported audited; CCR-SIM-02 must preserve, not silently ignore); enum_authority_verdict = PASS (pure import aliases, no parallel enums; ElementStatus/Normalization/Comparison legitimately engine-internal); stale_documentation_verdict = OWNER_FOLLOW_UP_REQUIRED (domain.py line-8 claim false since SIM-01 landed; doc-only follow-up commit on top of 7844a16 before QA).
+- candidate_disposition: CANDIDATE_REFRESH_REQUIRED - no DB/contract fix; owner pushes the docstring follow-up, QA freezes the new exact head with accepted dependencies, then standard live-read ff-only publication.
+- Audited evidence: main CCR record + wire schemas + JSONB reference keys + uniques all UUID-Identifier; candidate changed set confined to services/api/app/simulations/** + lifecycle; engine files untouched vs main; explicit "=" membership check and enabledEdgeIds fail-closed confirmed in assembly.py.
+- This branch carries the addendum record only (contract_lead scope); main not touched; candidate branch not modified.
+- No credentials or secret values are recorded here.
