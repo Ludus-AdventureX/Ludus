@@ -1489,3 +1489,32 @@ No P0/P1 blocker remains in the reviewed Task 2 scope. The prior two P1 findings
 - Standing P2s unchanged: QA-TASK03-001 (login rate limiting before public exposure), QA-TASK03-002 (tokenVersion enforcement, xfail).
 - Evidence: docs/handoffs/TASK03_FINAL_RELEASE_QA_HANDOFF.md. No product source modified by QA.
 - No credentials or secret values are recorded here.
+
+
+## Archive Task 3 Final Mainline Gate - Publication Blocked by Network - 2026-07-24 (Asia/Shanghai)
+
+# Work Log: blocked (remote publication only; content gate complete)
+
+- Role: Mainline Audit / Contract Integration Lead (Task 3 final mainline release gate)
+- Repository worktree: E:\Temp\xiayu\Documents\adventure-x\decision-lab-mainline-integration
+- Branch: codex/task-03-contract-integration
+- Final candidate tip: f95fda385912987fc1ce01a7931feb4acdd03929 (== QA exact_tested_head; candidate fast-forwarded to the QA r3 commit so the verified QA coverage is preserved non-destructively; product tree byte-identical to 9205835)
+- QA final: codex/qa-task-03-release-gate-r3 @ f95fda3; single commit on 9205835; QA-owned tests/handoffs/lifecycle only; HISTORY append-only verified; verdicts P1_REGRESSION PASS / IMPLEMENTATION_QA PASS / RELEASE_CONTENT PASS; P0=0, P1=0, P2=2.
+
+## Fresh regression on the final tip (disposable PG16 @55432, removed afterwards)
+
+- Full pytest -q -W error (product + QA suites): 118 passed, 1 xfailed — matches the QA-declared result exactly.
+- Alembic upgrade head + alembic check: clean. Ruff: PASS. compileall: PASS.
+
+## Remote publication attempt
+
+- git remote get-url origin verified: https://github.com/Ludus-AdventureX/Ludus.git
+- Live ls-remote of refs/heads/main attempted twice (60s apart): both failed with port 443 connection errors. Network has NOT recovered.
+- Per protocol, main was NOT merged and nothing was pushed: the required pre-merge live re-read of remote main and the candidate-branch remote verification cannot be satisfied while the network is down. No remote result is claimed.
+
+## Safe recovery state and resume plan
+
+- Local branches intact: codex/task-03-contract-integration @ f95fda3 (final candidate, content-gate complete); main @ 2396206 (unchanged, == CONTRACT_FREEZE_SHA).
+- Resume steps once GitHub connectivity returns: (1) git ls-remote origin refs/heads/main — expect 2396206, investigate if advanced; (2) git push -u origin codex/task-03-contract-integration; (3) ls-remote verify branch == f95fda3; (4) git merge --ff-only into main; (5) git push origin main (no force); (6) ls-remote re-read main; (7) publish MAINLINE_UPDATE with the new main SHA as the sole baseline for subsequent lanes.
+- Standing constraint: login endpoint must not be publicly exposed until P2-001 (Postgres-backed login rate limiting) lands; P2-002 (tokenVersion enforcement) xfail remains tracked for case_api_data.
+- No credentials or secret values are recorded here.

@@ -1,12 +1,11 @@
 # Work Log: idle
 
-- Status: idle after Task 3 final release-gate QA round 3 (recomposed candidate with P1 fix).
+- Status: idle; Task 3 final content gate COMPLETE, remote publication BLOCKED by GitHub 443.
 - Last archived: 2026-07-24 (Asia/Shanghai).
-- Last archive entry: `Archive Task 3 Final Release-Gate QA r3 - 2026-07-24 (Asia/Shanghai)`.
-- Audited candidate: codex/task-03-contract-integration @ 9205835e1932821f92937f6161a953fc4489ce31 (impl aa240f7 + CCR-20260724-005 + P1 fix 36ee13b; base = frozen main 2396206).
-- Verdicts: P1_REGRESSION PASS; IMPLEMENTATION_QA PASS; RELEASE_CONTENT PASS; REMOTE_PUBLISH BLOCKED (GitHub 443 blocked this round; candidate branch upload unverified on origin; no remote result is claimed).
-- Full suite on exact tested HEAD: 118 passed, 1 xfailed, 0 failed (-W error); alembic clean; OpenAPI/types drift OK (script-equivalent normalized compare); ruff/compileall PASS; owner-scope/secret/publish-scope clean.
-- Merge clearance: content cleared for Mainline Lead; merge only after network recovery, candidate push, and live ls-remote re-read of remote main (expected 2396206) and the candidate ref.
-- Standing P2 backlog unchanged: QA-TASK03-001 (login rate limiting before public exposure), QA-TASK03-002 (tokenVersion enforcement, xfail in place).
-- Evidence: docs/handoffs/TASK03_FINAL_RELEASE_QA_HANDOFF.md on this branch.
-- Secret policy: no credentials, API keys, tokens, cookies, or connection strings are stored here.
+- Last archive entry: `Archive Task 3 Final Mainline Gate - Publication Blocked by Network - 2026-07-24 (Asia/Shanghai)`.
+- Final candidate: codex/task-03-contract-integration @ f95fda385912987fc1ce01a7931feb4acdd03929 (== QA exact_tested_head; fresh regression re-run by the integration lead: 118 passed, 1 xfailed, -W error; alembic/ruff/compileall clean).
+- main: unchanged at 2396206 (CONTRACT_FREEZE_SHA); NOT merged — protocol requires a live pre-merge remote main re-read and candidate-branch remote verification, which GitHub 443 currently prevents. No remote result is claimed.
+- Resume once network recovers: ls-remote main (expect 2396206) -> push -u candidate -> ls-remote verify f95fda3 -> merge --ff-only into main -> push main (no force) -> ls-remote re-read -> publish MAINLINE_UPDATE.
+- Exposure constraint: login endpoint must not be publicly exposed until P2-001 (login rate limiting) lands.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
