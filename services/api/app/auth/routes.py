@@ -32,6 +32,7 @@ from app.db import get_session
 from app.models import User, UserSession, Workspace, WorkspaceMembership
 from app.security.csrf import issue_csrf_token, require_csrf
 from app.security.envelope import ApiFailure
+from app.security.rate_limits import LoginRateLimiter
 from app.tenancy.context import project_capabilities
 from app.types import (
     UserStatus,
@@ -281,9 +282,16 @@ async def register(
 )
 async def login(
     body: LoginRequest,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_session),
 ) -> AuthSessionEnvelope:
+    # P2-001 mandatory gate: meter the attempt (IP + normalized account) in
+    # Postgres before any credential work; storage failure fails closed.
+    client_ip = request.client.host if request.client else "unknown"
+    limiter = LoginRateLimiter()
+    await limiter.check_login_attempt(db, client_ip=client_ip, email=body.email)
+
     user = await db.scalar(select(User).where(User.email == body.email))
     if user is None:
         # Equalize timing with a real Argon2 verification, then fail uniformly.
@@ -302,6 +310,9 @@ async def login(
         expires_at=session.expires_at,
     )
     envelope = await _session_envelope(db, user, session)
+    # Successful authentication releases the account dimension only; the IP
+    # dimension keeps counting so address-level abuse cannot launder budget.
+    await limiter.reset_account(db, body.email)
     await db.commit()
     _set_session_cookie(response, token, session.expires_at)
     return envelope

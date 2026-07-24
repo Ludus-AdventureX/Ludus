@@ -28,6 +28,11 @@ class AuthSettings(BaseSettings):
     cookie_secure: bool = False
     # Empty list means "same origin as the request URL" for CSRF checks.
     allowed_origins: list[str] = []
+    # P2-001 login rate limiting (doc 22): sliding window over minute slices,
+    # enforced per client IP and per normalized account before authentication.
+    login_rate_window_minutes: int = 15
+    login_rate_ip_max_attempts: int = 20
+    login_rate_account_max_attempts: int = 5
 
 
 @lru_cache(maxsize=1)

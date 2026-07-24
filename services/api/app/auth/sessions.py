@@ -16,6 +16,14 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# P0 issues exactly one cookie token per UserSession, at creation time, and
+# token_version starts at 1 with no re-issue flow. The JWT claim set is
+# contract-locked to {sub, session_id, iat, exp}, so the version cannot ride
+# in the token itself: any bump of token_version is an administrative
+# invalidation and must reject every token minted for the session.
+ISSUED_TOKEN_VERSION = 1
+
+
 async def create_user_session(
     db: AsyncSession,
     user_id: UUID,
@@ -26,6 +34,7 @@ async def create_user_session(
     now = utc_now()
     session = UserSession(
         user_id=user_id,
+        token_version=ISSUED_TOKEN_VERSION,
         expires_at=now + timedelta(minutes=settings.session_ttl_minutes),
         last_seen_at=now,
     )
@@ -46,7 +55,7 @@ async def revoke_user_session(db: AsyncSession, session_id: UUID) -> bool:
 
 
 async def resolve_active_session(db: AsyncSession, session_id: UUID) -> UserSession | None:
-    """Return the session only if it exists, is unrevoked, and is unexpired."""
+    """Return the session only if unrevoked, unexpired, and version-current."""
 
     session = await db.scalar(select(UserSession).where(UserSession.id == session_id))
     if session is None:
@@ -54,6 +63,9 @@ async def resolve_active_session(db: AsyncSession, session_id: UUID) -> UserSess
     if session.revoked_at is not None:
         return None
     if session.expires_at <= utc_now():
+        return None
+    if session.token_version != ISSUED_TOKEN_VERSION:
+        # Administrative token_version bump: outstanding tokens die before exp.
         return None
     return session
 
