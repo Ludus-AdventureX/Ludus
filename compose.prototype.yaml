@@ -1,21 +1,22 @@
-# Closed Alpha prototype stack: Web + API + Postgres behind one origin.
+# Guest Simulation Alpha prototype stack: Web + API + Postgres, one origin.
 #
-#   Start: docker compose --env-file .env.prototype -f compose.prototype.yaml up -d --build
-#   Seed:  docker compose --env-file .env.prototype -f compose.prototype.yaml run --rm seed
-#   Smoke: docker compose --env-file .env.prototype -f compose.prototype.yaml run --rm smoke
+#   Build/start: docker compose --env-file .env.prototype -f compose.prototype.yaml up -d --build
+#   Smoke:       docker compose --env-file .env.prototype -f compose.prototype.yaml run --rm smoke
 #
 # Copy .env.prototype.example to .env.prototype first and fill in real values;
 # never commit the filled file (already covered by .gitignore).
 #
 # HTTPS: no managed cloud platform is assumed. The integration lane exposes
 # host port ${WEB_PORT} through a temporary HTTPS ingress (for example
-# `cloudflared tunnel --url http://localhost:3000`) and sets
+# `cloudflared tunnel --url http://localhost:3000`) and sets WEB_ORIGIN plus
 # AUTH_ALLOWED_ORIGINS to that public URL. The web container proxies /api/* to
-# FastAPI internally, so the tunnel is the single public origin.
+# FastAPI internally (NEXT_PUBLIC_API_BASE=/api), so browsers only ever see
+# one HTTPS origin.
 #
 # Migrations run as an explicit startup command (the `migrate` service) before
-# the API accepts traffic. Seeding is a separate explicit command and never
-# runs automatically, so restarts do not overwrite Closed Alpha data.
+# the API accepts traffic. Guest Alpha data is created by the API runtime when
+# ENABLE_GUEST_ALPHA=true; no seed job and no model API key are required
+# (FIXTURE_MODE=true), and no worker service exists in this stack.
 
 name: decision-lab-prototype
 
@@ -57,6 +58,9 @@ services:
     image: decision-lab-api:prototype
     environment:
       <<: *db-env
+      ENABLE_GUEST_ALPHA: ${ENABLE_GUEST_ALPHA:-true}
+      FIXTURE_MODE: ${FIXTURE_MODE:-true}
+      WEB_ORIGIN: ${WEB_ORIGIN:?set WEB_ORIGIN to the public HTTPS origin}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in .env.prototype}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
       AUTH_SESSION_TTL_MINUTES: ${AUTH_SESSION_TTL_MINUTES:-720}
@@ -79,16 +83,10 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        # Deterministic uuid5 identities from scripts/seed_simulation_alpha.py;
-        # public fixture IDs only, no secrets. Baked into the /demo bundle.
-        NEXT_PUBLIC_DEMO_GRAPH_ID: ${NEXT_PUBLIC_DEMO_GRAPH_ID:-62ea04dd-21f6-5be5-adb9-ed484f0728f2}
-        NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID: ${NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID:-85e46da1-ed0c-5dda-ae03-5e97be2b3327}
-        NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID: ${NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID:-3c2c4bbf-95ac-5a08-a474-ee18cd59d520}
-        NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID: ${NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID:-f7935a1d-c522-5e93-9f60-61c77e051068}
-        NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID: ${NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID:-198403ed-f3c2-52a4-b2c0-afd4899cd29f}
-        NEXT_PUBLIC_DEMO_PROFILE_ID: ${NEXT_PUBLIC_DEMO_PROFILE_ID:-1770c71d-dbe1-5270-89bf-f20998946aed}
-        NEXT_PUBLIC_DEMO_PROFILE_VERSION: ${NEXT_PUBLIC_DEMO_PROFILE_VERSION:-1}
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-/api}
     image: decision-lab-web:prototype
+    environment:
+      WEB_ORIGIN: ${WEB_ORIGIN:?set WEB_ORIGIN to the public HTTPS origin}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
@@ -96,71 +94,12 @@ services:
         condition: service_healthy
     healthcheck:
       # Exercises the same-origin /api proxy end to end (web -> FastAPI).
-      # /api/auth/csrf is a real proxied API route; the FastAPI /health route
-      # lives outside the /api prefix and is only reachable on the api service.
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/auth/csrf').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 15s
     restart: unless-stopped
-
-  # Explicit one-off: registers the Closed Alpha account through the public
-  # auth contract. Idempotent; never runs on `up`.
-  seed:
-    image: decision-lab-api:prototype
-    profiles: ["ops"]
-    environment:
-      SEED_API_BASE_URL: http://api:8000
-      SEED_EMAIL: ${SEED_EMAIL:?set SEED_EMAIL in .env.prototype}
-      SEED_PASSWORD: ${SEED_PASSWORD:?set SEED_PASSWORD in .env.prototype}
-      SEED_WORKSPACE_NAME: ${SEED_WORKSPACE_NAME:-Closed Alpha Workspace}
-    volumes:
-      - ./scripts/prototype_seed.py:/opt/deploy/prototype_seed.py:ro
-    depends_on:
-      api:
-        condition: service_healthy
-    command: ["python", "/opt/deploy/prototype_seed.py"]
-    restart: "no"
-
-  # Explicit one-off: seeds the full simulation-alpha demo scope (demo user,
-  # workspace, confirmed graph, versions, frozen profile) directly against the
-  # database. Idempotent (uuid5 identities); never runs on `up`.
-  seed-alpha:
-    image: decision-lab-api:prototype
-    profiles: ["ops"]
-    environment:
-      <<: *db-env
-      PYTHONPATH: /app
-      SIMULATION_ALPHA_DEMO_PASSWORD: ${SIMULATION_ALPHA_DEMO_PASSWORD:?set SIMULATION_ALPHA_DEMO_PASSWORD in .env.prototype}
-    volumes:
-      - ./scripts:/opt/deploy/scripts:ro
-      - ./fixtures:/opt/deploy/fixtures:ro
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["python", "/opt/deploy/scripts/seed_simulation_alpha.py"]
-    restart: "no"
-
-  # Explicit one-off: csrf -> login -> run -> idempotent replay -> GET replay
-  # against the real SIM-02A routes (in-process ASGI, same DB as the API).
-  smoke-alpha:
-    image: decision-lab-api:prototype
-    profiles: ["ops"]
-    environment:
-      <<: *db-env
-      PYTHONPATH: /app
-      SIMULATION_ALPHA_DEMO_PASSWORD: ${SIMULATION_ALPHA_DEMO_PASSWORD:?set SIMULATION_ALPHA_DEMO_PASSWORD in .env.prototype}
-    volumes:
-      - ./scripts:/opt/deploy/scripts:ro
-      - ./fixtures:/opt/deploy/fixtures:ro
-    depends_on:
-      api:
-        condition: service_healthy
-    command: ["python", "/opt/deploy/scripts/smoke_simulation_alpha.py"]
-    restart: "no"
 
   # Explicit one-off: verifies API health directly and through the web proxy.
   smoke:
@@ -176,7 +115,7 @@ services:
       - -c
       - |
         import sys, urllib.request
-        for url in ("http://api:8000/health", "http://web:3000/api/auth/csrf"):
+        for url in ("http://api:8000/health", "http://web:3000/api/health"):
             status = urllib.request.urlopen(url, timeout=10).status
             print(f"SMOKE {url} -> {status}")
             if status != 200:

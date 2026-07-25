@@ -1,9 +1,8 @@
-# syntax=docker/dockerfile:1
-# Next.js web image for the Closed Alpha prototype stack.
+# Next.js web image for the Guest Simulation Alpha prototype stack.
 # Build context is the repository root (pnpm workspace lockfile lives there):
 #   docker build -f apps/web/Dockerfile .
 # The standalone server proxies /api/* to FastAPI (see apps/web/next.config.ts),
-# so one origin serves both web and API.
+# so browsers only ever see one HTTPS origin.
 
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.14.4 --activate
@@ -20,27 +19,13 @@ WORKDIR /repo
 COPY --from=deps /repo ./
 COPY apps/web ./apps/web
 COPY packages/contracts ./packages/contracts
-# Rewrite target is baked at build time (standalone output); it must match the
-# API service name in compose.prototype.yaml.
+# Baked at build time (standalone output): the rewrite target must match the
+# API service name in compose.prototype.yaml, and the browser-visible API base
+# stays same-origin (/api) so no second origin ever appears.
 ARG API_PROXY_TARGET=http://api:8000
-# Public demo fixture identifiers for /demo (SimulationDemoPanel). These are
-# uuid5-deterministic outputs of scripts/seed_simulation_alpha.py and are baked
-# into the client bundle at build time (NEXT_PUBLIC_*). They contain no secrets.
-ARG NEXT_PUBLIC_DEMO_GRAPH_ID
-ARG NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID
-ARG NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID
-ARG NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID
-ARG NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID
-ARG NEXT_PUBLIC_DEMO_PROFILE_ID
-ARG NEXT_PUBLIC_DEMO_PROFILE_VERSION
+ARG NEXT_PUBLIC_API_BASE=/api
 ENV API_PROXY_TARGET=$API_PROXY_TARGET \
-    NEXT_PUBLIC_DEMO_GRAPH_ID=$NEXT_PUBLIC_DEMO_GRAPH_ID \
-    NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID=$NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID \
-    NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID=$NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID \
-    NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID=$NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID \
-    NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID=$NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID \
-    NEXT_PUBLIC_DEMO_PROFILE_ID=$NEXT_PUBLIC_DEMO_PROFILE_ID \
-    NEXT_PUBLIC_DEMO_PROFILE_VERSION=$NEXT_PUBLIC_DEMO_PROFILE_VERSION \
+    NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE \
     NEXT_OUTPUT_STANDALONE=true \
     NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --dir apps/web exec next build

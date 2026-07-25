@@ -1,5 +1,4 @@
-# syntax=docker/dockerfile:1
-# FastAPI service image for the Closed Alpha prototype stack
+# FastAPI service image for the Guest Simulation Alpha prototype stack
 # (compose.prototype.yaml). Dependencies come from the committed uv.lock so
 # the container matches local development exactly.
 
