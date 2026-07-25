@@ -25,8 +25,22 @@ vi.mock("next/image", async () => {
   };
 });
 
+// The homepage shell drives the real guest-backed create flow; unit tests
+// keep the network and navigation seams mocked (the golden path covers wire).
+const { createDecisionCaseMock, navigateToCreatedCaseMock } = vi.hoisted(() => ({
+  createDecisionCaseMock: vi.fn(),
+  navigateToCreatedCaseMock: vi.fn()
+}));
+
+vi.mock("@/lib/shell/createCase", () => ({
+  CaseCreateFlowError: class CaseCreateFlowError extends Error {},
+  createDecisionCase: createDecisionCaseMock,
+  navigateToCreatedCase: navigateToCreatedCaseMock
+}));
+
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
   window.history.replaceState(null, "", "/");
@@ -49,10 +63,18 @@ describe("DecisionShell Look V7 release gates", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent("先写下一个需要承担后果的问题。");
     expect(screen.getByLabelText("现在最需要看清的取舍是什么？")).toHaveFocus();
+    expect(createDecisionCaseMock).not.toHaveBeenCalled();
   });
 
-  test("fills an example prompt, then creates only a draft state", async () => {
+  test("fills an example prompt, then creates the real decision case", async () => {
     const user = userEvent.setup();
+    createDecisionCaseMock.mockResolvedValue({
+      workspaceId: "ws-guest-1",
+      decisionCaseId: "case-123",
+      version: 1,
+      title: "扩大当前市场还是转向细分机会？",
+      clarifyingQuestions: []
+    });
     const { container } = await renderShell();
     const question = screen.getByLabelText("现在最需要看清的取舍是什么？");
 
@@ -62,8 +84,16 @@ describe("DecisionShell Look V7 release gates", () => {
 
     await user.click(screen.getByRole("button", { name: /建立决策项目/ }));
 
-    expect(screen.getByRole("status")).toHaveTextContent("已建立决策项目草稿；尚未生成证据、分析或正式档案。");
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("决策项目已建立，正在打开工作台…")
+    );
     expect(container.querySelector("#emptyCaseForm")).toHaveClass("is-drafted");
+    expect(createDecisionCaseMock).toHaveBeenCalledWith(
+      "我们应该继续扩大当前市场，还是把资源转向一个更小但更确定的细分机会？"
+    );
+    expect(navigateToCreatedCaseMock).toHaveBeenCalledWith(
+      expect.objectContaining({ decisionCaseId: "case-123", workspaceId: "ws-guest-1" })
+    );
   });
 
   test("names the theme drawer, moves focus inside, traps Tab, and returns focus on Escape", async () => {

@@ -25,8 +25,22 @@ vi.mock("next/image", async () => {
   };
 });
 
+// The empty view drives the real guest-backed create flow; unit tests keep
+// the network and navigation seams mocked (the golden path covers the wire).
+const { createDecisionCaseMock, navigateToCreatedCaseMock } = vi.hoisted(() => ({
+  createDecisionCaseMock: vi.fn(),
+  navigateToCreatedCaseMock: vi.fn()
+}));
+
+vi.mock("@/lib/shell/createCase", () => ({
+  CaseCreateFlowError: class CaseCreateFlowError extends Error {},
+  createDecisionCase: createDecisionCaseMock,
+  navigateToCreatedCase: navigateToCreatedCaseMock
+}));
+
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
   document.body.classList.remove("empty-case");
   window.history.replaceState(null, "", "/");
 });
@@ -140,6 +154,13 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
 
   test("renders the question-first empty state without a template card wall", async () => {
     const user = userEvent.setup();
+    createDecisionCaseMock.mockResolvedValue({
+      workspaceId: "ws-guest-1",
+      decisionCaseId: "case-123",
+      version: 1,
+      title: "先验证哪一个市场方向？",
+      clarifyingQuestions: []
+    });
     const { container } = await renderCasePage("new");
 
     expect(screen.getByRole("heading", { level: 1, name: /先写下一个真正需要承担后果的问题/ })).toBeVisible();
@@ -152,13 +173,38 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
     // is enabled so the drawer (real workspace list) remains reachable.
     expect(screen.getByRole("button", { name: /尚未创建决策项目/ })).toBeEnabled();
 
-    // Human-owned draft flow: empty submit returns focus to the question.
+    // Human-owned draft flow: empty submit returns focus to the question and
+    // never reaches the network.
     await user.click(screen.getByRole("button", { name: /建立决策项目/ }));
     expect(screen.getByRole("status")).toHaveTextContent("先写下一个需要承担后果的问题。");
     expect(screen.getByLabelText("现在最需要看清的取舍是什么？")).toHaveFocus();
+    expect(createDecisionCaseMock).not.toHaveBeenCalled();
+
+    // Real create flow: guest-backed POST /cases, then open the case route.
+    await user.type(screen.getByLabelText("现在最需要看清的取舍是什么？"), "先验证哪一个市场方向？");
+    await user.click(screen.getByRole("button", { name: /建立决策项目/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("决策项目已建立，正在打开工作台…")
+    );
+    expect(createDecisionCaseMock).toHaveBeenCalledWith("先验证哪一个市场方向？");
+    expect(navigateToCreatedCaseMock).toHaveBeenCalledWith(
+      expect.objectContaining({ decisionCaseId: "case-123", workspaceId: "ws-guest-1" })
+    );
+  });
+
+  test("keeps an honest failure notice when the create flow fails", async () => {
+    const user = userEvent.setup();
+    createDecisionCaseMock.mockRejectedValue(new Error("boom"));
+    await renderCasePage("new");
 
     await user.type(screen.getByLabelText("现在最需要看清的取舍是什么？"), "先验证哪一个市场方向？");
     await user.click(screen.getByRole("button", { name: /建立决策项目/ }));
-    expect(screen.getByRole("status")).toHaveTextContent("已建立决策项目草稿；尚未生成证据、分析或正式档案。");
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("建立决策项目失败，请稍后重试。")
+    );
+    expect(navigateToCreatedCaseMock).not.toHaveBeenCalled();
+    // The button recovers so the human can retry.
+    expect(screen.getByRole("button", { name: /建立决策项目/ })).toBeEnabled();
   });
 });

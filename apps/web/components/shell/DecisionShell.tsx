@@ -3,6 +3,12 @@
 import Image from "next/image";
 import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  CaseCreateFlowError,
+  createDecisionCase,
+  navigateToCreatedCase
+} from "@/lib/shell/createCase";
+
 const copy = {
   "currentIssue": "当前议题",
   "emptyCaseTitle": "尚未创建决策项目",
@@ -39,10 +45,13 @@ const copy = {
   "caseRuleText": "空项目不会显示伪造的进度、证据数量、运行状态或推荐结果。",
   "caseStay": "留在当前项目",
   "caseOpen": "打开空工作台",
-  "draftedTitle": "项目草稿已建立",
-  "draftedSubline": "下一步将确认边界；当前仍是静态展示",
-  "emptySubmitNotice": "已建立决策项目草稿；尚未生成证据、分析或正式档案。",
+  "draftedTitle": "决策项目已建立",
+  "draftedSubline": "正在打开五工作台",
+  "creatingTitle": "正在建立决策项目…",
+  "creatingSubline": "建立访客会话并写入决策问题",
+  "emptySubmitNotice": "决策项目已建立，正在打开工作台…",
   "emptyNoQuestionNotice": "先写下一个需要承担后果的问题。",
+  "emptyCreateFailedFallback": "建立决策项目失败，请稍后重试。",
   "emptyImportNotice": "静态原型：正式版本会先建立项目草稿，再把材料写入项目级 RawArtifact。",
   "methodRows": [
     [
@@ -253,6 +262,7 @@ export function DecisionShell() {
   const [question, setQuestion] = useState("");
   const [draftNotice, setDraftNotice] = useState("");
   const [isDrafted, setIsDrafted] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [ready, setReady] = useState(false);
   const projectTrigger = useRef<HTMLButtonElement>(null);
   const themeTrigger = useRef<HTMLButtonElement>(null);
@@ -351,15 +361,29 @@ export function DecisionShell() {
     };
   }, [closeDrawer, drawer]);
 
-  const submitDraft = (event: FormEvent<HTMLFormElement>) => {
+  const submitDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isCreating || isDrafted) return;
     if (!question.trim()) {
       setDraftNotice(copy.emptyNoQuestionNotice);
       questionInput.current?.focus();
       return;
     }
-    setIsDrafted(true);
-    setDraftNotice(copy.emptySubmitNotice);
+    setIsCreating(true);
+    setDraftNotice("");
+    try {
+      const created = await createDecisionCase(question.trim());
+      setIsDrafted(true);
+      setDraftNotice(copy.emptySubmitNotice);
+      navigateToCreatedCase(created);
+    } catch (error) {
+      setDraftNotice(
+        error instanceof CaseCreateFlowError ? error.message : copy.emptyCreateFailedFallback
+      );
+      questionInput.current?.focus();
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const chooseExample = (value: string) => {
@@ -425,7 +449,7 @@ export function DecisionShell() {
                   <textarea ref={questionInput} id="emptyQuestion" rows={5} value={question} onChange={(event) => { setQuestion(event.target.value); setDraftNotice(""); }} placeholder={copy.formPlaceholder} />
                   <div className="empty-form-actions">
                     <button type="button" className="secondary-action" id="importEmptyMaterial" onClick={() => setDraftNotice(copy.emptyImportNotice)}>{copy.importText}</button>
-                    <button type="submit" className="primary-action" id="createEmptyCase"><span>{isDrafted ? copy.draftedTitle : copy.createText}</span><small>{isDrafted ? copy.draftedSubline : copy.createSubline}</small></button>
+                    <button type="submit" className="primary-action" id="createEmptyCase" disabled={isCreating}><span>{isDrafted ? copy.draftedTitle : isCreating ? copy.creatingTitle : copy.createText}</span><small>{isDrafted ? copy.draftedSubline : isCreating ? copy.creatingSubline : copy.createSubline}</small></button>
                   </div>
                   <p className="empty-privacy">{copy.formPrivacy}</p>
                   {draftNotice && <p className="draft-notice" role="status">{draftNotice}</p>}
