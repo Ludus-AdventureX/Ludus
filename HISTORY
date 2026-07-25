@@ -2834,3 +2834,89 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Acceptance gates: new test file green; full pytest tests app/simulations/tests -q -W error -rxX zero regression vs opening baseline (baseline count recorded before work); ruff check services/api; compileall; generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; diff-check/marker/secret/scope clean.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+
+## Archive SIM Alpha Integration Worklog (HEAD -> HISTORY) - 2026-07-25 (Asia/Shanghai)
+
+- Verbatim HEAD archived before Task 11 Phase 0 Session A took over the worklog:
+- (HEAD) Status: verification complete on codex/prototype-simulation-alpha-integration (base = live-verified remote main 387041d40442faf16557b266ef3f844b7af8fb69); mainline sim-eng-02 wave publication bd9fde1 adopted mid-release (same contract/product chain; QA-owned files resolved to mainline QA dc57fe6 with the route-mount pin re-flipped for the mounted I1/I2 surface); release steps (deploy from exact SHA -> external smoke -> ff-only main) in progress.
+- (HEAD) Role: Integration/Release Lead (SIM_ALPHA_INTEGRATION_RELEASE).
+- (HEAD) Assembled: contract chain 0289b2e -> c8c9167 -> 19f552c + product d2ae634 (no-ff; HEAD/HISTORY append-only 3-way), then rolling no-ff merges of codex/prototype-sim-web 3b7d588, -seed-smoke f08b66b, -run-api 56e01ab, -deploy e150528 as each was pushed; then origin/main bd9fde1.
+- (HEAD) Integration-owned work: simulations router mounted under workspace_router + OpenAPI/types regenerated (drift = exactly the two SIM-02A paths); combination-only fixes: ENG-02 pinned QA flips (acceptance suite canonical fingerprint, hash-flip pin, route-mount pin), smoke rewritten onto the real SIM-02A routes with an idempotent re-POST probe, prototype_seed csrfToken key, next.config proxy merge (API_PROXY_TARGET/API_PROXY_ORIGIN + standalone), web Dockerfile + compose NEXT_PUBLIC_DEMO_* build args, seed-alpha/smoke-alpha compose lanes, web healthcheck /api/auth/csrf fix, .env.prototype.example additions.
+- (HEAD) Verification (single full pass, disposable PG16 ludus-pg-sim-alpha @55439): alembic upgrade head + check clean (single head b2c7e9d4a1f6); pytest tests app/simulations/tests -q -W error = 482 passed / 0 failed (re-run after mainline adoption recorded below); generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; pnpm web test = 14 passed, build OK; seed idempotent twice + SMOKE PASS (201, sim-engine-1.1.0, sha256 inputHash, idempotencyReplay=true, replay identical); manual browser login -> run -> result -> replay on /demo verified (hash equality shown); security smoke PASS (unauthenticated 401 on GET+POST, foreign workspace uniform 404, idempotency replay, secret diff scan clean).
+- The release itself was published to main as 51ae45c (merge adopting bd9fde1); that SHA is the live remote main at this kickoff.
+
+## Task 11 Phase 0 Session A Kickoff - 2026-07-25 (Asia/Shanghai)
+
+- Role: Web/UX Owner (Task 11 Phase 0 five-workspace shell, Session A of the A/B serial split; Session B must branch from this session's exact pushed SHA).
+- Gate 0: git ls-remote origin refs/heads/main = 51ae45c900ae4efa01b72d5d6842adb74ad50c91 (expected 51ae45c; no advance). Fresh worktree decision-lab-task11-phase0-shell-a, new branch codex/task-11-phase0-shell-a from 51ae45c.
+- Look snapshot discipline: all six look sources (VERSION, README.md, index.html, themes.css, styles.css, app.js) SHA256-verified byte-identical to the frozen design/look-source-manifest.json (bundle c5d5d65bf62efdd14e4e3e13d1c70b92f9d6b4cdd4dbd2f652107d84d1a55e98); no resample, no snapshot diff to report.
+- Write scope: apps/web/** new files + minimal existing route mount points + docs/handoffs/** + HEAD/HISTORY. Forbidden: /demo page, guest client, next.config.ts, package.json dependencies, services/api/**, packages/contracts/**, rebase/amend/force-push, loading ../look/app.js in production, parallel IA, mock analysis data posing as real APIs.
+- No credentials or secret values are recorded here.
+
+## Task 11 Phase 0 Session A Completion - 2026-07-25 (Asia/Shanghai)
+
+- Role: Web/UX Owner (Fable5); branch codex/task-11-phase0-shell-a from live-verified remote main 51ae45c900ae4efa01b72d5d6842adb74ad50c91 (Gate 0 exact expected SHA, no advance).
+- Delivered (all new files, zero existing-file modifications): app/(workspace)/cases/[decisionCaseId]/page.tsx stable route skeleton (reserved segment `new` -> empty state, no API reads); components/shell/CaseShell.tsx (masthead with honest not-connected source mode + project-drawer trigger slot, ?view= URL sync and refresh restore); DecisionSpine.tsx (five canonical workspaces workspace/analysis/report/sandbox/decision aligned to Look V7 + disabled review-dialog-trigger slot for Task 14W, aria-current highlight, arrow/Home/End roving focus); CaseViewRouter.tsx; five structured Look V7 placeholder views (no fabricated analysis/case data, no total confidence percentage); EmptyCaseView.tsx (question-first empty state, no template card wall, no fake counters); PhaseSlot.tsx stable anchors (analysis-charter-form, analysis-progress, quality-gate-panel, evidence-drawer-trigger, decision-health-bar, decision-signoff, review-dialog-trigger, project-drawer); lib/shell/workspaces.ts; tests/case-shell.test.tsx (6 tests).
+- Naming adjudication disclosed in handoff: Look V7 + B12 freeze five workspaces as 问题/证据/判断/推演/决定; 复盘 is the spine-mounted Review dialog trigger (Task 14W), rendered as a disabled slot step, not a sixth workspace.
+- Look snapshot discipline: six look sources SHA256 byte-identical to frozen design/look-source-manifest.json; no resample; app.js keyboard behavior re-expressed in React, never loaded.
+- Gates: pnpm --dir apps/web test = 20 passed / 0 failed (14-test demo/guest baseline zero regression + 6 new); typecheck + lint clean; pnpm --dir apps/web build OK (/cases/[decisionCaseId] 11 kB, first load 125 kB); git diff --check clean; conflict-marker scan clean; secret scan clean (only worklog prose matches); scope audit = HEAD, HISTORY, 13 new apps/web files, 1 handoff.
+- Handoff: docs/handoffs/TASK11_PHASE0_SHELL_A_HANDOFF.md (component map index.html -> React, slot anchor table, Session B backlog: ProjectDrawer, slot/props contract, DecisionHealthBar skeleton, responsive/keyboard completion, cumulative report).
+- Session B rule: branch codex/task-11-phase0-shell-b with this branch's exact pushed SHA as its only parent.
+- No credentials or secret values are recorded here.
+
+## Archive Task 11 Phase 0 Session A Worklog (HEAD -> HISTORY) - 2026-07-25 (Asia/Shanghai)
+
+- Verbatim HEAD archived before Session B took over the worklog:
+- (HEAD) Status: Session A complete on codex/task-11-phase0-shell-a (base = live-verified remote main 51ae45c900ae4efa01b72d5d6842adb74ad50c91; Gate 0 exact match, no advance); all acceptance gates green (web test 20 passed incl. 14-test baseline zero regression, typecheck/lint clean, build OK with /cases/[decisionCaseId] 11 kB route / 125 kB first load, diff --check + conflict-marker + secret + scope audits clean); handoff at docs/handoffs/TASK11_PHASE0_SHELL_A_HANDOFF.md; Session B must branch from this branch's exact pushed SHA.
+- (HEAD) Role: Web/UX Owner (Fable5). Session A of the A/B serial split; Session B must use this session's exact pushed SHA as its only parent.
+- (HEAD) Scope: apps/web app/(workspace)/cases/[decisionCaseId] route skeleton, components/shell/DecisionSpine.tsx, components/shell/CaseViewRouter.tsx, structured per-workspace placeholder views (Look V7 static layout frames, no mock analysis data), empty view without a template card wall, component map recorded in docs/handoffs, new component tests (route render, five-workspace switching, empty state, a11y landmarks/focus).
+- (HEAD) Look snapshot: all six look sources SHA256-verified byte-identical to frozen design/look-source-manifest.json; index.html used as structure/accessibility reference only; app.js never loaded by production.
+- Session A was pushed as b35870635a601f09422d5c2d7a79cc10d15d6d85 (51ae45c base -> c67fb1a kickoff -> 9d17efa feat shell skeleton -> b358706 completion record); ready_for_qa = YES.
+
+## Task 11 Phase 0 Session B Kickoff - 2026-07-25 (Asia/Shanghai)
+
+- Role: Web/UX Owner (Fable5); Task 11 Phase 0 five-workspace shell, Session B of the A/B serial split (ProjectDrawer + slot/props contract + DecisionHealthBar skeleton + responsive/keyboard completion + cumulative report).
+- Gate 0: git ls-remote origin refs/heads/main = 51ae45c900ae4efa01b72d5d6842adb74ad50c91 (expected 51ae45c; no advance); refs/heads/codex/task-11-phase0-shell-a = b35870635a601f09422d5c2d7a79cc10d15d6d85 (exact match with the Session A report). Fresh worktree decision-lab-task11-phase0-shell-b, new branch codex/task-11-phase0-shell-b whose only parent is b358706.
+- Look snapshot discipline: Session A verified all six look sources byte-identical to the frozen design/look-source-manifest.json at this same base; Session B adds no new sampling and keeps index.html as structure reference only (app.js never loaded by production).
+- Write scope: apps/web/** new files + minimal existing shell mount-point edits (CaseShell project-drawer trigger slot -> real ProjectDrawer; WorkspaceView decision-health-bar slot -> skeleton) + docs/handoffs/** + HEAD/HISTORY. Forbidden: /demo page, guest client, next.config.ts, package.json dependencies, services/api/**, packages/contracts/**, rebase/amend/force-push, loading ../look/app.js in production, parallel IA, mock analysis data posing as real APIs.
+- Task 3 read-only surface for the drawer: GET /api/auth/session (workspace membership summaries). No decision-case list route exists yet; the drawer must render an honest empty state for cases and the gap is recorded in the Session B handoff (no backend invented).
+- No credentials or secret values are recorded here.
+
+## Task 11 Phase 0 Session B Completion - 2026-07-25 (Asia/Shanghai)
+
+- Role: Web/UX Owner (Fable5); branch codex/task-11-phase0-shell-b, only parent = Session A exact pushed SHA b35870635a601f09422d5c2d7a79cc10d15d6d85 (Gate 0: remote main still 51ae45c, A branch exact match).
+- Delivered (new files): components/shell/ProjectDrawer.tsx (Look V7 #caseDrawer as production drawer; workspace list from Task 3 read-only GET /api/auth/session membership summaries; honest loading/401-unauthenticated/retryable-error/no-workspace states; empty-workbench link to /cases/new; focus trap + Escape + scrim close + focus return per DecisionShell pattern); components/shell/DecisionHealthBar.tsx (five segments 证据/因果链/战略稳健性/质量门/版本 all 未接入, NO total confidence percentage, onSelectSegment click slot with disabled placeholders when absent); lib/shell/projects.ts (envelope parsing, caseListRouteAvailable=false as the single source of truth for the missing case-list route); lib/shell/slotContracts.ts (formal slot/props contract: per-slot props boundary types + shellSlotContract registry, 8 frozen slots = 6 reserved + 2 filled); tests/project-drawer.test.tsx (9 tests).
+- Minimal mount-point edits: CaseShell.tsx (project-drawer slot -> live trigger with aria-controls/aria-expanded, mobile-case-trigger, inert masthead/spine/stage while open, ?panel=projects refresh restore alongside ?view=, ProjectDrawer mount); DecisionSpine.tsx (optional inert prop only); views/WorkspaceView.tsx (decision-health-bar PhaseSlot -> DecisionHealthBar, anchor name unchanged); tests/case-shell.test.tsx (exactly 2 assertions updated where Session B legitimately fills the reserved project-drawer slot: disabled -> enabled + aria-haspopup).
+- API gap recorded (no backend invented): no GET /api/workspaces/{workspaceId}/cases route exists (tenancy workspace_router only mounts simulations); drawer discloses the gap in a case-drawer-note and renders no fabricated case entries.
+- Gates: pnpm --dir apps/web test = 29 passed / 0 failed (14 demo/guest baseline + 6 Session A + 9 Session B; zero regression); typecheck + lint clean; pnpm --dir apps/web build OK (/cases/[decisionCaseId] 16.1 kB, first load 131 kB); git diff --check clean; conflict-marker scan clean; secret scan clean (only worklog prose matches); scope audit vs b358706 = HEAD, HISTORY, 9 apps/web files, 1 handoff (all in scope).
+- Cumulative A+B: 18 new apps/web source/test files, 29 suite tests, 2 handoffs, slot contract frozen; ready_for_qa = YES for Task 11 Phase 0.
+- Handoff: docs/handoffs/TASK11_PHASE0_SHELL_B_HANDOFF.md (slot/props contract §3, API gap §4, cumulative report §6, later-phase consumption guide §7).
+- No credentials or secret values are recorded here.
+
+## Archived wave-1 in-progress worklog before Task 11 Phase 0 adoption - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 10/11 QA mainline integration (wave 1)
+
+- Status: in progress on worktree decision-lab-mainline-integration (main). Merging audited, QA-complete lanes into main with --no-ff per integration discipline; push pending principal confirmation.
+- This merge (1/2): no-ff adoption of codex/qa-task-10-lens-validators-r1 622f43bb6561c0054c50a5091275ee8afa0189ba = task-10 lens validators r1 impl chain (6790181 -> 0634e8c -> fac61e0, lane COMPLETE, full suite 549 passed zero regression, CONTRACT_DRIFT_OK) + QA adversarial battery 8e748b7 (schema-pass/behavior-fail + repair-input no-content-write asserts) + pre-existing F401 cleanup 622f43b. Conflicts confined to HEAD/HISTORY; resolved append-only preserving all lane records (both prior HEAD worklogs archived into HISTORY, byte-verified).
+- Audit honesty: a first local resolution attempt (e0d8499) was discarded before any push after self-audit caught a PowerShell pipeline UTF-8 corruption of one pre-existing HISTORY byte; redone with a byte-safe resolver, base bytes verified verbatim.
+- Next (2/2): no-ff adoption of codex/qa-task-11-phase0-shell-r1 4fb099930b8f237e02b536464e04af957dcbb03e (shell Sessions A+B + adversarial QA supplement, tests-only additions).
+- Excluded from this wave (audit verdicts): Task 8+9 family (c599030/ed65f40/e403c66/e4ac7dc) blocked on QA FAIL-P1 sec2.3 amendment durability + P2 race window, fix lane codex/task-09-amendment-durability-fast-fix in progress; 13 historical branches (behind 64-189) superseded or lifecycle-archive-only, not merged.
+- Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived Task 11 Phase 0 shell Session B lane worklog (merged into main with QA supplement 4fb0999) - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 11 Phase 0 five-workspace shell (Session B)
+
+- Status: Session B complete on codex/task-11-phase0-shell-b (only parent = Session A exact pushed SHA b35870635a601f09422d5c2d7a79cc10d15d6d85; Gate 0 live: remote main still 51ae45c900ae4efa01b72d5d6842adb74ad50c91, no advance); all acceptance gates green (web test 29 passed = A 20-test baseline zero regression incl. 2 slot-fill assertion updates + 9 new Session B tests; typecheck/lint clean; build OK with /cases/[decisionCaseId] 16.1 kB route / 131 kB first load; diff --check + conflict-marker + secret + scope audits clean); handoff at docs/handoffs/TASK11_PHASE0_SHELL_B_HANDOFF.md; ready_for_qa = YES for Task 11 Phase 0 (Sessions A+B).
+- Role: Web/UX Owner (Fable5). Session B of the A/B serial split; consumes Session A handoff docs/handoffs/TASK11_PHASE0_SHELL_A_HANDOFF.md (component map + slot anchors + §7 backlog).
+- Scope: components/shell/ProjectDrawer.tsx (consumes Task 3 read-only GET /api/auth/session membership summaries; decision-case list route does not exist yet -> honest empty state + gap recorded in handoff, no backend invented); formal slot/props contract for AnalysisCharterForm / AnalysisProgress / QualityGatePanel / EvidenceDrawer / Task 14W Decision-Review (later phases fill slots only, never restructure the shell); DecisionHealthBar skeleton (five segments 证据/因果链/战略稳健性/质量门/版本, no total confidence percentage, click behavior left as slot); responsive + keyboard completion (drawer focus trap per DecisionShell pattern, mobile case trigger, inert background); tests for drawer/slot rendering/refresh restore; cumulative two-session report.
+- Write scope: apps/web/** new files + minimal mount-point edits (CaseShell project-drawer slot -> real trigger + drawer; WorkspaceView decision-health-bar slot -> skeleton; case-shell.test.tsx assertions updated only where Session B legitimately fills a reserved slot) + docs/handoffs/** + HEAD/HISTORY.
+- Forbidden this lane: /demo page, guest client, next.config.ts, package.json dependencies, services/api/**, packages/contracts/**, rebase/amend/force-push, loading ../look/app.js in production, parallel IA (e.g. /chat), fabricated analysis/case data or mock APIs posing as real.
+- Look snapshot: frozen design/look-source-manifest.json unchanged since Session A's byte verification at this same base; index.html/styles used as structure + class reference only.
+- Acceptance gates: pnpm --dir apps/web test (Session A 20-test baseline zero regression + new Session B tests), pnpm --dir apps/web build, typecheck/lint, git diff --check, conflict-marker scan, secret scan, scope audit; handoff in docs/handoffs/; push and report exact SHA.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
