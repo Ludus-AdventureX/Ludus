@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
     }
     return [
       {
+        // FastAPI exposes /health without the /api prefix; map the
+        // same-origin healthcheck path explicitly before the generic rule.
+        source: "/api/health",
+        destination: `${apiProxyTarget}/health`,
+      },
+      {
         source: "/api/:path*",
         destination: `${apiProxyTarget}/api/:path*`,
       },

@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Next.js web image for the Guest Simulation Alpha prototype stack.
 # Build context is the repository root (pnpm workspace lockfile lives there):
 #   docker build -f apps/web/Dockerfile .
