@@ -11,15 +11,17 @@ from __future__ import annotations
 from typing import Any, Mapping
 from uuid import UUID, uuid4
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
+    CausalGraph,
     DecisionCase,
     DecisionMakerProfile,
     GraphEdge,
     GraphNode,
     GraphVersion,
+    IdempotencyRecord,
     ScenarioVersion,
     ScoreDefinition,
     SimulationRun,
@@ -55,6 +57,18 @@ class SimulationInputRepository:
             select(DecisionCase).where(
                 DecisionCase.workspace_id == workspace_id,
                 DecisionCase.decision_case_id == decision_case_id,
+            )
+        )
+
+    async def get_graph(
+        self, workspace_id: UUID, graph_id: UUID
+    ) -> CausalGraph | None:
+        """Graph aggregate anchor; the run route derives decision_case_id from it."""
+
+        return await self._db.scalar(
+            select(CausalGraph).where(
+                CausalGraph.workspace_id == workspace_id,
+                CausalGraph.id == graph_id,
             )
         )
 
@@ -96,6 +110,34 @@ class SimulationInputRepository:
             .order_by(GraphEdge.id.asc())
         )
         return list(rows.all())
+
+    async def count_graph_nodes(self, workspace_id: UUID, graph_version_id: UUID) -> int:
+        """Size-guard count (CCR-SIM-02A §9); never loads rows."""
+
+        return int(
+            await self._db.scalar(
+                select(func.count())
+                .select_from(GraphNode)
+                .where(
+                    GraphNode.workspace_id == workspace_id,
+                    GraphNode.graph_version_id == graph_version_id,
+                )
+            )
+            or 0
+        )
+
+    async def count_graph_edges(self, workspace_id: UUID, graph_version_id: UUID) -> int:
+        return int(
+            await self._db.scalar(
+                select(func.count())
+                .select_from(GraphEdge)
+                .where(
+                    GraphEdge.workspace_id == workspace_id,
+                    GraphEdge.graph_version_id == graph_version_id,
+                )
+            )
+            or 0
+        )
 
     async def get_strategy_version(
         self, workspace_id: UUID, decision_case_id: UUID, strategy_version_id: UUID
@@ -201,6 +243,42 @@ class SimulationInputRepository:
 
     async def insert_simulation_run(self, row: SimulationRun) -> SimulationRun:
         """Stage one fully computed, immutable result row (no partial lifecycle rows)."""
+
+        self._db.add(row)
+        await self._db.flush()
+        return row
+
+    async def get_simulation_run(
+        self, workspace_id: UUID, graph_id: UUID, simulation_run_id: UUID
+    ) -> SimulationRun | None:
+        """Three-anchor replay read (CCR-SIM-02A §6): one SELECT binds workspace,
+        graph, and run id together, so foreign-workspace, foreign-graph, ghost,
+        and mixed-anchor probes are all indistinguishable zero-row misses.
+        """
+
+        return await self._db.scalar(
+            select(SimulationRun).where(
+                SimulationRun.workspace_id == workspace_id,
+                SimulationRun.graph_id == graph_id,
+                SimulationRun.id == simulation_run_id,
+            )
+        )
+
+    async def get_idempotency_record(
+        self, workspace_id: UUID, route_key: str, idempotency_key: str
+    ) -> IdempotencyRecord | None:
+        """Replay lookup on the exact (workspace, route, key) unique scope."""
+
+        return await self._db.scalar(
+            select(IdempotencyRecord).where(
+                IdempotencyRecord.workspace_id == workspace_id,
+                IdempotencyRecord.route_key == route_key,
+                IdempotencyRecord.idempotency_key == idempotency_key,
+            )
+        )
+
+    async def insert_idempotency_record(self, row: IdempotencyRecord) -> IdempotencyRecord:
+        """Stage one replay record; committed atomically with its run row."""
 
         self._db.add(row)
         await self._db.flush()
