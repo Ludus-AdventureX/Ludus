@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/89ed0993-a0e2-4159-a5f6-9ec83a8b0f5a
 
 - **Development phase:** Gate 0 validated; Task 2/19A implementation pending
 - **Repository visibility:** Private
-- **License:** No public license granted; All Rights Reserved
+- **License:** AGPL-3.0-only (open source) + commercial dual licensing; see [`LICENSE`](LICENSE)
 - **Capacity clock:** Not started. Automated Gate 0 passed; the 6-agent/72-hour clock remains conditional on accepting the proven system-Chrome Playwright fallback or acquiring bundled Chromium.
 - **Production readiness:** Not ready
 
