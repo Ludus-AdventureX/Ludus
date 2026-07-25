@@ -2738,3 +2738,12 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Skipped by task order: migration downgrade/re-upgrade, full orphan battery, unrelated Lens reruns, repo-wide static re-audit, long byte-gate reports.
 - Release: deploy from the exact integration SHA, external network smoke, then ff-only advance of main (recorded in the worklog).
 - No credentials or secret values are recorded here.
+
+## Guest Simulation Technical Alpha Integration - 2026-07-25 (Asia/Shanghai)
+
+- Role: Integration/Release Owner; branch codex/prototype-guest-alpha-integration from live-verified remote main 51ae45c900ae4efa01b72d5d6842adb74ad50c91 (task-order baseline bd9fde15 is an ancestor superseded by the prior SIM alpha publication; deviation recorded, main not advanced by this lane).
+- Merged no-ff in order: run-api 56e01ab (no-op, already on main), guest-seed-smoke 3278dd8, web-demo d504b4f, deploy-stack c71d66a (sole parent 28511a9 verified; not merged separately). d2ae634/ENG-02 chain not re-merged.
+- Integration fixes: single canonical Run API mount under workspace_router (guest router hidden from OpenAPI); next.config.ts = standalone + API_PROXY_TARGET ?? API_PROXY_ORIGIN + exact /api/health->/health rewrite before the generic rule (trailing slash stripped); deploy-stack Dockerfiles without the BuildKit syntax line retained (registry frontend 403 workaround, accepted); web client normalizes flat guest data into GuestSession.fixture (guest backend untouched); real HTTP smoke runner app/prototype/smoke_guest_alpha.py wired into the compose smoke service (guest isolation, cookie restore, run 201/1.1.0/inputHash, replay equality, cross-guest uniform 404).
+- Verification gate (single pass): fresh PG16 alembic upgrade/heads/check clean (single head b2c7e9d4a1f6); pytest tests app/simulations/tests -q -W error -rxX = 493 passed / 0 failed / 0 xfailed / 0 xpassed; web 16 passed + build OK; CONTRACT_DRIFT_OK (run paths present, /api/auth/guest absent); ruff/compileall/diff-check clean; compose db/api/web healthy with API /health 200 and web /api/health 200; real smoke PASS over public HTTPS with AUTH_COOKIE_SECURE=true; /demo browser acceptance PASS incl. reload restoring the same guest.
+- Public naming: Simulation Technical Alpha. ready_for_public_https = YES; ready_for_main = YES (content), ff-only push withheld because the mandated re-read (main == bd9fde15) cannot be satisfied.
+- No credentials or secret values are recorded here.
