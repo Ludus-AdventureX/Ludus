@@ -19,7 +19,6 @@ from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
 import httpx
-import pytest
 import pytest_asyncio
 from fastapi import FastAPI, Path
 from sqlalchemy import func, select
@@ -232,19 +231,9 @@ async def test_dual_connection_same_key_race_appends_exactly_one_resolution(
     assert await _count(factory, RunResolution, run_id) == 1
 
 
-@pytest.mark.xfail(
-    reason=(
-        "QA-P2 (candidate e403c66): §2.2 strict reading — a concurrent same-key "
-        "same-body duplicate should ALWAYS replay the original success, but the "
-        "race loser that passed the idempotency pre-check before the winner "
-        "committed answers 409 ANALYSIS_RUN_NOT_RESUMABLE (the IntegrityError "
-        "fallback is unreachable because the run row lock serializes the flows "
-        "and the loser re-reads a resumed run). A sequential retry does replay. "
-        "Hardening: on RunNotResumable, re-check the idempotency record before "
-        "answering."
-    ),
-    strict=False,
-)
+# Promoted from xfail (QA-P2) after the r3 fast-fix 628f672: strict §2.2 — a
+# concurrent same-key same-body duplicate ALWAYS replays the original success
+# (the RunNotResumable handler now re-checks the idempotency record).
 async def test_dual_connection_same_key_race_loser_replays_strict_ccr(
     qa_sessionmaker,
 ) -> None:
@@ -361,20 +350,9 @@ async def test_amendment_code_not_shadowed_by_transition_backstop(
 # --- §2.3 amendment classification durability (Phase B r1 scope) ------------------------
 
 
-@pytest.mark.xfail(
-    reason=(
-        "QA-P1 (Phase B r1, pre-existing — NOT introduced by e403c66): "
-        "CCR-20260725-ANALYSIS-01 §2.3 freezes 'the server FIRST persists an "
-        "append-only RunInterventionClassification' before answering 409 "
-        "RUN_AMENDMENT_REQUIRED, but the route raises before any commit, so "
-        "under the production get_session lifecycle the classification row and "
-        "the analysis.amendment_required event are rolled back and lost. The "
-        "owner suite misses this because its shared-savepoint session never "
-        "closes between request and assertion. Fix: commit the classification "
-        "(and its event) before raising the amendment failure."
-    ),
-    strict=False,
-)
+# Promoted from xfail (QA-P1) after the r3 fast-fix 628f672: §2.3 — the
+# amendment classification and its event are committed before the 409 and
+# survive the production get_session lifecycle.
 async def test_amendment_classification_is_durable_under_production_session(
     qa_sessionmaker,
 ) -> None:

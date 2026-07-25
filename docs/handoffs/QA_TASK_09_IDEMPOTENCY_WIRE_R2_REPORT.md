@@ -114,3 +114,31 @@ CCR consumption declaration present with the exact contract SHA `d667569…`.
    descendant, not `83df911`'s); migration chain single-head
    `b2c7e9d4a1f6 → e7f3a2c9d5b1 → f9a4b7e2c8d3`, no conflicts; QA Owner
    extends the table-set assertion per the handoff guidance.
+
+
+---
+
+## Closure addendum - r3 verified, findings resolved (2026-07-25)
+
+- Owner r3 fast-fix `codex/task-09-amendment-durability-fast-fix` @
+  `628f672` (sole parent e403c66) merged into this QA branch `--no-ff` for
+  verification.
+- xfail-promotion executed: both probes are now HARD assertions and pass -
+  `test_amendment_classification_is_durable_under_production_session` (QA-P1)
+  and `test_dual_connection_same_key_race_loser_replays_strict_ccr` (QA-P2).
+- Combined verification on fresh disposable PG16 @55449 (deleted after use):
+  QA probes 6/6 + owner analyses suites 117/117 = 123 passed, `-W error`.
+- Owner r3 gates independently confirmed reasonable: full suite 667/1 (sole
+  known table-set assertion), CONTRACT_DRIFT_OK, scope = routes.py + one owner
+  test file.
+
+### Updated verdicts
+
+| Phase | Verdict |
+|---|---|
+| Phase A (c599030) | **PASS** (unchanged) |
+| Phase B lane (ed65f40 + e403c66 + 628f672) | **PASS** - QA-P1/QA-P2 closed and regression-locked by promoted hard assertions |
+
+Integration guidance unchanged: adopt `628f672` as the Task 9 lane head,
+standard `--no-ff`, migration chain single-head, table-set assertion revision
+per handoff guidance.
