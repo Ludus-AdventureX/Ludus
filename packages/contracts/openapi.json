@@ -2765,6 +2765,582 @@
         ]
       }
     },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/cancel": {
+      "post": {
+        "operationId": "post_run_cancel_api_workspaces__workspaceId__analyses__analysisRunId__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Run Cancel Api Workspaces  Workspaceid  Analyses  Analysisrunid  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Run Cancel"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/events": {
+      "get": {
+        "operationId": "stream_run_events_api_workspaces__workspaceId__analyses__analysisRunId__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Run Events"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence": {
+      "get": {
+        "operationId": "list_run_evidence_api_workspaces__workspaceId__analyses__analysisRunId__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Run Evidence Api Workspaces  Workspaceid  Analyses  Analysisrunid  Evidence Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Run Evidence"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence-conflicts": {
+      "get": {
+        "operationId": "list_run_conflicts_api_workspaces__workspaceId__analyses__analysisRunId__evidence_conflicts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Run Conflicts Api Workspaces  Workspaceid  Analyses  Analysisrunid  Evidence Conflicts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Run Conflicts"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/resolutions": {
+      "post": {
+        "operationId": "post_run_resolution_api_workspaces__workspaceId__analyses__analysisRunId__resolutions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Post Run Resolution Api Workspaces  Workspaceid  Analyses  Analysisrunid  Resolutions Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Run Resolution"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}": {
+      "get": {
+        "operationId": "get_evidence_detail_api_workspaces__workspaceId__evidence__evidenceItemId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Detail Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Detail"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/direction": {
+      "get": {
+        "operationId": "get_evidence_direction_api_workspaces__workspaceId__evidence__evidenceItemId__direction_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Direction Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Direction Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Direction"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/provenance": {
+      "get": {
+        "operationId": "get_evidence_provenance_api_workspaces__workspaceId__evidence__evidenceItemId__provenance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Provenance Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Provenance Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Provenance"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/quality": {
+      "get": {
+        "operationId": "get_evidence_quality_api_workspaces__workspaceId__evidence__evidenceItemId__quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Quality Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Quality Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Quality"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/same-source-group": {
+      "get": {
+        "operationId": "get_same_source_group_api_workspaces__workspaceId__evidence__evidenceItemId__same_source_group_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Same Source Group Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Same Source Group Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Same Source Group"
+      }
+    },
     "/api/workspaces/{workspaceId}/simulations/{graphId}/runs": {
       "post": {
         "description": "POST run (§5): membership + contribute + CSRF + Idempotency-Key required.",

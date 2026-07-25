@@ -73,6 +73,13 @@ Idempotency-Key: charter_001_v1_full
 | `GET` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses/{artifactId}` | 读取一份精确战略透镜产物 |
 | `POST` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/resolutions` | 分类并追加 resolution，恢复 needs_attention Run |
 | `POST` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/cancel` | 幂等取消 queued/执行中/needs_attention Run |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}` | 读取证据条目详情（EvidenceItemView） |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/quality` | 读取证据质量评估维度 |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/provenance` | 读取证据溯源链（RawArtifact/SourceRecord/Quality） |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/direction` | 读取证据支持/反对方向投影 |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/same-source-group` | 读取同源独立性分组与独立来源计数贡献 |
+| `GET` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence` | 列出该 Run 的证据条目 |
+| `GET` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence-conflicts` | 列出该 Run 的证据冲突关系 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports` | 按版本/状态分页列出报告 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}` | 读取报告 |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}/exports` | 创建 HTML/PDF 导出 |
@@ -1018,6 +1025,18 @@ Idempotency-Key: run_research_001_cancel_01
 ```
 
 响应返回 `{ "analysisRunId": "run_research_001", "status": "cancelled", "cancelledAt": "..." }`。取消适用于 queued、六个执行阶段和 needs_attention；重复请求返回同一终态。Worker 在下一安全检查点停止，取消后不能发布新报告/导出，已持久化事件与不可变阶段产物保留。`blocked` 是质量门终态，resolution 与 cancel 都不重开它；重做必须创建新 Run。
+
+## 证据溯源与冲突读取 API
+
+证据读取面由 deep research 管线（Task 8）产出，A3 挂载波次（CCR-20260726-MOUNT-01）将其挂入 canonical 契约。全部为只读 `GET`：使用 `require_workspace_context` 鉴权，不涉及 CSRF 或 `Idempotency-Key`；缺失、外部或跨租户 id 一律返回逐字节一致的 `CASE_NOT_FOUND` 404（反枚举）。wire 形状为 camelCase `CanonicalModel` DTO，`evidenceItemId` 是实体自身 id（非 Case/AnalysisRun 别名）。
+
+- `GET /evidence/{evidenceItemId}` → `{ ok, data: EvidenceItemView }`：证据条目全字段（标题、URL/文件指针、来源域、`sourceGrade`、片段、`sourceRecordId`/`sourceSpanIds`、支持/反对 claim id、`freshnessStatus`、`relevance`、`bias`、`conflictGroupId`、`independentSourceGroupId`、`verdict`+`verdictReasonCodes`、`applicabilityLimits`、`originMode`、`rawArtifactId`、`qualityAssessmentId`）。
+- `GET /evidence/{evidenceItemId}/quality` → `{ ok, data: QualityDimensionsView }`：七项数值维度（authenticity/sourceQuality/relevance/freshness/applicability/independence/extractionReliability）与 `biasFlags[]`、`completenessWarnings[]`、`conflictGroupIds[]`、`verdict`、`reasonCodes[]`、`assessedAt`。
+- `GET /evidence/{evidenceItemId}/provenance` → `{ ok, data: EvidenceProvenanceView }`：`evidenceItemId` + `rawArtifact`（RawArtifactView：kind/mediaType/byteSize/sha256/sourceUrl/originMode/createdAt，不含磁盘路径）+ `sourceRecord`（SourceRecordView 及 `spans[]`）+ `quality`。
+- `GET /evidence/{evidenceItemId}/direction` → `{ ok, data: EvidenceDirectionView }`：`evidenceItemId` + `supportsClaimIds[]` + `contradictsClaimIds[]` + `verdict`。
+- `GET /evidence/{evidenceItemId}/same-source-group` → `{ ok, data: SameSourceGroupView }`：`independentSourceGroupId` + `memberEvidenceItemIds[]` + `independentSourceCountContribution`（同源多篇引用计为一个独立来源）。
+- `GET /analyses/{analysisRunId}/evidence` → `{ ok, data: RunEvidenceListView }`：`analysisRunId` + `items: EvidenceItemView[]`（该 Run 工作区内的证据条目）。
+- `GET /analyses/{analysisRunId}/evidence-conflicts` → `{ ok, data: ConflictListView }`：`analysisRunId` + `conflicts: ConflictRelationView[]`（`fromEvidenceItemId`/`toEvidenceItemId`/`groupId`/`rationale`）。
 
 ## 决策生命周期事件与不可调用能力
 

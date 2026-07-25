@@ -3,8 +3,10 @@ from typing import Literal
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from app.analyses.routes import router as analyses_router
 from app.auth.guest import router as guest_alpha_router
 from app.auth.routes import router as auth_router
+from app.evidence.routes import router as evidence_router
 from app.security.envelope import register_error_handlers
 from app.tenancy.routes import workspace_router
 
@@ -25,6 +27,13 @@ app = FastAPI(
 register_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(workspace_router)
+# Deep-research pipeline surface (CCR-20260726-MOUNT-01): the Task 8 evidence
+# read router and the Task 9 analysis SSE/resolution/cancel router each ship an
+# absolute /api/workspaces/{workspaceId} prefix with a per-route
+# require_workspace_context guard, so they mount on the app directly rather than
+# under workspace_router (which would double the prefix); see CCR §M7.
+app.include_router(evidence_router)
+app.include_router(analyses_router)
 # PROTOTYPE (guest alpha): hidden from OpenAPI and hard-gated by
 # ENABLE_GUEST_ALPHA (uniform 404 when disabled); no product contract.
 app.include_router(guest_alpha_router)
