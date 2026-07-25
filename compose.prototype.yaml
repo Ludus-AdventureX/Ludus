@@ -96,7 +96,9 @@ services:
         condition: service_healthy
     healthcheck:
       # Exercises the same-origin /api proxy end to end (web -> FastAPI).
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      # /api/auth/csrf is a real proxied API route; the FastAPI /health route
+      # lives outside the /api prefix and is only reachable on the api service.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/auth/csrf').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -174,7 +176,7 @@ services:
       - -c
       - |
         import sys, urllib.request
-        for url in ("http://api:8000/health", "http://web:3000/api/health"):
+        for url in ("http://api:8000/health", "http://web:3000/api/auth/csrf"):
             status = urllib.request.urlopen(url, timeout=10).status
             print(f"SMOKE {url} -> {status}")
             if status != 200:
