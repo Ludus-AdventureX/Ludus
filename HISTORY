@@ -3175,3 +3175,14 @@ Verbatim Phase A HEAD content:
 - 10 ruling items adjudicated: A1-1 DB-first IMPLEMENTATION_FREE (enum promotion → A3), A1-2 RunManifest REAFFIRM, A1-3 Heartbeat IMPLEMENTATION_FREE, A1-4 Endpoint mounting DEFERRED-to-A3, A1-5 Idempotency-Key layering NEW (ratified + SA1), A1-6 eventId on fresh success NEW (ratified, already synced via S4), A1-7 Amendment commit-before-raise NEW (ratified + SA2), A1-8 Idempotency race loser replay NEW (ratified + SA3), A1-9 Evidence read paths DEFERRED-to-A3, A1-10 Evidence enums IMPLEMENTATION_FREE (→ A3).
 - Next work should follow push: merge to main via standard no-ff flow per contract-lead protocol.
 - Secret policy: do not record credentials here.
+
+## Archived work 2026-07-26 (Asia/Shanghai) — prior HEAD: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration (main @ 4941e58), archived by the Task 9 analyses-http-handlers lane
+
+# Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
+
+- Status: COMPLETE on worktree decision-lab-mainline-integration (main); both merges + QA-owned assertion revision landed; all gates green; push + live re-read recorded below.
+- Now canonical on main: Task 8 evidence ledger + Task 9 analysis runtime (charter/run state machines, DB-queue worker, SSE/resolutions/cancel routers UNMOUNTED) + r2/r3 idempotency & amendment-durability fixes + QA battery + ANALYSIS-01 Addendum A1 contract docs. ready_for_public_route: NO (mounting rights with the integration wave, A3).
+- Unlocked next: A3 mounting lane Gate 0 precondition satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
+- Gates recap: alembic single head f9a4b7e2c8d3; full pytest tests app/simulations/tests app/evidence/tests app/analyses/tests = 784 passed / 0 failed; generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; conflict-marker scan 0.
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

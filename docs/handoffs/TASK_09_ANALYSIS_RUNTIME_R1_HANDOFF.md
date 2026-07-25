@@ -334,3 +334,43 @@ xfail-promotion: the two QA probes
 against this head and should be promoted to hard assertions on the QA branch.
 
 ready_for_fast_QA: **YES**. ready_for_public_route: **NO**.
+
+
+---
+
+## r4 addendum — Analyses HTTP handlers (MOUNT-01 M3/M4/M5 + M9), 2026-07-26 (Asia/Shanghai)
+
+- Role: Case/API/Data Owner (Task 9 owner follow-up). Branch `codex/task-09-analyses-http-handlers-r1`, parent = main @ `4941e58bee3b91f14a4a92b7fab92750ef85b3b6` (live Gate 0 echo). No rebase/amend/force; relative implementation — mounting stays with MOUNT-02; zero migration (domain layer already complete).
+- Scope: `app/analyses/routes.py` (product) + own tests + this addendum + HEAD/HISTORY. ZERO change to repository / state machine / models / schemas / lens_artifact_reads / migrations / main.py / packages/contracts.
+
+### Delivered HTTP handlers (relative, UNMOUNTED — added to the existing analyses router)
+
+Each consumes the shipped repository + lens read service as-is, answers the `{ok,data}` envelope + the existing error-code table, and collapses cross-tenant / missing ids into the uniform `CASE_NOT_FOUND` 404 (anti-enumeration):
+
+1. `POST /cases/{decisionCaseId}/analysis-charters` — create draft (`create_charter_draft`); missing-field + lens-set violations fail closed 422 (VALIDATION_FAILED).
+2. `PATCH /analysis-charters/{charterId}` — edit draft (`update_draft_charter`); confirmed/superseded → 409 CHARTER_IMMUTABLE.
+3. `POST /analysis-charters/{charterId}/replacements` — replacement draft (`create_replacement_draft`); non-confirmed origin → 409 CHARTER_NOT_CONFIRMED.
+4. `POST /analysis-charters/{charterId}/confirm` — freeze; auto-bridges draft → awaiting_confirmation → confirmed (`submit_charter` + `confirm_charter`, since 10-api exposes no separate submit endpoint); re-confirm/superseded → 409 CHARTER_IMMUTABLE.
+5. `POST /analysis-charters/{charterId}/runs` — create queued Run (`create_queued_run`); mandatory `Idempotency-Key` header (resolutions precedent; body-smuggled key → 422); key-based replay returns the original 201 + `meta.idempotencyReplay: true`; a reused key whose persisted charter/manifest/cynefin fields differ → 409 IDEMPOTENCY_CONFLICT (handler-level body-conflict check, no repository change); unconfirmed charter → 409 CHARTER_NOT_CONFIRMED; second active run → 409 ANALYSIS_RUN_ALREADY_ACTIVE (+ details.existingAnalysisRunId).
+6. `GET /analyses/{analysisRunId}` — run status projection (10-api §AnalysisRun 状态).
+7. `GET /analyses/{analysisRunId}/strategic-lenses` — ready lens summaries in canonical order (`StrategicLensArtifactReadService.list_ready_for_run`; decision_case_id derived from the run).
+8. `GET /analyses/{analysisRunId}/strategic-lenses/{artifactId}` — one ready lens detail (`get_ready_artifact`); draft/rejected/missing/cross-tenant → uniform CASE_NOT_FOUND.
+
+### MOUNT-01 stop-report items adopted
+
+- **M9 (adopted):** `POST .../cancel` now enforces the mandatory `Idempotency-Key` header (10-api L953; body-smuggled key → 422). Cancel is naturally idempotent (canonical terminal state converges on replay), so requiring the header — not an `idempotency_records` row — honors the guarantee; no repository change. Disclosed own-test maintenance (Task 9 r1 "disclosed maintenance" precedent): the pre-existing cancel calls in `test_analysis_sse_and_commands.py` (5) and `test_analysis_idempotency_wire.py` (2) now send the header; no assertion semantics changed.
+- **M8 (fix-plan only — NOT self-fixed; referred to the auth/security lane):** under cookie-based session auth the analyses unsafe-write endpoints (`resolutions`, `cancel`, and the new charter/run POSTs) are CSRF-exposed. 10-api scopes CSRF to "Cookie mutation" (L5/L946), but SIM-02A applies `require_csrf` to its authenticated `POST /runs`. **Recommended fix (auth lane):** add `Depends(require_csrf)` to the analyses unsafe-write handlers (SIM-02A parity) and clarify the canonical text so authenticated unsafe writes under cookie auth carry CSRF. Not applied here — `app/security/csrf.py` / middleware is outside this lane and CSRF is a cross-cutting security decision.
+
+### Gates (fresh disposable PG16 `ludus-pg-task09-http` @55451; main venv via junction; uv/pnpm offline, zero installs)
+
+- Own suite `pytest app/analyses/tests/test_analysis_http_handlers.py -q -W error -rxX` = **32 passed** (per-endpoint positive/negative + run-create idempotency replay/conflict + cancel header + cross-tenant/missing 404 matrix).
+- Owner diagnostic zero-regression: `pytest app/analyses/tests app/evidence/tests` = **239 passed / 0 failed**; full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests` = **816 passed / 0 failed** (= mainline 784 + 32 new).
+- `ruff check services/api` all-pass; `compileall app` exit 0; `git diff --check` clean; secret scan 0.
+- Official `generate_contracts.ps1 -Check` = **CONTRACT_DRIFT_OK** — the router stays unmounted, so `app.main.app.openapi()` is unchanged (8 published ops); verified the analyses router carries 11 routes but reaches no generated contract (analyses paths absent from OpenAPI).
+- alembic single head `f9a4b7e2c8d3` re-verified on the disposable PG16.
+
+### Verdict
+
+- ready_for_qa: **YES**. ready_for_public_route: **NO** (mounting is MOUNT-02's job).
+- Next: MOUNT-02 mounts the now-complete analyses router (11 routes: 3 prior + 8 new) and regenerates contracts; the M8 CSRF hardening is the auth lane's to land.
+- No credentials or secret values are recorded in this addendum, the code, or the tests.

@@ -334,6 +334,7 @@ async def test_transition_invalid_backstop_on_cancel(
     response = await client.post(
         f"/api/workspaces/{world.workspace_id}/analyses/{run.analysis_run_id}/cancel",
         json={"reason": "user_cancelled"},
+        headers={"Idempotency-Key": "cancel-race"},
     )
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "ANALYSIS_TRANSITION_INVALID"
@@ -369,6 +370,7 @@ async def test_backstop_never_shadows_specific_codes(session, client_world) -> N
     guarded = await client.post(
         f"/api/workspaces/{ws}/analyses/{run_id}/cancel",
         json={"reason": "user_cancelled"},
+        headers={"Idempotency-Key": "cancel-guarded-backstop"},
     )
     assert guarded.status_code == 409
     assert guarded.json()["error"]["code"] == "ANALYSIS_RUN_NOT_CANCELLABLE"
