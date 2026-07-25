@@ -937,6 +937,8 @@ Idempotency-Key: decision_001_review_2026_10_15
 
 幂等重放不是错误：同一 `Idempotency-Key` 与同一规范化 body 返回原有成功资源和原 HTTP success status，并在响应 `meta.idempotencyReplay=true`；不得用 `ANALYSIS_RUN_ALREADY_ACTIVE` 表示幂等命中。
 
+竞争安全保证（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）：任意连接级竞争下，同一 key + 同一 body 始终重放胜者成功——双 200、恰好一条 resolution 行、败者响应携带 `meta.idempotencyReplay: true`；同一 key 不同 body 仍返回 `IDEMPOTENCY_CONFLICT` 409。
+
 ## 安全错误码补充
 
 | 错误码 | 含义 | 可重试 |
@@ -995,7 +997,7 @@ Idempotency-Key: run_research_001_constraint_resolution_01
 
 Provider recovery 只能重试、使用已有缓存，或切换到 Charter `allowedConnectorIds` 中的连接器；不能增加连接器、材料或预算。`planning/retrieving/analyzing/criticizing/synthesizing/validating` 都可进入 `needs_attention`，resolution 只能回到持久化的 `lastResumableStage`，不能回到 `queued` 或由客户端指定阶段。
 
-改变问题、目标、选项、偏好权重、硬约束定义、材料/连接器范围、预算、方法或分析深度时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`，details 固定为 `{ "changedFrozenFields": [...], "replacementUrl": "..." }`。客户端随后调用：
+改变问题、目标、选项、偏好权重、硬约束定义、材料/连接器范围、预算、方法或分析深度时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`——分类与 `analysis.amendment_required` 事件先于 409 响应提交（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）：持久化行在调用方收到错误前已 commit，不因 HTTP 响应状态回滚。details 固定为 `{ "changedFrozenFields": [...], "replacementUrl": "..." }`。客户端随后调用：
 
 ```http
 POST /api/workspaces/ws_demo/analysis-charters/charter_001/replacements

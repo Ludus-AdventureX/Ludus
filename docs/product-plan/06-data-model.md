@@ -462,6 +462,8 @@ export interface AnalysisRun {
   cancelledAt?: string;
 }
 
+`AnalysisRun.idempotencyKey` 与 `DeepAnalysisRequest.idempotencyKey` 是 canonical **内部**字段（run/worker 生命周期关联），不属于 HTTP wire 请求体；HTTP 面以 `Idempotency-Key` header 为载体，请求体夹带 `idempotencyKey` 字段的请求必须返回 422（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）。
+
 export type CharterFrozenField =
   | "decision_question"
   | "goals"
