@@ -897,12 +897,17 @@ async def create_analysis_run(
 
     if not created:
         # §2.2 replay: a reused key must carry the same creation request. The run
-        # persists the meaningful body (charter + manifest + cynefin gate); a
-        # mismatch is a reused key with a different body -> IDEMPOTENCY_CONFLICT.
+        # persists the meaningful body (charter + manifest + cynefin gate +
+        # supersedes target); a mismatch is a reused key with a different body
+        # -> IDEMPOTENCY_CONFLICT. supersedesAnalysisRunId joined the compare
+        # set per CCR-20260726-MOUNT-02 addendum ⑦ (P3 combination-only fix):
+        # a same-key retry that only changes the supersedes target must 409,
+        # never silently replay the original run.
         if (
             run.charter_id != charter_id
             or run.run_manifest_hash != run_manifest_hash
             or run.cynefin_gate_result_id != cynefin_gate_result_id
+            or run.supersedes_analysis_run_id != supersedes_id
         ):
             raise _idempotency_conflict()
         return JSONResponse(
