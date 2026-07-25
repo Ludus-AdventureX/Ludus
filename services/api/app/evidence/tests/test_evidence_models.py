@@ -36,6 +36,11 @@ def _retrieval_task(world: EvidenceWorld, **overrides) -> RetrievalTask:
         query_summary="rescue market",
         input_hash="sha256:" + "b" * 64,
         status="completed",
+        # Pin created_at alongside completed_at: with the DB now() default the
+        # completed_after_created check flips red the moment the wall clock
+        # passes the frozen NOW (pre-existing base time bomb, surfaced on the
+        # A1+A2 integration wave; assertion semantics untouched).
+        created_at=NOW,
         completed_at=NOW,
     )
     values.update(overrides)
