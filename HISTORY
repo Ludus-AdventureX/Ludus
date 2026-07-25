@@ -3485,3 +3485,19 @@ Verbatim Phase A HEAD content:
 - Prohibitions: no rebase/amend/force; no new dependencies; no edits to existing shell files (slot fill only; any shell increment requires prior authorization per Task 13 precedent); no /demo, guest, simulation, next.config.ts, services/api, packages/contracts.
 - Acceptance gates: pnpm --dir apps/web test (zero regression on existing baseline + new), typecheck, build; diff-check/scope/secret clean. Report SHA + ready_for_qa.
 - Secret policy: do not record credentials here.
+
+## Archived work (replaced by read-routes backend lane kickoff)
+
+# Work Log: Task 11 B2 evidence provenance line mainline integration - WAVE_REPORT
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/mainline-t11b2; branch codex/mainline-task11-b2-integration; ff-only push to main recorded below. No rebase/amend/force.
+- Role: Contract/Mainline Lead (integration lane).
+- Gate 0 echo: ls-remote main = 420a42ceca73dea7fb44d427683c431ab3092f1e (A1+A2 joint wave head); candidate codex/task-11-evidence-ui-r1 = 895e3c81c3373ab93f1e0fe1a4e89014d352c833 (base 23ab477).
+- Merge: no-ff adoption f609c2f (conflicts HEAD/HISTORY only, byte-safe append-only; base deviation 23ab477 -> 420a42c has ZERO apps/web overlap - the advance touched only packages/contracts additive regen + services/api).
+- QA battery adoption 66e8205 (disclosed): qa-evidence-b2-adversarial.test.tsx (P1-P7) was left UNCOMMITTED in the QA lane worktree decision-lab-qa-task11-evidence-b2-r1 (branch qa/task-11-evidence-b2-r1); adopted byte-identical per the battery-must-ship discipline; QA worktree untouched.
+- Gates: pnpm --dir apps/web test = 89 passed / 0 failed (82 owner incl. 14 new B2 + 7 QA battery; baseline 68 zero-regression); typecheck exit 0; build exit 0; lint 0 error (1 pre-existing demo-lane warning, disclosed by owner); generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; git diff --check clean; conflict-marker scan 0.
+- Backend regression: git diff 420a42c..HEAD -- services/api packages/contracts = ZERO files; the landed A1+A2 wave verified full 925/0 + canonical 667/0 on this byte-identical backend tree, so the pytest gates hold by construction (no redundant rerun).
+- Environment incident (disclosed, repaired): during the duplicate-A1+A2-lane cleanup a PowerShell Remove-Item -Recurse traversed the .tools junction inside the abandoned worktree and emptied the MAIN repo .tools/uv toolchain (junction-follow behavior); .venv and node_modules were NOT affected (removed via [System.IO.Directory]::Delete non-recursive before the incident); restored uv.exe/uvx.exe/uvw.exe via pip target-install (uv 0.11.32), contracts gate re-verified green. Lesson recorded: never Remove-Item -Recurse a worktree containing junctions - delete junctions first.
+- Fail-closed reminders unchanged: evidenceAnchorsRouteAvailable stays false (case->run resolution route still missing - read-route small wave); slotContracts.ts status flip + decisionCaseId threading remain awaiting authorization per Task 13 precedent; MOUNT-02 audit binding remains an analyses-owner follow-up.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

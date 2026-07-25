@@ -27,3 +27,26 @@ workspace_router = APIRouter(
 from app.simulations.routes import router as simulations_router  # noqa: E402
 
 workspace_router.include_router(simulations_router)
+
+# Task 4/5 resource surface (CCR-20260726-READ-01 mount): the cases, dossiers
+# and conversations routers shipped RELATIVE on the A2 lane and were QA-proven
+# on a private mount "exactly as the Contract Lead will" (test_task0405_qa_battery
+# app assembly). Mounting order mirrors that tested combination.
+from app.cases.routes import router as cases_router  # noqa: E402
+from app.conversations.routes import router as conversations_router  # noqa: E402
+from app.dossiers.routes import router as dossiers_router  # noqa: E402
+
+workspace_router.include_router(cases_router)
+workspace_router.include_router(dossiers_router)
+workspace_router.include_router(conversations_router)
+
+# Sandbox read projections (CCR-20260726-READ-01): graph-version reads under
+# the same relative /simulations/{graphId} prefix, plus the case→graph anchor
+# resolution the sandbox workspace waits on.
+from app.simulations.graph_reads import (  # noqa: E402
+    case_anchor_router as simulation_case_anchor_router,
+    router as graph_reads_router,
+)
+
+workspace_router.include_router(graph_reads_router)
+workspace_router.include_router(simulation_case_anchor_router)
