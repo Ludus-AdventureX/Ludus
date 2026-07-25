@@ -423,13 +423,11 @@ async def test_qa6_fixture_provider_is_deterministic_across_calls() -> None:
 
 
 def test_qa7_lane_migration_chained_to_task10_revision() -> None:
-    """The deferral is RELEASED: A1 (Task 10) reported its migration rev-id
-    ``b6e8f3a1d7c2`` (add_analysis_outputs, after ``f9a4b7e2c8d3``), so this
-    lane's revision ``a7c3e9f1b5d8`` now exists with ``down_revision`` pointing
-    at it. The Task 10 FILE ships on the A1 branch, not here — in this worktree
-    the lane revision therefore has a dangling parent by design (lands last;
-    applicable only after the integration merge). This pin fails loudly if the
-    file set, the chain wiring or the dangling-parent state silently changes."""
+    """Post-integration pin (A1+A2 joint wave): the Task 10 parent FILE
+    ``b6e8f3a1d7c2`` now lives on the merged tree, so the by-design dangling
+    parent state is over and the chain collapses to the single head
+    ``a7c3e9f1b5d8`` (down_revision -> b6e8f3a1d7c2 -> f9a4b7e2c8d3). This pin
+    fails loudly if the file set or the chain wiring silently changes."""
 
     versions_dir = APP_DIR.parent / "migrations" / "versions"
     files = sorted(p.name for p in versions_dir.glob("*.py") if p.name != "__init__.py")
@@ -439,6 +437,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
         "a7c3e9f1b5d8_add_dossier_version_snapshots.py",
         "b2c7e9d4a1f6_add_decision_maker_profiles_and_idempotency_records.py",
+        "b6e8f3a1d7c2_add_analysis_outputs.py",
         "c4a1f0b2d9e7_add_login_rate_buckets.py",
         "d7e2a91c5b48_add_strategic_lens_artifacts.py",
         "e7f3a2c9d5b1_add_evidence_ledger.py",
@@ -459,12 +458,12 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
     assert revisions["a7c3e9f1b5d8"] == "b6e8f3a1d7c2", (
         "lane migration must chain after Task 10's reported rev-id"
     )
-    # In-worktree heads: the frozen tip f9a4b7e2c8d3 (b6e8f3a1d7c2's file lives
-    # on the A1 branch) plus this lane's a7c3e9f1b5d8. After the integration
-    # merge the single head collapses to a7c3e9f1b5d8.
+    # Post-merge chain: b6e8f3a1d7c2's file is on the merged tree, so the
+    # in-worktree head pair {f9a4b7e2c8d3, a7c3e9f1b5d8} has collapsed to the
+    # single head a7c3e9f1b5d8 (dual-head convergence assertion).
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"f9a4b7e2c8d3", "a7c3e9f1b5d8"}, (
-        f"unexpected in-worktree chain heads: {heads}"
+    assert heads == {"a7c3e9f1b5d8"}, (
+        f"unexpected merged-tree chain head: {heads}"
     )
 
 
