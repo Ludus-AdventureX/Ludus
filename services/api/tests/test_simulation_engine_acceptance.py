@@ -30,14 +30,13 @@ from app.types import SimulationConvergenceStatus, SimulationMode
 
 FORMAL = SimulationMode.FORMAL
 
-# CCR-ENG-02 profile enforcement: sim-engine-1.1.0 requires a verified
-# fingerprint on EVERY engine call. Fixed deterministic canonical fingerprint
-# keeps the acceptance numerics byte-stable while satisfying the mandatory
-# profile block (mirrors the owner suite's OWNER_FP convention).
+# CCR-ENG-02: the 1.1.0 engine requires a verified ProfileFingerprint on every
+# hash/run path. Canonical deterministic QA fingerprint (values frozen so the
+# byte-identity assertions below stay reproducible).
 QA_FP = ProfileFingerprint(
-    id="00000000-0000-4000-8000-0000000000a1",
+    id="11111111-1111-4111-8111-111111111111",
     version=1,
-    content_hash="sha256:" + "a" * 64,
+    content_hash="sha256:" + "ab" * 32,
 )
 
 
