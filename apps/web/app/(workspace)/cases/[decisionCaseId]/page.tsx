@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   title: "决策项目 · Ludus"
 };
 
+export const runtime = "edge";
+
 const EMPTY_CASE_SEGMENT = "new";
 
 type DecisionCasePageProps = {
