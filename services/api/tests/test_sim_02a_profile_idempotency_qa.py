@@ -526,17 +526,17 @@ def test_no_idempotency_runtime_flow_and_public_route_stays_blocked() -> None:
 
 
 async def test_p2_engine_hash_gap_is_pinned_pending_dependency(session) -> None:
-    # Engine untouched by this slice: version pinned, hash payload unchanged,
-    # profile identity/content hash NOT in the hash source yet.
-    assert engine_module.ENGINE_VERSION == "sim-engine-1.0.0"
+    # CCR-ENG-02 landed (d2ae634 enforcement): version bumped, profile block
+    # mandatory in the hash source. Pinned assertions flipped to permanent
+    # green per contract §7.3.
+    assert engine_module.ENGINE_VERSION == "sim-engine-1.1.0"
     hash_source = inspect.getsource(engine_module.compute_input_hash)
-    assert "profile" not in hash_source.lower()
-    assert "content_hash" not in hash_source and "contentHash" not in hash_source
+    assert "profile" in hash_source.lower()
+    assert "content_hash" in hash_source or "contentHash" in hash_source
 
-    # Pinned CURRENT behavior (contract §3 gap): two different frozen profiles
-    # with the SAME riskTolerance still produce the SAME inputHash. CCR-ENG-02
-    # MUST flip this assertion together with the ENGINE_VERSION bump; until
-    # then the public POST route stays blocked (ready_for_public_route = NO).
+    # Post-flip behavior (contract §3): two different frozen profiles with the
+    # SAME riskTolerance now produce DIFFERENT inputHash values because the
+    # nested profile{id,version,contentHash} block is part of the hash payload.
     world = await seed_world(session, f"qa02a-p2-{uuid4().hex[:6]}")
     service = SimulationRunService(session)
     baseline = await service.run_and_record(world.context, request_for(world))
@@ -554,4 +554,4 @@ async def test_p2_engine_hash_gap_is_pinned_pending_dependency(session) -> None:
         world.context, request_for(world, decision_maker_profile_id=twin_profile)
     )
     assert twin.decision_maker_profile_id != baseline.decision_maker_profile_id
-    assert twin.input_hash == baseline.input_hash
+    assert twin.input_hash != baseline.input_hash
