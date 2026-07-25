@@ -4,7 +4,21 @@
 - Branch: `codex/ccr-guest-analysis-contracts` (pushed)
 - Base: `bd9fde15278afd63d351b2adaeb95ec32441cd6f`
   - Gate-zero live `git ls-remote origin refs/heads/main` = `bd9fde15278afd63d351b2adaeb95ec32441cd6f`
-    — EQUAL to the authorized baseline; main had NOT advanced, no old/new SHA split to disclose.
+    — EQUAL to the authorized baseline at lane start.
+  - **Mid-lane disclosure (post-delivery re-read):** main advanced DURING this lane to
+    `51ae45c900ae4efa01b72d5d6842adb74ad50c91` (SIM alpha / Guest Demo wave publication).
+    old_remote_main_sha: `bd9fde15278afd63d351b2adaeb95ec32441cd6f`;
+    new_remote_main_sha: `51ae45c900ae4efa01b72d5d6842adb74ad50c91`.
+    `bd9fde15` IS an ancestor of the new main (the wave explicitly adopted it), and the
+    new-main delta touches NO canonical contract doc (no `docs/product-plan/**` path) — the
+    only path overlap with this lane is HEAD/HISTORY (append-only worklogs). This lane is
+    docs-only, so per protocol it did not stop; the branch merges cleanly onto the new main.
+  - Integration note for Delivery A consumers: the new main already ships a DIFFERENT
+    `apps/web/lib/demo/simulationDemo.ts` + `/demo` page from `codex/prototype-sim-web`
+    (env-fixture based, NO guest endpoint usage). The WEB_DEMO candidate (d504b4f0) will
+    therefore face a file-level merge with that page IN ADDITION to the shape fix ruled in
+    CCR-20260725-GUEST-01; the shape ruling itself is unaffected (guest endpoint exists only
+    on the two in-flight branches).
 - Date: 2026-07-25 (Asia/Shanghai)
 - Scope proof target: `git diff --name-only <base>..HEAD` contains ONLY
   `docs/product-plan/docs/contract-changes/**`, the CCR-authorized subsections of
@@ -82,9 +96,11 @@
 
 ## Gates
 
-- docs-only diff proof, `git diff --check`, conflict-marker scan, HISTORY append-only,
-  secret scan: results recorded in the final lane report; no credential value appears in any
-  file of this branch.
+- docs-only diff proof (only the 7 authorized paths), `git diff --check` clean,
+  conflict-marker scan clean, HISTORY strictly append-only (numstat 25/0), secret scan: the
+  single pattern hit is an INHERITED historical HISTORY line (a backup file path reference
+  from the 2026-07-22 Gate 1 record; contains no credential value and predates this lane);
+  no file written by this lane contains any key/credential/env value.
 - This lane did NOT advance main, did NOT rebase/amend/force-push, and carried NO code from
   the in-flight branches.
 
