@@ -1,19 +1,10 @@
-# Work Log: Analyses HTTP handlers (Task 9 owner follow-up; MOUNT-01 M3/M4/M5 + M9), r1
+# Work Log: QA — Task 9 analyses HTTP handlers candidate acceptance (r1b)
 
-- Status: implementation COMPLETE on worktree decision-lab-task09-analyses-http; all acceptance gates green; pending commit + push (recorded on push).
-- Role: Case/API/Data Owner (Task 9 owner follow-up).
-- Branch: `codex/task-09-analyses-http-handlers-r1`, fresh worktree; parent = main @ `4941e58bee3b91f14a4a92b7fab92750ef85b3b6` (live Gate 0 echo). No rebase/amend/force-push/cherry-pick; main untouched. Relative implementation — mounting is MOUNT-02's job; zero migration (domain layer already complete).
-- Contracts consumed read-only: ANALYSIS-01 + Addendum A1 + MOUNT-01 (M3/M4/M5 DEFERRED records = scope definition), 10-api-and-events.md canonical paths + envelope.
-- Delivered (app/analyses/routes.py, added to the existing UNMOUNTED analyses router; consumes the shipped repository + lens read service as-is): Charter create / PATCH(draft) / replacements / confirm; Run create (mandatory Idempotency-Key header per resolutions precedent; key-based replay + handler-level body-conflict → IDEMPOTENCY_CONFLICT); run status GET; strategic-lenses list + item read. All {ok,data} envelope + existing error codes; cross-tenant/missing → uniform CASE_NOT_FOUND 404. Confirm auto-bridges draft → awaiting_confirmation → confirmed (no separate submit endpoint in 10-api).
-- MOUNT-01 items: M9 adopted — cancel now enforces the mandatory Idempotency-Key header (10-api L953; body-smuggled key → 422; natural idempotency covers replay, no idempotency_records row, no repository change). M8 fix-plan written into the Task 9 handoff r4 addendum for the auth/security lane (add require_csrf to analyses unsafe writes, SIM-02A parity); NOT self-fixed (CSRF middleware is cross-cutting, outside this lane).
-- Scope: app/analyses/routes.py + own test test_analysis_http_handlers.py (NEW, 32) + disclosed M9 cancel-header maintenance in test_analysis_sse_and_commands.py (5 calls) & test_analysis_idempotency_wire.py (2 calls) + Task 9 handoff r4 addendum + HEAD/HISTORY. ZERO change to repository / state_machine / models / schemas / lens_artifact_reads / migrations / main.py / packages/contracts.
-- Gates (fresh disposable PG16 ludus-pg-task09-http @55451; main venv via junction; uv/pnpm offline, zero installs):
-  - Own suite `pytest app/analyses/tests/test_analysis_http_handlers.py -q -W error -rxX` = 32 passed (per-endpoint positive/negative + run-create idempotency replay/conflict + cancel header + cross-tenant/missing 404 matrix).
-  - Owner diagnostic zero-regression: `pytest app/analyses/tests app/evidence/tests` = 239 passed / 0 failed; full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests` = 816 passed / 0 failed (= mainline 784 + 32 new).
-  - `ruff check services/api` all-pass; `compileall app` exit 0; `git diff --check` clean; secret scan 0.
-  - Official `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK — the router stays UNMOUNTED, so `app.main.app.openapi()` is unchanged (8 published ops); the analyses router carries 11 routes (3 prior + 8 new) but reaches no generated contract.
-  - alembic single head `f9a4b7e2c8d3` re-verified on the disposable PG16.
-- ready_for_qa: YES. ready_for_public_route: NO (mounting is MOUNT-02's job).
-- Next: MOUNT-02 mounts the complete analyses router (11 routes) + regenerates contracts; the M8 CSRF hardening is the auth lane's to land.
-- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Status: IN_PROGRESS on worktree decision-lab-G0/worktrees/qa-task09-analyses-r1b.
+- Role: independent QA lane (session takeover authorized by dispatcher; the parallel QA session's worktree/container/branch untouched — isolated suffix -b resources).
+- Branch: `codex/qa-task-09-analyses-http-r1b`, cut from candidate tip `0f92b172c5d931531a1d450254655ed6b958a95f` (codex/task-09-analyses-http-handlers-r1) so the QA tip carries the candidate chain for MOUNT-02's single no-ff adoption. No rebase/amend/force.
+- Live main at Gate 0 = `23ab477649716f52b3aa913e5efb209442397efa`; candidate base = 4941e58. Merge-deviation reconciliation is MOUNT-02's job, not QA's (disclosed).
+- Scope: own adversarial tests + HEAD/HISTORY only. ZERO touch on app/analyses/routes.py, repository, state machine, models, schemas, migrations, main.py, packages/contracts.
+- Verification env: fresh disposable PG16 `ludus-pg-qa-task09-http-b` @55453; main venv/.tools/node_modules via junction; offline, zero installs; alembic single head f9a4b7e2c8d3 applied clean.
+- Gate results are recorded in the PASS/FAIL verdict update of this file.
 - Secret policy: do not record credentials here.
