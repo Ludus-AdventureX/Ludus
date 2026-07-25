@@ -19,12 +19,25 @@ pytest.importorskip(
 )
 
 from app.simulations import graph_builder as gb
-from app.simulations.domain import GraphVersionStatus, SimulationInputError
+from app.simulations.domain import (
+    GraphVersionStatus,
+    ProfileFingerprint,
+    SimulationInputError,
+)
 from app.simulations.engine import ENGINE_VERSION, run_simulation
 from app.simulations.sensitivity import analyze_sensitivity
 from app.types import SimulationConvergenceStatus, SimulationMode
 
 FORMAL = SimulationMode.FORMAL
+
+# CCR-ENG-02: the 1.1.0 engine requires a verified ProfileFingerprint on every
+# hash/run path. Canonical deterministic QA fingerprint (values frozen so the
+# byte-identity assertions below stay reproducible).
+QA_FP = ProfileFingerprint(
+    id="11111111-1111-4111-8111-111111111111",
+    version=1,
+    content_hash="sha256:" + "ab" * 32,
+)
 
 
 def _run(fixture, *, strategy=None, scenario="agency_pull", **overrides):
@@ -35,6 +48,7 @@ def _run(fixture, *, strategy=None, scenario="agency_pull", **overrides):
         fixture.score_definition,
         fixture.risk_tolerance,
         FORMAL,
+        profile=QA_FP,
         **overrides,
     )
 
@@ -88,6 +102,7 @@ def test_formal_mode_rejects_unconfirmed_graph() -> None:
             fixture.score_definition,
             fixture.risk_tolerance,
             FORMAL,
+            profile=QA_FP,
         )
     assert "confirmed" in str(excinfo.value).lower()
 
@@ -102,6 +117,7 @@ def test_experimental_mode_accepts_draft_graph() -> None:
         fixture.score_definition,
         fixture.risk_tolerance,
         SimulationMode.EXPERIMENTAL,
+        profile=QA_FP,
     )
     assert result.mode is SimulationMode.EXPERIMENTAL
 
@@ -128,6 +144,7 @@ def test_invalid_numeric_inputs_are_rejected() -> None:
             fixture.score_definition,
             1.5,
             FORMAL,
+            profile=QA_FP,
         )
 
 
@@ -174,6 +191,7 @@ def test_sensitivity_identifies_flip_threshold_driver() -> None:
         fixture.score_definition,
         fixture.risk_tolerance,
         FORMAL,
+        profile=QA_FP,
     )
     assert sensitivity.flip_conditions, "sensitivity must surface flip conditions"
     top = sensitivity.flip_conditions[0]
@@ -193,6 +211,7 @@ def test_sensitivity_is_deterministic_across_repeat_runs() -> None:
             fixture.score_definition,
             fixture.risk_tolerance,
             FORMAL,
+            profile=QA_FP,
         )
 
     first, second = _analyze(), _analyze()

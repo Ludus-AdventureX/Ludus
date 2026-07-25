@@ -71,6 +71,11 @@ from app.types import (
 
 NOW = datetime(2026, 7, 25, 8, 0, 0, tzinfo=timezone.utc)
 
+# Frozen seeded profile facts (CCR-SIM-02A §2): the seeded workspace-global
+# profile v1 carries this riskTolerance; the service resolves it server-side.
+SEED_PROFILE_VERSION = 1
+SEED_PROFILE_RISK_TOLERANCE = 0.5
+
 
 @pytest_asyncio.fixture
 async def session() -> AsyncIterator[AsyncSession]:
@@ -112,6 +117,7 @@ class World:
     strategy_version_id: UUID
     scenario_version_id: UUID
     score_definition_id: UUID
+    profile_id: UUID
     option_a: str = ""
     option_b: str = ""
     extras: dict[str, UUID] = field(default_factory=dict)
@@ -382,6 +388,19 @@ async def seed_world(
     )
     await session.flush()
 
+    # Workspace-global frozen profile v1 (decision_case_id NULL): the only
+    # riskTolerance authority for runs in this world (CCR-SIM-02A §2).
+    profile_id = uuid4()
+    await SimulationInputRepository(session).insert_decision_maker_profile(
+        workspace_id=ws_id,
+        profile_id=profile_id,
+        version=SEED_PROFILE_VERSION,
+        user_id=user_id,
+        display_name=f"profile-{slug}",
+        preference_weights={"traction": 0.7, "cash": 0.3},
+        risk_tolerance=SEED_PROFILE_RISK_TOLERANCE,
+    )
+
     context = WorkspaceContext(
         user_id=user_id,
         workspace_id=ws_id,
@@ -407,6 +426,7 @@ async def seed_world(
         strategy_version_id=strategy_id,
         scenario_version_id=scenario_id_row,
         score_definition_id=score_id,
+        profile_id=profile_id,
         option_a=option_a,
         option_b=option_b,
     )
@@ -420,9 +440,8 @@ def request_for(world: World, **overrides) -> SimulationRunRequest:
         "scenario_version_id": world.scenario_version_id,
         "score_definition_id": world.score_definition_id,
         "simulation_mode": SimulationMode.FORMAL,
-        "decision_maker_profile_id": uuid4(),
-        "decision_maker_profile_version": 1,
-        "risk_tolerance": 0.5,
+        "decision_maker_profile_id": world.profile_id,
+        "decision_maker_profile_version": SEED_PROFILE_VERSION,
         "include_sensitivity": False,
     }
     payload.update(overrides)
@@ -511,7 +530,7 @@ async def test_graph_content_change_changes_input_hash(session: AsyncSession):
     service = SimulationRunService(session)
     base = await service.run_and_record(world.context, request_for(world))
 
-    assembled, _ = await service._load_frozen_input(world.context, request_for(world))
+    assembled, row_refs = await service._load_frozen_input(world.context, request_for(world))
     changed = assembled.graph.with_value(str(world.driver_id), 0.75)
     changed_hash = compute_input_hash(
         changed,
@@ -523,6 +542,7 @@ async def test_graph_content_change_changes_input_hash(session: AsyncSession):
         {},
         0.001,
         12,
+        profile=row_refs["profile_fingerprint"],
     )
     assert changed_hash != base.input_hash
 

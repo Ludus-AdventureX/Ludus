@@ -15,12 +15,15 @@ redefined — before they are translated into engine domain objects.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
+from uuid import UUID
 
 from pydantic import ValidationError
 
 from app.models import (
     DecisionCase,
+    DecisionMakerProfile,
     GraphEdge,
     GraphNode,
     GraphVersion as GraphVersionRow,
@@ -46,18 +49,24 @@ from .domain import (
     GraphVersion,
     Normalization,
     OptionOutcomeMapping,
+    ProfileFingerprint,
     RiskWeight,
     ScenarioVersion,
     ScoreDefinition,
     StrategyVersion,
 )
 from .errors import (
+    FrozenReferenceError,
     ScenarioParameterError,
     ScoreDefinitionReferenceError,
     StrategyOverrideError,
 )
 
 _STRATEGY_OVERRIDABLE_TYPES = frozenset({NodeType.DECISION, NodeType.LEVER})
+
+# CCR-ENG-02 §3: the persisted profile content hash is trusted via the append-only
+# write path, but its FORMAT is re-validated before any engine/hash work.
+_PROFILE_CONTENT_HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +83,38 @@ def _sorted_copy(values: dict[str, float]) -> dict[str, float]:
     """Defensive copy with normalized (sorted) key insertion order."""
 
     return {key: float(values[key]) for key in sorted(values)}
+
+
+def assemble_profile_fingerprint(row: DecisionMakerProfile) -> ProfileFingerprint:
+    """Build the one frozen profile fingerprint from a VERIFIED profile row (CCR-ENG-02).
+
+    Trust boundary: the persisted ``content_hash`` is trusted via the append-only
+    write path, but the mandatory format gate below fails closed with the stable
+    ``frozen_reference_incomplete`` code BEFORE any engine or hash computation.
+    The fingerprint carries the STABLE ``profile_id`` (never the row primary key)
+    as a canonical lowercase UUID string.
+    """
+
+    content_hash = row.content_hash
+    if (
+        not isinstance(content_hash, str)
+        or _PROFILE_CONTENT_HASH_RE.fullmatch(content_hash) is None
+    ):
+        raise FrozenReferenceError(
+            "decision-maker profile content hash is missing or malformed; "
+            "the frozen profile reference cannot witness this run"
+        )
+    version = row.version
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        raise FrozenReferenceError(
+            "decision-maker profile version must be a positive integer"
+        )
+    profile_id = str(row.profile_id)
+    if str(UUID(profile_id)) != profile_id:
+        raise FrozenReferenceError(
+            "decision-maker profile id is not a canonical lowercase UUID"
+        )
+    return ProfileFingerprint(id=profile_id, version=version, content_hash=content_hash)
 
 
 def assemble_node(row: GraphNode) -> CausalNode:

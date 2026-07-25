@@ -32,6 +32,7 @@ from app.simulations.domain import (
     GraphVersionStatus,
     Normalization,
     OptionOutcomeMapping,
+    ProfileFingerprint,
     ScenarioVersion,
     ScoreDefinition,
     SimulationAuthorizationError,
@@ -53,6 +54,15 @@ from app.types import NodeType, SimulationConvergenceStatus, SimulationMode
 
 FORMAL = SimulationMode.FORMAL
 EXPERIMENTAL = SimulationMode.EXPERIMENTAL
+
+# CCR-ENG-02 profile enforcement: sim-engine-1.1.0 requires a verified fingerprint
+# on EVERY engine call. This fixed, deterministic canonical fingerprint keeps the
+# numeric suite byte-stable while satisfying the mandatory profile block.
+OWNER_FP = ProfileFingerprint(
+    id="00000000-0000-4000-8000-000000000001",
+    version=1,
+    content_hash="sha256:" + "0" * 64,
+)
 
 
 # --- tiny graph builders for isolated behaviors ------------------------------------------
@@ -176,7 +186,7 @@ def test_positive_edge_raises_target_above_baseline():
     graph = _graph(nodes, [_edge("e", "src", "tgt", EdgePolarity.POSITIVE, 0.8)])
     result = run_simulation(
         graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL,
-        node_overrides={"src": 1.0},
+        node_overrides={"src": 1.0}, profile=OWNER_FP,
     )
     assert result.node_results["tgt"] > 0.5
 
@@ -189,7 +199,7 @@ def test_negative_edge_lowers_target_below_baseline():
     graph = _graph(nodes, [_edge("e", "src", "tgt", EdgePolarity.NEGATIVE, 0.8)])
     result = run_simulation(
         graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL,
-        node_overrides={"src": 1.0},
+        node_overrides={"src": 1.0}, profile=OWNER_FP,
     )
     assert result.node_results["tgt"] < 0.5
 
@@ -206,12 +216,14 @@ def test_delay_defers_impact_until_delay_steps_elapse():
     score = _score_single("opt", "tgt")
 
     early = run_simulation(
-        graph, _strategy(), _scenario(), score, 0.0, FORMAL, node_overrides={"src": 1.0}, max_steps=1
+        graph, _strategy(), _scenario(), score, 0.0, FORMAL, node_overrides={"src": 1.0}, max_steps=1,
+        profile=OWNER_FP,
     )
     assert early.node_results["tgt"] == pytest.approx(0.5)
 
     settled = run_simulation(
-        graph, _strategy(), _scenario(), score, 0.0, FORMAL, node_overrides={"src": 1.0}, max_steps=12
+        graph, _strategy(), _scenario(), score, 0.0, FORMAL, node_overrides={"src": 1.0}, max_steps=12,
+        profile=OWNER_FP,
     )
     assert settled.node_results["tgt"] > 0.5
 
@@ -227,7 +239,7 @@ def test_values_are_clamped_into_unit_interval():
     graph = _graph(nodes, [_edge("e", "src", "tgt", EdgePolarity.POSITIVE, 1.0)])
     result = run_simulation(
         graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL,
-        node_overrides={"src": 1.0},
+        node_overrides={"src": 1.0}, profile=OWNER_FP,
     )
     assert result.node_results["tgt"] == 1.0
     assert all(0.0 <= value <= 1.0 for value in result.node_results.values())
@@ -241,11 +253,11 @@ def test_identical_inputs_produce_identical_results_and_hash():
     second = gb.spherical_robot_fixture()
     run_first = run_simulation(
         first.graph, first.strategies[gb.RESCUE_PILOT], first.scenarios["agency_pull"],
-        first.score_definition, first.risk_tolerance, FORMAL,
+        first.score_definition, first.risk_tolerance, FORMAL, profile=OWNER_FP,
     )
     run_second = run_simulation(
         second.graph, second.strategies[gb.RESCUE_PILOT], second.scenarios["agency_pull"],
-        second.score_definition, second.risk_tolerance, FORMAL,
+        second.score_definition, second.risk_tolerance, FORMAL, profile=OWNER_FP,
     )
     assert run_first.node_results == run_second.node_results
     assert run_first.option_scores == run_second.option_scores
@@ -265,6 +277,7 @@ def _hash_for(fixture, **overrides) -> str:
         "node_overrides": {},
         "epsilon": 0.001,
         "max_steps": 12,
+        "profile": OWNER_FP,
     }
     kwargs.update(overrides)
     return compute_input_hash(**kwargs)
@@ -308,7 +321,7 @@ def test_stable_graph_converges():
     fixture = gb.spherical_robot_fixture()
     result = run_simulation(
         fixture.graph, fixture.strategies[gb.RESCUE_PILOT], fixture.scenarios["agency_pull"],
-        fixture.score_definition, fixture.risk_tolerance, FORMAL,
+        fixture.score_definition, fixture.risk_tolerance, FORMAL, profile=OWNER_FP,
     )
     assert result.convergence_status == SimulationConvergenceStatus.CONVERGED
     # This acyclic fixture converges even though its worst-target incoming sum makes the
@@ -327,7 +340,9 @@ def test_strong_feedback_loop_does_not_converge_cleanly():
     ]
     graph = _graph(nodes, edges)
     scenario = _scenario(damping=1.0, node_shifts={"a": 0.3})
-    result = run_simulation(graph, _strategy(), scenario, _score_single("opt", "b"), 0.0, FORMAL)
+    result = run_simulation(
+        graph, _strategy(), scenario, _score_single("opt", "b"), 0.0, FORMAL, profile=OWNER_FP
+    )
     assert stability_bound(graph, scenario, FORMAL) >= 1.0
     assert result.convergence_status in {
         SimulationConvergenceStatus.SATURATED,
@@ -344,7 +359,10 @@ def test_non_finite_propagation_is_reported_invalid_and_abstains():
     ]
     graph = _graph(nodes, [_edge("e", "src", "tgt", EdgePolarity.POSITIVE, 0.8)])
     with patch.object(engine_mod, "normalize", return_value=float("nan")):
-        result = run_simulation(graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL)
+        result = run_simulation(
+            graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL,
+            profile=OWNER_FP,
+        )
     assert result.convergence_status == SimulationConvergenceStatus.INVALID
     assert result.recommended_option_id is None
 
@@ -363,7 +381,7 @@ def test_baseline_recommends_rescue_pilot():
     fixture = gb.spherical_robot_fixture()
     result = run_simulation(
         fixture.graph, fixture.strategies[gb.RESCUE_PILOT], fixture.scenarios["agency_pull"],
-        fixture.score_definition, fixture.risk_tolerance, FORMAL,
+        fixture.score_definition, fixture.risk_tolerance, FORMAL, profile=OWNER_FP,
     )
     assert result.convergence_status == SimulationConvergenceStatus.CONVERGED
     assert result.recommended_option_id == gb.RESCUE_PILOT
@@ -376,7 +394,7 @@ def test_long_procurement_cycle_triggers_hard_constraint_and_flips_recommendatio
     result = run_simulation(
         fixture.graph, fixture.strategies[gb.RESCUE_PILOT], fixture.scenarios["agency_pull"],
         fixture.score_definition, fixture.risk_tolerance, FORMAL,
-        node_overrides={"procurement_cycle_months": 14.0},
+        node_overrides={"procurement_cycle_months": 14.0}, profile=OWNER_FP,
     )
     assert result.node_results["cash_safety"] < 0.45
     assert result.recommended_option_id == gb.CONTINUE_RESEARCH
@@ -386,7 +404,7 @@ def test_sensitivity_reports_procurement_as_top_flip_driver():
     fixture = gb.spherical_robot_fixture()
     sensitivity = analyze_sensitivity(
         fixture.graph, fixture.strategies[gb.RESCUE_PILOT], fixture.scenarios["agency_pull"],
-        fixture.score_definition, fixture.risk_tolerance, FORMAL,
+        fixture.score_definition, fixture.risk_tolerance, FORMAL, profile=OWNER_FP,
     )
     assert sensitivity.base_recommended_option_id == gb.RESCUE_PILOT
     assert sensitivity.flip_conditions, "expected at least one flip condition"
@@ -404,7 +422,8 @@ def test_sensitivity_business_step_defaults_to_ten_percent_of_range():
     ]
     graph = _graph(nodes, [_edge("e", "driver", "out", EdgePolarity.POSITIVE, 0.5)])
     result = analyze_sensitivity(
-        graph, _strategy(), _scenario(), _score_single("opt", "out"), 0.0, FORMAL
+        graph, _strategy(), _scenario(), _score_single("opt", "out"), 0.0, FORMAL,
+        profile=OWNER_FP,
     )
     assert result.business_steps["driver"] == pytest.approx(10.0)
 
@@ -442,7 +461,10 @@ def test_formal_run_requires_confirmed_graph_version():
     nodes = [_node("src", NodeType.EXTERNAL, 0.5), _node("tgt", NodeType.OUTCOME, 0.5)]
     draft = _graph(nodes, [_edge("e", "src", "tgt", EdgePolarity.POSITIVE, 0.5)], status=GraphVersionStatus.DRAFT)
     with pytest.raises(SimulationAuthorizationError):
-        run_simulation(draft, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL)
+        run_simulation(
+            draft, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL,
+            profile=OWNER_FP,
+        )
 
 
 def test_formal_run_requires_confirmed_propagating_nodes():
@@ -452,7 +474,10 @@ def test_formal_run_requires_confirmed_propagating_nodes():
     ]
     graph = _graph(nodes, [_edge("e", "src", "tgt", EdgePolarity.POSITIVE, 0.5)])
     with pytest.raises(SimulationAuthorizationError):
-        run_simulation(graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL)
+        run_simulation(
+            graph, _strategy(), _scenario(), _score_single("opt", "tgt"), 0.0, FORMAL,
+            profile=OWNER_FP,
+        )
 
 
 def test_eligible_edges_differ_between_formal_and_experimental():

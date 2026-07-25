@@ -16,6 +16,7 @@ from .domain import (
     FlipCondition,
     GraphVersion,
     NodeType,
+    ProfileFingerprint,
     ScenarioVersion,
     ScoreDefinition,
     StrategyVersion,
@@ -52,9 +53,14 @@ def analyze_sensitivity(
     node_overrides: dict[str, float] | None = None,
     epsilon: float = 0.001,
     max_steps: int = 12,
+    *,
+    profile: ProfileFingerprint,
 ) -> SensitivityResult:
     base_overrides = dict(node_overrides or {})
 
+    # CCR-ENG-02 fast fix: the ONE verified fingerprint is captured by this closure,
+    # so the base run and every sweep/perturbation use the identical profile block
+    # (never None, never re-derived, independent of iteration order).
     def run(overrides: dict[str, float]):
         return run_simulation(
             graph,
@@ -66,6 +72,7 @@ def analyze_sensitivity(
             node_overrides=overrides,
             epsilon=epsilon,
             max_steps=max_steps,
+            profile=profile,
         )
 
     base = run(base_overrides)

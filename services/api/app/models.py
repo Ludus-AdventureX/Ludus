@@ -1217,6 +1217,126 @@ class GraphBranch(Base):
     created_at: Mapped[datetime] = created_at_column()
 
 
+class DecisionMakerProfile(Base):
+    """Immutable, versioned decision-maker preference snapshot (CCR-20260724-SIM-02A §2).
+
+    Append-only: a new version is a new inserted row; neither the repository nor the
+    service exposes an UPDATE or DELETE path. ``(workspace_id, profile_id, version)``
+    is the business identity referenced by simulation_runs; the row UUID ``id`` is
+    storage-only and never doubles as the stable profile id. ``content_hash`` is
+    always computed server-side over the frozen payload (canonical JSON, sorted
+    keys, UTF-8); caller-supplied hashes are never authoritative.
+    """
+
+    __tablename__ = "decision_maker_profiles"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "id", name="uq_decision_maker_profiles_workspace_id"
+        ),
+        UniqueConstraint(
+            "workspace_id",
+            "profile_id",
+            "version",
+            name="uq_decision_maker_profiles_workspace_profile_version",
+        ),
+        # decision_case_id NULL = workspace-global profile; non-NULL binds the
+        # profile to exactly one case. RESTRICT: frozen replay inputs never vanish.
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_decision_maker_profiles_workspace_case",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("version > 0", name="profile_version_positive"),
+        CheckConstraint(
+            "risk_tolerance >= 0 AND risk_tolerance <= 1",
+            name="profile_risk_tolerance_range",
+        ),
+        CheckConstraint("display_name <> ''", name="profile_display_name_not_empty"),
+        CheckConstraint("content_hash <> ''", name="profile_content_hash_not_empty"),
+        Index(
+            "ix_decision_maker_profiles_workspace_case",
+            "workspace_id",
+            "decision_case_id",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    profile_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_case_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    display_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    preference_weights: Mapped[dict[str, Any]] = json_object_column()
+    risk_tolerance: Mapped[float] = mapped_column(Float, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class IdempotencyRecord(Base):
+    """Generic idempotent-POST replay record (CCR-20260724-SIM-02A §4).
+
+    Persistence schema only in this slice: header parsing, replay/conflict runtime
+    flow, and route wiring land with the SIM-02A implementation wave. Unique key
+    scope is ``(workspace_id, route_key, idempotency_key)``; ``response_kind`` is a
+    contract-frozen enum-checked string (no PG enum by design); rows past
+    ``expires_at`` (created_at + 48h retention) are purgeable.
+    """
+
+    __tablename__ = "idempotency_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "route_key",
+            "idempotency_key",
+            name="uq_idempotency_records_workspace_route_key",
+        ),
+        CheckConstraint("route_key <> ''", name="idempotency_route_key_not_empty"),
+        CheckConstraint(
+            "char_length(idempotency_key) BETWEEN 1 AND 200",
+            name="idempotency_key_length",
+        ),
+        CheckConstraint(
+            "normalized_request_hash <> ''",
+            name="idempotency_request_hash_not_empty",
+        ),
+        CheckConstraint(
+            "resource_type <> ''", name="idempotency_resource_type_not_empty"
+        ),
+        CheckConstraint(
+            "http_status >= 100 AND http_status <= 599",
+            name="idempotency_http_status_range",
+        ),
+        CheckConstraint(
+            "response_kind IN ('success', 'non_converged')",
+            name="idempotency_response_kind_enum",
+        ),
+        CheckConstraint("expires_at > created_at", name="idempotency_expiry_after_creation"),
+        Index(
+            "ix_idempotency_records_workspace_expires",
+            "workspace_id",
+            "expires_at",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    route_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    normalized_request_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    resource_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    http_status: Mapped[int] = mapped_column(Integer, nullable=False)
+    response_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class SimulationRun(Base):
     __tablename__ = "simulation_runs"
     __table_args__ = (
@@ -1257,6 +1377,23 @@ class SimulationRun(Base):
             ["workspace_id", "score_definition_id"],
             ["score_definitions.workspace_id", "score_definitions.id"],
             name="fk_simulation_runs_workspace_score_definition",
+            ondelete="RESTRICT",
+        ),
+        # CCR-20260724-SIM-02A §2: the decision-maker profile reference is a
+        # tenant-scoped frozen input like the four SIM-01 FKs above; RESTRICT so
+        # the profile a run was scored with can never vanish from history.
+        ForeignKeyConstraint(
+            [
+                "workspace_id",
+                "decision_maker_profile_id",
+                "decision_maker_profile_version",
+            ],
+            [
+                "decision_maker_profiles.workspace_id",
+                "decision_maker_profiles.profile_id",
+                "decision_maker_profiles.version",
+            ],
+            name="fk_simulation_runs_workspace_profile_version",
             ondelete="RESTRICT",
         ),
         CheckConstraint("decision_maker_profile_version > 0", name="profile_version_positive"),

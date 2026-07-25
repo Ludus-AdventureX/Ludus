@@ -5,4 +5,5 @@
 - Inputs (live-verified): adjudication chain codex/ccr-eng-02-implementation-adjudication-a1 @ 19f552c901789371a23c6b0d3af7fb32b8823254 (carries SIM-02A contract 0289b2e + ENG-02 contract c8c9167 + adjudication A1); QA exact combination codex/qa-sim-eng-02-profile-enforcement-r1 @ dc57fe60b56fc547f31d9231ee8277979bf77de0 (carries product chain fb75b8f -> edaa842 -> d43e36e -> d2ae634 + QA flip; fresh 461/121, CONTRACT_DRIFT_OK, migration head b2c7e9d4a1f6).
 - Plan: kickoff -> --no-ff merge 19f552c -> --no-ff merge dc57fe6 -> byte gates -> SHA-anchored fresh acceptance (expect exact 461 / lens_lanes 121, single head b2c7e9d4a1f6, CONTRACT_DRIFT_OK) -> acceptance archive -> live re-read -> ff-only publication.
 - No cherry-picks; both audit chains enter via independent no-ff merges; conflicts allowed only on HEAD/HISTORY (append-only 3-way).
+- Incorporated lane HEAD records (three-party lifecycle rule): adjudication lane (PRODUCT_FIX_REQUIRED verdict, addenda frozen) and QA lane (governance-waiver QA, RELEASE_CONTENT PASS, 461/121 fresh, merge object = QA head dc57fe6).
 - Secret policy: do not record credentials here.
