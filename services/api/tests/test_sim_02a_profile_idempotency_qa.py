@@ -506,18 +506,27 @@ async def test_idempotency_exact_schema_scope_and_constraints(session) -> None:
 
 
 def test_no_idempotency_runtime_flow_and_public_route_stays_blocked() -> None:
-    # P3 is persistence only: no header parsing, replay, conflict, or
-    # concurrency flow anywhere in the simulations package.
-    for module in (service_module, repository_module):
-        source = inspect.getsource(module)
-        assert "idempotency" not in source.lower(), module.__name__
-    # No route surface exists: no simulations routes module, nothing mounted.
-    assert importlib.util.find_spec("app.simulations.routes") is None
+    # I1/I2 landed (SIM-02A run API + Contract Lead mount): flipped from the
+    # P3 persistence-only pin to positive assertions on the shipped surface.
+    # The runtime idempotency flow lives in app.simulations.idempotency and is
+    # driven by the routes module, not by service/repository internals.
+    assert importlib.util.find_spec("app.simulations.idempotency") is not None
+    assert importlib.util.find_spec("app.simulations.routes") is not None
     import app.main as main_module
     import app.tenancy.routes as tenancy_routes
 
-    assert "simulation" not in inspect.getsource(main_module).lower()
-    assert "simulation" not in inspect.getsource(tenancy_routes).lower()
+    # Mounted under workspace_router (tenancy guard) per contract §10. FastAPI
+    # keeps included routers lazy (_IncludedRouter), so assert on the OpenAPI
+    # path catalog rather than app.routes.
+    assert "simulation" in inspect.getsource(tenancy_routes).lower()
+    app_paths = set(main_module.app.openapi().get("paths", {}))
+    assert (
+        "/api/workspaces/{workspaceId}/simulations/{graphId}/runs" in app_paths
+    )
+    assert (
+        "/api/workspaces/{workspaceId}/simulations/{graphId}/runs/{simulationRunId}"
+        in app_paths
+    )
 
 
 # ---------------------------------------------------------------------------
