@@ -17,6 +17,12 @@ from app.db import Base, get_database_url
 # test selection (same pattern as migrations/env.py).
 import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
 import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
+
+# Task 4/5 companion table registers the same way; importing it here keeps the
+# exact-table-set equality deterministic under any test selection (QA finding
+# F2, codex/qa-task-04-05-backend-r1: co-running any dossiers test used to
+# flip this assertion).
+import app.dossiers.models  # noqa: F401  (registers dossier_version_snapshots)
 from app.models import (
     AnalysisRun,
     CausalGraph,
@@ -136,6 +142,8 @@ def test_core_table_set_and_workspace_scope() -> None:
         "research_packets",
         "run_intervention_classifications",
         "run_resolutions",
+        # Task 4/5: immutable dossier snapshot companion (migration a7c3e9f1b5d8).
+        "dossier_version_snapshots",
     }
     assert set(Base.metadata.tables) == expected
 

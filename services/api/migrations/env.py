@@ -19,6 +19,11 @@ import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
 # including the active-run partial unique index attached to analysis_runs.
 import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
 
+# Task 4/5 companion table (dossier_version_snapshots) registers the same way;
+# without this import `alembic check` on the merged chain reports a spurious
+# remove_table drift (QA finding F1, codex/qa-task-04-05-backend-r1).
+import app.dossiers.models  # noqa: F401  (registers dossier_version_snapshots)
+
 config = context.config
 # The login throttle table lives on a deliberate module-local MetaData
 # (see app/security/rate_limits.py); include it so autogenerate/check do not
