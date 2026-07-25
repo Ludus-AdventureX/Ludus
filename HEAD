@@ -1,8 +1,9 @@
-# Work Log: idle
+# Work Log: CCR-20260725-ANALYSIS-01 Addendum A1
 
-- Status: idle after CCR Guest-Analysis contracts merge onto published main (2026-07-25, Asia/Shanghai).
-- Sequence honesty: B1 (guest alpha) was published to main by the Release Owner mid-operation (51ae45c -> ff 83df911 -> archive 6679da1, live-verified); this lane's earlier unpushed local merge attempt 44d0ef5 (based on pre-advance main 51ae45c) was discarded before reaching any remote; the B2 merge was redone cleanly on 6679da1.
-- This merge (B2): no-ff adoption of codex/ccr-guest-analysis-contracts d6675693fd2b7709d9ed4756489e633c49c869ee (docs-only). Now canonical: CCR-20260725-ANALYSIS-01 Task 9/10 wire pre-freeze + canonical syncs S1-S5 (06-data-model.md / 10-api-and-events.md); CCR-20260725-GUEST-01 recorded as withdrawn adjudication (evidence retained; GUEST-02 verbatim transcription now unblocked because the guest integration record is on main). Merge conflicts confined to HEAD/HISTORY; resolved append-only preserving all lane records; zero product code.
-- In-flight (NOT merged here): task-11 phase 0 shell Sessions A (b358706) + B (3d68730), ready_for_qa = YES, QA pending; task-10 lens validators r1 (fac61e0) + QA battery (622f43b), QA verdict handoff not yet recorded. Investigation 3 (Task 11 Session B status) cancelled by principal: Session B reported complete directly; the missing decision-case list read-only route is handled by an honest empty state + disclosure, non-blocking.
-- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Status: addendum A1 authored, pending push (2026-07-25, Asia/Shanghai).
+- Branch: `codex/ccr-analysis-01-addendum-a1`, parent = main @ `4508b3059e1a71f62f90bdabcfb7a36cfc50cac4` (live ls-remote verified).
+- Mode: docs-only lane. No code/migration/test/packages/contracts touched; no rebase/amend/force-push.
+- Scope: 1 addendum file (CCR-20260725-ANALYSIS-01-ADDENDUM-A1.md) + 3 canonical text syncs (SA1: 06-data-model.md; SA2+SA3: 10-api-and-events.md) + this HEAD update + HISTORY append + handoff.
+- 10 ruling items adjudicated: A1-1 DB-first IMPLEMENTATION_FREE (enum promotion → A3), A1-2 RunManifest REAFFIRM, A1-3 Heartbeat IMPLEMENTATION_FREE, A1-4 Endpoint mounting DEFERRED-to-A3, A1-5 Idempotency-Key layering NEW (ratified + SA1), A1-6 eventId on fresh success NEW (ratified, already synced via S4), A1-7 Amendment commit-before-raise NEW (ratified + SA2), A1-8 Idempotency race loser replay NEW (ratified + SA3), A1-9 Evidence read paths DEFERRED-to-A3, A1-10 Evidence enums IMPLEMENTATION_FREE (→ A3).
+- Next work should follow push: merge to main via standard no-ff flow per contract-lead protocol.
 - Secret policy: do not record credentials here.

@@ -2799,3 +2799,15 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - In-flight (NOT merged here): task-11 shell A/B b358706/3d68730 (QA pending); task-10 lens validators fac61e0 + QA battery 622f43b (QA verdict handoff not yet recorded).
 - Unblocked next: CCR-20260725-GUEST-02 verbatim transcription (guest integration record now on main); Task 9/10 implementation lanes may consume ANALYSIS-01 from canonical main.
 - No credentials or secret values are recorded here.
+
+## CCR-20260725-ANALYSIS-01 Addendum A1 — 2026-07-25 (Asia/Shanghai)
+
+- Role: Contract/Mainline Lead (contract_lead), docs-only lane.
+- Branch: `codex/ccr-analysis-01-addendum-a1`, parent = main @ `4508b3059e1a71f62f90bdabcfb7a36cfc50cac4` (live ls-remote verified at Gate 0).
+- Trigger: full-chain accumulated pending ruling items consolidated into a single addendum — Task 9 r1 handoff §5-6, r2 QA disclosure (ACCEPT, pending contract ratification), r3 QA hard-assertion-locked fixes, and Task 8 r1 handoff §5.
+- Input evidence: CCR body (main), Task 9 r1 handoff (codex/task-09-analysis-runtime-r1), Task 8 r1 handoff (codex/task-08-evidence-ledger-r1 @ c599030), QA r2+r3 report (codex/qa-task-09-idempotency-wire-r2 @ 78c3ce6), 06-data-model.md / 10-api-and-events.md (main), format precedent CCR-20260724-SIM-01-ADDENDUM-A1.md.
+- 10 ruling items adjudicated: A1-1 DB-first IMPLEMENTATION_FREE (enum promotion → A3), A1-2 RunManifest REAFFIRM, A1-3 Heartbeat IMPLEMENTATION_FREE, A1-4 Endpoint mounting DEFERRED-to-A3, A1-5 Idempotency-Key layering NEW (ratified + SA1), A1-6 eventId on fresh success NEW (ratified, already synced via S4), A1-7 Amendment commit-before-raise NEW (ratified + SA2), A1-8 Idempotency race loser replay NEW (ratified + SA3), A1-9 Evidence read paths DEFERRED-to-A3, A1-10 Evidence enums IMPLEMENTATION_FREE (→ A3).
+- Canonical text syncs: SA1 (06-data-model.md, idempotencyKey layering), SA2 (10-api-and-events.md, amendment timing), SA3 (10-api-and-events.md, idempotency race safety).
+- 4 items requiring A3 code follow-up: A1-1 enum promotion, A1-4 endpoint mounting, A1-9 evidence path CCR+mount, A1-10 evidence enum promotion.
+- ready_for_merge: YES (docs-only; zero code, migration, test, or generated-contract change).
+- No credentials or secret values are recorded here.
