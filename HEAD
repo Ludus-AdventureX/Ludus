@@ -1,9 +1,13 @@
-# Work Log: sim-eng-02 mainline integration - acceptance complete
+# Work Log: idle
 
-- Status: acceptance complete on candidate 4d6dfab8165118b1d267e67564a09e74ea7541bb; publication pending final live re-read + ff-only push.
-- Role: Mainline Audit / Integration Lead (QA executed by Lead this slice under principal governance waiver, recorded in the QA lane and handoff).
-- Topology: 387041d -> 39897e9 kickoff -> 27ddf1e (--no-ff adjudication chain 19f552c: SIM-02A 0289b2e + ENG-02 c8c9167 + adjudication A1) -> 4d6dfab (--no-ff QA exact dc57fe6: fb75b8f -> edaa842 -> d43e36e -> d2ae634 + QA flip). Conflicts confined to HEAD/HISTORY, resolved append-only 3-way; one local mis-resolved merge attempt (36d1049, conflict markers in HEAD) was detected by self-audit, discarded BEFORE any push, and redone cleanly - no remote ever saw it.
-- Byte gates ALL_PASS: 24 QA-exact paths blob-identical to dc57fe6; 7 contract-doc paths blob-identical to 19f552c; strategic_lenses/analyses/agents/workers/apps/web/packages/contracts/scripts/types.py/schemas.py untouched vs main; candidate changed-path set (33) exactly the union of the two chains + lifecycle.
-- Fresh SHA-anchored acceptance (detached 4d6dfab, disposable PG16 @55432, removed after): alembic heads/current = b2c7e9d4a1f6 single head, upgrade + check clean; full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error, exact repeat of QA count); same-db lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; ruff all-pass; packages/contracts git-clean.
-- Next: live re-read remote main (must still be 387041d) -> ff-only -> push -> re-read -> publication archive.
+- Status: idle; sim-eng-02 wave (SIM-02A prerequisites P1/P3 + ENG-02 P2 enforcement + contracts/adjudication + QA) published to remote main and live-verified.
+- Last archived: 2026-07-25 (Asia/Shanghai).
+- Last archive entry: `Archive Sim-ENG-02 Wave Main Publication - 2026-07-25 (Asia/Shanghai)`.
+- Remote main: d69fa54c40834dace5d1dc9d230ea7b18b6b30a4 + this archive commit (live ls-remote verified). Migration head now b2c7e9d4a1f6 (decision_maker_profiles + idempotency_records). Engine now sim-engine-1.1.0 with mandatory profile-aware inputHash.
+- Governance note: QA for this slice was executed by the Mainline Lead under an explicit principal directive (waiver recorded in SIM_ENG_02_PROFILE_ENFORCEMENT_QA_HANDOFF.md and HISTORY). Future slices revert to independent QA unless re-waived.
+- New frozen baselines: full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error); lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK (contracts unchanged this wave).
+- Archive-only now: 0289b2e / c8c9167 / 19f552c (contract chain), fb75b8f / edaa842 / d43e36e / d2ae634 / dc57fe6 (product+QA chain), d69fa54 integration branch; related worktrees retired.
+- Unlocked: SIM-02A I1 (routes/schemas/idempotency flow, Simulation Owner) -> I2 (mounting + contracts regeneration + 10-api P2 doc amendments, Contract Lead) -> I3 (QA). ready_for_public_route = NO until I1/I2/I3 land.
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
