@@ -11,6 +11,22 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 from app.db import Base, get_database_url
+
+# Task 8/9 models live in their own modules but register on the shared Base;
+# import them so the exact-table-set assertion is deterministic regardless of
+# test selection (same pattern as migrations/env.py).
+import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
+import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
+import app.analyses.claims  # noqa: F401  (registers claims + claim_evidence)
+import app.analyses.devils_advocate  # noqa: F401  (registers challenges)
+import app.analyses.quality_gate  # noqa: F401  (registers quality_gate_results)
+import app.reports.models  # noqa: F401  (registers report/export artifacts)
+
+# Task 4/5 companion table registers the same way; importing it here keeps the
+# exact-table-set equality deterministic under any test selection (QA finding
+# F2, codex/qa-task-04-05-backend-r1: co-running any dossiers test used to
+# flip this assertion).
+import app.dossiers.models  # noqa: F401  (registers dossier_version_snapshots)
 from app.models import (
     AnalysisRun,
     CausalGraph,
@@ -104,6 +120,9 @@ def test_core_table_set_and_workspace_scope() -> None:
         "source_spans",
         "simulation_runs",
         "signoff_requests",
+        "decision_records",
+        "decision_reviews",
+        "decision_lifecycle_events",
         # CCR-20260724-Ways-01: persisted five-lens outputs.
         "strategic_lens_artifacts",
         # CCR-20260724-SIM-01: canonical simulation graph contract.
@@ -118,6 +137,28 @@ def test_core_table_set_and_workspace_scope() -> None:
         # CCR-20260724-SIM-02A P1+P3: frozen profiles + idempotency persistence.
         "decision_maker_profiles",
         "idempotency_records",
+        # Task 8: evidence ledger & information quality gateway.
+        "retrieval_tasks",
+        "raw_artifacts",
+        "quality_assessments",
+        "evidence_items",
+        "evidence_relations",
+        # Task 9: persistent deep analysis state machine & worker.
+        "analysis_charters",
+        "analysis_events",
+        "research_packets",
+        "run_intervention_classifications",
+        "run_resolutions",
+        # Task 10: propositions & adversarial arc (claims ledger).
+        "claims",
+        "claim_evidence",
+        "challenges",
+        # Task 10: formal quality gate & report objects.
+        "quality_gate_results",
+        "report_artifacts",
+        "export_artifacts",
+        # Task 4/5: immutable dossier snapshot companion (migration a7c3e9f1b5d8).
+        "dossier_version_snapshots",
     }
     assert set(Base.metadata.tables) == expected
 

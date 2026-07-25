@@ -54,6 +54,7 @@ Idempotency-Key: charter_001_v1_full
 | `GET` | `/api/workspaces/{workspaceId}/cases` | 列出当前 Workspace 的案例 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}` | 读取当前 `DecisionCase`、确认档案版本和 `ArgumentNode[]` 投影 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/versions/{version}` | 读取历史版本 |
+| `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analyses` | 按创建时间倒序列出该 Case 的 AnalysisRun 锚点（CCR-20260726-READ-01；anchor 投影，完整状态仍走 run 状态路由） |
 | `PATCH` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}` | 更新用户确认的结构化档案 |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/messages` | 发送讨论消息并生成候选档案变更 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/candidates` | 读取待审阅 `CandidateRevision` |
@@ -73,6 +74,13 @@ Idempotency-Key: charter_001_v1_full
 | `GET` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses/{artifactId}` | 读取一份精确战略透镜产物 |
 | `POST` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/resolutions` | 分类并追加 resolution，恢复 needs_attention Run |
 | `POST` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/cancel` | 幂等取消 queued/执行中/needs_attention Run |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}` | 读取证据条目详情（EvidenceItemView） |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/quality` | 读取证据质量评估维度 |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/provenance` | 读取证据溯源链（RawArtifact/SourceRecord/Quality） |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/direction` | 读取证据支持/反对方向投影 |
+| `GET` | `/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/same-source-group` | 读取同源独立性分组与独立来源计数贡献 |
+| `GET` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence` | 列出该 Run 的证据条目 |
+| `GET` | `/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence-conflicts` | 列出该 Run 的证据冲突关系 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports` | 按版本/状态分页列出报告 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}` | 读取报告 |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}/exports` | 创建 HTML/PDF 导出 |
@@ -82,6 +90,7 @@ Idempotency-Key: charter_001_v1_full
 | `POST` | `/api/workspaces/{workspaceId}/files` | 上传 Workspace 文件并创建 RawArtifact |
 | `GET` | `/api/workspaces/{workspaceId}/files/{rawArtifactId}` | 鉴权读取上传文件 metadata/content |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations/from-report` | 从 ready 报告生成沙盘 |
+| `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations` | 列出该 Case 的因果图锚点（CCR-20260726-READ-01；graphId/title/currentGraphVersionId/reportArtifactId） |
 | `GET` | `/api/workspaces/{workspaceId}/simulations/{graphId}/versions` | 分页读取图版本历史 |
 | `GET` | `/api/workspaces/{workspaceId}/simulations/{graphId}/versions/{graphVersionId}` | 读取精确图版本 |
 | `POST` | `/api/workspaces/{workspaceId}/simulations/{graphId}/runs` | 运行持久化的 experimental/formal 情景推演 |
@@ -121,6 +130,8 @@ Idempotency-Key: charter_001_v1_full
 `GET /api/auth/csrf` 是匿名可调用的 safe endpoint：服务端生成随机 token，设置非 HttpOnly 的同源 CSRF cookie，并在响应 body 返回相同 token。浏览器在调用 login/register/logout 或任何 Cookie mutation 前，把 token 放入 `X-CSRF-Token`；服务端同时验证精确 `Origin`（缺失时验证同源 `Referer`）并做常量时间比较。
 
 登录成功后服务端创建 `UserSession`，JWT 的 `session_id` 只引用该记录；每次请求检查 session 未撤销、未过期且 `tokenVersion` 有效。退出在数据库中设置 `revokedAt`，再清除 Cookie。Workspace 授权每次从 `WorkspaceMembership` 读取 `owner | member` 与 `capabilities[]`；token 不永久缓存 Workspace 权限。`sign` 还必须在签署事务中再次校验活动 session 与 capability。
+
+CSRF 范围澄清（CCR-20260726-MOUNT-02 M5，收编 MOUNT-01 M8）：在 Cookie session 鉴权下，除 auth Cookie mutation 外，**已认证的 unsafe write 同样携带 CSRF dependency**（同源 double-submit：`X-CSRF-Token` header + 同名 cookie + 精确 `Origin`/同源 `Referer`）。已落实面：simulations `POST /runs`（SIM-02A）与 analyses 七个 unsafe write（charter 创建/PATCH/replacements/confirm、run 创建、resolutions、cancel）。安全读（SSE、run 状态、strategic-lenses、evidence 读面）不携带 CSRF。缺失或验证失败统一返回 403 `CSRF_VALIDATION_FAILED`，且排序在鉴权之后（未认证仍先答 401）。
 
 ## 添加审核目录连接器
 
@@ -364,7 +375,7 @@ POST /api/workspaces/ws_demo/analysis-charters/charter_001/runs
 
 `lensType` 只允许 `porter_five_forces | pre_mortem | counterparty_response_matrix | scenario_planning | meadows_leverage_points`。item 接口返回 `06-data-model.md` 的完整 `StrategicLensArtifact`，包括 resolved reference IDs、`researchRequests` 与 lens-specific `content`。full Run 在进入 `ready` 前必须各有一份 `ready` 产物，报告恰好引用这五个 ID。数据库对 `(workspaceId, analysisRunId, lensType)` 建唯一约束；相同 `contentHash` 的幂等重放返回已有对象，不同哈希返回冲突，重做必须创建 new Run。服务端从 Run 和当前 Workspace 推导所有权，不接受客户端传入 `workspaceId/decisionCaseId/analysisRunId`，跨 Workspace 一律返回 `404`。响应不得包含隐藏思维链、原始 Provider `reasoning_content` 或未清洗的工具结果。
 
-每份产物完成时追加 `agent.task` 类别、`strategic_lens.completed` 类型的 SSE 事件，payload 只包含 `lensArtifactId`、`lensType`、`producerRole`、引用计数和 `contentHash`。事件消费者随后通过上述读取接口获取正文，避免把大型 content 重复写入事件流。
+每份产物完成时追加 `agent.task` 类别、`strategic_lens.completed` 类型的 SSE 事件，payload 只包含 `lensArtifactId`、`lensType`、`producerRole`、`referenceCounts`（与 `StrategicLensArtifactSummary.referenceCounts` 同形）和 `contentHash`，且只能在 artifact 行持久化提交成功后追加（CCR-20260725-ANALYSIS-01）。事件消费者随后通过上述读取接口获取正文，避免把大型 content 重复写入事件流。
 
 ## SSE 事件
 
@@ -421,7 +432,7 @@ data: {"id":"evt_045","sequence":45,"workspaceId":"ws_demo","decisionCaseId":"ca
 }
 ```
 
-事件只使用 `06-data-model.md` 的一套合同：`category` 固定为 `agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`，用于前端分发；`type` 使用同一合同中更具体的领域枚举，例如 `analysis.stage.progressed`、`research.packet.completed` 或 `tool.call.completed`。SSE 的 `event:` 等于 `category`，`data:` 始终是完整 `AnalysisEvent` 信封。SSE 支持 `Last-Event-ID`，浏览器重连后按持久化 `sequence` 从数据库历史继续。
+事件只使用 `06-data-model.md` 的一套合同：`category` 固定为 `agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`，用于前端分发；`type` 使用同一合同中更具体的领域枚举，例如 `analysis.stage.progressed`、`research.packet.completed` 或 `tool.call.completed`。SSE 的 `event:` 等于 `category`，`data:` 始终是完整 `AnalysisEvent` 信封。SSE 支持 `Last-Event-ID`，浏览器重连后按持久化 `sequence` 从数据库历史继续。`sequence` 在单个 `analysisRunId` 事件流内严格单调递增：由服务端在持久化时分配，禁止回退，允许缺口（CCR-20260725-ANALYSIS-01）。
 
 DeepSeek V4 Pro 的 `reasoning_content` 是 Provider 内部 transient 协议字段，不是 API 或事件字段。thinking mode 默认启用；同一 assistant turn 发起 tool call 时，Provider 后续回传工具结果必须在内存中原样带回该字段。它不得出现在响应、SSE、数据库、日志、tool trace、报告或 UI；无 tool call 时立即丢弃，中断后也不恢复。strict tool calls 可在 thinking/non-thinking 使用；JSON Output 空 `content` 视为结构失败并至多执行一次既有修复/重试。
 
@@ -896,6 +907,7 @@ Idempotency-Key: decision_001_review_2026_10_15
 | `ANALYSIS_RUN_NOT_CANCELLABLE` | 409 | ready/blocked Run 不是可取消的活动任务 | 否 |
 | `RUN_AMENDMENT_REQUIRED` | 409 | 输入改变 Charter 冻结字段，禁止原 Run 续跑 | 否，创建 replacement Charter + new Run |
 | `RUN_RESOLUTION_INVALID` | 422 | resolution 超出允许 payload 或引用不在冻结范围 | 否 |
+| `ANALYSIS_TRANSITION_INVALID` | 409 | 请求隐含的 Run 状态迁移不在 canonical 迁移矩阵内，且没有更具体的错误码适用（CCR-20260725-ANALYSIS-01） | 否 |
 | `MODEL_UNAVAILABLE` | 503 | 模型不可用 | 是，可切换或降级 |
 | `SEARCH_UNAVAILABLE` | 503 | 搜索不可用 | 是，可使用缓存或审核 fallback |
 | `CONNECTOR_NOT_ALLOWED` | 403 | Provider 或工具不在审核目录 | 否 |
@@ -935,6 +947,8 @@ Idempotency-Key: decision_001_review_2026_10_15
 | `NEEDS_USER_INPUT` | 409 | 需要人工补充或确认 | 否，等待用户 |
 
 幂等重放不是错误：同一 `Idempotency-Key` 与同一规范化 body 返回原有成功资源和原 HTTP success status，并在响应 `meta.idempotencyReplay=true`；不得用 `ANALYSIS_RUN_ALREADY_ACTIVE` 表示幂等命中。
+
+竞争安全保证（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）：任意连接级竞争下，同一 key + 同一 body 始终重放胜者成功——双 200、恰好一条 resolution 行、败者响应携带 `meta.idempotencyReplay: true`；同一 key 不同 body 仍返回 `IDEMPOTENCY_CONFLICT` 409。
 
 ## 安全错误码补充
 
@@ -994,7 +1008,7 @@ Idempotency-Key: run_research_001_constraint_resolution_01
 
 Provider recovery 只能重试、使用已有缓存，或切换到 Charter `allowedConnectorIds` 中的连接器；不能增加连接器、材料或预算。`planning/retrieving/analyzing/criticizing/synthesizing/validating` 都可进入 `needs_attention`，resolution 只能回到持久化的 `lastResumableStage`，不能回到 `queued` 或由客户端指定阶段。
 
-改变问题、目标、选项、偏好权重、硬约束定义、材料/连接器范围、预算、方法或分析深度时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`，details 包含 `changedFrozenFields` 和 replacement URL。客户端随后调用：
+改变问题、目标、选项、偏好权重、硬约束定义、材料/连接器范围、预算、方法或分析深度时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`——分类与 `analysis.amendment_required` 事件先于 409 响应提交（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）：持久化行在调用方收到错误前已 commit，不因 HTTP 响应状态回滚。details 固定为 `{ "changedFrozenFields": [...], "replacementUrl": "..." }`。客户端随后调用：
 
 ```http
 POST /api/workspaces/ws_demo/analysis-charters/charter_001/replacements
@@ -1015,6 +1029,18 @@ Idempotency-Key: run_research_001_cancel_01
 ```
 
 响应返回 `{ "analysisRunId": "run_research_001", "status": "cancelled", "cancelledAt": "..." }`。取消适用于 queued、六个执行阶段和 needs_attention；重复请求返回同一终态。Worker 在下一安全检查点停止，取消后不能发布新报告/导出，已持久化事件与不可变阶段产物保留。`blocked` 是质量门终态，resolution 与 cancel 都不重开它；重做必须创建新 Run。
+
+## 证据溯源与冲突读取 API
+
+证据读取面由 deep research 管线（Task 8）产出，A3 挂载波次（CCR-20260726-MOUNT-01）将其挂入 canonical 契约。全部为只读 `GET`：使用 `require_workspace_context` 鉴权，不涉及 CSRF 或 `Idempotency-Key`；缺失、外部或跨租户 id 一律返回逐字节一致的 `CASE_NOT_FOUND` 404（反枚举）。wire 形状为 camelCase `CanonicalModel` DTO，`evidenceItemId` 是实体自身 id（非 Case/AnalysisRun 别名）。
+
+- `GET /evidence/{evidenceItemId}` → `{ ok, data: EvidenceItemView }`：证据条目全字段（标题、URL/文件指针、来源域、`sourceGrade`、片段、`sourceRecordId`/`sourceSpanIds`、支持/反对 claim id、`freshnessStatus`、`relevance`、`bias`、`conflictGroupId`、`independentSourceGroupId`、`verdict`+`verdictReasonCodes`、`applicabilityLimits`、`originMode`、`rawArtifactId`、`qualityAssessmentId`）。
+- `GET /evidence/{evidenceItemId}/quality` → `{ ok, data: QualityDimensionsView }`：七项数值维度（authenticity/sourceQuality/relevance/freshness/applicability/independence/extractionReliability）与 `biasFlags[]`、`completenessWarnings[]`、`conflictGroupIds[]`、`verdict`、`reasonCodes[]`、`assessedAt`。
+- `GET /evidence/{evidenceItemId}/provenance` → `{ ok, data: EvidenceProvenanceView }`：`evidenceItemId` + `rawArtifact`（RawArtifactView：kind/mediaType/byteSize/sha256/sourceUrl/originMode/createdAt，不含磁盘路径）+ `sourceRecord`（SourceRecordView 及 `spans[]`）+ `quality`。
+- `GET /evidence/{evidenceItemId}/direction` → `{ ok, data: EvidenceDirectionView }`：`evidenceItemId` + `supportsClaimIds[]` + `contradictsClaimIds[]` + `verdict`。
+- `GET /evidence/{evidenceItemId}/same-source-group` → `{ ok, data: SameSourceGroupView }`：`independentSourceGroupId` + `memberEvidenceItemIds[]` + `independentSourceCountContribution`（同源多篇引用计为一个独立来源）。
+- `GET /analyses/{analysisRunId}/evidence` → `{ ok, data: RunEvidenceListView }`：`analysisRunId` + `items: EvidenceItemView[]`（该 Run 工作区内的证据条目）。
+- `GET /analyses/{analysisRunId}/evidence-conflicts` → `{ ok, data: ConflictListView }`：`analysisRunId` + `conflicts: ConflictRelationView[]`（`fromEvidenceItemId`/`toEvidenceItemId`/`groupId`/`rationale`）。
 
 ## 决策生命周期事件与不可调用能力
 

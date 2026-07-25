@@ -1,26 +1,8 @@
-﻿# Work Log: idle
+# Work Log: chore - explicit UNLICENSED license field (proprietary hardening)
 
-- Status: idle after CCR-ENG-02 profile enforcement fast fix; ready_for_fast_QA=YES.
-- Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive CCR-ENG-02 Profile Enforcement Fast Fix - 2026-07-25 (Asia/Shanghai)`.
-- Role: Simulation/Graph Owner (Fable5).
-- Branch: codex/sim-eng-02-profile-enforcement-fast-fix, sole parent = live-resolved P2 head
-  d43e36eb399900e24ec171c8cf02eff3048cf089 (itself sole-child of edaa8421; main 387041d4 and
-  ENG-02 contract c8c9167b unmoved; fresh worktree; no amend/rebase/force).
-- Delivered: ProfileFingerprint now MANDATORY keyword-only on compute_input_hash and
-  run_simulation (omission = TypeError; explicit None/bare dict = SimulationInputError
-  fail-fast; profile block unconditional - no 1.1.0 missing-profile/legacy/mixed hash mode);
-  sensitivity.py minimal pass-through of the ONE verified fingerprint to base + every
-  sweep/flip-grid run (zero numeric/perturbation/ordering changes); service passes the
-  fingerprint into analyze_sensitivity; Task 12 owner suite fed a fixed deterministic
-  canonical OWNER_FP (zero numeric-input changes); +2 owner probe tests.
-- Fast gates: owner suite 84 passed / 0 failed; four no-profile probes REJECTED as required;
-  sensitivity capture probe = 0 None calls, all fingerprints identical; ruff/compileall/
-  diff-check/conflict/scope clean; services/api/tests, migrations, models/types/schemas,
-  packages/contracts, routes/web all ZERO diff. Full battery deferred to the integration
-  gate per task order (QA-owned no-profile acceptance calls will need the P2 QA flip).
-- Handoff: docs/handoffs/SIM_ENG_02_PROFILE_ENFORCEMENT_FAST_FIX_HANDOFF.md.
-- ready_for_public_route: NO.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
-  replace this idle record before modifying task-owned files.
+- Status: ACTIVE on worktree decision-lab-release-integration-r1; branch codex/chore-license-unlicensed, base = live remote main e178f2bed94a1dd99cc3adc88b9e200fd63cf1e1 (ls-remote verified). No rebase/amend/force.
+- Scope: add "license": "UNLICENSED" to the three workspace package.json files (root, apps/web, packages/contracts) so the npm-convention proprietary marker matches COPYRIGHT / LICENSING.md (All Rights Reserved, no public license granted). Zero dependency, zero code, zero contract change.
+- Adjudication basis: LICENSING.md section 5 forbids adding any open-source LICENSE; "license": "UNLICENSED" is the npm marker for exactly the all-rights-reserved state and was requested by the principal.
+- Gates: JSON validity on all three files; pnpm --dir apps/web test + build (metadata-only change, expected zero effect); git diff --check; scope audit = exactly 3 package.json + lifecycle.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.

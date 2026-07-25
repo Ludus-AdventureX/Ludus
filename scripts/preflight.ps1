@@ -166,7 +166,7 @@ try {
         }
 
         $origin = Invoke-Capture "git" @("remote", "get-url", "origin")
-        if ($origin.exit_code -eq 0 -and (First-NonEmptyLine $origin) -eq "https://github.com/xiayuzizhuo666/Ludus.git") {
+        if ($origin.exit_code -eq 0 -and (First-NonEmptyLine $origin) -eq "https://github.com/Ludus-AdventureX/Ludus.git") {
             Add-Check "git-origin" "PASS" "origin is the approved Ludus remote"
         }
         else {

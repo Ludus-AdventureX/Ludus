@@ -77,6 +77,39 @@
         "title": "ActionItem",
         "type": "object"
       },
+      "AssumptionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assumptionId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Assumptionid",
+            "type": "string"
+          },
+          "observation": {
+            "minLength": 1,
+            "title": "Observation",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "weakened",
+              "falsified",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assumptionId",
+          "status",
+          "observation"
+        ],
+        "title": "AssumptionResult",
+        "type": "object"
+      },
       "AuthSessionData": {
         "additionalProperties": false,
         "properties": {
@@ -121,6 +154,124 @@
         "title": "AuthSessionEnvelope",
         "type": "object"
       },
+      "CandidateConfirmRequest": {
+        "properties": {
+          "baseCaseVersion": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basecaseversion"
+          },
+          "baseDossierVersion": {
+            "minimum": 1.0,
+            "title": "Basedossierversion",
+            "type": "integer"
+          },
+          "statementTypeOverrides": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DossierStatementType"
+            },
+            "title": "Statementtypeoverrides",
+            "type": "object"
+          }
+        },
+        "required": [
+          "baseDossierVersion"
+        ],
+        "title": "CandidateConfirmRequest",
+        "type": "object"
+      },
+      "CandidateRejectRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "CandidateRejectRequest",
+        "type": "object"
+      },
+      "CaseCreateRequest": {
+        "properties": {
+          "decisionQuestion": {
+            "minLength": 1,
+            "title": "Decisionquestion",
+            "type": "string"
+          },
+          "decisionSubjectId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decisionsubjectid"
+          },
+          "initialContext": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initialcontext"
+          }
+        },
+        "required": [
+          "decisionQuestion"
+        ],
+        "title": "CaseCreateRequest",
+        "type": "object"
+      },
+      "CaseMessageRequest": {
+        "properties": {
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "proposeStructuredUpdates": {
+            "default": true,
+            "title": "Proposestructuredupdates",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "CaseMessageRequest",
+        "type": "object"
+      },
+      "CaseOperationalStatus": {
+        "enum": [
+          "ok",
+          "blocked",
+          "needs_attention",
+          "cancelled",
+          "reopened",
+          "archived"
+        ],
+        "title": "CaseOperationalStatus",
+        "type": "string"
+      },
       "CsrfEnvelope": {
         "additionalProperties": false,
         "properties": {
@@ -154,6 +305,20 @@
         ],
         "title": "CsrfTokenData",
         "type": "object"
+      },
+      "DecisionLifecycleStage": {
+        "enum": [
+          "draft",
+          "scoped",
+          "ready",
+          "running",
+          "review",
+          "pending_signoff",
+          "decided",
+          "monitoring"
+        ],
+        "title": "DecisionLifecycleStage",
+        "type": "string"
       },
       "DeepAnalysisRequest": {
         "additionalProperties": false,
@@ -347,6 +512,56 @@
           "provenanceHash"
         ],
         "title": "DeepAnalysisResult",
+        "type": "object"
+      },
+      "DossierStatementType": {
+        "enum": [
+          "fact",
+          "evidence",
+          "assumption",
+          "judgment",
+          "preference",
+          "unknown",
+          "constraint"
+        ],
+        "title": "DossierStatementType",
+        "type": "string"
+      },
+      "ExportCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "html",
+              "pdf"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ExportCreateRequest",
+        "type": "object"
+      },
+      "ExportRetryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "rendererVersion": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendererversion"
+          }
+        },
+        "title": "ExportRetryRequest",
         "type": "object"
       },
       "FormalAnalysisLevel": {
@@ -756,6 +971,23 @@
         "title": "PreRunSourceSpan",
         "type": "object"
       },
+      "QuickAnalysisRequest": {
+        "properties": {
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          }
+        },
+        "title": "QuickAnalysisRequest",
+        "type": "object"
+      },
       "Recommendation": {
         "additionalProperties": false,
         "properties": {
@@ -985,6 +1217,193 @@
           "password"
         ],
         "title": "RegisterRequest",
+        "type": "object"
+      },
+      "ReviewCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "actualOutcomes": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Actualoutcomes",
+            "type": "array"
+          },
+          "assumptionResults": {
+            "items": {
+              "$ref": "#/components/schemas/AssumptionResult"
+            },
+            "title": "Assumptionresults",
+            "type": "array"
+          },
+          "decisionProcessAssessment": {
+            "enum": [
+              "sound",
+              "mixed",
+              "flawed"
+            ],
+            "title": "Decisionprocessassessment",
+            "type": "string"
+          },
+          "executionAssessment": {
+            "enum": [
+              "as_planned",
+              "minor_deviation",
+              "major_deviation",
+              "not_executed"
+            ],
+            "title": "Executionassessment",
+            "type": "string"
+          },
+          "externalChanges": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Externalchanges",
+            "type": "array"
+          },
+          "lessons": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Lessons",
+            "type": "array"
+          },
+          "nextDecisionChanges": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Nextdecisionchanges",
+            "type": "array"
+          },
+          "nextReviewDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextreviewdate"
+          },
+          "notes": {
+            "minLength": 1,
+            "title": "Notes",
+            "type": "string"
+          },
+          "observedIndicatorValues": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Observedindicatorvalues",
+            "type": "object"
+          },
+          "outcome": {
+            "enum": [
+              "on_track",
+              "adjust",
+              "reverse",
+              "close"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "outcomeQuality": {
+            "enum": [
+              "positive",
+              "mixed",
+              "negative",
+              "not_yet_observable"
+            ],
+            "title": "Outcomequality",
+            "type": "string"
+          },
+          "recommendationAdoption": {
+            "enum": [
+              "adopted",
+              "partially_adopted",
+              "not_adopted"
+            ],
+            "title": "Recommendationadoption",
+            "type": "string"
+          },
+          "reviewDate": {
+            "format": "date",
+            "title": "Reviewdate",
+            "type": "string"
+          },
+          "sourceAnalysisRunId": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Sourceanalysisrunid",
+            "type": "string"
+          },
+          "sourceCaseVersion": {
+            "exclusiveMinimum": 0.0,
+            "title": "Sourcecaseversion",
+            "type": "integer"
+          },
+          "sourceCausalGraphVersionId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcecausalgraphversionid"
+          },
+          "sourceSimulationRunId": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesimulationrunid"
+          },
+          "thresholdBreaches": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Thresholdbreaches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sourceCaseVersion",
+          "sourceAnalysisRunId",
+          "reviewDate",
+          "outcome",
+          "recommendationAdoption",
+          "executionAssessment",
+          "decisionProcessAssessment",
+          "outcomeQuality",
+          "observedIndicatorValues",
+          "thresholdBreaches",
+          "externalChanges",
+          "actualOutcomes",
+          "assumptionResults",
+          "lessons",
+          "nextDecisionChanges",
+          "notes"
+        ],
+        "title": "ReviewCreateRequest",
         "type": "object"
       },
       "RunFrozenSourceRecord": {
@@ -1229,6 +1648,19 @@
           "expiresAt"
         ],
         "title": "SessionSummary",
+        "type": "object"
+      },
+      "SignoffCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/SignoffPayload"
+          }
+        },
+        "required": [
+          "payload"
+        ],
+        "title": "SignoffCreateRequest",
         "type": "object"
       },
       "SignoffPayload": {
@@ -1731,6 +2163,77 @@
         "title": "SimulationRun",
         "type": "object"
       },
+      "SimulationRunCreateRequest": {
+        "additionalProperties": false,
+        "description": "Frozen POST body (§5): anchors only; every authority field is server-owned.",
+        "properties": {
+          "decisionMakerProfileId": {
+            "format": "uuid",
+            "title": "Decisionmakerprofileid",
+            "type": "string"
+          },
+          "decisionMakerProfileVersion": {
+            "minimum": 1.0,
+            "title": "Decisionmakerprofileversion",
+            "type": "integer"
+          },
+          "epsilon": {
+            "default": 0.001,
+            "exclusiveMinimum": 0.0,
+            "maximum": 0.1,
+            "title": "Epsilon",
+            "type": "number"
+          },
+          "graphVersionId": {
+            "format": "uuid",
+            "title": "Graphversionid",
+            "type": "string"
+          },
+          "maxSteps": {
+            "default": 12,
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Maxsteps",
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SimulationMode"
+          },
+          "nodeOverrides": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Nodeoverrides",
+            "type": "object"
+          },
+          "scenarioVersionId": {
+            "format": "uuid",
+            "title": "Scenarioversionid",
+            "type": "string"
+          },
+          "scoreDefinitionId": {
+            "format": "uuid",
+            "title": "Scoredefinitionid",
+            "type": "string"
+          },
+          "strategyVersionId": {
+            "format": "uuid",
+            "title": "Strategyversionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "graphVersionId",
+          "strategyVersionId",
+          "scenarioVersionId",
+          "scoreDefinitionId",
+          "decisionMakerProfileId",
+          "decisionMakerProfileVersion"
+        ],
+        "title": "SimulationRunCreateRequest",
+        "type": "object"
+      },
       "SimulationTopDriver": {
         "additionalProperties": false,
         "properties": {
@@ -2105,6 +2608,32 @@
           }
         },
         "title": "SourceSpanLocator",
+        "type": "object"
+      },
+      "SubjectCreateRequest": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SubjectCreateRequest",
         "type": "object"
       },
       "SystemRecommendation": {
@@ -2691,6 +3220,3210 @@
         "summary": "Read Session",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}": {
+      "get": {
+        "description": "Read the current AnalysisRun status (10-api §AnalysisRun 状态).",
+        "operationId": "get_analysis_run_api_workspaces__workspaceId__analyses__analysisRunId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Analysis Run Api Workspaces  Workspaceid  Analyses  Analysisrunid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analysis Run"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/cancel": {
+      "post": {
+        "operationId": "post_run_cancel_api_workspaces__workspaceId__analyses__analysisRunId__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Run Cancel Api Workspaces  Workspaceid  Analyses  Analysisrunid  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Run Cancel"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/events": {
+      "get": {
+        "operationId": "stream_run_events_api_workspaces__workspaceId__analyses__analysisRunId__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Run Events"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence": {
+      "get": {
+        "operationId": "list_run_evidence_api_workspaces__workspaceId__analyses__analysisRunId__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Run Evidence Api Workspaces  Workspaceid  Analyses  Analysisrunid  Evidence Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Run Evidence"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/evidence-conflicts": {
+      "get": {
+        "operationId": "list_run_conflicts_api_workspaces__workspaceId__analyses__analysisRunId__evidence_conflicts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Run Conflicts Api Workspaces  Workspaceid  Analyses  Analysisrunid  Evidence Conflicts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Run Conflicts"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/resolutions": {
+      "post": {
+        "operationId": "post_run_resolution_api_workspaces__workspaceId__analyses__analysisRunId__resolutions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Post Run Resolution Api Workspaces  Workspaceid  Analyses  Analysisrunid  Resolutions Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Run Resolution"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses": {
+      "get": {
+        "description": "List the run's ready strategic-lens artifacts in canonical order.",
+        "operationId": "list_run_strategic_lenses_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Run Strategic Lenses Api Workspaces  Workspaceid  Analyses  Analysisrunid  Strategic Lenses Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Run Strategic Lenses"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses/{artifactId}": {
+      "get": {
+        "description": "Read one ready strategic-lens artifact (full detail).",
+        "operationId": "get_run_strategic_lens_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses__artifactId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Run Strategic Lens Api Workspaces  Workspaceid  Analyses  Analysisrunid  Strategic Lenses  Artifactid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Strategic Lens"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}": {
+      "patch": {
+        "description": "Edit a draft charter in place (confirmed/superseded reject with 409).",
+        "operationId": "patch_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Analysis Charter Api Workspaces  Workspaceid  Analysis Charters  Charterid  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Analysis Charter"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/confirm": {
+      "post": {
+        "description": "Freeze a charter (draft -> awaiting_confirmation -> confirmed).",
+        "operationId": "confirm_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Confirm Analysis Charter Api Workspaces  Workspaceid  Analysis Charters  Charterid  Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Analysis Charter"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/replacements": {
+      "post": {
+        "description": "Clone a confirmed charter into a new draft carrying the amendment.",
+        "operationId": "create_charter_replacement_api_workspaces__workspaceId__analysis_charters__charterId__replacements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Charter Replacement"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/runs": {
+      "post": {
+        "description": "Create a queued Run from a confirmed charter (Idempotency-Key header).",
+        "operationId": "create_analysis_run_api_workspaces__workspaceId__analysis_charters__charterId__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Analysis Run"
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases": {
+      "get": {
+        "operationId": "list_cases_api_workspaces__workspaceId__cases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DecisionLifecycleStage"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "operationalStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseOperationalStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Operationalstatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Cases Api Workspaces  Workspaceid  Cases Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Cases",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      },
+      "post": {
+        "operationId": "create_case_api_workspaces__workspaceId__cases_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Case Api Workspaces  Workspaceid  Cases Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Case",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}": {
+      "get": {
+        "operationId": "read_case_api_workspaces__workspaceId__cases__decisionCaseId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Case Api Workspaces  Workspaceid  Cases  Decisioncaseid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Case",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analyses": {
+      "get": {
+        "description": "Run-anchor list for one decision case (CCR-20260726-READ-01 §1).",
+        "operationId": "list_case_analysis_runs_api_workspaces__workspaceId__cases__decisionCaseId__analyses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Case Analysis Runs Api Workspaces  Workspaceid  Cases  Decisioncaseid  Analyses Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Case Analysis Runs"
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analysis-charters": {
+      "post": {
+        "description": "Create a draft charter from the method-route result (10-api §方法路由).",
+        "operationId": "create_analysis_charter_api_workspaces__workspaceId__cases__decisionCaseId__analysis_charters_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Analysis Charter"
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/candidates": {
+      "get": {
+        "operationId": "list_candidates_api_workspaces__workspaceId__cases__decisionCaseId__candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Candidates Api Workspaces  Workspaceid  Cases  Decisioncaseid  Candidates Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Candidates",
+        "tags": [
+          "workspaces",
+          "dossiers"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/candidates/{candidateId}/confirm": {
+      "post": {
+        "operationId": "confirm_candidate_api_workspaces__workspaceId__cases__decisionCaseId__candidates__candidateId__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidateId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidateid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Confirm Candidate Api Workspaces  Workspaceid  Cases  Decisioncaseid  Candidates  Candidateid  Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Candidate",
+        "tags": [
+          "workspaces",
+          "dossiers"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/candidates/{candidateId}/reject": {
+      "post": {
+        "operationId": "reject_candidate_api_workspaces__workspaceId__cases__decisionCaseId__candidates__candidateId__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "candidateId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidateid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CandidateRejectRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reject Candidate Api Workspaces  Workspaceid  Cases  Decisioncaseid  Candidates  Candidateid  Reject Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Candidate",
+        "tags": [
+          "workspaces",
+          "dossiers"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/decisions": {
+      "get": {
+        "operationId": "list_case_decisions_api_workspaces__workspaceId__cases__decisionCaseId__decisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Case Decisions Api Workspaces  Workspaceid  Cases  Decisioncaseid  Decisions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Case Decisions",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/messages": {
+      "post": {
+        "operationId": "post_case_message_api_workspaces__workspaceId__cases__decisionCaseId__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Case Message Api Workspaces  Workspaceid  Cases  Decisioncaseid  Messages Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Case Message",
+        "tags": [
+          "workspaces",
+          "conversations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports": {
+      "get": {
+        "operationId": "list_case_reports_api_workspaces__workspaceId__cases__decisionCaseId__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "ready"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Case Reports Api Workspaces  Workspaceid  Cases  Decisioncaseid  Reports Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Case Reports",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}": {
+      "get": {
+        "operationId": "read_case_report_api_workspaces__workspaceId__cases__decisionCaseId__reports__reportId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reportid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Case Report Api Workspaces  Workspaceid  Cases  Decisioncaseid  Reports  Reportid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Case Report",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}/exports": {
+      "post": {
+        "operationId": "create_report_export_api_workspaces__workspaceId__cases__decisionCaseId__reports__reportId__exports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reportid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Report Export",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/signoff-requests": {
+      "post": {
+        "operationId": "create_signoff_request_api_workspaces__workspaceId__cases__decisionCaseId__signoff_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignoffCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Signoff Request Api Workspaces  Workspaceid  Cases  Decisioncaseid  Signoff Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Signoff Request",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations": {
+      "get": {
+        "description": "Case→graph anchor list (CCR-20260726-READ-01 §2).\n\nAnchors only — but COMPLETE for the SIM-02A run request: per graph the\nlatest strategy/scenario/score version summaries ride along, and the\ncase-visible decision-maker profiles ship at the top level, so a client\ncan assemble the full run-anchor set without any extra surface.",
+        "operationId": "list_case_simulation_anchors_api_workspaces__workspaceId__cases__decisionCaseId__simulations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Case Simulation Anchors Api Workspaces  Workspaceid  Cases  Decisioncaseid  Simulations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Case Simulation Anchors",
+        "tags": [
+          "workspaces",
+          "simulations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/versions/{version}": {
+      "get": {
+        "operationId": "read_case_version_api_workspaces__workspaceId__cases__decisionCaseId__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Case Version Api Workspaces  Workspaceid  Cases  Decisioncaseid  Versions  Version  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Case Version",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/conversations/{conversationId}/quick-analyses": {
+      "post": {
+        "operationId": "create_quick_analysis_api_workspaces__workspaceId__conversations__conversationId__quick_analyses_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversationid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/QuickAnalysisRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Quick Analysis Api Workspaces  Workspaceid  Conversations  Conversationid  Quick Analyses Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Quick Analysis",
+        "tags": [
+          "workspaces",
+          "conversations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/decisions/{decisionId}": {
+      "get": {
+        "operationId": "read_decision_api_workspaces__workspaceId__decisions__decisionId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisionid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Decision Api Workspaces  Workspaceid  Decisions  Decisionid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Decision",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/decisions/{decisionId}/reviews": {
+      "get": {
+        "operationId": "list_decision_reviews_api_workspaces__workspaceId__decisions__decisionId__reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisionid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Decision Reviews Api Workspaces  Workspaceid  Decisions  Decisionid  Reviews Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Decision Reviews",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      },
+      "post": {
+        "operationId": "create_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisionid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Decision Review Api Workspaces  Workspaceid  Decisions  Decisionid  Reviews Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Decision Review",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/decisions/{decisionId}/reviews/{reviewId}": {
+      "get": {
+        "operationId": "read_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews__reviewId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisionid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reviewid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Decision Review Api Workspaces  Workspaceid  Decisions  Decisionid  Reviews  Reviewid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Decision Review",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}": {
+      "get": {
+        "operationId": "get_evidence_detail_api_workspaces__workspaceId__evidence__evidenceItemId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Detail Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Detail"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/direction": {
+      "get": {
+        "operationId": "get_evidence_direction_api_workspaces__workspaceId__evidence__evidenceItemId__direction_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Direction Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Direction Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Direction"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/provenance": {
+      "get": {
+        "operationId": "get_evidence_provenance_api_workspaces__workspaceId__evidence__evidenceItemId__provenance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Provenance Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Provenance Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Provenance"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/quality": {
+      "get": {
+        "operationId": "get_evidence_quality_api_workspaces__workspaceId__evidence__evidenceItemId__quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Quality Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Quality Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Evidence Quality"
+      }
+    },
+    "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}/same-source-group": {
+      "get": {
+        "operationId": "get_same_source_group_api_workspaces__workspaceId__evidence__evidenceItemId__same_source_group_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidenceItemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidenceitemid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Same Source Group Api Workspaces  Workspaceid  Evidence  Evidenceitemid  Same Source Group Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Same Source Group"
+      }
+    },
+    "/api/workspaces/{workspaceId}/exports/{exportArtifactId}": {
+      "get": {
+        "operationId": "read_export_artifact_api_workspaces__workspaceId__exports__exportArtifactId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportArtifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exportartifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Export Artifact Api Workspaces  Workspaceid  Exports  Exportartifactid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Export Artifact",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/exports/{exportArtifactId}/content": {
+      "get": {
+        "operationId": "read_export_content_api_workspaces__workspaceId__exports__exportArtifactId__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportArtifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exportartifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Export Content",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/exports/{exportArtifactId}/retry": {
+      "post": {
+        "operationId": "retry_export_artifact_api_workspaces__workspaceId__exports__exportArtifactId__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportArtifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exportartifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retry Export Artifact Api Workspaces  Workspaceid  Exports  Exportartifactid  Retry Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Export Artifact",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}": {
+      "get": {
+        "operationId": "read_signoff_request_api_workspaces__workspaceId__signoff_requests__signoffRequestId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signoffRequestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signoffrequestid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Signoff Request Api Workspaces  Workspaceid  Signoff Requests  Signoffrequestid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Signoff Request",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}/nonce-rotations": {
+      "post": {
+        "operationId": "rotate_signoff_nonce_api_workspaces__workspaceId__signoff_requests__signoffRequestId__nonce_rotations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signoffRequestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signoffrequestid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rotate Signoff Nonce Api Workspaces  Workspaceid  Signoff Requests  Signoffrequestid  Nonce Rotations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate Signoff Nonce",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}/sign": {
+      "post": {
+        "operationId": "sign_signoff_request_api_workspaces__workspaceId__signoff_requests__signoffRequestId__sign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signoffRequestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Signoffrequestid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignoffSignCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sign Signoff Request Api Workspaces  Workspaceid  Signoff Requests  Signoffrequestid  Sign Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sign Signoff Request",
+        "tags": [
+          "workspaces",
+          "decisions"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/runs": {
+      "post": {
+        "description": "POST run (§5): membership + contribute + CSRF + Idempotency-Key required.",
+        "operationId": "create_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "graphId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRunCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Simulation Run",
+        "tags": [
+          "workspaces",
+          "simulations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/runs/{simulationRunId}": {
+      "get": {
+        "description": "GET replay (§6): active membership only; byte-equal frozen inputs + results.",
+        "operationId": "get_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs__simulationRunId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "graphId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "simulationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Simulationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Simulation Run Api Workspaces  Workspaceid  Simulations  Graphid  Runs  Simulationrunid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Simulation Run",
+        "tags": [
+          "workspaces",
+          "simulations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/versions": {
+      "get": {
+        "description": "Paged graph-version history, newest first (canonical 10-api row).",
+        "operationId": "list_graph_versions_api_workspaces__workspaceId__simulations__graphId__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "graphId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Graph Versions Api Workspaces  Workspaceid  Simulations  Graphid  Versions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Graph Versions",
+        "tags": [
+          "workspaces",
+          "simulations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/versions/{graphVersionId}": {
+      "get": {
+        "description": "Exact immutable graph version with nodes and edges (canonical row).",
+        "operationId": "get_graph_version_api_workspaces__workspaceId__simulations__graphId__versions__graphVersionId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "graphId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "graphVersionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphversionid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Graph Version Api Workspaces  Workspaceid  Simulations  Graphid  Versions  Graphversionid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Graph Version",
+        "tags": [
+          "workspaces",
+          "simulations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/subjects": {
+      "post": {
+        "operationId": "create_subject_api_workspaces__workspaceId__subjects_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Subject Api Workspaces  Workspaceid  Subjects Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Subject",
+        "tags": [
+          "workspaces",
+          "dossiers"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/subjects/{subjectId}": {
+      "get": {
+        "operationId": "read_subject_api_workspaces__workspaceId__subjects__subjectId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subjectId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subjectid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Subject Api Workspaces  Workspaceid  Subjects  Subjectid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Subject",
+        "tags": [
+          "workspaces",
+          "dossiers"
         ]
       }
     },

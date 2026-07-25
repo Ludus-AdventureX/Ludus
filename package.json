@@ -2,6 +2,7 @@
   "name": "decision-lab",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "description": "Ludus AI-native decision operating system",
   "packageManager": "pnpm@9.14.4",
   "engines": {
@@ -18,7 +19,7 @@
   },
   "pnpm": {
     "overrides": {
-      "postcss": "8.5.10",
+      "postcss": "8.5.18",
       "sharp": "0.35.3"
     }
   }

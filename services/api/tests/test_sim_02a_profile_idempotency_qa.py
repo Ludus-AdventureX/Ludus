@@ -8,7 +8,8 @@ authority with an INDEPENDENT hashlib re-derivation, pg_catalog shape of the
 frozen run->profile FK (convalidated + ON DELETE RESTRICT), service-side
 riskTolerance authority end to end, engine-not-run precedence for profile scope
 denials, the exact idempotency persistence schema (no runtime flow, no route),
-and the accepted-pending P2 engine-hash gap pinned as current behavior.
+and the CCR-ENG-02 profile-aware engine hash locked as a permanent green
+regression (flipped from the former accepted-pending P2 pin).
 
 Owner seeding helpers are loaded by file path (the owner tests directory is
 not a package); loading them does not modify any owner file.
@@ -37,7 +38,6 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 import app.simulations.engine as engine_module
-import app.simulations.repository as repository_module
 import app.simulations.service as service_module
 from app.db import Base, get_database_url
 from app.models import DecisionMakerProfile, IdempotencyRecord, SimulationRun as SimulationRunRow
@@ -506,37 +506,45 @@ async def test_idempotency_exact_schema_scope_and_constraints(session) -> None:
 
 
 def test_no_idempotency_runtime_flow_and_public_route_stays_blocked() -> None:
-    # P3 is persistence only: no header parsing, replay, conflict, or
-    # concurrency flow anywhere in the simulations package.
-    for module in (service_module, repository_module):
-        source = inspect.getsource(module)
-        assert "idempotency" not in source.lower(), module.__name__
-    # No route surface exists: no simulations routes module, nothing mounted.
-    assert importlib.util.find_spec("app.simulations.routes") is None
+    # I1/I2 landed (SIM-02A run API + Contract Lead mount): flipped from the
+    # P3 persistence-only pin to positive assertions on the shipped surface.
+    # The runtime idempotency flow lives in app.simulations.idempotency and is
+    # driven by the routes module, not by service/repository internals.
+    assert importlib.util.find_spec("app.simulations.idempotency") is not None
+    assert importlib.util.find_spec("app.simulations.routes") is not None
     import app.main as main_module
     import app.tenancy.routes as tenancy_routes
 
-    assert "simulation" not in inspect.getsource(main_module).lower()
-    assert "simulation" not in inspect.getsource(tenancy_routes).lower()
+    # Mounted under workspace_router (tenancy guard) per contract §10. FastAPI
+    # keeps included routers lazy (_IncludedRouter), so assert on the OpenAPI
+    # path catalog rather than app.routes.
+    assert "simulation" in inspect.getsource(tenancy_routes).lower()
+    app_paths = set(main_module.app.openapi().get("paths", {}))
+    assert (
+        "/api/workspaces/{workspaceId}/simulations/{graphId}/runs" in app_paths
+    )
+    assert (
+        "/api/workspaces/{workspaceId}/simulations/{graphId}/runs/{simulationRunId}"
+        in app_paths
+    )
 
 
 # ---------------------------------------------------------------------------
-# G: P2 (engine hash) is an accepted pending dependency, not regressed
+# G: P2 (engine hash) delivered - CCR-ENG-02 behavior locked as permanent green
 # ---------------------------------------------------------------------------
 
 
 async def test_p2_engine_hash_gap_is_pinned_pending_dependency(session) -> None:
-    # Engine untouched by this slice: version pinned, hash payload unchanged,
-    # profile identity/content hash NOT in the hash source yet.
-    assert engine_module.ENGINE_VERSION == "sim-engine-1.0.0"
+    # CCR-ENG-02 landed (adjudication A1 fix d2ae634): version bumped, hash
+    # payload carries the mandatory profile block sourced from the verified row.
+    assert engine_module.ENGINE_VERSION == "sim-engine-1.1.0"
     hash_source = inspect.getsource(engine_module.compute_input_hash)
-    assert "profile" not in hash_source.lower()
-    assert "content_hash" not in hash_source and "contentHash" not in hash_source
+    assert "profile" in hash_source.lower()
+    assert "content_hash" in hash_source or "contentHash" in hash_source
 
-    # Pinned CURRENT behavior (contract §3 gap): two different frozen profiles
-    # with the SAME riskTolerance still produce the SAME inputHash. CCR-ENG-02
-    # MUST flip this assertion together with the ENGINE_VERSION bump; until
-    # then the public POST route stays blocked (ready_for_public_route = NO).
+    # FLIPPED assertion (former pinned gap): two different frozen profiles with
+    # the SAME riskTolerance MUST now produce DIFFERENT inputHashes; identity is
+    # witnessed by the nested profile block (id/version/contentHash).
     world = await seed_world(session, f"qa02a-p2-{uuid4().hex[:6]}")
     service = SimulationRunService(session)
     baseline = await service.run_and_record(world.context, request_for(world))
@@ -554,4 +562,6 @@ async def test_p2_engine_hash_gap_is_pinned_pending_dependency(session) -> None:
         world.context, request_for(world, decision_maker_profile_id=twin_profile)
     )
     assert twin.decision_maker_profile_id != baseline.decision_maker_profile_id
-    assert twin.input_hash == baseline.input_hash
+    assert twin.input_hash != baseline.input_hash
+    assert baseline.engine_version == "sim-engine-1.1.0"
+    assert twin.engine_version == "sim-engine-1.1.0"

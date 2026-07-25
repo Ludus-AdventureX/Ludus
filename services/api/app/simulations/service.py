@@ -13,13 +13,15 @@ for same-tenant contract violations; ``SQLAlchemyError`` never leaks to callers.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models import IdempotencyRecord as IdempotencyRecordRow
 from app.models import SimulationRun as SimulationRunRow
 from app.simulations.schemas import SimulationRun as SimulationRunWire
 from app.tenancy.context import WorkspaceContext
@@ -40,12 +42,13 @@ from .assembly import (
     assemble_strategy,
 )
 from .domain import OptionScore, TopDriver
-from .engine import assert_authorization, run_simulation
+from .engine import assert_authorization, recommend_option, run_simulation
 from .errors import (
     GraphScopeMismatchError,
     SimulationPersistenceError,
     simulation_scope_not_found,
 )
+from .idempotency import IdempotencyRaceError, is_idempotency_unique_violation
 from .repository import SimulationInputRepository
 from .sensitivity import analyze_sensitivity
 
@@ -206,9 +209,11 @@ class SimulationRunService:
         }
         return assembled, row_refs
 
-    async def run_and_record(
+    async def _execute_run(
         self, context: WorkspaceContext, request: SimulationRunRequest
-    ) -> SimulationRunView:
+    ) -> tuple[SimulationRunRow, SimulationRunView]:
+        """Assemble + run the pure engine; build the row and view WITHOUT persisting."""
+
         assembled, row_refs = await self._load_frozen_input(context, request)
         overrides = dict(request.node_overrides or {})
         risk_tolerance = row_refs["risk_tolerance"]
@@ -321,16 +326,7 @@ class SimulationRunService:
             created_at=created_at,
         )
 
-        try:
-            await self._repository.insert_simulation_run(row)
-            await self._db.commit()
-        except SQLAlchemyError as exc:
-            await self._db.rollback()
-            raise SimulationPersistenceError(
-                "persisting the simulation run failed; the transaction was rolled back"
-            ) from exc
-
-        return SimulationRunView(
+        view = SimulationRunView(
             id=run_id,
             workspace_id=context.workspace_id,
             decision_case_id=request.decision_case_id,
@@ -359,3 +355,118 @@ class SimulationRunService:
             origin_modes=tuple(row_refs["origin_modes"]),
             created_at=created_at,
         )
+        return row, view
+
+    async def _persist_run(
+        self, row: SimulationRunRow, record: IdempotencyRecordRow | None
+    ) -> None:
+        """Commit the run row (and its idempotency record) in ONE transaction.
+
+        CCR-SIM-02A §4.4: on the run route no run row may exist without its
+        idempotency record and vice versa; a lost unique-constraint race
+        surfaces as ``IdempotencyRaceError`` after a full rollback.
+        """
+
+        try:
+            await self._repository.insert_simulation_run(row)
+            if record is not None:
+                await self._repository.insert_idempotency_record(record)
+            await self._db.commit()
+        except IntegrityError as exc:
+            await self._db.rollback()
+            if record is not None and is_idempotency_unique_violation(exc):
+                # Lost the concurrent unique-constraint race (CCR-SIM-02A §4.5):
+                # nothing was persisted here; the caller replays the winner.
+                raise IdempotencyRaceError(
+                    "a concurrent request committed this idempotency key first"
+                ) from exc
+            raise SimulationPersistenceError(
+                "persisting the simulation run failed; the transaction was rolled back"
+            ) from exc
+        except SQLAlchemyError as exc:
+            await self._db.rollback()
+            raise SimulationPersistenceError(
+                "persisting the simulation run failed; the transaction was rolled back"
+            ) from exc
+
+    async def run_and_record(
+        self, context: WorkspaceContext, request: SimulationRunRequest
+    ) -> SimulationRunView:
+        row, view = await self._execute_run(context, request)
+        await self._persist_run(row, None)
+        return view
+
+    async def run_and_record_idempotent(
+        self,
+        context: WorkspaceContext,
+        request: SimulationRunRequest,
+        build_record: Callable[[SimulationRunView], IdempotencyRecordRow],
+    ) -> tuple[SimulationRunView, IdempotencyRecordRow]:
+        """Run the engine, then commit run + idempotency record atomically (§4.4).
+
+        ``build_record`` receives the computed view so the caller can freeze the
+        terminal status/kind (§7) into the record before anything is persisted.
+        """
+
+        row, view = await self._execute_run(context, request)
+        record = build_record(view)
+        await self._persist_run(row, record)
+        return view, record
+
+    async def get_run(
+        self, context: WorkspaceContext, graph_id: UUID, simulation_run_id: UUID
+    ) -> SimulationRunView:
+        """Three-anchor replay read (§6); every miss is the uniform 404."""
+
+        row = await self._repository.get_simulation_run(
+            context.workspace_id, graph_id, simulation_run_id
+        )
+        if row is None:
+            raise simulation_scope_not_found()
+        return run_view_from_row(row)
+
+
+def run_view_from_row(row: SimulationRunRow) -> SimulationRunView:
+    """Rebuild the immutable service view from one persisted run row.
+
+    ``recommended_option_id`` is not persisted: it is re-derived through the
+    engine's own pure ``recommend_option`` over the frozen option scores, so
+    POST and GET projections can never disagree.
+    """
+
+    option_scores = tuple(
+        OptionScore(option_id=entry["optionId"], score=entry["score"])
+        for entry in row.option_scores
+    )
+    return SimulationRunView(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        decision_case_id=row.decision_case_id,
+        graph_id=row.graph_id,
+        graph_version_id=row.graph_version_id,
+        strategy_version_id=row.strategy_version_id,
+        scenario_version_id=row.scenario_version_id,
+        score_definition_id=row.score_definition_id,
+        score_definition_version=row.score_definition_version,
+        decision_maker_profile_id=row.decision_maker_profile_id,
+        decision_maker_profile_version=row.decision_maker_profile_version,
+        risk_tolerance=row.risk_tolerance,
+        engine_version=row.engine_version,
+        scenario_id=row.scenario_id,
+        simulation_mode=row.simulation_mode,
+        epsilon=row.epsilon,
+        max_steps=row.max_steps,
+        steps=row.steps,
+        input_hash=row.input_hash,
+        node_results=dict(row.node_results),
+        option_scores=option_scores,
+        top_drivers=tuple(
+            TopDriver(node_id=entry["nodeId"], score_delta=entry["scoreDelta"])
+            for entry in row.top_drivers
+        ),
+        recommendation_shift=row.recommendation_shift,
+        recommended_option_id=recommend_option(option_scores, row.convergence_status),
+        convergence_status=row.convergence_status,
+        origin_modes=tuple(row.origin_modes),
+        created_at=row.created_at,
+    )
