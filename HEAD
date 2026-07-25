@@ -1,12 +1,11 @@
-# Work Log: idle
+# Work Log: CCR-ENG-02 implementation adjudication A1
 
-- Status: idle; simulation repository/service r1 published to remote main and live-verified.
-- Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive Simulation Repository/Service R1 Main Publication - 2026-07-25 (Asia/Shanghai)`.
-- Remote main: 82b6180784caf3065a2f903144718dbff61ddacf + this archive commit (live ls-remote verified; tenant-scoped simulation repository/service + Addendum A1 contract adjudication on main; migration head unchanged a3f8c2d47e19).
-- Stage: Simulation Repository/Service Foundation Complete (post Canonical Simulation Graph Foundation).
-- Archive-only now: codex/ccr-sim-01-addendum-a1 (b28dda6), codex/task-simulation-repository-service-r1 (7844a16), codex/task-simulation-repository-service-r1-doc-refresh (9cc4e87), codex/qa-simulation-repository-service-r1 (a2cc987), codex/qa-simulation-repository-service-r1-contract-closure (f12bea6), codex/simulation-repository-service-integration-r1 (82b6180).
-- Unlocked: CCR-SIM-02 (routes/API contract; must keep both fail-closed stable errors score_constraint_operator_unsupported and strategy_edge_gating_unsupported) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED pending its lane's controlled push and QA.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Status: adjudication complete on codex/ccr-eng-02-implementation-adjudication-a1 (base = ENG-02 contract c8c9167). Verdict: PRODUCT_FIX_REQUIRED. TEXT-ONLY: no product code, tests, migrations, contracts, or scripts touched; read-only audit via git show at exact SHAs.
+- Role: Contract/Mainline Lead - ENG-02 Implementation Conformance Adjudicator.
+- Refs (all live ls-remote verified; main NOT advanced): main 387041d40442faf16557b266ef3f844b7af8fb69; SIM-02A contract 0289b2e; ENG-02 contract c8c9167b219fa8aa06bf9769776f49706f43b219; P2 parent edaa8421c330de7cfe02a53c1e38574533e99c48; exact full P2 product SHA d43e36eb399900e24ec171c8cf02eff3048cf089 (single direct parent = edaa842 proven; short SHA never used as authority).
+- Findings at d43e36e: compute_input_hash/run_simulation accept keyword-only profile=None and SUCCEED producing sim-engine-1.1.0 hashes WITHOUT the profile block; sensitivity.analyze_sensitivity has no profile parameter so base + every sweep run without a fingerprint; service passes the fingerprint to the persisted run but cannot pass it into sensitivity; Task 12 owner engine tests (17 call sites, zero profile refs) are the only beneficiaries of the optional default.
+- Verdicts: no-mixed-mode = PROFILE_REQUIRED_FOR_ALL_ENGINE_1_1_HASHES; sensitivity = EVERY_BASE_AND_SWEEP_RUN_MUST_RECEIVE_SAME_FINGERPRINT (both grounded in byte-verified c8c9167 quotes); optional parameter unauthorized; Task 12 tests must add a canonical fingerprint (numeric expectations unchanged); SENSITIVITY_PY_SCOPE_EXPANSION_APPROVED (pass-through only) via additive CCR-20260724-ENG-02-ADDENDUM-A1.md; product fix required with frozen minimal scope; fix branch's only direct parent = d43e36e.
+- Deliverables: docs/product-plan/docs/contract-changes/CCR-20260724-ENG-02-ADDENDUM-A1.md + docs/handoffs/CCR_ENG_02_IMPLEMENTATION_ADJUDICATION_A1_HANDOFF.md.
+- Flags: ready_for_final_QA = NO (PRODUCT_FIX_REQUIRED first); ready_for_public_route = NO.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
