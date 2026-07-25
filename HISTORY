@@ -3194,3 +3194,16 @@ Verbatim Phase A HEAD content:
 - Unlocked next: A3 mounting lane Gate 0 precondition now satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
 - Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Task 10 quality-gate r1 kickoff worklog archived at completion - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 10 claims/synthesis/devils-advocate/quality-gate (r1)
+
+- Status: kickoff on worktree decision-lab-task10-quality-gate-r1, branch codex/task-10-quality-gate-r1, sole parent = main 4941e58bee3b91f14a4a92b7fab92750ef85b3b6 (remote-verified; carries Task 8/9 full chain + ANALYSIS-01 Addendum A1).
+- Role: Ways/Agent-Pipeline Owner (Fable5). The four app/analyses files belong to case_api_data scope per CCR-20260724-Ways-01; this session lands TWO commits with distinct scope trailers (case_api_data: app/analyses four files; ways_agent_pipeline: app/reports + migration + tests + handoff).
+- Plan source: 18-detailed-development-plan.md Task 10 section (L1020-1105 @ 4941e58), consumed verbatim. Contract: CCR-20260725-ANALYSIS-01 (introduced 5ffccf8) + Addendum A1 (32dfbd1 + 9bb19eb), both read from main @ 4941e58.
+- Migration window: sole holder; exactly ONE forward revision chained after f9a4b7e2c8d3, single head preserved; tables claims/claim_evidence/challenges/quality_gate_results/report_artifacts/export_artifacts; strategic_lens_artifacts already exists (d7e2a91c5b48) and is NOT recreated.
+- Write scope: app/analyses/claims.py|synthesis.py|devils_advocate.py|quality_gate.py, app/reports/models.py|schemas.py, one migration, own tests (services/api/tests/test_analysis_quality_gate.py + test_reports_artifacts.py), docs/handoffs, HEAD/HISTORY.
+- Forbidden: app/strategic_lenses/** existing files (validators import-only), app/evidence/**, app/workers/**, app/simulations/**, apps/web/**, packages/contracts/**, app/main.py, rebase/amend/force-push. Routers stay relative/unmounted.
+- Acceptance gates: own tests all green incl. red-light batch (unsupported core claim blocked; full missing/duplicate/wrong-role/cross-run/non-ready lens all blocked; focused lens persistence rejected; Validation never writes artifacts); migration lifecycle clean on disposable PG16; CONTRACT_DRIFT_OK; ruff/compileall/diff-check/secret scan; report SHA + ready_for_qa.
+- Secret policy: do not record credentials here.
