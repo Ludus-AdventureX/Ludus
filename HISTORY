@@ -3517,3 +3517,17 @@ Verbatim Phase A HEAD content:
 - Fail-closed reminders unchanged: evidenceAnchorsRouteAvailable stays false (case->run resolution route still missing - read-route small wave); slotContracts.ts status flip + decisionCaseId threading remain awaiting authorization per Task 13 precedent; MOUNT-02 audit binding remains an analyses-owner follow-up.
 - Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Archived work (replaced by READ-01 web flip lane)
+
+# Work Log: READ-01 case/sandbox read surface + audit binding (r1, reconciled)
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/read-routes-r1; branch codex/task-read-routes-backend-r1, base = main 8130410, reconciled with post-dispatch main advance cdc0103 (release lane c150d72: reports/exports routes + Task 4/5 mounts + provider seam). No rebase/amend/force; zero new dependencies.
+- Role: Case/API/Data + Analyses Owner (integration-lane dispatch READ-ROUTES-BACKEND-R1), Fable5.
+- Adjudication: docs/product-plan/docs/contract-changes/CCR-20260726-READ-01.md - (1) case reports list/detail surface CEDED to the release lane implementation (app/reports/routes.py @ c150d72; duplicate implementation dropped in e1aa4ff, owner tests re-pinned to verify the release reads on this combination); (2) TWO new canonical anchor rows (GET /cases/{id}/analyses via app/analyses/case_reads.py, GET /cases/{id}/simulations via app/simulations/graph_reads.py) plus graph versions list/detail; (3) tenancy mounts = UNION of c150d72 mounts + graph_reads/case-anchor routers (reports_router mount preserved); (4) MOUNT-02 Addendum A1 SS A1-6 audit binding CLOSED at worker VALIDATING (referenced ids AS-IS from run.strategic_lens_artifact_ids; frozen set from charter; audit fail => blocked; focused skips); coexists with the release lane's provider-seam additions in the same module (disjoint regions, auto-merged).
+- Base gap fixed (disclosed, 77437c3): .gitignore carried a PowerShell-corrupted line (literal backtick-r-backtick-n gluing the comment to `.contract-check/`), so the scratch dir was NEVER ignored; repaired + accidentally committed scratch artifacts dropped.
+- Contracts: regenerated via official generate_contracts.ps1 on the MERGED tree; -Check = CONTRACT_DRIFT_OK (counts recorded in the merge commit).
+- Gates on the merged tree (disposable PG16 ludus-pg-read01 @55463): full battery 936 passed / 0 failed (NEW count; = 934 wave + 2 release-lane tests); canonical pytest tests app/simulations/tests -q -W error -rxX = 669 passed (NEW cross-wave baseline, supersedes 667; the release lane test pair joined the selection set); web 89/89 + typecheck + build green; contracts ops=47 CONTRACT_DRIFT_OK; ruff all-pass; compileall exit 0; git diff --check clean. Combination fix 86c6dc9: c150d72 case-not-found path called zero-arg workspace_not_found with 2 args (TypeError 500) - caught by the READ-01 uniform-404 matrix, repaired with the byte-identical analyses envelope copy.
+- ready_for_qa: YES.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

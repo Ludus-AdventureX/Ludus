@@ -7,15 +7,12 @@
 // `data-phase-slot="evidence-drawer-trigger"` anchor so the shell contract
 // and its coverage tests stay intact.
 //
-// Contract divergence, disclosed in the handoff: EvidenceDrawerTriggerSlotProps
-// promises { decisionCaseId }, but the Phase 0 host views receive no props to
-// forward (threading it through CaseViewRouter is a shell increment that
-// needs authorization, Task 13 precedent). decisionCaseId is therefore
-// optional here — and today no route resolves it to run anchors anyway
-// (lib/api/evidence.ts single switch), so the drawer opens on the honest gap
-// state in production. Tests and future callers pass real anchors directly.
+// READ-01 flip: the canonical case→run resolution route shipped, so when the
+// host provides { workspaceId, decisionCaseId } the trigger resolves the
+// newest run's anchors asynchronously (honest null on 404/empty/error).
+// Callers with real anchors still override the resolution.
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { EvidenceEventSourceFactory, EvidenceRunAnchors } from "@/lib/api/evidence";
 import { resolveEvidenceAnchors } from "@/lib/api/evidence";
@@ -23,6 +20,7 @@ import { resolveEvidenceAnchors } from "@/lib/api/evidence";
 import { EvidenceDrawer } from "./EvidenceDrawer";
 
 export type EvidenceDrawerTriggerProps = {
+  workspaceId?: string;
   decisionCaseId?: string;
   /** Real run anchors, when the caller has them; overrides case resolution. */
   anchors?: EvidenceRunAnchors | null;
@@ -32,6 +30,7 @@ export type EvidenceDrawerTriggerProps = {
 };
 
 export function EvidenceDrawerTrigger({
+  workspaceId,
   decisionCaseId,
   anchors,
   fetchImpl,
@@ -39,10 +38,25 @@ export function EvidenceDrawerTrigger({
   slowThresholdMs
 }: EvidenceDrawerTriggerProps) {
   const [open, setOpen] = useState(false);
+  const [resolved, setResolved] = useState<EvidenceRunAnchors | null>(null);
   const triggerButton = useRef<HTMLButtonElement>(null);
 
-  const resolvedAnchors =
-    anchors !== undefined ? anchors : decisionCaseId ? resolveEvidenceAnchors(decisionCaseId) : null;
+  const shouldResolve = anchors === undefined && Boolean(workspaceId && decisionCaseId);
+
+  useEffect(() => {
+    if (!shouldResolve || !workspaceId || !decisionCaseId) return;
+    let cancelled = false;
+    void resolveEvidenceAnchors(workspaceId, decisionCaseId, fetchImpl ?? fetch).then(
+      (result) => {
+        if (!cancelled) setResolved(result);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldResolve, workspaceId, decisionCaseId, fetchImpl]);
+
+  const resolvedAnchors = anchors !== undefined ? anchors : shouldResolve ? resolved : null;
 
   // Focus returns to the trigger on close (drawer trap follows ProjectDrawer).
   const closeDrawer = useCallback(() => {

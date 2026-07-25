@@ -315,16 +315,49 @@ describe("QA-A4 interpret: thresholds only from really tested points", () => {
 });
 
 describe("QA-A5 sandboxCaseDataRouteAvailable flip safety", () => {
-  test("today's single source of truth is false and resolves to null", () => {
-    expect(sandboxCaseDataRouteAvailable).toBe(false);
-    expect(loadSandboxCaseData("LX-2407")).toBeNull();
+  test("READ-01 flip: the switch is ON and the loader degrades to null on 404", async () => {
+    expect(sandboxCaseDataRouteAvailable).toBe(true);
+    const notFound = vi.fn(async () =>
+      jsonResponse(404, { ok: false, error: { code: "CASE_NOT_FOUND", message: "Case material not found." } })
+    );
+    await expect(
+      loadSandboxCaseData("ws_1", "LX-2407", notFound as unknown as typeof fetch)
+    ).resolves.toBeNull();
+    expect(String((notFound.mock.calls as unknown[][])[0]?.[0])).toBe("/api/workspaces/ws_1/cases/LX-2407/simulations");
   });
 
-  test("flipping the flag (mocked module) still renders the honest empty frame without crashing", async () => {
-    vi.doMock("@/components/simulation/sandboxData", () => ({
-      sandboxCaseDataRouteAvailable: true,
-      loadSandboxCaseData: () => null,
-    }));
+  test("incomplete anchors (graph without strategy/scenario/score/profile) stay fail-closed", async () => {
+    const partialAnchors = vi.fn(async () =>
+      jsonResponse(200, {
+        ok: true,
+        data: {
+          decisionCaseId: "LX-2407",
+          items: [
+            {
+              graphId: "g1",
+              title: "t",
+              currentGraphVersionId: "gv1",
+              reportArtifactId: "r1",
+              originModes: [],
+              createdAt: "2026-07-25",
+              updatedAt: "2026-07-25",
+              strategyVersions: [],
+              scenarioVersions: [],
+              scoreDefinitions: []
+            }
+          ],
+          decisionMakerProfiles: []
+        }
+      })
+    );
+    await expect(
+      loadSandboxCaseData("ws_1", "LX-2407", partialAnchors as unknown as typeof fetch)
+    ).resolves.toBeNull();
+    // Fail-closed after the FIRST read: no fabricated follow-up fetches.
+    expect(partialAnchors).toHaveBeenCalledTimes(1);
+  });
+
+  test("SandboxView without a workspace anchor renders the honest empty frame without crashing", async () => {
     const { SandboxView } = await import("../components/shell/views/SandboxView");
     const { container } = render(createElement(SandboxView, { decisionCaseId: "LX-2407" }));
 

@@ -5,8 +5,15 @@ import { PhaseSlot } from "@/components/shell/PhaseSlot";
 // No run, trace step, evidence count or gate verdict is fabricated here;
 // AnalysisProgress / QualityGatePanel fill their slots later. Task 11 B2
 // fills the evidence-drawer-trigger anchor (replace-phase-slot-node only).
+// READ-01 flip: the shell threads { workspaceId, decisionCaseId } so the
+// trigger can resolve real run anchors (null workspaceId keeps the gap state).
 
-export function AnalysisView() {
+export type AnalysisViewProps = {
+  workspaceId?: string | null;
+  decisionCaseId?: string;
+};
+
+export function AnalysisView({ workspaceId = null, decisionCaseId }: AnalysisViewProps = {}) {
   return (
     <section className="view is-active" id="view-analysis" data-view-panel="analysis" aria-labelledby="analysis-view-title">
       <header className="view-intro analysis-intro">
@@ -38,7 +45,10 @@ export function AnalysisView() {
 
       <section className="custody-strip" aria-label="证据保管链">
         <span className="custody-title">一条结论如何形成</span>
-        <EvidenceDrawerTrigger />
+        <EvidenceDrawerTrigger
+          {...(workspaceId ? { workspaceId } : {})}
+          {...(decisionCaseId ? { decisionCaseId } : {})}
+        />
       </section>
     </section>
   );

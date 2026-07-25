@@ -16,9 +16,11 @@ import { defaultWorkspaceId, isCaseWorkspaceId, type CaseWorkspaceId } from "@/l
 type CaseShellProps = {
   /** null = empty state (no decision case yet). */
   decisionCaseId: string | null;
+  /** Tenant workspace anchor (READ-01 flip threading; null = reads stay gap). */
+  tenantWorkspaceId?: string | null;
 };
 
-export function CaseShell({ decisionCaseId }: CaseShellProps) {
+export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShellProps) {
   const [activeWorkspace, setActiveWorkspace] = useState<CaseWorkspaceId>(defaultWorkspaceId);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -106,7 +108,11 @@ export function CaseShell({ decisionCaseId }: CaseShellProps) {
       <DecisionSpine activeWorkspace={activeWorkspace} onSelectWorkspace={setActiveWorkspace} inert={drawerOpen} />
 
       <main className="stage" id="mainStage" inert={drawerOpen}>
-        <CaseViewRouter decisionCaseId={decisionCaseId} activeWorkspace={activeWorkspace} />
+        <CaseViewRouter
+          decisionCaseId={decisionCaseId}
+          tenantWorkspaceId={tenantWorkspaceId}
+          activeWorkspace={activeWorkspace}
+        />
       </main>
 
       <ProjectDrawer open={drawerOpen} decisionCaseId={decisionCaseId} onClose={closeDrawer} />

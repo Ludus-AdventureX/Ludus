@@ -4,8 +4,15 @@ import { EvidenceDrawerTrigger } from "@/components/quality/EvidenceDrawerTrigge
 // Recommendation, conditions and dissent render only from canonical
 // Report contracts in later phases; no verdict is fabricated here. Task 11
 // B2 fills the evidence-drawer-trigger anchor (replace-phase-slot-node only).
+// READ-01 flip: the shell threads { workspaceId, decisionCaseId } so the
+// trigger can resolve real run anchors (null workspaceId keeps the gap state).
 
-export function ReportView() {
+export type ReportViewProps = {
+  workspaceId?: string | null;
+  decisionCaseId?: string;
+};
+
+export function ReportView({ workspaceId = null, decisionCaseId }: ReportViewProps = {}) {
   return (
     <section className="view is-active" id="view-report" data-view-panel="report" aria-labelledby="report-view-title">
       <header className="view-intro report-intro">
@@ -35,7 +42,10 @@ export function ReportView() {
           <span className="margin-label">最强反对意见</span>
           <p>反方审查与建议翻转条件将随真实报告一同呈现。</p>
           <hr />
-          <EvidenceDrawerTrigger />
+          <EvidenceDrawerTrigger
+            {...(workspaceId ? { workspaceId } : {})}
+            {...(decisionCaseId ? { decisionCaseId } : {})}
+          />
         </aside>
       </article>
     </section>
