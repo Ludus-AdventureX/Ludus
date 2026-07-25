@@ -73,7 +73,12 @@ async def worlds_client(session, world, foreign_world):
         },
     )
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-sse-csrf"},
+        cookies={"decision_lab_csrf": "qa-sse-csrf"},
     ) as client:
         yield client, world, foreign_world
 

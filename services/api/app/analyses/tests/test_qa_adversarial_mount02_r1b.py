@@ -26,6 +26,7 @@ from fastapi import FastAPI, Path
 
 from app.analyses.repository import AnalysisRuntimeRepository
 from app.analyses.routes import router as analyses_router
+from app.auth.config import get_auth_settings
 from app.db import get_session
 from app.security.envelope import register_error_handlers, workspace_not_found
 from app.tenancy.context import (
@@ -79,7 +80,14 @@ async def client(session, world, foreign_world):
         },
     )
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://qa-adversarial.test"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://qa-adversarial.test",
+        # MOUNT-02 M8: unsafe writes now carry require_csrf (SIM-02A parity).
+        headers={
+            "Origin": "http://qa-adversarial.test",
+            get_auth_settings().csrf_header_name: "qa-adversarial-csrf",
+        },
+        cookies={get_auth_settings().csrf_cookie_name: "qa-adversarial-csrf"},
     ) as http_client:
         yield http_client
 

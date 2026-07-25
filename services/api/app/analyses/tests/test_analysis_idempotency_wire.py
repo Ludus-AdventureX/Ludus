@@ -87,7 +87,12 @@ def _build_app(session, memberships: dict[UUID, UUID]) -> FastAPI:
 async def client_world(session, world):
     app = _build_app(session, {world.workspace_id: world.user_id})
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-idem-csrf"},
+        cookies={"decision_lab_csrf": "qa-idem-csrf"},
     ) as client:
         yield client, world
 

@@ -25,6 +25,14 @@ of these paths reach the generated contracts. Endpoints:
 
 Tenancy: ``require_workspace_context`` first, then uniform CASE_NOT_FOUND for
 missing/foreign run ids (anti-enumeration).
+
+CSRF (CCR-20260726-MOUNT-02 M8, closing the MOUNT-01 M8 stop-report): every
+unsafe write on this router (resolutions, cancel, charter create/PATCH/
+replacements/confirm, run create) carries ``Depends(require_csrf)`` — the
+SIM-02A double-submit parity the Task 9 handoff r4 addendum recommended. The
+dependency is declared after the workspace context so an unauthenticated
+caller still answers 401 before any CSRF 403. Safe reads (run status, SSE,
+strategic-lenses) stay CSRF-free.
 """
 
 from __future__ import annotations
@@ -41,6 +49,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.models import AnalysisRun
+from app.security.csrf import require_csrf
 from app.security.envelope import ApiFailure
 from app.tenancy.context import WorkspaceContext, require_workspace_context
 from app.types import AnalysisRunStatus, FormalAnalysisLevel
@@ -267,6 +276,7 @@ async def post_run_resolution(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> Any:
     repo = AnalysisRuntimeRepository(db)
     key = validate_idempotency_key(idempotency_key)
@@ -406,6 +416,7 @@ async def post_run_cancel(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> dict[str, Any]:
     # MOUNT-01 M9 / 10-api L953: cancel is a POST that MUST carry the
     # Idempotency-Key header (the key travels ONLY in the header, resolutions
@@ -673,6 +684,7 @@ async def create_analysis_charter(
     decision_case_id: UUID = Path(alias="decisionCaseId"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> JSONResponse:
     """Create a draft charter from the method-route result (10-api §方法路由)."""
 
@@ -737,6 +749,7 @@ async def patch_analysis_charter(
     charter_id: UUID = Path(alias="charterId"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> dict[str, Any]:
     """Edit a draft charter in place (confirmed/superseded reject with 409)."""
 
@@ -768,6 +781,7 @@ async def create_charter_replacement(
     charter_id: UUID = Path(alias="charterId"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> JSONResponse:
     """Clone a confirmed charter into a new draft carrying the amendment."""
 
@@ -796,6 +810,7 @@ async def confirm_analysis_charter(
     charter_id: UUID = Path(alias="charterId"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> dict[str, Any]:
     """Freeze a charter (draft -> awaiting_confirmation -> confirmed)."""
 
@@ -826,6 +841,7 @@ async def create_analysis_run(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
+    _csrf: None = Depends(require_csrf),
 ) -> JSONResponse:
     """Create a queued Run from a confirmed charter (Idempotency-Key header)."""
 

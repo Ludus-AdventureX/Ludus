@@ -21,6 +21,7 @@ from fastapi import FastAPI, Path
 
 from app.analyses.repository import AnalysisRuntimeRepository
 from app.analyses.routes import router as analyses_router
+from app.auth.config import get_auth_settings
 from app.db import get_session
 from app.models import StrategicLensArtifact
 from app.security.envelope import register_error_handlers, workspace_not_found
@@ -82,7 +83,15 @@ async def client(session, world, foreign_world):
         },
     )
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://analyses.test"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://analyses.test",
+        # MOUNT-02 M8: unsafe writes now carry require_csrf (SIM-02A parity);
+        # same-origin + double-submit proof mirrors the production browser.
+        headers={
+            "Origin": "http://analyses.test",
+            get_auth_settings().csrf_header_name: "qa-analyses-csrf",
+        },
+        cookies={get_auth_settings().csrf_cookie_name: "qa-analyses-csrf"},
     ) as http_client:
         yield http_client
 

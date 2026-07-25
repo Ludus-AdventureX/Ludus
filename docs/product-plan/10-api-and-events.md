@@ -129,6 +129,8 @@ Idempotency-Key: charter_001_v1_full
 
 登录成功后服务端创建 `UserSession`，JWT 的 `session_id` 只引用该记录；每次请求检查 session 未撤销、未过期且 `tokenVersion` 有效。退出在数据库中设置 `revokedAt`，再清除 Cookie。Workspace 授权每次从 `WorkspaceMembership` 读取 `owner | member` 与 `capabilities[]`；token 不永久缓存 Workspace 权限。`sign` 还必须在签署事务中再次校验活动 session 与 capability。
 
+CSRF 范围澄清（CCR-20260726-MOUNT-02 M5，收编 MOUNT-01 M8）：在 Cookie session 鉴权下，除 auth Cookie mutation 外，**已认证的 unsafe write 同样携带 CSRF dependency**（同源 double-submit：`X-CSRF-Token` header + 同名 cookie + 精确 `Origin`/同源 `Referer`）。已落实面：simulations `POST /runs`（SIM-02A）与 analyses 七个 unsafe write（charter 创建/PATCH/replacements/confirm、run 创建、resolutions、cancel）。安全读（SSE、run 状态、strategic-lenses、evidence 读面）不携带 CSRF。缺失或验证失败统一返回 403 `CSRF_VALIDATION_FAILED`，且排序在鉴权之后（未认证仍先答 401）。
+
 ## 添加审核目录连接器
 
 请求只接受目录 Provider，不接受任意 URL：
