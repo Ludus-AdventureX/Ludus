@@ -2755,3 +2755,12 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Canonical text syncs (verbatim per CCR section 7): 06-data-model.md analysis-state paragraph (S1); 10-api-and-events.md lens event sentence (S2), error table row (S3), amendment details (S4), SSE sequence sentence (S5). No other canonical text touched.
 - Write scope honored: contract-changes/**, the five authorized subsections, docs/handoffs/CCR_GUEST_ANALYSIS_CONTRACTS_HANDOFF.md, HEAD, HISTORY. Zero product code, migrations, or test changes; no rebase/amend/force-push; no code from in-flight branches entered this branch.
 - No credentials or secret values are recorded here.
+
+## CCR-GUEST-01 Independent Adjudication Rescinded - 2026-07-25 (Asia/Shanghai)
+
+- Principal directive received after the original Delivery A push (21bbeff): stop the independent guest-endpoint shape adjudication; replace it with a transcription-only process - wait for the Guest Demo integration report, then copy the Release Owner's decision verbatim into a CCR record for the contract archive (no re-derivation by this lane).
+- Action taken (new commit; no amend/force-push/history rewrite): CCR-20260725-GUEST-01 flipped to Status: withdrawn with a normative Withdrawal Notice; "Adjudication" and "fix instructions" headings marked RESCINDED (analysis text preserved as archival record); Decision section records the rescission and points follow-up at CCR-20260725-GUEST-02 (the future verbatim transcription). Evidence section (byte-accurate two-sided shape extractions from d504b4f0 and 3278dd80 plus canonical envelope precedents) remains valid factual reference for the Release Owner.
+- Checked origin/main @ 51ae45c900ae4efa01b72d5d6842adb74ad50c91: no Guest integration report exists yet, so GUEST-02 is intentionally not created in this commit.
+- Delivery B (CCR-20260725-ANALYSIS-01, Task 9/10 wire pre-freeze) is explicitly unaffected by the directive and stands as delivered, including canonical syncs S1-S5.
+- Handoff and HEAD updated accordingly; ready_for_consumption: A = NO (await Release Owner + GUEST-02), B = YES.
+- No credentials or secret values are recorded here.

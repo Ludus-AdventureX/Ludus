@@ -13,39 +13,35 @@
     new-main delta touches NO canonical contract doc (no `docs/product-plan/**` path) — the
     only path overlap with this lane is HEAD/HISTORY (append-only worklogs). This lane is
     docs-only, so per protocol it did not stop; the branch merges cleanly onto the new main.
-  - Integration note for Delivery A consumers: the new main already ships a DIFFERENT
+  - Integration note: the new main already ships a DIFFERENT
     `apps/web/lib/demo/simulationDemo.ts` + `/demo` page from `codex/prototype-sim-web`
-    (env-fixture based, NO guest endpoint usage). The WEB_DEMO candidate (d504b4f0) will
-    therefore face a file-level merge with that page IN ADDITION to the shape fix ruled in
-    CCR-20260725-GUEST-01; the shape ruling itself is unaffected (guest endpoint exists only
-    on the two in-flight branches).
+    (env-fixture based, NO guest endpoint usage); the guest endpoint exists only on the two
+    in-flight branches. Relevant context for the Release Owner's upcoming shape decision.
 - Date: 2026-07-25 (Asia/Shanghai)
 - Scope proof target: `git diff --name-only <base>..HEAD` contains ONLY
   `docs/product-plan/docs/contract-changes/**`, the CCR-authorized subsections of
   `docs/product-plan/06-data-model.md` + `docs/product-plan/10-api-and-events.md`,
   `docs/handoffs/**`, `HEAD`, `HISTORY`. Zero product code, zero migrations, zero tests.
 
-## Delivery A — CCR-20260725-GUEST-01 (URGENT, unblocks the Guest Demo integration wave)
+## Delivery A — CCR-20260725-GUEST-01 (WITHDRAWN — rescinded by principal directive)
 
-- File: `docs/product-plan/docs/contract-changes/CCR-20260725-GUEST-01.md`
-- Committed and pushed SEPARATELY at `21bbeff` — **A is consumable on its own; do not wait
-  for anything else in this lane** (ready_for_consumption: YES).
-- One-line verdict: the **flat server shape wins** —
-  `data: { workspaceId, decisionCaseId, graphId, graphVersionId, strategyVersionId,
-  scenarioVersionId, scoreDefinitionId, decisionMakerProfileId,
-  decisionMakerProfileVersion, reused }` (201 create / 200 reuse);
-  **the web side (`codex/prototype-web-demo` @ d504b4f0) is the non-compliant side** and must
-  drop its nested `fixture` assumption; the seed side (@ 3278dd80) needs no change.
-- Rationale anchors: 10-api `{ ok, data }` flat-payload discipline; SIM-02A field ruling 1
-  (decisionCaseId is server-derived from graphId and can never be sent by clients) + echo
-  ruling; Run API `_success_payload` envelope precedent; the demo's own `SimulationRunData`
-  already consumes flat `decisionCaseId`.
-- `decisionCaseId` MUST stay exposed (only pre-run source of the case anchor for future
-  navigation); `reused` stays (201/200 discriminator); clients may ignore it.
-- Fix executor: WEB_DEMO owner or integration layer. Files + Vitest acceptance criteria are
-  enumerated in the CCR (§ "Non-compliant side and one-sided fix instructions").
-- Alpha status recorded: `include_in_schema=False` + `ENABLE_GUEST_ALPHA` hard gate (uniform
-  404 when off); NOT in `packages/contracts` artifacts; `CONTRACT_DRIFT_OK` unaffected.
+- File: `docs/product-plan/docs/contract-changes/CCR-20260725-GUEST-01.md`, now
+  `Status: withdrawn`.
+- Directive (2026-07-25, after the original push at `21bbeff`): this lane must NOT
+  independently adjudicate the guest endpoint shape. New binding process:
+  1. WAIT for the Guest Demo integration report;
+  2. the wave's **Release Owner decides** the authoritative shape there;
+  3. this lane (or successor) transcribes that decision VERBATIM into
+     `CCR-20260725-GUEST-02` — a transcription-only archival record, zero re-derivation.
+- As of this handoff no Guest integration report exists on `origin/main` (checked
+  `docs/handoffs/` tree at `51ae45c9`), so the transcription target does not exist yet and
+  GUEST-02 is intentionally NOT created.
+- What survives in GUEST-01: the verbatim source-shape extractions (Evidence E1–E3: seed
+  flat envelope @ 3278dd80, web nested-`fixture` assumption @ d504b4f0, canonical envelope
+  precedents) remain valid factual reference for the Release Owner. The "Adjudication" /
+  "fix instructions" sections are marked RESCINDED and carry no authority.
+- ready_for_consumption: **NO** — nobody implements against GUEST-01; wait for the Release
+  Owner decision + GUEST-02 transcription.
 
 ## Delivery B — CCR-20260725-ANALYSIS-01 (Task 9/10 wire pre-freeze)
 
@@ -106,7 +102,9 @@
 
 ## Consumers
 
-- Integration layer / WEB_DEMO owner: execute CCR-20260725-GUEST-01 §fix immediately.
+- Guest Demo integration wave / Release Owner: decide the guest endpoint shape in the
+  integration report; GUEST-01's Evidence section is your verbatim source-of-record for both
+  sides' actual shapes. This lane transcribes your decision into CCR-20260725-GUEST-02.
 - Fable5 (Task 9 Phase B) and ways_agent_pipeline (Task 10): implement against
   CCR-20260725-ANALYSIS-01; deviations require an addendum BEFORE code diverges.
 
