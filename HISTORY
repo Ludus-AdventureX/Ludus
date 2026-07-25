@@ -2920,3 +2920,17 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Acceptance gates: pnpm --dir apps/web test (Session A 20-test baseline zero regression + new Session B tests), pnpm --dir apps/web build, typecheck/lint, git diff --check, conflict-marker scan, secret scan, scope audit; handoff in docs/handoffs/; push and report exact SHA.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Archived wave-1 integration worklog before Task 13 sandbox lane kickoff - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 10/11 QA mainline integration (wave 1)
+
+- Status: merges complete on worktree decision-lab-mainline-integration (main); post-merge gates running; push pending principal confirmation.
+- Merge 1/2 (342323f): no-ff adoption of codex/qa-task-10-lens-validators-r1 622f43bb6561c0054c50a5091275ee8afa0189ba = task-10 lens validators r1 impl chain (6790181 -> 0634e8c -> fac61e0, lane COMPLETE, 549 passed zero regression, CONTRACT_DRIFT_OK) + QA adversarial battery 8e748b7 + F401 cleanup 622f43b.
+- Merge 2/2 (this commit): no-ff adoption of codex/qa-task-11-phase0-shell-r1 4fb099930b8f237e02b536464e04af957dcbb03e = Task 11 Phase 0 shell Sessions A (b358706) + B (3d68730, all acceptance gates green, ready_for_qa YES) + adversarial QA supplement 4fb0999 (focus trap escape, URL abuse, hostile payloads, flag flip, a11y spot checks; tests-only additions).
+- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (prior HEAD worklogs archived into HISTORY, byte-verified base preservation).
+- Audit honesty: a first local resolution attempt of merge 1 (e0d8499) was discarded before any push after self-audit caught a PowerShell pipeline UTF-8 corruption of one pre-existing HISTORY byte; redone with a byte-safe resolver.
+- Excluded from this wave (audit verdicts): Task 8+9 family (c599030/ed65f40/e403c66/e4ac7dc) blocked on QA FAIL-P1 sec2.3 amendment durability + P2 race window, fix lane codex/task-09-amendment-durability-fast-fix in progress; 13 historical branches (behind 64-189) superseded or lifecycle-archive-only, not merged.
+- Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
