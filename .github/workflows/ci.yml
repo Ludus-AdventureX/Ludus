@@ -1,0 +1,127 @@
+name: CI
+
+"on":
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gates:
+    name: release gates
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: decision_lab
+          POSTGRES_USER: decision_lab
+          POSTGRES_PASSWORD: decision_lab_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U decision_lab -d decision_lab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      CI: "true"
+      PYTHONPATH: ${{ github.workspace }}/services/api
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: decision_lab
+      POSTGRES_USER: decision_lab
+      POSTGRES_PASSWORD: decision_lab_dev
+      DATABASE_URL: ""
+      ENABLE_GUEST_ALPHA: "true"
+      FIXTURE_MODE: "true"
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_ALLOWED_ORIGINS: '["http://127.0.0.1:3010"]'
+      AUTH_JWT_SECRET: ci-insecure-jwt-secret-change-me
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Python dependencies
+        run: uv sync --frozen --project services/api --group dev
+
+      - name: Contract and manifest gates
+        shell: pwsh
+        run: |
+          uv run --frozen --project services/api python scripts/verify_decision_os_contracts.py
+          ./scripts/generate_contracts.ps1 -Check
+
+      - name: Python lint
+        run: uv run --frozen --project services/api python -m ruff check services/api
+
+      - name: Database migrations
+        run: |
+          uv run --frozen --project services/api python -m alembic -c services/api/alembic.ini heads
+          uv run --frozen --project services/api python -m alembic -c services/api/alembic.ini upgrade head
+          uv run --frozen --project services/api python -m alembic -c services/api/alembic.ini check
+
+      - name: Python tests
+        run: >-
+          uv run --frozen --project services/api python -m pytest
+          services/api/tests
+          services/api/app/simulations/tests
+          services/api/app/evidence/tests
+          services/api/app/analyses/tests
+          -q -W error -rxX
+
+      - name: TypeScript, unit tests, and web build
+        run: |
+          pnpm --dir apps/web lint
+          pnpm --dir apps/web typecheck
+          pnpm --dir apps/web test
+          pnpm --dir apps/web build
+
+      - name: Fixture and method-pack gate
+        run: >-
+          uv run --frozen --project services/api python scripts/install_method_pack.py
+          ways/hardtech-market-direction/1.1.0
+          --catalog-root "${RUNNER_TEMP}/method-packs"
+          --json
+
+      - name: Install Playwright browser
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+
+      - name: Playwright golden path
+        env:
+          E2E_API_COMMAND: uv run --frozen python -m uvicorn app.main:app --host 127.0.0.1 --port 8010
+        run: pnpm --dir apps/web test:e2e
+
+      - name: Production image builds
+        run: |
+          docker build -f services/api/Dockerfile services/api
+          docker build -f apps/web/Dockerfile .
+

@@ -423,13 +423,12 @@ async def test_qa6_fixture_provider_is_deterministic_across_calls() -> None:
 
 
 def test_qa7_lane_migration_chained_to_task10_revision() -> None:
-    """The deferral is RELEASED: A1 (Task 10) reported its migration rev-id
-    ``b6e8f3a1d7c2`` (add_analysis_outputs, after ``f9a4b7e2c8d3``), so this
-    lane's revision ``a7c3e9f1b5d8`` now exists with ``down_revision`` pointing
-    at it. The Task 10 FILE ships on the A1 branch, not here — in this worktree
-    the lane revision therefore has a dangling parent by design (lands last;
-    applicable only after the integration merge). This pin fails loudly if the
-    file set, the chain wiring or the dangling-parent state silently changes."""
+    """Integration release keeps Task 10 -> Task 4/5 -> decision records linear.
+
+    The standalone QA branch originally asserted a dangling Task 10 parent before
+    integration. In the release branch all migration files are present, so the
+    guard now pins the exact integrated migration set and single Alembic head.
+    """
 
     versions_dir = APP_DIR.parent / "migrations" / "versions"
     files = sorted(p.name for p in versions_dir.glob("*.py") if p.name != "__init__.py")
@@ -439,12 +438,14 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
         "a7c3e9f1b5d8_add_dossier_version_snapshots.py",
         "b2c7e9d4a1f6_add_decision_maker_profiles_and_idempotency_records.py",
+        "b6e8f3a1d7c2_add_analysis_outputs.py",
         "c4a1f0b2d9e7_add_login_rate_buckets.py",
+        "c8d4e6f0a1b2_add_decision_records_reviews.py",
         "d7e2a91c5b48_add_strategic_lens_artifacts.py",
         "e7f3a2c9d5b1_add_evidence_ledger.py",
         "f850d361ee42_harden_canonical_contract_invariants.py",
         "f9a4b7e2c8d3_add_analysis_runtime.py",
-    ], "exactly one Task 4/5 migration, chained after Task 10's b6e8f3a1d7c2"
+    ], "integrated release migration set must stay explicit"
 
     revisions: dict[str, str | None] = {}
     pattern_rev = re.compile(r"^revision(?::\s*str)?\s*=\s*['\"]([^'\"]+)['\"]", re.M)
@@ -456,16 +457,17 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         revisions[pattern_rev.search(text).group(1)] = (
             pattern_down.search(text).group(1) if pattern_down.search(text) else None
         )
+    assert revisions["b6e8f3a1d7c2"] == "f9a4b7e2c8d3", (
+        "Task 10 migration must chain after the analysis runtime baseline"
+    )
     assert revisions["a7c3e9f1b5d8"] == "b6e8f3a1d7c2", (
-        "lane migration must chain after Task 10's reported rev-id"
+        "Task 4/5 migration must chain after Task 10 outputs"
     )
-    # In-worktree heads: the frozen tip f9a4b7e2c8d3 (b6e8f3a1d7c2's file lives
-    # on the A1 branch) plus this lane's a7c3e9f1b5d8. After the integration
-    # merge the single head collapses to a7c3e9f1b5d8.
+    assert revisions["c8d4e6f0a1b2"] == "a7c3e9f1b5d8", (
+        "decision records migration must land after Task 4/5 dossier snapshots"
+    )
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"f9a4b7e2c8d3", "a7c3e9f1b5d8"}, (
-        f"unexpected in-worktree chain heads: {heads}"
-    )
+    assert heads == {"c8d4e6f0a1b2"}, f"unexpected integrated Alembic heads: {heads}"
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
@@ -36,6 +37,7 @@ def _retrieval_task(world: EvidenceWorld, **overrides) -> RetrievalTask:
         query_summary="rescue market",
         input_hash="sha256:" + "b" * 64,
         status="completed",
+        created_at=NOW,
         completed_at=NOW,
     )
     values.update(overrides)
@@ -407,7 +409,8 @@ async def test_evidence_tables_and_enum_exist_with_single_alembic_head(session) 
     from alembic.config import Config
     from alembic.script import ScriptDirectory
 
-    script = ScriptDirectory.from_config(Config("alembic.ini"))
+    alembic_ini = Path(__file__).resolve().parents[3] / "alembic.ini"
+    script = ScriptDirectory.from_config(Config(str(alembic_ini)))
     heads = script.get_heads()
     assert heads == [version], "single alembic head must equal the applied version"
     ancestry = {rev.revision for rev in script.walk_revisions("base", version)}
