@@ -21,9 +21,9 @@ Contract points implemented here:
   runs skip every lens stage and the array stays empty;
 - ``strategic_lens.completed`` is emitted only after the artifact write path
   reports successful persistence, never on raw model output;
-- model calls in this lane go through injectable role executors backed by
-  fixture/stub providers; live provider wiring belongs to the integration
-  lane.
+- model calls go through injectable role executors; the integration lane binds
+  those executors to the provider-neutral ModelProvider seam so live DeepSeek
+  or deterministic fixture providers share the same orchestration boundary.
 
 Role executors are injected so the orchestration is fully testable offline;
 the executor protocol mirrors what the Task 7 ``WorkerRunner`` produces.
@@ -31,12 +31,20 @@ the executor protocol mirrors what the Task 7 ``WorkerRunner`` produces.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.agents.model_provider import (
+    ModelMessage,
+    ModelProvider,
+    build_model_provider_from_env,
+    complete_structured_checked,
+)
 
 # Shipped lens write path: imported (never copied). The default lens writer
 # below delegates to these exact callables.
@@ -380,3 +388,112 @@ class AnalysisWorker:
                 },
                 origin_mode=self._origin_mode,
             )
+
+
+
+_STAGE_RESULT_SCHEMA: Mapping[str, Any] = {
+    "type": "object",
+    "required": ["output"],
+    "properties": {
+        "output": {"type": "object"},
+        "packets": {"type": "array"},
+        "lensPayloads": {"type": "object"},
+        "qualityGatePassed": {"type": "boolean"},
+        "validatorFindings": {"type": "array"},
+    },
+}
+
+
+def _provider_request_model(provider: ModelProvider, request_model: str | None) -> str:
+    if request_model:
+        return request_model
+    for attr in ("default_model", "request_model"):
+        value = getattr(provider, attr, None)
+        if value:
+            return str(value)
+    return "default"
+
+
+def build_role_executors_from_model_provider(
+    provider: ModelProvider,
+    *,
+    request_model: str | None = None,
+) -> RoleExecutors:
+    """Wire live/fixture ModelProvider calls into the durable worker.
+
+    The worker receives only the schema-checked StageResult envelope; provider
+    protocol details (including any DeepSeek ``reasoning_content``) are stripped
+    inside the provider adapter and never persisted by this layer.
+    """
+
+    model_id = _provider_request_model(provider, request_model)
+
+    async def execute(
+        run: AnalysisRun, stage: AnalysisRunStatus, inputs: Mapping[str, Any]
+    ) -> StageResult:
+        completion = await complete_structured_checked(
+            provider,
+            system=(
+                "You are a Ludus analysis stage executor. Return ONLY JSON with "
+                "keys output, packets, lensPayloads, qualityGatePassed and "
+                "validatorFindings. Do not include hidden reasoning."
+            ),
+            messages=(
+                ModelMessage(
+                    role="user",
+                    content=json.dumps(
+                        {
+                            "workspaceId": str(run.workspace_id),
+                            "decisionCaseId": str(run.decision_case_id),
+                            "analysisRunId": str(run.analysis_run_id),
+                            "stage": stage.value,
+                            "inputs": dict(inputs),
+                        },
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                ),
+            ),
+            schema=_STAGE_RESULT_SCHEMA,
+            request_model=model_id,
+        )
+        content = completion.content
+        output = content.get("output") or {}
+        if not isinstance(output, Mapping):
+            output = {"value": output}
+        packets = tuple(
+            item for item in content.get("packets", ()) if isinstance(item, Mapping)
+        )
+        raw_lenses = content.get("lensPayloads") or {}
+        lens_payloads = raw_lenses if isinstance(raw_lenses, Mapping) else {}
+        findings = tuple(
+            item for item in content.get("validatorFindings", ()) if isinstance(item, Mapping)
+        )
+        return StageResult(
+            output=output,
+            packets=packets,
+            lens_payloads=lens_payloads,
+            quality_gate_passed=content.get("qualityGatePassed"),
+            validator_findings=findings,
+        )
+
+    return RoleExecutors(
+        research=execute,
+        critic=execute,
+        synthesis=execute,
+        validation=execute,
+    )
+
+
+def build_role_executors_from_env() -> tuple[RoleExecutors, OriginMode]:
+    """Production seam: environment -> provider -> worker executors.
+
+    ``MODEL_PROVIDER=deepseek`` gives live execution. ``MODEL_PROVIDER=fixture``
+    or ``FIXTURE_MODE=true`` keeps the deterministic offline path explicitly
+    marked as fixture origin.
+    """
+
+    provider = build_model_provider_from_env()
+    origin_mode = OriginMode.FIXTURE if provider.name == "fixture" else OriginMode.LIVE
+    return build_role_executors_from_model_provider(provider), origin_mode

@@ -494,6 +494,43 @@
         "title": "DossierStatementType",
         "type": "string"
       },
+      "ExportCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "html",
+              "pdf"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ExportCreateRequest",
+        "type": "object"
+      },
+      "ExportRetryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "rendererVersion": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendererversion"
+          }
+        },
+        "title": "ExportRetryRequest",
+        "type": "object"
+      },
       "FormalAnalysisLevel": {
         "enum": [
           "focused",
@@ -4347,7 +4384,6 @@
     },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports": {
       "get": {
-        "description": "List a case's report artifacts by version/status (canonical row).",
         "operationId": "list_case_reports_api_workspaces__workspaceId__cases__decisionCaseId__reports_get",
         "parameters": [
           {
@@ -4377,6 +4413,10 @@
             "schema": {
               "anyOf": [
                 {
+                  "enum": [
+                    "draft",
+                    "ready"
+                  ],
                   "type": "string"
                 },
                 {
@@ -4392,7 +4432,7 @@
             "required": false,
             "schema": {
               "default": 50,
-              "maximum": 200,
+              "maximum": 100,
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -4423,13 +4463,16 @@
             "description": "Validation Error"
           }
         },
-        "summary": "List Case Reports"
+        "summary": "List Case Reports",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
       }
     },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}": {
       "get": {
-        "description": "Read one report artifact (canonical row); case mismatch is the same 404.",
-        "operationId": "get_case_report_api_workspaces__workspaceId__cases__decisionCaseId__reports__reportId__get",
+        "operationId": "read_case_report_api_workspaces__workspaceId__cases__decisionCaseId__reports__reportId__get",
         "parameters": [
           {
             "in": "path",
@@ -4468,7 +4511,7 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": true,
-                  "title": "Response Get Case Report Api Workspaces  Workspaceid  Cases  Decisioncaseid  Reports  Reportid  Get",
+                  "title": "Response Read Case Report Api Workspaces  Workspaceid  Cases  Decisioncaseid  Reports  Reportid  Get",
                   "type": "object"
                 }
               }
@@ -4486,7 +4529,83 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Case Report"
+        "summary": "Read Case Report",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}/exports": {
+      "post": {
+        "operationId": "create_report_export_api_workspaces__workspaceId__cases__decisionCaseId__reports__reportId__exports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reportid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Report Export",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
       }
     },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations": {
@@ -4955,6 +5074,180 @@
           }
         },
         "summary": "Get Same Source Group"
+      }
+    },
+    "/api/workspaces/{workspaceId}/exports/{exportArtifactId}": {
+      "get": {
+        "operationId": "read_export_artifact_api_workspaces__workspaceId__exports__exportArtifactId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportArtifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exportartifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Export Artifact Api Workspaces  Workspaceid  Exports  Exportartifactid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Export Artifact",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/exports/{exportArtifactId}/content": {
+      "get": {
+        "operationId": "read_export_content_api_workspaces__workspaceId__exports__exportArtifactId__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportArtifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exportartifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Export Content",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/exports/{exportArtifactId}/retry": {
+      "post": {
+        "operationId": "retry_export_artifact_api_workspaces__workspaceId__exports__exportArtifactId__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportArtifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Exportartifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retry Export Artifact Api Workspaces  Workspaceid  Exports  Exportartifactid  Retry Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Export Artifact",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
       }
     },
     "/api/workspaces/{workspaceId}/simulations/{graphId}/runs": {
