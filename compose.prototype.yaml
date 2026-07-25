@@ -101,26 +101,20 @@ services:
       start_period: 15s
     restart: unless-stopped
 
-  # Explicit one-off: verifies API health directly and through the web proxy.
+  # Explicit one-off: REAL release-evidence smoke over HTTP through the web
+  # proxy (guest bootstrap -> run -> replay -> cross-guest uniform 404).
   smoke:
     image: decision-lab-api:prototype
     profiles: ["ops"]
+    environment:
+      SMOKE_BASE_URL: ${SMOKE_BASE_URL:-http://web:3000}
+      SMOKE_ORIGIN: ${SMOKE_ORIGIN:-${WEB_ORIGIN:?set WEB_ORIGIN to the public HTTPS origin}}
     depends_on:
       api:
         condition: service_healthy
       web:
         condition: service_healthy
-    command:
-      - python
-      - -c
-      - |
-        import sys, urllib.request
-        for url in ("http://api:8000/health", "http://web:3000/api/health"):
-            status = urllib.request.urlopen(url, timeout=10).status
-            print(f"SMOKE {url} -> {status}")
-            if status != 200:
-                sys.exit(1)
-        print("SMOKE OK")
+    command: ["python", "-m", "app.prototype.smoke_guest_alpha"]
     restart: "no"
 
 volumes:
