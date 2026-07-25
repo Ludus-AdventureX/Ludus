@@ -16,6 +16,7 @@ from app.models import (
     CausalGraph,
     Conversation,
     DecisionCase,
+    DecisionMakerProfile,
     DecisionSubject,
     DossierEntry,
     DossierVersion,
@@ -114,6 +115,9 @@ def test_core_table_set_and_workspace_scope() -> None:
         "scenario_versions",
         "score_definitions",
         "graph_branches",
+        # CCR-20260724-SIM-02A P1+P3: frozen profiles + idempotency persistence.
+        "decision_maker_profiles",
+        "idempotency_records",
     }
     assert set(Base.metadata.tables) == expected
 
@@ -852,6 +856,34 @@ async def seed_simulation_reference_stack(
             .returning(ScoreDefinition.id)
         )
     ).scalar_one()
+    # CCR-20260724-SIM-02A P1: simulation_runs now carries a composite FK to a
+    # real frozen decision-maker profile row; replay fixtures must satisfy it.
+    profile_user_id = (
+        await connection.execute(
+            insert(User)
+            .values(
+                email=f"sim-profile-{uuid4()}@example.invalid",
+                password_hash="not-a-real-hash",
+            )
+            .returning(User.id)
+        )
+    ).scalar_one()
+    profile_id = uuid4()
+    profile_version = 1
+    await connection.execute(
+        insert(DecisionMakerProfile).values(
+            id=uuid4(),
+            workspace_id=workspace_id,
+            profile_id=profile_id,
+            decision_case_id=None,
+            user_id=profile_user_id,
+            display_name="Replay profile v1",
+            version=profile_version,
+            preference_weights={},
+            risk_tolerance=0.5,
+            content_hash=f"sha256:profile-{uuid4().hex[:12]}",
+        )
+    )
     return {
         "analysis_run": run_id,
         "lens_artifact": lens_artifact_id,
@@ -860,6 +892,8 @@ async def seed_simulation_reference_stack(
         "strategy_version": strategy_version_id,
         "scenario_version": scenario_version_id,
         "score_definition": score_definition_id,
+        "profile": profile_id,
+        "profile_version": profile_version,
     }
 
 
@@ -892,8 +926,10 @@ async def test_task_19a_simulation_replay_numeric_constraints_are_enforced(
         "scenario_version_id": refs["scenario_version"],
         "score_definition_id": refs["score_definition"],
         "score_definition_version": "1.0.0",
-        "decision_maker_profile_id": uuid4(),
-        "decision_maker_profile_version": 1,
+        # SIM-02A P1: base insert must reference the seeded frozen profile;
+        # ghost profile refs are now their own FK negative, not fixture noise.
+        "decision_maker_profile_id": refs["profile"],
+        "decision_maker_profile_version": refs["profile_version"],
         "risk_tolerance": 0.5,
         "engine_version": "1.0.0",
         "scenario_id": uuid4(),

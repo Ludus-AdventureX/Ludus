@@ -1,11 +1,10 @@
-# Work Log: CCR-ENG-02 implementation adjudication A1
+# Work Log: SIM Alpha prototype integration release
 
-- Status: adjudication complete on codex/ccr-eng-02-implementation-adjudication-a1 (base = ENG-02 contract c8c9167). Verdict: PRODUCT_FIX_REQUIRED. TEXT-ONLY: no product code, tests, migrations, contracts, or scripts touched; read-only audit via git show at exact SHAs.
-- Role: Contract/Mainline Lead - ENG-02 Implementation Conformance Adjudicator.
-- Refs (all live ls-remote verified; main NOT advanced): main 387041d40442faf16557b266ef3f844b7af8fb69; SIM-02A contract 0289b2e; ENG-02 contract c8c9167b219fa8aa06bf9769776f49706f43b219; P2 parent edaa8421c330de7cfe02a53c1e38574533e99c48; exact full P2 product SHA d43e36eb399900e24ec171c8cf02eff3048cf089 (single direct parent = edaa842 proven; short SHA never used as authority).
-- Findings at d43e36e: compute_input_hash/run_simulation accept keyword-only profile=None and SUCCEED producing sim-engine-1.1.0 hashes WITHOUT the profile block; sensitivity.analyze_sensitivity has no profile parameter so base + every sweep run without a fingerprint; service passes the fingerprint to the persisted run but cannot pass it into sensitivity; Task 12 owner engine tests (17 call sites, zero profile refs) are the only beneficiaries of the optional default.
-- Verdicts: no-mixed-mode = PROFILE_REQUIRED_FOR_ALL_ENGINE_1_1_HASHES; sensitivity = EVERY_BASE_AND_SWEEP_RUN_MUST_RECEIVE_SAME_FINGERPRINT (both grounded in byte-verified c8c9167 quotes); optional parameter unauthorized; Task 12 tests must add a canonical fingerprint (numeric expectations unchanged); SENSITIVITY_PY_SCOPE_EXPANSION_APPROVED (pass-through only) via additive CCR-20260724-ENG-02-ADDENDUM-A1.md; product fix required with frozen minimal scope; fix branch's only direct parent = d43e36e.
-- Deliverables: docs/product-plan/docs/contract-changes/CCR-20260724-ENG-02-ADDENDUM-A1.md + docs/handoffs/CCR_ENG_02_IMPLEMENTATION_ADJUDICATION_A1_HANDOFF.md.
-- Flags: ready_for_final_QA = NO (PRODUCT_FIX_REQUIRED first); ready_for_public_route = NO.
+- Status: IN_PROGRESS on codex/prototype-simulation-alpha-integration (base = live-verified remote main 387041d40442faf16557b266ef3f844b7af8fb69).
+- Role: Integration/Release Lead (SIM_ALPHA_INTEGRATION_RELEASE).
+- Assembled so far: contract chain 0289b2e -> c8c9167 -> 19f552c (no-ff) + prerequisite product d2ae634 (no-ff; HEAD/HISTORY append-only 3-way resolution).
+- Pending: rolling merges of codex/prototype-sim-run-api / -sim-web / -sim-seed-smoke / -sim-deploy as they are pushed; simulations router mount; OpenAPI/types regeneration; combination-only fixes.
+- Verification plan (single full pass): alembic upgrade head + check; pytest tests app/simulations/tests -q -W error; generate_contracts.ps1 -Check; pnpm web test/build; seed+smoke simulation alpha; manual browser login->run->result->replay; security smoke (unauthenticated deny, foreign workspace deny, idempotency replay, secret diff scan).
+- Release: deploy from exact integration SHA, external network smoke, then ff-only advance of main.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.

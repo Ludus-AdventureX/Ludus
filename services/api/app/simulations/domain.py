@@ -99,6 +99,22 @@ class SimulationInputError(SimulationError):
 
 
 @dataclass(frozen=True, slots=True)
+class ProfileFingerprint:
+    """Frozen decision-maker profile identity witnessed by the input hash (CCR-ENG-02).
+
+    Engine-internal value object — NOT an ORM row and NOT a wire DTO, never exposed
+    over HTTP. It is built exactly once per run by the assembly layer from the
+    VERIFIED ``decision_maker_profiles`` row (stable ``profile_id``, never the row
+    primary key) after the mandatory content-hash format gate; callers never
+    hand-build it from request data.
+    """
+
+    id: str
+    version: int
+    content_hash: str
+
+
+@dataclass(frozen=True, slots=True)
 class CausalNode:
     id: str
     label: str

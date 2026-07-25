@@ -91,8 +91,10 @@ def _run_values(stack: dict) -> dict:
         "scenario_version_id": stack["scenario_version"],
         "score_definition_id": stack["score_definition"],
         "score_definition_version": "1.0.0",
-        "decision_maker_profile_id": uuid4(),
-        "decision_maker_profile_version": 1,
+        # SIM-02A P1: the baseline run must reference the stack's real frozen
+        # profile; the composite FK rejects ghosts at the DB layer now.
+        "decision_maker_profile_id": stack["profile"],
+        "decision_maker_profile_version": stack["profile_version"],
         "risk_tolerance": 0.5,
         "engine_version": "1.0.0",
         "scenario_id": uuid4(),
@@ -268,9 +270,21 @@ async def test_simulation_run_frozen_refs_reject_cross_workspace_targets(
         ("strategy_version_id", stack_b["strategy_version"]),
         ("scenario_version_id", stack_b["scenario_version"]),
         ("score_definition_id", stack_b["score_definition"]),
+        # SIM-02A P1: a REAL profile id of another workspace is a ghost under
+        # the composite (workspace_id, profile_id, version) FK.
+        ("decision_maker_profile_id", stack_b["profile"]),
     ):
         attack = {**_run_values(stack_a), field: foreign}
         await _expect_rejected(db, insert(SimulationRun).values(attack))
+
+    # Real profile id, real foreign version pairing: stack B's (profile, version)
+    # tuple is genuine in workspace B but unresolvable inside workspace A.
+    attack = {
+        **_run_values(stack_a),
+        "decision_maker_profile_id": stack_b["profile"],
+        "decision_maker_profile_version": stack_b["profile_version"],
+    }
+    await _expect_rejected(db, insert(SimulationRun).values(attack))
 
 
 # ---------------------------------------------------------------------------
