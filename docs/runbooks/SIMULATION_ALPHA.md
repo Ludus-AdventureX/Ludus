@@ -56,23 +56,26 @@ prints the same summary.
 python scripts/smoke_simulation_alpha.py
 ```
 
-This baseline has no simulation HTTP routes, so the smoke mounts two
-**prototype** routes onto the real FastAPI app at runtime only (no repo file
-is touched) and drives them in-process through httpx `ASGITransport`, passing
-the production auth/CSRF/tenancy dependencies:
+The SIM-02A run routes are now real product surface (mounted under the
+tenancy-guarded `workspace_router`), so the smoke drives the canonical app
+in-process through httpx `ASGITransport`, passing the production
+auth/CSRF/tenancy/idempotency dependencies:
 
 1. `GET /api/auth/csrf` — double-submit token;
 2. `POST /api/auth/login` — demo credentials (env password);
-3. `POST /api/workspaces/{workspaceId}/cases/{caseId}/simulation-runs`;
-4. `GET .../simulation-runs/{runId}` — replay.
+3. `POST /api/workspaces/{workspaceId}/simulations/{graphId}/runs`
+   (with `Idempotency-Key`), then an idempotent re-POST replay;
+4. `GET .../runs/{simulationRunId}` — replay.
 
 Asserted contract:
 
-- create answers **201**, or the agreed non-convergence **409** envelope
-  (`ok=false`, `error.code=SIMULATION_NOT_CONVERGED`, persisted run in `data`);
+- create answers **201**, or the contract non-convergence **409** envelope
+  (`ok=false`, `error.code=SIMULATION_NOT_CONVERGED`);
 - the run ID exists (valid UUID);
 - `engineVersion == sim-engine-1.1.0`;
 - `inputHash` present and matches `sha256:<64 hex>`;
+- the idempotent re-POST replays the identical payload with
+  `meta.idempotencyReplay = true`;
 - the replay payload equals the creation payload exactly.
 
 Exit code 0 + `SMOKE PASS` on success; non-zero with `SMOKE FAIL: <reason>`

@@ -34,7 +34,8 @@ def main() -> int:
     with httpx.Client(base_url=base_url, timeout=15.0) as client:
         csrf = client.get("/api/auth/csrf")
         csrf.raise_for_status()
-        token = csrf.json()["data"]["csrf_token"]
+        # CanonicalModel serializes by alias: the wire key is camelCase.
+        token = csrf.json()["data"]["csrfToken"]
 
         payload: dict[str, str] = {"email": email, "password": password}
         if workspace_name:

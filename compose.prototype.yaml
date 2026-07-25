@@ -78,6 +78,16 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Deterministic uuid5 identities from scripts/seed_simulation_alpha.py;
+        # public fixture IDs only, no secrets. Baked into the /demo bundle.
+        NEXT_PUBLIC_DEMO_GRAPH_ID: ${NEXT_PUBLIC_DEMO_GRAPH_ID:-62ea04dd-21f6-5be5-adb9-ed484f0728f2}
+        NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID: ${NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID:-85e46da1-ed0c-5dda-ae03-5e97be2b3327}
+        NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID: ${NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID:-3c2c4bbf-95ac-5a08-a474-ee18cd59d520}
+        NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID: ${NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID:-f7935a1d-c522-5e93-9f60-61c77e051068}
+        NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID: ${NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID:-198403ed-f3c2-52a4-b2c0-afd4899cd29f}
+        NEXT_PUBLIC_DEMO_PROFILE_ID: ${NEXT_PUBLIC_DEMO_PROFILE_ID:-1770c71d-dbe1-5270-89bf-f20998946aed}
+        NEXT_PUBLIC_DEMO_PROFILE_VERSION: ${NEXT_PUBLIC_DEMO_PROFILE_VERSION:-1}
     image: decision-lab-web:prototype
     ports:
       - "${WEB_PORT:-3000}:3000"
@@ -109,6 +119,45 @@ services:
       api:
         condition: service_healthy
     command: ["python", "/opt/deploy/prototype_seed.py"]
+    restart: "no"
+
+  # Explicit one-off: seeds the full simulation-alpha demo scope (demo user,
+  # workspace, confirmed graph, versions, frozen profile) directly against the
+  # database. Idempotent (uuid5 identities); never runs on `up`.
+  seed-alpha:
+    image: decision-lab-api:prototype
+    profiles: ["ops"]
+    environment:
+      <<: *db-env
+      PYTHONPATH: /app
+      SIMULATION_ALPHA_DEMO_PASSWORD: ${SIMULATION_ALPHA_DEMO_PASSWORD:?set SIMULATION_ALPHA_DEMO_PASSWORD in .env.prototype}
+    volumes:
+      - ./scripts:/opt/deploy/scripts:ro
+      - ./fixtures:/opt/deploy/fixtures:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["python", "/opt/deploy/scripts/seed_simulation_alpha.py"]
+    restart: "no"
+
+  # Explicit one-off: csrf -> login -> run -> idempotent replay -> GET replay
+  # against the real SIM-02A routes (in-process ASGI, same DB as the API).
+  smoke-alpha:
+    image: decision-lab-api:prototype
+    profiles: ["ops"]
+    environment:
+      <<: *db-env
+      PYTHONPATH: /app
+      SIMULATION_ALPHA_DEMO_PASSWORD: ${SIMULATION_ALPHA_DEMO_PASSWORD:?set SIMULATION_ALPHA_DEMO_PASSWORD in .env.prototype}
+    volumes:
+      - ./scripts:/opt/deploy/scripts:ro
+      - ./fixtures:/opt/deploy/fixtures:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "/opt/deploy/scripts/smoke_simulation_alpha.py"]
     restart: "no"
 
   # Explicit one-off: verifies API health directly and through the web proxy.
