@@ -304,12 +304,31 @@ async def post_run_resolution(
     except RunNotFound as exc:
         raise case_not_found() from exc
     except RunNotResumable as exc:
+        # §2.2 (QA-P2): a same-key duplicate that lost the concurrency race
+        # reaches here AFTER the winner committed — the entry pre-check saw no
+        # record yet, the run row lock serialized both flows, and the loser
+        # re-read a resumed run. Re-check the idempotency record so the
+        # duplicate replays the winner's success instead of answering 409.
+        try:
+            stored = await repo.check_resolution_idempotency(
+                context.workspace_id, key, request_hash
+            )
+        except IdempotencyConflict as conflict:
+            raise _idempotency_conflict() from conflict
+        if stored is not None:
+            return await _replay_resolution_response(
+                repo, context.workspace_id, stored.resource_id, stored.http_status
+            )
         raise ApiFailure(
             "ANALYSIS_RUN_NOT_RESUMABLE",
             "Run is not in needs_attention or is already terminal.",
             http_status=409,
         ) from exc
     except RunAmendmentRequired as exc:
+        # §2.3 (QA-P1): the append-only classification and its
+        # analysis.amendment_required event must survive this 409 under the
+        # production session lifecycle — commit them before raising.
+        await db.commit()
         raise ApiFailure(
             "RUN_AMENDMENT_REQUIRED",
             "Input changes charter frozen fields; create a replacement charter "

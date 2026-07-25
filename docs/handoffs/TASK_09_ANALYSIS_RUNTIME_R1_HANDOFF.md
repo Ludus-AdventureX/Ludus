@@ -288,3 +288,49 @@ tests, or the lifecycle files.
   `ludus-pg-task09-fastfix` @55446 (deleted after use).
 - ready_for_fast_QA: **YES**. ready_for_public_route: **NO** (routers stay
   unmounted).
+
+
+---
+
+## r3 fast-fix addendum - QA-P1 + QA-P2 closure (2026-07-25)
+
+- Branch: `codex/task-09-amendment-durability-fast-fix`, sole parent = r2 exact
+  SHA `e403c665364d6260ad6199f283a5964db070f436`; ordered by QA report
+  `QA_TASK_09_IDEMPOTENCY_WIRE_R2_REPORT.md` (QA tip `e4ac7dc`).
+- Scope: `app/analyses/routes.py` only (+ new owner test file
+  `test_analysis_amendment_durability.py`); repository/state machine/worker/
+  SSE envelope/migrations ZERO diff.
+
+### QA-P1 (2.3 amendment durability) - FIXED
+
+The amendment path now commits the append-only
+`RunInterventionClassification` and its `analysis.amendment_required` event
+BEFORE raising 409 `RUN_AMENDMENT_REQUIRED`. Under the production
+`get_session` lifecycle a brand-new session sees both rows after the 409;
+repeated amendment attempts append exactly one classification row each
+(append-only ledger).
+
+### QA-P2 (2.2 race-loser replay) - FIXED
+
+`RunNotResumable` is no longer answered blindly: the handler first re-checks
+the idempotency record. The dual-connection same-key same-body race now ends
+with BOTH sides receiving the success (exactly one carries
+`meta.idempotencyReplay: true`); same key + different body still answers
+`IDEMPOTENCY_CONFLICT`; a FRESH key on an already-resumed run still answers
+the specific `ANALYSIS_RUN_NOT_RESUMABLE` (no shadowing - dedicated negative
+test).
+
+### Gates
+
+Owner targeted suite 4/0 (`-W error`); full suite 667 passed / 1 failed (the
+disclosed QA-owned table-set assertion; zero regression vs r2's 663);
+ruff/compileall/diff-check clean; `generate_contracts.ps1 -Check` =
+**CONTRACT_DRIFT_OK**; no migration touched (single head `f9a4b7e2c8d3`
+re-verified on disposable PG16 @55448, deleted after use).
+
+xfail-promotion: the two QA probes
+(`test_amendment_classification_is_durable_under_production_session`,
+`test_dual_connection_same_key_race_loser_replays_strict_ccr`) flip green
+against this head and should be promoted to hard assertions on the QA branch.
+
+ready_for_fast_QA: **YES**. ready_for_public_route: **NO**.
