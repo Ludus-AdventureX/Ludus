@@ -553,8 +553,10 @@ export interface paths {
          * List Case Simulation Anchors
          * @description Case→graph anchor list (CCR-20260726-READ-01 §2).
          *
-         *     Anchors only: graph id, title, current-version pointer and the source
-         *     report — enough for the sandbox to key the mounted graph/run reads.
+         *     Anchors only — but COMPLETE for the SIM-02A run request: per graph the
+         *     latest strategy/scenario/score version summaries ride along, and the
+         *     case-visible decision-maker profiles ship at the top level, so a client
+         *     can assemble the full run-anchor set without any extra surface.
          */
         get: operations["list_case_simulation_anchors_api_workspaces__workspaceId__cases__decisionCaseId__simulations_get"];
         put?: never;

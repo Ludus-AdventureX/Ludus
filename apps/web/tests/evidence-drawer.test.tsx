@@ -229,15 +229,52 @@ function renderDrawer(overrides: Partial<Parameters<typeof EvidenceDrawer>[0]> =
   return { onClose, ...view };
 }
 
-// --- Honest gap + availability switch ---------------------------------------
+// --- Anchors resolution + availability switch --------------------------------
 
-describe("evidence anchors availability (sandbox single-switch precedent)", () => {
-  test("no case→run resolution route ships today; resolution stays fail-closed", () => {
-    expect(evidenceAnchorsRouteAvailable).toBe(false);
-    expect(resolveEvidenceAnchors("case_1")).toBeNull();
+describe("evidence anchors availability (READ-01 flip)", () => {
+  test("the case→run resolution route shipped; the switch is ON", () => {
+    expect(evidenceAnchorsRouteAvailable).toBe(true);
   });
 
-  test("production trigger opens the honest gap state and performs ZERO fetches", async () => {
+  test("resolveEvidenceAnchors picks the newest run and degrades to null honestly", async () => {
+    const anchorsFetch = vi.fn(async () =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          data: {
+            decisionCaseId: "case_1",
+            items: [
+              { analysisRunId: "run_new", decisionCaseId: "case_1", charterId: "ch", analysisLevel: "full", status: "ready", caseVersion: 1, createdAt: "2026-07-25", completedAt: null }
+            ]
+          }
+        })
+      }) as unknown as Response
+    );
+    await expect(
+      resolveEvidenceAnchors("ws_1", "case_1", anchorsFetch as unknown as typeof fetch)
+    ).resolves.toEqual({ workspaceId: "ws_1", analysisRunId: "run_new" });
+    expect(String((anchorsFetch.mock.calls as unknown[][])[0]?.[0])).toBe(
+      "/api/workspaces/ws_1/cases/case_1/analyses"
+    );
+
+    const emptyFetch = vi.fn(async () =>
+      ({ ok: true, status: 200, json: async () => ({ ok: true, data: { decisionCaseId: "case_1", items: [] } }) }) as unknown as Response
+    );
+    await expect(
+      resolveEvidenceAnchors("ws_1", "case_1", emptyFetch as unknown as typeof fetch)
+    ).resolves.toBeNull();
+
+    const notFoundFetch = vi.fn(async () =>
+      ({ ok: false, status: 404, json: async () => ({ ok: false, error: { code: "CASE_NOT_FOUND", message: "Case material not found." } }) }) as unknown as Response
+    );
+    await expect(
+      resolveEvidenceAnchors("ws_1", "case_1", notFoundFetch as unknown as typeof fetch)
+    ).resolves.toBeNull();
+  });
+
+  test("trigger without a workspace anchor keeps the honest gap state and performs ZERO fetches", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.fn();
     render(<EvidenceDrawerTrigger fetchImpl={fetchSpy as unknown as typeof fetch} eventSourceFactory={null} />);

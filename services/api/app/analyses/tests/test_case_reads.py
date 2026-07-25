@@ -308,9 +308,17 @@ async def test_case_simulation_anchor_list(client, session, world) -> None:
     graph, _version, _nodes, _edge = await _seed_graph(session, world)
     response = await client.get(f"{_ws(world)}/cases/{world.case_id}/simulations")
     assert response.status_code == 200, response.text
-    items = response.json()["data"]["items"]
+    data = response.json()["data"]
+    items = data["items"]
     assert [item["graphId"] for item in items] == [str(graph.id)]
     assert items[0]["reportArtifactId"] == str(graph.report_artifact_id)
+    # READ-01 anchor completeness: the strategy/scenario/score summaries and
+    # the profile list are ALWAYS present (empty lists when nothing persisted)
+    # so the client can fail closed without probing extra surfaces.
+    assert items[0]["strategyVersions"] == []
+    assert items[0]["scenarioVersions"] == []
+    assert items[0]["scoreDefinitions"] == []
+    assert data["decisionMakerProfiles"] == []
 
 
 # --- anti-enumeration matrix -----------------------------------------------------

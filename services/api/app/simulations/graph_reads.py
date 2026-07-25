@@ -27,7 +27,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.models import CausalGraph, DecisionCase, GraphEdge, GraphNode, GraphVersion
+from app.models import (
+    CausalGraph,
+    DecisionCase,
+    DecisionMakerProfile,
+    GraphEdge,
+    GraphNode,
+    GraphVersion,
+    ScenarioVersion,
+    ScoreDefinition,
+    StrategyVersion,
+)
 from app.tenancy.context import WorkspaceContext, require_workspace_context
 
 from .errors import simulation_scope_not_found
@@ -224,8 +234,10 @@ async def list_case_simulation_anchors(
 ) -> dict[str, Any]:
     """Case→graph anchor list (CCR-20260726-READ-01 §2).
 
-    Anchors only: graph id, title, current-version pointer and the source
-    report — enough for the sandbox to key the mounted graph/run reads.
+    Anchors only — but COMPLETE for the SIM-02A run request: per graph the
+    latest strategy/scenario/score version summaries ride along, and the
+    case-visible decision-maker profiles ship at the top level, so a client
+    can assemble the full run-anchor set without any extra surface.
     """
 
     case = (
@@ -253,24 +265,129 @@ async def list_case_simulation_anchors(
         .scalars()
         .all()
     )
+
+    async def _graph_item(graph: CausalGraph) -> dict[str, Any]:
+        strategies = (
+            (
+                await db.execute(
+                    select(StrategyVersion)
+                    .where(
+                        StrategyVersion.workspace_id == context.workspace_id,
+                        StrategyVersion.graph_id == graph.id,
+                    )
+                    .order_by(StrategyVersion.version.desc(), StrategyVersion.id)
+                    .limit(20)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        scenarios = (
+            (
+                await db.execute(
+                    select(ScenarioVersion)
+                    .where(
+                        ScenarioVersion.workspace_id == context.workspace_id,
+                        ScenarioVersion.graph_id == graph.id,
+                    )
+                    .order_by(ScenarioVersion.version.desc(), ScenarioVersion.id)
+                    .limit(20)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        scores = (
+            (
+                await db.execute(
+                    select(ScoreDefinition)
+                    .where(
+                        ScoreDefinition.workspace_id == context.workspace_id,
+                        ScoreDefinition.graph_id == graph.id,
+                    )
+                    .order_by(ScoreDefinition.created_at.desc(), ScoreDefinition.id)
+                    .limit(20)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {
+            "graphId": str(graph.id),
+            "title": graph.title,
+            "currentGraphVersionId": (
+                str(graph.current_graph_version_id)
+                if graph.current_graph_version_id
+                else None
+            ),
+            "reportArtifactId": str(graph.report_artifact_id),
+            "originModes": [mode.value for mode in graph.origin_modes],
+            "createdAt": graph.created_at.isoformat(),
+            "updatedAt": graph.updated_at.isoformat(),
+            "strategyVersions": [
+                {
+                    "strategyVersionId": str(row.id),
+                    "version": row.version,
+                    "optionId": str(row.option_id),
+                    "createdAt": row.created_at.isoformat(),
+                }
+                for row in strategies
+            ],
+            "scenarioVersions": [
+                {
+                    "scenarioVersionId": str(row.id),
+                    "version": row.version,
+                    "name": row.name,
+                    "strategySurvives": row.strategy_survives,
+                    "sourceLensArtifactId": str(row.source_lens_artifact_id),
+                    "sourceStrategicScenarioId": row.source_strategic_scenario_id,
+                    "createdAt": row.created_at.isoformat(),
+                }
+                for row in scenarios
+            ],
+            "scoreDefinitions": [
+                {
+                    "scoreDefinitionId": str(row.id),
+                    "version": row.version,
+                    "createdAt": row.created_at.isoformat(),
+                }
+                for row in scores
+            ],
+        }
+
+    profiles = (
+        (
+            await db.execute(
+                select(DecisionMakerProfile)
+                .where(
+                    DecisionMakerProfile.workspace_id == context.workspace_id,
+                    (DecisionMakerProfile.decision_case_id == decision_case_id)
+                    | (DecisionMakerProfile.decision_case_id.is_(None)),
+                )
+                .order_by(
+                    DecisionMakerProfile.version.desc(), DecisionMakerProfile.id
+                )
+                .limit(20)
+            )
+        )
+        .scalars()
+        .all()
+    )
     return _envelope(
         {
             "decisionCaseId": str(decision_case_id),
-            "items": [
+            "items": [await _graph_item(graph) for graph in graphs],
+            "decisionMakerProfiles": [
                 {
-                    "graphId": str(graph.id),
-                    "title": graph.title,
-                    "currentGraphVersionId": (
-                        str(graph.current_graph_version_id)
-                        if graph.current_graph_version_id
-                        else None
+                    "decisionMakerProfileId": str(row.profile_id),
+                    "version": row.version,
+                    "displayName": row.display_name,
+                    "decisionCaseId": (
+                        str(row.decision_case_id) if row.decision_case_id else None
                     ),
-                    "reportArtifactId": str(graph.report_artifact_id),
-                    "originModes": [mode.value for mode in graph.origin_modes],
-                    "createdAt": graph.created_at.isoformat(),
-                    "updatedAt": graph.updated_at.isoformat(),
+                    "createdAt": row.created_at.isoformat(),
                 }
-                for graph in graphs
+                for row in profiles
             ],
         }
     )

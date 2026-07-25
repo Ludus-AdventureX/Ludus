@@ -3615,3 +3615,18 @@ Verbatim Phase A HEAD content:
 - ready_for_qa: YES.
 - Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Archived work 2026-07-25 (Asia/Shanghai) - prior main HEAD: READ-01 web flip - evidence anchors + sandbox data assembly (main @ fdc31d1), displaced by the release-integration reconcile merge r2 (verbatim from origin/main:HEAD)
+
+# Work Log: READ-01 web flip (r1) - evidence + sandbox switches ON
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/read-routes-r1; branch codex/task-read-routes-web-flip-r1, base = live main 465869af5fdfcbaea4749923e3930584eb90294a (READ-01 backend wave head, remote-verified). No rebase/amend/force; zero new dependencies.
+- Role: Web/UX Owner (integration-lane dispatch READ-ROUTES-WEB-FLIP-R1), Fable5.
+- Backend increment (same wave, additive): the case->graph anchor projection now carries per-graph strategyVersions/scenarioVersions/scoreDefinitions summaries and top-level decisionMakerProfiles, completing the SIM-02A anchor set on ONE surface (CCR-20260726-READ-01 SS2 anchor rows, additive fields only; contracts regenerated, CONTRACT_DRIFT_OK).
+- Flips: lib/api/evidence.ts evidenceAnchorsRouteAvailable=true with an async resolveEvidenceAnchors(workspaceId, decisionCaseId) consuming GET /cases/{id}/analyses (newest run; 404/empty/error => null, honest gap); components/simulation/sandboxData.ts sandboxCaseDataRouteAvailable=true with an async loadSandboxCaseData assembling recommendation (ready StructuredReport, option outcome only - abstain keeps the sandbox closed), graph (version detail nodes/edges), fragileConditions (adjustable nodes ranked weakest evidence first), scenarioFrames (scenario_planning lens content + confirmed ScenarioVersion anchors) and the full SimulationAnchors; ANY missing block degrades the WHOLE load to null (fail-closed, zero partial fabrication).
+- Authorized shell threading (dispatch authorization): CaseShell/CaseViewRouter thread tenantWorkspaceId + decisionCaseId into AnalysisView/ReportView (EvidenceDrawerTrigger anchors resolution) and SandboxView (async loader); trigger resolves asynchronously with a cancelled-effect guard; slotContracts.ts untouched (evidence-drawer-trigger status stays as shipped by B2; no slot definition changed - threading is props-only on the view components, not a slot contract edit).
+- Disclosed test updates (switch-state pins, dispatch-authorized): evidence-drawer.test.tsx availability block re-pinned to ON + async resolver matrix (newest-run pick, empty->null, 404->null, zero-fetch without workspace anchor); qa-task13-sandbox-adversarial.test.tsx QA-A5 re-pinned (ON + 404->null + incomplete-anchors fail-closed after FIRST read + no-workspace empty frame); NEW tests/sandbox-data-loader.test.ts (full-fixture assembly incl. anchors equality, weakest-evidence ranking, confirmed-frame version anchor; four missing-block degradations; abstain closure).
+- Gates: web test 97/97 (89 baseline zero-regression + 8 new), typecheck exit 0, build + lint recorded in the wave commit; backend test_case_reads 8/8 (anchor completeness assertions added), full battery + canonical on the wave tree recorded in the wave commit; generate_contracts.ps1 regenerate + -Check = CONTRACT_DRIFT_OK; ruff all-pass.
+- ready_for_qa: YES.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

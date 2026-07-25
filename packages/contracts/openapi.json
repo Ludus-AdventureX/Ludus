@@ -4977,7 +4977,7 @@
     },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations": {
       "get": {
-        "description": "Case→graph anchor list (CCR-20260726-READ-01 §2).\n\nAnchors only: graph id, title, current-version pointer and the source\nreport — enough for the sandbox to key the mounted graph/run reads.",
+        "description": "Case→graph anchor list (CCR-20260726-READ-01 §2).\n\nAnchors only — but COMPLETE for the SIM-02A run request: per graph the\nlatest strategy/scenario/score version summaries ride along, and the\ncase-visible decision-maker profiles ship at the top level, so a client\ncan assemble the full run-anchor set without any extra surface.",
         "operationId": "list_case_simulation_anchors_api_workspaces__workspaceId__cases__decisionCaseId__simulations_get",
         "parameters": [
           {

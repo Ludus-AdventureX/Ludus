@@ -312,26 +312,47 @@ export async function fetchRunConflicts(
 
 // --- Honest data-availability contract (sandbox precedent) -------------------
 
-// Single source of truth per missing backend surface, following
-// components/simulation/sandboxData.ts / lib/shell/projects.ts:
-// every mounted evidence route is keyed by workspaceId + analysisRunId (or
-// evidenceItemId), but NO route resolves a decisionCaseId to its analysis
-// runs today (no case read / run list surface in types.gen.ts). Until that
-// surface ships, the production drawer renders an honest gap state; the full
-// interaction is driven by callers that CAN provide real anchors (and by
-// tests with fixtures). Flip this flag only when the canonical resolution
-// route lands — the UI needs no restructuring.
-export const evidenceAnchorsRouteAvailable = false;
+// CCR-20260726-READ-01 shipped the canonical resolution surface
+// (GET /api/workspaces/{workspaceId}/cases/{decisionCaseId}/analyses), so the
+// single switch is now ON. The resolver stays honest: any 404/401/network
+// failure or an empty run list resolves to null and the drawer keeps its gap
+// state — no fabricated run id, no invented endpoint.
+export const evidenceAnchorsRouteAvailable = true;
+
+export type CaseRunAnchor = {
+  analysisRunId: string;
+  decisionCaseId: string;
+  charterId: string;
+  analysisLevel: string;
+  status: string;
+  caseVersion: number;
+  createdAt: string;
+  completedAt: string | null;
+};
 
 /**
- * Resolve the run anchors for a decision case. Today there is no backend
- * surface for this resolution, so it returns null and the drawer renders the
- * honest gap state (no fabricated run id, no invented endpoint).
+ * Resolve the run anchors for a decision case via the READ-01 anchor route.
+ * The newest run wins (server orders createdAt DESC). Every failure mode
+ * degrades to null — the caller renders the honest gap state.
  */
-export function resolveEvidenceAnchors(decisionCaseId: string): EvidenceRunAnchors | null {
-  void decisionCaseId;
+export async function resolveEvidenceAnchors(
+  workspaceId: string,
+  decisionCaseId: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<EvidenceRunAnchors | null> {
   if (!evidenceAnchorsRouteAvailable) return null;
-  return null;
+  try {
+    const data = (await getJson(
+      fetchImpl,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(decisionCaseId)}/analyses`
+    )) as { items?: unknown };
+    const items = Array.isArray(data?.items) ? (data.items as CaseRunAnchor[]) : [];
+    const first = items.find((item) => typeof item?.analysisRunId === "string");
+    if (!first) return null;
+    return { workspaceId, analysisRunId: first.analysisRunId };
+  } catch {
+    return null;
+  }
 }
 
 // --- SSE passive-refresh hook (citation.added only; B1 owns progress) --------

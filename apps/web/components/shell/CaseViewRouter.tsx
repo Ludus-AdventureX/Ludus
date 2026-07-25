@@ -13,20 +13,26 @@ import type { CaseWorkspaceId } from "@/lib/shell/workspaces";
 type CaseViewRouterProps = {
   /** null = no decision case selected/created yet -> empty view. */
   decisionCaseId: string | null;
+  /** Tenant workspace id (READ-01 flip threading; null = anchors stay gap). */
+  tenantWorkspaceId?: string | null;
   activeWorkspace: CaseWorkspaceId;
 };
 
-export function CaseViewRouter({ decisionCaseId, activeWorkspace }: CaseViewRouterProps) {
+export function CaseViewRouter({
+  decisionCaseId,
+  tenantWorkspaceId = null,
+  activeWorkspace
+}: CaseViewRouterProps) {
   if (!decisionCaseId) {
     return <EmptyCaseView />;
   }
   switch (activeWorkspace) {
     case "analysis":
-      return <AnalysisView />;
+      return <AnalysisView workspaceId={tenantWorkspaceId} decisionCaseId={decisionCaseId} />;
     case "report":
-      return <ReportView />;
+      return <ReportView workspaceId={tenantWorkspaceId} decisionCaseId={decisionCaseId} />;
     case "sandbox":
-      return <SandboxView decisionCaseId={decisionCaseId} />;
+      return <SandboxView workspaceId={tenantWorkspaceId} decisionCaseId={decisionCaseId} />;
     case "decision":
       return <DecisionView />;
     case "workspace":
