@@ -1,6 +1,6 @@
 # Work Log: Task 11 Phase 0 five-workspace shell (Session A)
 
-- Status: in progress on codex/task-11-phase0-shell-a (base = live-verified remote main 51ae45c900ae4efa01b72d5d6842adb74ad50c91; Gate 0 exact match, no advance).
+- Status: Session A complete on codex/task-11-phase0-shell-a (base = live-verified remote main 51ae45c900ae4efa01b72d5d6842adb74ad50c91; Gate 0 exact match, no advance); all acceptance gates green (web test 20 passed incl. 14-test baseline zero regression, typecheck/lint clean, build OK with /cases/[decisionCaseId] 11 kB route / 125 kB first load, diff --check + conflict-marker + secret + scope audits clean); handoff at docs/handoffs/TASK11_PHASE0_SHELL_A_HANDOFF.md; Session B must branch from this branch's exact pushed SHA.
 - Role: Web/UX Owner (Fable5). Session A of the A/B serial split; Session B must use this session's exact pushed SHA as its only parent.
 - Scope: apps/web app/(workspace)/cases/[decisionCaseId] route skeleton, components/shell/DecisionSpine.tsx, components/shell/CaseViewRouter.tsx, structured per-workspace placeholder views (Look V7 static layout frames, no mock analysis data), empty view without a template card wall, component map recorded in docs/handoffs, new component tests (route render, five-workspace switching, empty state, a11y landmarks/focus).
 - Look snapshot: all six look sources SHA256-verified byte-identical to frozen design/look-source-manifest.json; index.html used as structure/accessibility reference only; app.js never loaded by production.
