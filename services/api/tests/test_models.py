@@ -17,6 +17,10 @@ from app.db import Base, get_database_url
 # test selection (same pattern as migrations/env.py).
 import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
 import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
+import app.analyses.claims  # noqa: F401  (registers claims + claim_evidence)
+import app.analyses.devils_advocate  # noqa: F401  (registers challenges)
+import app.analyses.quality_gate  # noqa: F401  (registers quality_gate_results)
+import app.reports.models  # noqa: F401  (registers report/export artifacts)
 
 # Task 4/5 companion table registers the same way; importing it here keeps the
 # exact-table-set equality deterministic under any test selection (QA finding
@@ -116,6 +120,9 @@ def test_core_table_set_and_workspace_scope() -> None:
         "source_spans",
         "simulation_runs",
         "signoff_requests",
+        "decision_records",
+        "decision_reviews",
+        "decision_lifecycle_events",
         # CCR-20260724-Ways-01: persisted five-lens outputs.
         "strategic_lens_artifacts",
         # CCR-20260724-SIM-01: canonical simulation graph contract.

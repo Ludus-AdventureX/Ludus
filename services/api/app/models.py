@@ -1501,6 +1501,196 @@ class SignoffRequest(Base):
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class DecisionRecord(Base):
+    __tablename__ = "decision_records"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_decision_records_workspace_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "id",
+            name="uq_decision_records_workspace_case_id",
+        ),
+        UniqueConstraint(
+            "workspace_id",
+            "signoff_request_id",
+            name="uq_decision_records_workspace_signoff_request",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_decision_records_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "signoff_request_id"],
+            ["signoff_requests.workspace_id", "signoff_requests.decision_case_id", "signoff_requests.id"],
+            name="fk_decision_records_workspace_signoff_request",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "supersedes_decision_record_id"],
+            ["decision_records.workspace_id", "decision_records.decision_case_id", "decision_records.id"],
+            name="fk_decision_records_workspace_supersedes",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("case_version > 0", name="decision_record_case_version_positive"),
+        CheckConstraint(
+            "record_kind IN ('original', 'revision')",
+            name="decision_record_kind_valid",
+        ),
+        CheckConstraint(
+            "(record_kind = 'original' AND supersedes_decision_record_id IS NULL) "
+            "OR (record_kind = 'revision' AND supersedes_decision_record_id IS NOT NULL)",
+            name="decision_record_revision_supersedes",
+        ),
+        CheckConstraint("payload_hash <> ''", name="decision_record_payload_hash_not_empty"),
+        CheckConstraint("signature_hash <> ''", name="decision_record_signature_hash_not_empty"),
+        CheckConstraint("record_hash <> ''", name="decision_record_record_hash_not_empty"),
+        Index("ix_decision_records_workspace_case_created", "workspace_id", "decision_case_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    case_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    record_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    supersedes_decision_record_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    signoff_request_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    source_analysis_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_report_artifact_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_judgment_set_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_dissent_record_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_causal_graph_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    source_causal_graph_version_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    source_simulation_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM), nullable=False, default=list, server_default=text("'{}'::origin_mode[]")
+    )
+    system_recommendation: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    selected_option_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    decision_text: Mapped[str] = mapped_column(Text, nullable=False)
+    conditions: Mapped[list[dict[str, Any]]] = json_list_column()
+    thresholds: Mapped[list[dict[str, Any]]] = json_list_column()
+    exit_criteria: Mapped[list[dict[str, Any]]] = json_list_column()
+    action_items: Mapped[list[dict[str, Any]]] = json_list_column()
+    leading_indicators: Mapped[list[dict[str, Any]]] = json_list_column()
+    accepted_unknown_ids: Mapped[list[str]] = json_list_column()
+    review_date: Mapped[str] = mapped_column(String(32), nullable=False)
+    signed_by_user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    signature_statement: Mapped[str] = mapped_column(Text, nullable=False)
+    signature_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    record_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DecisionReview(Base):
+    __tablename__ = "decision_reviews"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_decision_reviews_workspace_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_decision_reviews_workspace_case",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "decision_record_id"],
+            ["decision_records.workspace_id", "decision_records.decision_case_id", "decision_records.id"],
+            name="fk_decision_reviews_workspace_decision_record",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("source_case_version > 0", name="decision_review_case_version_positive"),
+        CheckConstraint(
+            "outcome IN ('on_track', 'adjust', 'reverse', 'close')",
+            name="decision_review_outcome_valid",
+        ),
+        CheckConstraint(
+            "recommendation_adoption IN ('adopted', 'partially_adopted', 'not_adopted')",
+            name="decision_review_recommendation_adoption_valid",
+        ),
+        CheckConstraint(
+            "execution_assessment IN ('as_planned', 'minor_deviation', 'major_deviation', 'not_executed')",
+            name="decision_review_execution_assessment_valid",
+        ),
+        CheckConstraint(
+            "decision_process_assessment IN ('sound', 'mixed', 'flawed')",
+            name="decision_review_process_assessment_valid",
+        ),
+        CheckConstraint(
+            "outcome_quality IN ('positive', 'mixed', 'negative', 'not_yet_observable')",
+            name="decision_review_outcome_quality_valid",
+        ),
+        Index("ix_decision_reviews_workspace_decision_created", "workspace_id", "decision_record_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    decision_record_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_case_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_analysis_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    source_causal_graph_version_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    source_simulation_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    review_date: Mapped[str] = mapped_column(String(32), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(24), nullable=False)
+    recommendation_adoption: Mapped[str] = mapped_column(String(24), nullable=False)
+    execution_assessment: Mapped[str] = mapped_column(String(32), nullable=False)
+    decision_process_assessment: Mapped[str] = mapped_column(String(16), nullable=False)
+    outcome_quality: Mapped[str] = mapped_column(String(24), nullable=False)
+    observed_indicator_values: Mapped[dict[str, Any]] = json_object_column()
+    threshold_breaches: Mapped[list[str]] = json_list_column()
+    external_changes: Mapped[list[str]] = json_list_column()
+    actual_outcomes: Mapped[list[str]] = json_list_column()
+    assumption_results: Mapped[list[dict[str, Any]]] = json_list_column()
+    lessons: Mapped[list[str]] = json_list_column()
+    next_decision_changes: Mapped[list[str]] = json_list_column()
+    notes: Mapped[str] = mapped_column(Text, nullable=False)
+    next_review_date: Mapped[str | None] = mapped_column(String(32))
+    created_by: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DecisionLifecycleEvent(Base):
+    __tablename__ = "decision_lifecycle_events"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_decision_lifecycle_events_workspace_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_decision_lifecycle_events_workspace_case",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("payload_hash <> ''", name="decision_lifecycle_event_payload_hash_not_empty"),
+        Index("ix_decision_lifecycle_events_workspace_case_created", "workspace_id", "decision_case_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    from_stage: Mapped[DecisionLifecycleStage] = mapped_column(
+        enum_type(DecisionLifecycleStage, "decision_lifecycle_stage"), nullable=False
+    )
+    to_stage: Mapped[DecisionLifecycleStage] = mapped_column(
+        enum_type(DecisionLifecycleStage, "decision_lifecycle_stage"), nullable=False
+    )
+    actor_type: Mapped[DomainEventActor] = mapped_column(
+        enum_type(DomainEventActor, "domain_event_actor"), nullable=False
+    )
+    actor_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    command_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
 class CaseVersion(Base):
     __tablename__ = "case_versions"
     __table_args__ = (

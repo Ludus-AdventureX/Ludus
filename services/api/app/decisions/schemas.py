@@ -154,3 +154,113 @@ class SignoffSignCommand(CanonicalModel):
     signature_statement: NonEmptyText
     payload_hash: ContentHash
     nonce: NonEmptyText
+
+
+
+class SignoffCreateRequest(CanonicalModel):
+    payload: SignoffPayload
+
+
+class SignoffCreated(CanonicalModel):
+    signoff_request: SignoffRequest
+    nonce: NonEmptyText
+
+
+class SignoffNonceRotation(CanonicalModel):
+    signoff_request: SignoffRequest
+    nonce: NonEmptyText
+
+
+class DecisionRecord(CanonicalModel):
+    id: Identifier
+    workspace_id: Identifier
+    decision_case_id: Identifier
+    case_version: int = Field(gt=0)
+    record_kind: Literal["original", "revision"]
+    supersedes_decision_record_id: Identifier | None = None
+    signoff_request_id: Identifier
+    payload: SignoffPayload
+    payload_hash: ContentHash
+    source_analysis_run_id: Identifier
+    source_report_artifact_id: Identifier
+    source_judgment_set_id: Identifier
+    source_dissent_record_id: Identifier
+    source_causal_graph_id: Identifier | None = None
+    source_causal_graph_version_id: Identifier | None = None
+    source_simulation_run_id: Identifier | None = None
+    origin_modes: list[Literal["live", "cached", "fixture"]]
+    system_recommendation: SystemRecommendation
+    selected_option_id: Identifier
+    decision_text: NonEmptyText
+    conditions: list[NonEmptyText]
+    thresholds: list[Threshold]
+    exit_criteria: list[NonEmptyText]
+    action_items: list[ActionItem]
+    leading_indicators: list[LeadingIndicator]
+    accepted_unknown_ids: list[Identifier]
+    review_date: date
+    signed_by_user_id: Identifier
+    signed_at: datetime
+    signature_statement: NonEmptyText
+    signature_hash: ContentHash
+    record_hash: ContentHash
+
+
+class AssumptionResult(CanonicalModel):
+    assumption_id: Identifier
+    status: Literal["supported", "weakened", "falsified", "unknown"]
+    observation: NonEmptyText
+
+
+class ReviewCreateRequest(CanonicalModel):
+    source_case_version: int = Field(gt=0)
+    source_analysis_run_id: Identifier
+    source_causal_graph_version_id: Identifier | None = None
+    source_simulation_run_id: Identifier | None = None
+    review_date: date
+    outcome: Literal["on_track", "adjust", "reverse", "close"]
+    recommendation_adoption: Literal["adopted", "partially_adopted", "not_adopted"]
+    execution_assessment: Literal[
+        "as_planned", "minor_deviation", "major_deviation", "not_executed"
+    ]
+    decision_process_assessment: Literal["sound", "mixed", "flawed"]
+    outcome_quality: Literal["positive", "mixed", "negative", "not_yet_observable"]
+    observed_indicator_values: dict[str, str]
+    threshold_breaches: list[Identifier]
+    external_changes: list[NonEmptyText]
+    actual_outcomes: list[NonEmptyText]
+    assumption_results: list[AssumptionResult]
+    lessons: list[NonEmptyText]
+    next_decision_changes: list[NonEmptyText]
+    notes: NonEmptyText
+    next_review_date: date | None = None
+
+
+class Review(CanonicalModel):
+    id: Identifier
+    workspace_id: Identifier
+    decision_case_id: Identifier
+    decision_record_id: Identifier
+    source_case_version: int
+    source_analysis_run_id: Identifier
+    source_causal_graph_version_id: Identifier | None = None
+    source_simulation_run_id: Identifier | None = None
+    review_date: date
+    outcome: Literal["on_track", "adjust", "reverse", "close"]
+    recommendation_adoption: Literal["adopted", "partially_adopted", "not_adopted"]
+    execution_assessment: Literal[
+        "as_planned", "minor_deviation", "major_deviation", "not_executed"
+    ]
+    decision_process_assessment: Literal["sound", "mixed", "flawed"]
+    outcome_quality: Literal["positive", "mixed", "negative", "not_yet_observable"]
+    observed_indicator_values: dict[str, str]
+    threshold_breaches: list[Identifier]
+    external_changes: list[NonEmptyText]
+    actual_outcomes: list[NonEmptyText]
+    assumption_results: list[AssumptionResult]
+    lessons: list[NonEmptyText]
+    next_decision_changes: list[NonEmptyText]
+    notes: NonEmptyText
+    next_review_date: date | None = None
+    created_by: Identifier
+    created_at: datetime
