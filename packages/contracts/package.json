@@ -2,6 +2,7 @@
   "name": "@decision-lab/contracts",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "generate": "openapi-typescript openapi.json -o src/types.gen.ts",
