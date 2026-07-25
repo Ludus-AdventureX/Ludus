@@ -207,7 +207,12 @@ async def test_dual_connection_same_key_race_appends_exactly_one_resolution(
     key = f"race-{uuid4().hex[:12]}"
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-r2-csrf"},
+        cookies={"decision_lab_csrf": "qa-r2-csrf"},
     ) as client:
         first, second = await asyncio.gather(
             client.post(_url(ws_id, run_id), headers={"Idempotency-Key": key}, json=RESOLUTION_BODY),
@@ -243,7 +248,12 @@ async def test_dual_connection_same_key_race_loser_replays_strict_ccr(
     key = f"race-{uuid4().hex[:12]}"
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-r2-csrf"},
+        cookies={"decision_lab_csrf": "qa-r2-csrf"},
     ) as client:
         first, second = await asyncio.gather(
             client.post(_url(ws_id, run_id), headers={"Idempotency-Key": key}, json=RESOLUTION_BODY),
@@ -269,7 +279,12 @@ async def test_idempotency_records_are_workspace_scoped(qa_sessionmaker) -> None
     shared_key = f"shared-{uuid4().hex[:12]}"
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-r2-csrf"},
+        cookies={"decision_lab_csrf": "qa-r2-csrf"},
     ) as client:
         first = await client.post(
             _url(ws_a, run_a), headers={"Idempotency-Key": shared_key}, json=RESOLUTION_BODY
@@ -302,7 +317,12 @@ async def test_amendment_409_does_not_consume_the_idempotency_key(
     key = f"reuse-{uuid4().hex[:12]}"
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-r2-csrf"},
+        cookies={"decision_lab_csrf": "qa-r2-csrf"},
     ) as client:
         amendment = await client.post(
             _url(ws_id, run_id),
@@ -333,7 +353,12 @@ async def test_amendment_code_not_shadowed_by_transition_backstop(
     app = _build_prod_like_app(factory, {ws_id: user_id})
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-r2-csrf"},
+        cookies={"decision_lab_csrf": "qa-r2-csrf"},
     ) as client:
         response = await client.post(
             _url(ws_id, run_id),
@@ -361,7 +386,12 @@ async def test_amendment_classification_is_durable_under_production_session(
     app = _build_prod_like_app(factory, {ws_id: user_id})
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-r2-csrf"},
+        cookies={"decision_lab_csrf": "qa-r2-csrf"},
     ) as client:
         response = await client.post(
             _url(ws_id, run_id),
