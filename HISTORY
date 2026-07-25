@@ -2751,3 +2751,61 @@ Verbatim idle HEAD content archived before starting Task 08 (base main bd9fde152
 - Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T11:17:39.958698+08:00
+
+# Archive Task 08 Evidence Ledger R1 (Phase A) - 2026-07-25 (Asia/Shanghai)
+
+Phase A shipped at c599030a54db591528bf9e7b62850e5869c686e2 on
+codex/task-08-evidence-ledger-r1 (pushed, live ls-remote verified); Phase B
+(Task 09) continues in this lane with parent = that exact SHA.
+Mid-lane deviation disclosure: remote main advanced during Phase A work
+(bd9fde1 -> 51ae45c, guest demo wave). Post-hoc check per the deviation
+protocol: bd9fde1 IS an ancestor of 51ae45c and
+git diff bd9fde1..51ae45c -- services/api/app/evidence services/api/app/analyses
+services/api/app/workers services/api/app/connectors is EMPTY, so the lane's
+surfaces are untouched by the wave and the pinned base stays legitimate.
+
+Verbatim Phase A HEAD content:
+
+# Work Log: in-progress
+
+- Status: Phase A COMPLETE (Task 08 Evidence Ledger & Information Quality Gateway,
+  ready_for_qa = YES); Phase B (Task 09 Analysis Runtime) starts next in this lane on
+  branch codex/task-09-analysis-runtime-r1 with parent = this commit.
+- Role: Case/API/Data Owner (Fable5).
+- Branch: codex/task-08-evidence-ledger-r1; base = origin/main
+  bd9fde15278afd63d351b2adaeb95ec32441cd6f (live ls-remote at Gate 0; EXACT match with
+  the authorized baseline - no deviation protocol). Fresh worktree
+  decision-lab-task08-evidence; no rebase/amend/force-push/cherry-pick; main untouched.
+- Delivered: evidence ledger tables retrieval_tasks / raw_artifacts /
+  quality_assessments / evidence_items / evidence_relations (workspace-scoped,
+  composite case/run FKs, CASE_NOT_FOUND anti-enumeration); migration e7f3a2c9d5b1 on
+  b2c7e9d4a1f6 (single head kept; new PG enums evidence_verdict +
+  retrieval_task_status; origin_mode reused); deterministic quality gateway (L1-L6
+  category + orthogonal dimensions + four-tier verdict accepted/conditional(limits
+  mandatory)/lead_only(next-retrieval only)/rejected + reason codes + remediation
+  actions; L1 never auto-accepts; three articles citing one report = 1 independent
+  source); provider adapters exa (default) -> tavily failover, firecrawl fetch
+  (crawl disabled by default, allowlist + caps), fixture provider (spherical-robot
+  query keys, origin_mode=fixture); SSRF guard (scheme/port whitelist,
+  loopback/private/link-local/metadata rejection, DNS fail-closed, injectable
+  resolver); RawArtifact-first ingestion (immutable rows before references);
+  unmounted relative provenance/conflict router (main.py untouched); 90 own tests in
+  app/evidence/tests.
+- Gates: own suite 90/0 (-W error); full suite 550 passed / 1 failed / 0 xfailed /
+  0 xpassed vs start baseline 461/0/0/0 - the single failure is the QA-owned
+  tests/test_models.py exact-table-set equality (contract-driven, SIM-02A precedent,
+  revision guidance in handoff); filtered regression deselecting exactly that node =
+  550/0; alembic upgrade/current/check/downgrade-roundtrip clean on disposable PG16
+  ludus-pg-task08 @55441; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK
+  (preset read-only toolchain, zero installs/network); packages/contracts zero diff;
+  ruff/compileall/diff-check/conflict-marker/secret-scan/scope-audit clean;
+  migrations/env.py +5 disclosed lines (evidence metadata import).
+- Contract gaps recorded as CCR requests in the handoff (evidence API paths,
+  SourceGrade/FreshnessStatus/stableToolName enum promotion, independent-source
+  group canonical field, evidence_relations schema, SSRF client unification).
+- Handoff: docs/handoffs/TASK_08_EVIDENCE_LEDGER_R1_HANDOFF.md.
+- ready_for_public_route: NO (router unmounted; evidence API paths await CCR).
+- Secret policy: no credentials in code, logs, HEAD/HISTORY, or handoffs.

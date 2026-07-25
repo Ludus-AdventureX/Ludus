@@ -15,6 +15,10 @@ from app.security.rate_limits import rate_limit_metadata
 # check see the full metadata and do not propose dropping them.
 import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
 
+# Task 9 analysis runtime tables (app/analyses/models.py) register the same way,
+# including the active-run partial unique index attached to analysis_runs.
+import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
+
 config = context.config
 # The login throttle table lives on a deliberate module-local MetaData
 # (see app/security/rate_limits.py); include it so autogenerate/check do not

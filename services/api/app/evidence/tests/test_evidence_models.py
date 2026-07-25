@@ -20,7 +20,7 @@ from app.evidence.models import (
 from app.evidence.repository import EvidenceReadRepository
 from app.types import EvidenceVerdict, OriginMode
 
-from conftest import EvidenceWorld
+from evidence_world import EvidenceWorld
 
 NOW = datetime(2026, 7, 25, 12, 0, 0, tzinfo=timezone.utc)
 SHA = "a" * 64
@@ -402,7 +402,16 @@ async def test_evidence_tables_and_enum_exist_with_single_alembic_head(session) 
     version = (
         await session.execute(text("SELECT version_num FROM alembic_version"))
     ).scalar_one()
-    assert version == "e7f3a2c9d5b1"
+    # Chain-robust: the applied head must contain the evidence revision in its
+    # ancestry (later lane migrations legitimately advance the single head).
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(Config("alembic.ini"))
+    heads = script.get_heads()
+    assert heads == [version], "single alembic head must equal the applied version"
+    ancestry = {rev.revision for rev in script.walk_revisions("base", version)}
+    assert "e7f3a2c9d5b1" in ancestry
 
 
 async def test_all_evidence_tables_are_workspace_scoped(session) -> None:

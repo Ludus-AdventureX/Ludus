@@ -9,9 +9,8 @@ sandbox. This directory is deliberately not a package.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -37,6 +36,8 @@ from app.types import (
     WorkspaceRole,
 )
 
+from evidence_world import EvidenceWorld
+
 NOW = datetime(2026, 7, 25, 12, 0, 0, tzinfo=timezone.utc)
 
 
@@ -61,19 +62,6 @@ async def session() -> AsyncIterator[AsyncSession]:
 @pytest.fixture
 def artifact_store(tmp_path) -> FilesystemArtifactStore:
     return FilesystemArtifactStore(root=tmp_path / "artifacts")
-
-
-@dataclass(slots=True)
-class EvidenceWorld:
-    """Ids of one fully seeded tenant scope for evidence tests."""
-
-    workspace_id: UUID
-    user_id: UUID
-    subject_id: UUID
-    case_id: UUID
-    analysis_run_id: UUID
-    source_record_id: UUID
-    source_span_id: UUID
 
 
 async def seed_evidence_world(session: AsyncSession, slug: str) -> EvidenceWorld:
