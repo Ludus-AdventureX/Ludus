@@ -3,16 +3,16 @@
  * (docs/product-plan/docs/contract-changes/CCR-20260724-SIM-02A.md):
  *
  *   GET  /api/auth/csrf
- *   POST /api/auth/login
- *   GET  /api/auth/session
+ *   POST /api/auth/guest
  *   POST /api/workspaces/{workspaceId}/simulations/{graphId}/runs
  *   GET  /api/workspaces/{workspaceId}/simulations/{graphId}/runs/{simulationRunId}
  *
- * Every call is same-origin `/api` with `credentials: "include"`; no secret
- * is read from the environment — only public demo fixture identifiers.
+ * Every call is same-origin `/api` with `credentials: "include"`. No secret
+ * is read from the environment — the guest endpoint returns the workspace
+ * and fixture identifiers the page needs.
  */
 
-export type DemoFixtureConfig = {
+export type DemoFixtureIds = {
   graphId: string;
   graphVersionId: string;
   strategyVersionId: string;
@@ -22,9 +22,10 @@ export type DemoFixtureConfig = {
   decisionMakerProfileVersion: number;
 };
 
-export type DemoFixtureReadResult =
-  | { ok: true; config: DemoFixtureConfig }
-  | { ok: false; missing: string[] };
+export type GuestSession = {
+  workspaceId: string;
+  fixture: DemoFixtureIds;
+};
 
 export type SimulationOptionScore = { optionId: string; score: number };
 export type SimulationTopDriver = { nodeId: string; scoreDelta: number };
@@ -73,45 +74,6 @@ export class DemoApiError extends Error {
   }
 }
 
-/**
- * Reads the public demo fixture. Each variable is referenced statically so
- * Next.js can inline the NEXT_PUBLIC_* values into the client bundle.
- */
-export function readDemoFixtureConfig(): DemoFixtureReadResult {
-  const raw: Record<string, string | undefined> = {
-    NEXT_PUBLIC_DEMO_GRAPH_ID: process.env.NEXT_PUBLIC_DEMO_GRAPH_ID,
-    NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID: process.env.NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID,
-    NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID: process.env.NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID,
-    NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID: process.env.NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID,
-    NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID: process.env.NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID,
-    NEXT_PUBLIC_DEMO_PROFILE_ID: process.env.NEXT_PUBLIC_DEMO_PROFILE_ID,
-    NEXT_PUBLIC_DEMO_PROFILE_VERSION: process.env.NEXT_PUBLIC_DEMO_PROFILE_VERSION,
-  };
-  const missing = Object.entries(raw)
-    .filter(([, value]) => !value || !value.trim())
-    .map(([name]) => name);
-  const version = Number.parseInt(raw.NEXT_PUBLIC_DEMO_PROFILE_VERSION ?? "", 10);
-  if (
-    !missing.includes("NEXT_PUBLIC_DEMO_PROFILE_VERSION") &&
-    (!Number.isInteger(version) || version < 1)
-  ) {
-    missing.push("NEXT_PUBLIC_DEMO_PROFILE_VERSION");
-  }
-  if (missing.length > 0) return { ok: false, missing };
-  return {
-    ok: true,
-    config: {
-      graphId: raw.NEXT_PUBLIC_DEMO_GRAPH_ID!.trim(),
-      graphVersionId: raw.NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID!.trim(),
-      strategyVersionId: raw.NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID!.trim(),
-      scenarioVersionId: raw.NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID!.trim(),
-      scoreDefinitionId: raw.NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID!.trim(),
-      decisionMakerProfileId: raw.NEXT_PUBLIC_DEMO_PROFILE_ID!.trim(),
-      decisionMakerProfileVersion: version,
-    },
-  };
-}
-
 type Envelope = { ok?: boolean; data?: unknown; meta?: { idempotencyReplay?: boolean } };
 
 async function requestJson(path: string, init: RequestInit = {}): Promise<Envelope> {
@@ -149,27 +111,73 @@ export async function fetchCsrfToken(): Promise<string> {
   return token;
 }
 
-export async function loginDemoAccount(
-  csrfToken: string,
-  email: string,
-  password: string,
-): Promise<void> {
-  await requestJson("/api/auth/login", {
+/**
+ * POST /api/auth/guest — create or restore a guest account. The server owns
+ * the guest identity (cookie-bound session); the response returns the
+ * workspace and fixture IDs the page needs to drive the demo.
+ */
+export async function fetchGuestSession(csrfToken: string): Promise<GuestSession> {
+  const envelope = await requestJson("/api/auth/guest", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
-    body: JSON.stringify({ email, password }),
   });
+  const data = envelope.data as
+    | { workspaceId?: string; fixture?: Partial<DemoFixtureIds> }
+    | undefined;
+  const missing = validateGuestPayload(data);
+  if (missing.length > 0) {
+    throw new DemoApiError(
+      "GUEST_PAYLOAD_INVALID",
+      `Guest 响应缺少必要字段：${missing.join(", ")}。`,
+      200,
+    );
+  }
+  return {
+    workspaceId: data!.workspaceId!,
+    fixture: {
+      graphId: data!.fixture!.graphId!,
+      graphVersionId: data!.fixture!.graphVersionId!,
+      strategyVersionId: data!.fixture!.strategyVersionId!,
+      scenarioVersionId: data!.fixture!.scenarioVersionId!,
+      scoreDefinitionId: data!.fixture!.scoreDefinitionId!,
+      decisionMakerProfileId: data!.fixture!.decisionMakerProfileId!,
+      decisionMakerProfileVersion: data!.fixture!.decisionMakerProfileVersion!,
+    },
+  };
 }
 
-export async function fetchWorkspaceId(): Promise<string> {
-  const envelope = await requestJson("/api/auth/session");
-  const memberships = (envelope.data as { memberships?: { workspaceId?: string }[] } | undefined)
-    ?.memberships;
-  const workspaceId = memberships?.[0]?.workspaceId;
-  if (!workspaceId) {
-    throw new DemoApiError("WORKSPACE_MISSING", "Demo 账号没有可用的 workspace membership。", 200);
+function validateGuestPayload(
+  data: { workspaceId?: string; fixture?: Partial<DemoFixtureIds> } | undefined,
+): string[] {
+  if (!data) return ["data"];
+  const missing: string[] = [];
+  if (!data.workspaceId) missing.push("workspaceId");
+  const fixture = data.fixture;
+  if (!fixture) {
+    missing.push("fixture");
+    return missing;
   }
-  return workspaceId;
+  const required: (keyof DemoFixtureIds)[] = [
+    "graphId",
+    "graphVersionId",
+    "strategyVersionId",
+    "scenarioVersionId",
+    "scoreDefinitionId",
+    "decisionMakerProfileId",
+    "decisionMakerProfileVersion",
+  ];
+  for (const key of required) {
+    const value = fixture[key];
+    if (value === undefined || value === null || value === "") missing.push(`fixture.${key}`);
+  }
+  if (
+    fixture.decisionMakerProfileVersion !== undefined &&
+    (!Number.isInteger(fixture.decisionMakerProfileVersion) ||
+      fixture.decisionMakerProfileVersion < 1)
+  ) {
+    missing.push("fixture.decisionMakerProfileVersion");
+  }
+  return missing;
 }
 
 export type SimulationRunOutcome = {
@@ -180,11 +188,11 @@ export type SimulationRunOutcome = {
 export async function createSimulationRun(
   workspaceId: string,
   csrfToken: string,
-  config: DemoFixtureConfig,
+  fixture: DemoFixtureIds,
   idempotencyKey: string,
 ): Promise<SimulationRunOutcome> {
   const envelope = await requestJson(
-    `/api/workspaces/${encodeURIComponent(workspaceId)}/simulations/${encodeURIComponent(config.graphId)}/runs`,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/simulations/${encodeURIComponent(fixture.graphId)}/runs`,
     {
       method: "POST",
       headers: {
@@ -194,12 +202,12 @@ export async function createSimulationRun(
       },
       body: JSON.stringify({
         mode: "experimental",
-        graphVersionId: config.graphVersionId,
-        strategyVersionId: config.strategyVersionId,
-        scenarioVersionId: config.scenarioVersionId,
-        scoreDefinitionId: config.scoreDefinitionId,
-        decisionMakerProfileId: config.decisionMakerProfileId,
-        decisionMakerProfileVersion: config.decisionMakerProfileVersion,
+        graphVersionId: fixture.graphVersionId,
+        strategyVersionId: fixture.strategyVersionId,
+        scenarioVersionId: fixture.scenarioVersionId,
+        scoreDefinitionId: fixture.scoreDefinitionId,
+        decisionMakerProfileId: fixture.decisionMakerProfileId,
+        decisionMakerProfileVersion: fixture.decisionMakerProfileVersion,
       }),
     },
   );
@@ -220,10 +228,11 @@ export async function fetchSimulationReplay(
   return envelope.data as SimulationRunData;
 }
 
-export type DemoFlowStep = "csrf" | "login" | "session" | "run" | "replay";
+export type DemoFlowStep = "csrf" | "guest" | "run" | "replay";
 
 export type DemoFlowResult = {
   workspaceId: string;
+  fixture: DemoFixtureIds;
   run: SimulationRunData;
   idempotencyReplay: boolean;
   replay: SimulationRunData;
@@ -236,26 +245,40 @@ export function newIdempotencyKey(): string {
   return `demo-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-/** Runs the full demo flow: csrf → login → session → POST run → GET replay. */
-export async function runDemoFlow(
-  config: DemoFixtureConfig,
-  credentials: { email: string; password: string },
+/**
+ * Establishes (or restores) the guest session: csrf → POST /api/auth/guest.
+ * The guest step is idempotent at the server: a fresh browser gets a new guest,
+ * an existing cookie-bound session is restored transparently.
+ */
+export async function establishGuestSession(
   onStep?: (step: DemoFlowStep) => void,
-): Promise<DemoFlowResult> {
+): Promise<GuestSession> {
   onStep?.("csrf");
   const csrfToken = await fetchCsrfToken();
-  onStep?.("login");
-  await loginDemoAccount(csrfToken, credentials.email, credentials.password);
-  onStep?.("session");
-  const workspaceId = await fetchWorkspaceId();
+  onStep?.("guest");
+  return fetchGuestSession(csrfToken);
+}
+
+/**
+ * Runs the simulation against an already-established guest session:
+ * csrf → POST run → GET replay. The caller supplies the workspace + fixture
+ * returned by establishGuestSession.
+ */
+export async function runSimulation(
+  workspaceId: string,
+  fixture: DemoFixtureIds,
+  onStep?: (step: DemoFlowStep) => void,
+): Promise<SimulationRunOutcome & { replay: SimulationRunData }> {
+  onStep?.("csrf");
+  const csrfToken = await fetchCsrfToken();
   onStep?.("run");
-  const { run, idempotencyReplay } = await createSimulationRun(
+  const outcome = await createSimulationRun(
     workspaceId,
     csrfToken,
-    config,
+    fixture,
     newIdempotencyKey(),
   );
   onStep?.("replay");
-  const replay = await fetchSimulationReplay(workspaceId, config.graphId, run.simulationRunId);
-  return { workspaceId, run, idempotencyReplay, replay };
+  const replay = await fetchSimulationReplay(workspaceId, fixture.graphId, outcome.run.simulationRunId);
+  return { ...outcome, replay };
 }

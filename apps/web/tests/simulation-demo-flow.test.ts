@@ -4,29 +4,21 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   DemoApiError,
-  readDemoFixtureConfig,
-  runDemoFlow,
-  type DemoFixtureConfig,
+  establishGuestSession,
+  fetchCsrfToken,
+  fetchGuestSession,
+  runSimulation,
+  type DemoFixtureIds,
   type SimulationRunData,
 } from "../lib/demo/simulationDemo";
 
-const fixtureEnv: Record<string, string> = {
-  NEXT_PUBLIC_DEMO_GRAPH_ID: "11111111-1111-4111-8111-111111111111",
-  NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID: "22222222-2222-4222-8222-222222222222",
-  NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID: "33333333-3333-4333-8333-333333333333",
-  NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID: "44444444-4444-4444-8444-444444444444",
-  NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID: "55555555-5555-4555-8555-555555555555",
-  NEXT_PUBLIC_DEMO_PROFILE_ID: "66666666-6666-4666-8666-666666666666",
-  NEXT_PUBLIC_DEMO_PROFILE_VERSION: "1",
-};
-
-const demoConfig: DemoFixtureConfig = {
-  graphId: fixtureEnv.NEXT_PUBLIC_DEMO_GRAPH_ID,
-  graphVersionId: fixtureEnv.NEXT_PUBLIC_DEMO_GRAPH_VERSION_ID,
-  strategyVersionId: fixtureEnv.NEXT_PUBLIC_DEMO_STRATEGY_VERSION_ID,
-  scenarioVersionId: fixtureEnv.NEXT_PUBLIC_DEMO_SCENARIO_VERSION_ID,
-  scoreDefinitionId: fixtureEnv.NEXT_PUBLIC_DEMO_SCORE_DEFINITION_ID,
-  decisionMakerProfileId: fixtureEnv.NEXT_PUBLIC_DEMO_PROFILE_ID,
+const guestFixture: DemoFixtureIds = {
+  graphId: "11111111-1111-4111-8111-111111111111",
+  graphVersionId: "22222222-2222-4222-8222-222222222222",
+  strategyVersionId: "33333333-3333-4333-8333-333333333333",
+  scenarioVersionId: "44444444-4444-4444-8444-444444444444",
+  scoreDefinitionId: "55555555-5555-4555-8555-555555555555",
+  decisionMakerProfileId: "66666666-6666-4666-8666-666666666666",
   decisionMakerProfileVersion: 1,
 };
 
@@ -34,13 +26,13 @@ const runData: SimulationRunData = {
   simulationRunId: "77777777-7777-4777-8777-777777777777",
   workspaceId: "88888888-8888-4888-8888-888888888888",
   decisionCaseId: "99999999-9999-4999-8999-999999999999",
-  graphId: demoConfig.graphId,
-  graphVersionId: demoConfig.graphVersionId,
-  strategyVersionId: demoConfig.strategyVersionId,
-  scenarioVersionId: demoConfig.scenarioVersionId,
-  scoreDefinitionId: demoConfig.scoreDefinitionId,
+  graphId: guestFixture.graphId,
+  graphVersionId: guestFixture.graphVersionId,
+  strategyVersionId: guestFixture.strategyVersionId,
+  scenarioVersionId: guestFixture.scenarioVersionId,
+  scoreDefinitionId: guestFixture.scoreDefinitionId,
   scoreDefinitionVersion: "1",
-  decisionMakerProfileId: demoConfig.decisionMakerProfileId,
+  decisionMakerProfileId: guestFixture.decisionMakerProfileId,
   decisionMakerProfileVersion: 1,
   riskTolerance: 0.5,
   engineVersion: "sim-engine-1.1.0",
@@ -67,31 +59,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-describe("readDemoFixtureConfig", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  test("returns the parsed fixture when all variables are present", () => {
-    for (const [name, value] of Object.entries(fixtureEnv)) vi.stubEnv(name, value);
-    const result = readDemoFixtureConfig();
-    expect(result).toEqual({ ok: true, config: demoConfig });
-  });
-
-  test("reports every missing variable by name", () => {
-    for (const [name, value] of Object.entries(fixtureEnv)) vi.stubEnv(name, value);
-    vi.stubEnv("NEXT_PUBLIC_DEMO_GRAPH_ID", "");
-    vi.stubEnv("NEXT_PUBLIC_DEMO_PROFILE_VERSION", "not-a-number");
-    const result = readDemoFixtureConfig();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.missing).toContain("NEXT_PUBLIC_DEMO_GRAPH_ID");
-      expect(result.missing).toContain("NEXT_PUBLIC_DEMO_PROFILE_VERSION");
-    }
-  });
-});
-
-describe("runDemoFlow", () => {
+describe("fetchCsrfToken / fetchGuestSession", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -103,116 +71,160 @@ describe("runDemoFlow", () => {
     vi.unstubAllGlobals();
   });
 
-  test("walks csrf → login → session → run → replay with contract headers", async () => {
+  test("fetchCsrfToken reads the double-submit token from the envelope", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-abc" } }));
+    const token = await fetchCsrfToken();
+    expect(token).toBe("csrf-abc");
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/csrf", expect.objectContaining({ credentials: "include" }));
+  });
+
+  test("fetchGuestSession posts with X-CSRF-Token and parses the payload", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        ok: true,
+        data: { workspaceId: runData.workspaceId, fixture: guestFixture },
+      }),
+    );
+    const session = await fetchGuestSession("csrf-abc");
+    expect(session.workspaceId).toBe(runData.workspaceId);
+    expect(session.fixture).toEqual(guestFixture);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/auth/guest");
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>)["X-CSRF-Token"]).toBe("csrf-abc");
+    expect(init.credentials).toBe("include");
+  });
+
+  test("fetchGuestSession throws GUEST_PAYLOAD_INVALID when workspaceId is missing", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, data: { fixture: guestFixture } }));
+    await expect(fetchGuestSession("csrf-abc")).rejects.toMatchObject({
+      code: "GUEST_PAYLOAD_INVALID",
+      status: 200,
+    });
+  });
+
+  test("fetchGuestSession reports every missing fixture field", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ ok: true, data: { workspaceId: runData.workspaceId, fixture: {} } }),
+    );
+    const error = await fetchGuestSession("csrf-abc").catch((e) => e);
+    expect(error).toBeInstanceOf(DemoApiError);
+    expect(error.message).toContain("fixture.graphId");
+    expect(error.message).toContain("fixture.decisionMakerProfileVersion");
+  });
+});
+
+describe("establishGuestSession", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("walks csrf → guest and returns the workspace + fixture", async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-token-1" } }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { user: {}, session: {}, memberships: [] } }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-abc" } }))
       .mockResolvedValueOnce(
         jsonResponse({
           ok: true,
-          data: { memberships: [{ workspaceId: runData.workspaceId, workspaceName: "Demo" }] },
+          data: { workspaceId: runData.workspaceId, fixture: guestFixture },
         }),
-      )
+      );
+
+    const steps: string[] = [];
+    const session = await establishGuestSession((step) => steps.push(step));
+
+    expect(steps).toEqual(["csrf", "guest"]);
+    expect(session.workspaceId).toBe(runData.workspaceId);
+    expect(session.fixture).toEqual(guestFixture);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/csrf");
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/auth/guest");
+  });
+});
+
+describe("runSimulation", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("walks csrf → run → replay with contract headers and same-origin /api", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-abc" } }))
       .mockResolvedValueOnce(jsonResponse({ ok: true, data: runData }, 201))
       .mockResolvedValueOnce(jsonResponse({ ok: true, data: runData }));
 
     const steps: string[] = [];
-    const result = await runDemoFlow(
-      demoConfig,
-      { email: "demo@example.test", password: "demo-password" },
-      (step) => steps.push(step),
-    );
+    const result = await runSimulation(runData.workspaceId, guestFixture, (step) => steps.push(step));
 
-    expect(steps).toEqual(["csrf", "login", "session", "run", "replay"]);
-    expect(result.workspaceId).toBe(runData.workspaceId);
+    expect(steps).toEqual(["csrf", "run", "replay"]);
     expect(result.run.inputHash).toBe(runData.inputHash);
     expect(result.replay.simulationRunId).toBe(runData.simulationRunId);
     expect(result.idempotencyReplay).toBe(false);
 
-    const [csrfCall, loginCall, sessionCall, runCall, replayCall] = fetchMock.mock.calls;
+    const [csrfCall, runCall, replayCall] = fetchMock.mock.calls;
     expect(csrfCall[0]).toBe("/api/auth/csrf");
-    expect(loginCall[0]).toBe("/api/auth/login");
-    expect(sessionCall[0]).toBe("/api/auth/session");
     expect(runCall[0]).toBe(
-      `/api/workspaces/${runData.workspaceId}/simulations/${demoConfig.graphId}/runs`,
+      `/api/workspaces/${runData.workspaceId}/simulations/${guestFixture.graphId}/runs`,
     );
     expect(replayCall[0]).toBe(
-      `/api/workspaces/${runData.workspaceId}/simulations/${demoConfig.graphId}/runs/${runData.simulationRunId}`,
+      `/api/workspaces/${runData.workspaceId}/simulations/${guestFixture.graphId}/runs/${runData.simulationRunId}`,
     );
 
-    // Every request stays same-origin /api with cookies included.
     for (const [, init] of fetchMock.mock.calls) {
       expect((init as RequestInit).credentials).toBe("include");
     }
 
-    const loginInit = loginCall[1] as RequestInit;
-    expect((loginInit.headers as Record<string, string>)["X-CSRF-Token"]).toBe("csrf-token-1");
-
     const runInit = runCall[1] as RequestInit;
     const runHeaders = runInit.headers as Record<string, string>;
-    expect(runHeaders["X-CSRF-Token"]).toBe("csrf-token-1");
+    expect(runHeaders["X-CSRF-Token"]).toBe("csrf-abc");
     expect(runHeaders["Idempotency-Key"]).toMatch(/^demo-/);
     expect(JSON.parse(runInit.body as string)).toEqual({
       mode: "experimental",
-      graphVersionId: demoConfig.graphVersionId,
-      strategyVersionId: demoConfig.strategyVersionId,
-      scenarioVersionId: demoConfig.scenarioVersionId,
-      scoreDefinitionId: demoConfig.scoreDefinitionId,
-      decisionMakerProfileId: demoConfig.decisionMakerProfileId,
-      decisionMakerProfileVersion: demoConfig.decisionMakerProfileVersion,
+      graphVersionId: guestFixture.graphVersionId,
+      strategyVersionId: guestFixture.strategyVersionId,
+      scenarioVersionId: guestFixture.scenarioVersionId,
+      scoreDefinitionId: guestFixture.scoreDefinitionId,
+      decisionMakerProfileId: guestFixture.decisionMakerProfileId,
+      decisionMakerProfileVersion: guestFixture.decisionMakerProfileVersion,
     });
   });
 
-  test("surfaces the envelope error code and message on failure", async () => {
+  test("surfaces envelope errors with their stable code", async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-token-1" } }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-abc" } }))
       .mockResolvedValueOnce(
         jsonResponse(
-          {
-            ok: false,
-            error: { code: "AUTH_INVALID_CREDENTIALS", message: "Email or password is incorrect." },
-          },
-          401,
+          { ok: false, error: { code: "CASE_NOT_FOUND", message: "Fixture scope missing." } },
+          404,
         ),
       );
-
-    const attempt = runDemoFlow(demoConfig, { email: "demo@example.test", password: "wrong" });
-    await expect(attempt).rejects.toMatchObject({
-      code: "AUTH_INVALID_CREDENTIALS",
-      status: 401,
+    await expect(runSimulation(runData.workspaceId, guestFixture)).rejects.toMatchObject({
+      code: "CASE_NOT_FOUND",
+      status: 404,
     });
-    await expect(
-      runDemoFlow(demoConfig, { email: "demo@example.test", password: "wrong" }).catch((error) => {
-        expect(error).toBeInstanceOf(DemoApiError);
-        throw error;
-      }),
-    ).rejects.toBeDefined();
-  });
-
-  test("stops on network failure with a NETWORK_ERROR code", async () => {
-    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    await expect(
-      runDemoFlow(demoConfig, { email: "demo@example.test", password: "demo-password" }),
-    ).rejects.toMatchObject({ code: "NETWORK_ERROR" });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   test("flags idempotent replays from the response meta", async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-token-1" } }))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, data: {} }))
-      .mockResolvedValueOnce(
-        jsonResponse({ ok: true, data: { memberships: [{ workspaceId: runData.workspaceId }] } }),
-      )
+      .mockResolvedValueOnce(jsonResponse({ ok: true, data: { csrfToken: "csrf-abc" } }))
       .mockResolvedValueOnce(
         jsonResponse({ ok: true, data: runData, meta: { idempotencyReplay: true } }, 201),
       )
       .mockResolvedValueOnce(jsonResponse({ ok: true, data: runData }));
 
-    const result = await runDemoFlow(demoConfig, {
-      email: "demo@example.test",
-      password: "demo-password",
-    });
+    const result = await runSimulation(runData.workspaceId, guestFixture);
     expect(result.idempotencyReplay).toBe(true);
   });
 });

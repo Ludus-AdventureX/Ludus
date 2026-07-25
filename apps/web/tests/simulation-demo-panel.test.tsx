@@ -7,24 +7,24 @@ import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { DemoFlowResult, SimulationRunData } from "../lib/demo/simulationDemo";
+import type { DemoFixtureIds, SimulationRunData } from "../lib/demo/simulationDemo";
 
-const { readDemoFixtureConfig, runDemoFlow } = vi.hoisted(() => ({
-  readDemoFixtureConfig: vi.fn(),
-  runDemoFlow: vi.fn(),
+const { establishGuestSession, runSimulation } = vi.hoisted(() => ({
+  establishGuestSession: vi.fn(),
+  runSimulation: vi.fn(),
 }));
 
 vi.mock("@/lib/demo/simulationDemo", async () => {
   const actual = await vi.importActual<typeof import("../lib/demo/simulationDemo")>(
     "../lib/demo/simulationDemo",
   );
-  return { ...actual, readDemoFixtureConfig, runDemoFlow };
+  return { ...actual, establishGuestSession, runSimulation };
 });
 
 import { SimulationDemoPanel } from "../components/demo/SimulationDemoPanel";
 import { DemoApiError } from "../lib/demo/simulationDemo";
 
-const fixtureConfig = {
+const fixture: DemoFixtureIds = {
   graphId: "graph-1",
   graphVersionId: "graph-version-1",
   strategyVersionId: "strategy-version-1",
@@ -66,6 +66,7 @@ const runData: SimulationRunData = {
 
 const flowResult: DemoFlowResult = {
   workspaceId: "workspace-1",
+  fixture,
   run: runData,
   idempotencyReplay: false,
   replay: runData,
@@ -76,61 +77,62 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function fillCredentialsAndSubmit() {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Email"), "demo@example.test");
-  await user.type(screen.getByLabelText("Password"), "demo-password");
-  await user.click(screen.getByRole("button", { name: "运行 Demo Simulation" }));
-  return user;
-}
-
 describe("SimulationDemoPanel", () => {
-  test("lists missing fixture variables when the env is not configured", () => {
-    readDemoFixtureConfig.mockReturnValue({ ok: false, missing: ["NEXT_PUBLIC_DEMO_GRAPH_ID"] });
-    render(createElement(SimulationDemoPanel));
-    expect(screen.getByRole("alert")).toHaveTextContent("NEXT_PUBLIC_DEMO_GRAPH_ID");
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  test("shows the loading step and then the run + replay result", async () => {
-    readDemoFixtureConfig.mockReturnValue({ ok: true, config: fixtureConfig });
-    let releaseFlow: (value: DemoFlowResult) => void = () => {};
-    runDemoFlow.mockImplementation(
-      (_config, _credentials, onStep) =>
-        new Promise<DemoFlowResult>((resolve) => {
-          onStep?.("run");
-          releaseFlow = resolve;
+  test("bootstraps the guest session on mount and shows the Run button", async () => {
+    let releaseBoot: (value: { workspaceId: string; fixture: DemoFixtureIds }) => void = () => {};
+    establishGuestSession.mockImplementation(
+      (onStep) =>
+        new Promise((resolve) => {
+          onStep?.("csrf");
+          onStep?.("guest");
+          releaseBoot = resolve;
         }),
     );
 
     render(createElement(SimulationDemoPanel));
-    await fillCredentialsAndSubmit();
+    // 初始状态已是 running/csrf；boot 推进到 guest 步骤时显示“2/4”。
+    expect(await screen.findByRole("status")).toHaveTextContent(/2\/4|1\/4/);
 
-    expect(await screen.findByRole("status")).toHaveTextContent("4/5 提交 Simulation Run");
-    releaseFlow(flowResult);
+    releaseBoot({ workspaceId: "workspace-1", fixture });
+
+    await waitFor(() => expect(screen.getByText("Run Simulation")).toBeInTheDocument());
+    expect(screen.getByText("workspace-1")).toBeInTheDocument();
+    expect(screen.getByText(fixture.graphId)).toBeInTheDocument();
+    expect(screen.getByText(/profile-1 v1/)).toBeInTheDocument();
+  });
+
+  test("clicking Run walks through the simulation and renders the result", async () => {
+    establishGuestSession.mockResolvedValue({ workspaceId: "workspace-1", fixture });
+    runSimulation.mockResolvedValue({ run: runData, idempotencyReplay: false, replay: runData });
+
+    const user = userEvent.setup();
+    render(createElement(SimulationDemoPanel));
+    const runButton = await screen.findByRole("button", { name: "Run Simulation" });
+    await user.click(runButton);
 
     await waitFor(() =>
       expect(screen.getAllByText(runData.simulationRunId).length).toBeGreaterThanOrEqual(2),
     );
-    expect(screen.getAllByText(runData.inputHash).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(runData.engineVersion)).toBeInTheDocument();
     expect(screen.getByText(/converged/)).toBeInTheDocument();
     expect(screen.getByText(/option-a（shift: stable）/)).toBeInTheDocument();
     expect(screen.getByText(/Δscore -0\.2000/)).toBeInTheDocument();
+    expect(runSimulation).toHaveBeenCalledWith(
+      "workspace-1",
+      fixture,
+      expect.any(Function),
+    );
   });
 
-  test("renders a clear error state when the flow fails", async () => {
-    readDemoFixtureConfig.mockReturnValue({ ok: true, config: fixtureConfig });
-    runDemoFlow.mockRejectedValue(
-      new DemoApiError("AUTH_INVALID_CREDENTIALS", "Email or password is incorrect.", 401),
+  test("renders a clear error state with retry when the guest step fails", async () => {
+    establishGuestSession.mockRejectedValue(
+      new DemoApiError("NETWORK_ERROR", "无法连接 /api 服务。", 0),
     );
 
     render(createElement(SimulationDemoPanel));
-    await fillCredentialsAndSubmit();
-
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("AUTH_INVALID_CREDENTIALS");
-    expect(alert).toHaveTextContent("Email or password is incorrect.");
-    expect(screen.getByRole("button", { name: "运行 Demo Simulation" })).toBeEnabled();
+    expect(alert).toHaveTextContent("NETWORK_ERROR");
+    expect(alert).toHaveTextContent("无法连接 /api 服务。");
+    expect(screen.getByRole("button", { name: "重试" })).toBeEnabled();
   });
 });

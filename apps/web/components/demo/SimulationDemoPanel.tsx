@@ -1,28 +1,29 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   DemoApiError,
   DemoFlowResult,
   DemoFlowStep,
-  readDemoFixtureConfig,
-  runDemoFlow,
+  establishGuestSession,
+  runSimulation,
+  type DemoFixtureIds,
+  type SimulationRunData,
 } from "@/lib/demo/simulationDemo";
 
 const stepLabels: Record<DemoFlowStep, string> = {
-  csrf: "1/5 获取 CSRF token",
-  login: "2/5 登录 Demo 账号",
-  session: "3/5 读取 session / workspace",
-  run: "4/5 提交 Simulation Run",
-  replay: "5/5 读取 Replay",
+  csrf: "1/4 获取 CSRF token",
+  guest: "2/4 建立或恢复 Guest 会话",
+  run: "3/4 提交 Simulation Run",
+  replay: "4/4 读取 Replay",
 };
 
 type PanelState =
-  | { phase: "idle" }
-  | { phase: "loading"; step: DemoFlowStep }
-  | { phase: "error"; code: string; message: string }
-  | { phase: "done"; result: DemoFlowResult };
+  | { phase: "ready"; workspaceId: string; fixture: DemoFixtureIds }
+  | { phase: "running"; step: DemoFlowStep }
+  | { phase: "done"; result: DemoFlowResult }
+  | { phase: "error"; code: string; message: string; canRetry: boolean };
 
 function formatScore(value: number): string {
   return Number.isFinite(value) ? value.toFixed(4) : String(value);
@@ -41,7 +42,7 @@ function RunResult({ result }: { result: DemoFlowResult }) {
   const { run, replay, idempotencyReplay } = result;
   const replayMatches = replay.inputHash === run.inputHash;
   return (
-    <section aria-label="Simulation run result" className="mt-6 space-y-6">
+    <section aria-label="Simulation run result" className="space-y-6">
       <div className="rounded border border-neutral-300 bg-white p-4">
         <h2 className="text-sm font-semibold text-neutral-900">Run 结果</h2>
         <dl className="mt-2">
@@ -120,25 +121,48 @@ function RunResult({ result }: { result: DemoFlowResult }) {
 }
 
 export function SimulationDemoPanel() {
-  const fixture = readDemoFixtureConfig();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [state, setState] = useState<PanelState>({ phase: "idle" });
+  const [state, setState] = useState<PanelState>({ phase: "running", step: "csrf" });
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!fixture.ok || state.phase === "loading") return;
-    setState({ phase: "loading", step: "csrf" });
+  const boot = useCallback(async () => {
+    setState({ phase: "running", step: "csrf" });
     try {
-      const result = await runDemoFlow(fixture.config, { email, password }, (step) =>
-        setState({ phase: "loading", step }),
-      );
-      setState({ phase: "done", result });
+      const { workspaceId, fixture } = await establishGuestSession((step) => {
+        setState({ phase: "running", step });
+      });
+      // Guest 会话已建立（或恢复）；停留在 ready 等待用户点击 Run。
+      setState({ phase: "ready", workspaceId, fixture });
     } catch (error) {
       if (error instanceof DemoApiError) {
-        setState({ phase: "error", code: error.code, message: error.message });
+        setState({ phase: "error", code: error.code, message: error.message, canRetry: true });
       } else {
-        setState({ phase: "error", code: "UNEXPECTED_ERROR", message: "发生未知错误，请重试。" });
+        setState({ phase: "error", code: "UNEXPECTED_ERROR", message: "发生未知错误，请重试。", canRetry: true });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void boot();
+  }, [boot]);
+
+  const run = async () => {
+    if (state.phase !== "ready") return;
+    const { workspaceId, fixture } = state;
+    setState({ phase: "running", step: "csrf" });
+    try {
+      const { run, idempotencyReplay, replay } = await runSimulation(
+        workspaceId,
+        fixture,
+        (step) => setState({ phase: "running", step }),
+      );
+      setState({
+        phase: "done",
+        result: { workspaceId, fixture, run, idempotencyReplay, replay },
+      });
+    } catch (error) {
+      if (error instanceof DemoApiError) {
+        setState({ phase: "error", code: error.code, message: error.message, canRetry: false });
+      } else {
+        setState({ phase: "error", code: "UNEXPECTED_ERROR", message: "发生未知错误，请重试。", canRetry: false });
       }
     }
   };
@@ -147,82 +171,60 @@ export function SimulationDemoPanel() {
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
       <header>
         <p className="inline-block rounded bg-amber-100 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900">
-          Technical Alpha · Demo Fixture
+          Guest · Technical Alpha
         </p>
-        <h1 className="mt-3 text-2xl font-semibold text-neutral-900">Simulation Run Demo</h1>
+        <h1 className="mt-3 text-2xl font-semibold text-neutral-900">Simulation Demo</h1>
         <p className="mt-2 text-sm text-neutral-600">
-          使用预置 Demo fixture（Technical Alpha 专用，非正式数据）对同源 <span className="font-mono">/api</span>{" "}
-          执行一次 Simulation Run，并读取 Replay 验证。
+          无需注册：页面加载即建立 Guest 会话（刷新后自动恢复）。所有请求走同源{" "}
+          <span className="font-mono">/api</span>，凭据以 cookie 形式随请求携带。
         </p>
       </header>
 
-      {!fixture.ok ? (
-        <div role="alert" className="mt-6 rounded border border-red-300 bg-red-50 p-4">
-          <h2 className="text-sm font-semibold text-red-900">Demo fixture 未配置</h2>
-          <p className="mt-1 text-sm text-red-800">缺少以下环境变量，无法启动演示：</p>
-          <ul className="mt-2 list-inside list-disc font-mono text-xs text-red-800">
-            {fixture.missing.map((name) => (
-              <li key={name}>{name}</li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <>
-          <form onSubmit={submit} className="mt-6 rounded border border-neutral-300 bg-white p-4">
-            <h2 className="text-sm font-semibold text-neutral-900">Demo 账号登录</h2>
-            <p className="mt-1 text-xs text-neutral-500">凭据仅提交到同源 /api/auth/login，不会写入页面代码或环境变量。</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm text-neutral-700">
-                Email
-                <input
-                  type="email"
-                  required
-                  autoComplete="username"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="rounded border border-neutral-300 px-2 py-1.5 font-mono text-sm"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-neutral-700">
-                Password
-                <input
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="rounded border border-neutral-300 px-2 py-1.5 font-mono text-sm"
-                />
-              </label>
-            </div>
-            <button
-              type="submit"
-              disabled={state.phase === "loading"}
-              className="mt-4 w-full rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-neutral-400 sm:w-auto"
-            >
-              {state.phase === "loading" ? "运行中…" : "运行 Demo Simulation"}
-            </button>
-          </form>
+      <div aria-live="polite" className="mt-6">
+        {state.phase === "running" && (
+          <p role="status" className="rounded border border-neutral-300 bg-neutral-50 p-3 text-sm text-neutral-700">
+            {stepLabels[state.step]}…
+          </p>
+        )}
 
-          <div aria-live="polite" className="mt-4">
-            {state.phase === "loading" && (
-              <p role="status" className="rounded border border-neutral-300 bg-neutral-50 p-3 text-sm text-neutral-700">
-                {stepLabels[state.step]}…
-              </p>
-            )}
-            {state.phase === "error" && (
-              <div role="alert" className="rounded border border-red-300 bg-red-50 p-4">
-                <h2 className="text-sm font-semibold text-red-900">请求失败</h2>
-                <p className="mt-1 break-all text-sm text-red-800">
-                  <span className="font-mono">{state.code}</span>：{state.message}
-                </p>
-              </div>
+        {state.phase === "ready" && (
+          <div className="rounded border border-neutral-300 bg-white p-4">
+            <h2 className="text-sm font-semibold text-neutral-900">Guest 会话已就绪</h2>
+            <dl className="mt-2">
+              <ResultRow label="Workspace ID" value={state.workspaceId} />
+              <ResultRow label="Graph ID" value={state.fixture.graphId} />
+              <ResultRow label="Profile" value={`${state.fixture.decisionMakerProfileId} v${state.fixture.decisionMakerProfileVersion}`} />
+            </dl>
+            <button
+              type="button"
+              onClick={run}
+              className="mt-4 w-full rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white sm:w-auto"
+            >
+              Run Simulation
+            </button>
+          </div>
+        )}
+
+        {state.phase === "error" && (
+          <div role="alert" className="rounded border border-red-300 bg-red-50 p-4">
+            <h2 className="text-sm font-semibold text-red-900">请求失败</h2>
+            <p className="mt-1 break-all text-sm text-red-800">
+              <span className="font-mono">{state.code}</span>：{state.message}
+            </p>
+            {state.canRetry && (
+              <button
+                type="button"
+                onClick={boot}
+                className="mt-3 rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-800"
+              >
+                重试
+              </button>
             )}
           </div>
+        )}
 
-          {state.phase === "done" && <RunResult result={state.result} />}
-        </>
-      )}
+        {state.phase === "done" && <RunResult result={state.result} />}
+      </div>
 
       <footer className="mt-8 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
         Technical Alpha 演示：仅覆盖 Simulation Run 创建与 Replay 读取，不包含 Graph editor、Report 与 Decision。
@@ -230,3 +232,5 @@ export function SimulationDemoPanel() {
     </main>
   );
 }
+
+export type { SimulationRunData };

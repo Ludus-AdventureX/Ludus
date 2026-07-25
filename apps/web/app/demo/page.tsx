@@ -5,7 +5,7 @@ import { SimulationDemoPanel } from "@/components/demo/SimulationDemoPanel";
 export const metadata: Metadata = {
   title: "Simulation Demo · Technical Alpha · Ludus",
   description:
-    "Technical Alpha demo: run a preset simulation fixture against the same-origin /api and replay the persisted result.",
+    "Guest Technical Alpha demo: auto-create/restore a guest session, run a preset simulation fixture, and replay the persisted result.",
 };
 
 export default function DemoPage() {
