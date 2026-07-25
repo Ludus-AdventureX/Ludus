@@ -1,0 +1,259 @@
+{
+  "lensType": "porter_five_forces",
+  "sourceSkillVersion": "1.0.0",
+  "phase": "research_interpretation",
+  "references": {
+    "sourcePacketIds": [
+      "rp-sr-001",
+      "rp-sr-002"
+    ],
+    "claimIds": [
+      "claim-sr-001"
+    ],
+    "evidenceIds": [
+      "ev-sr-001",
+      "ev-sr-002",
+      "ev-sr-003",
+      "ev-sr-004",
+      "ev-sr-005",
+      "ev-sr-006",
+      "ev-sr-007",
+      "ev-sr-008",
+      "ev-sr-009",
+      "ev-sr-010",
+      "ev-sr-011",
+      "ev-sr-012",
+      "ev-sr-013",
+      "ev-sr-014",
+      "ev-sr-015",
+      "ev-sr-016",
+      "ev-sr-017",
+      "ev-sr-018",
+      "ev-sr-019",
+      "ev-sr-020"
+    ],
+    "assumptionIds": [
+      "asm-sr-001"
+    ],
+    "challengeIds": []
+  },
+  "researchRequests": [],
+  "content": {
+    "marketAnalyses": [
+      {
+        "optionId": "option-rescue-market",
+        "industryBoundary": {
+          "coreValue": "Mobile spherical robot platform for the segment.",
+          "upstream": [
+            "drive units",
+            "battery packs",
+            "sensor suppliers"
+          ],
+          "downstream": [
+            "fire departments"
+          ],
+          "adjacentMarkets": [
+            "inspection robots"
+          ],
+          "crossIndustrySubstitutes": [
+            "drones",
+            "fixed cameras"
+          ],
+          "boundaryRisk": "Too-wide 'robotics' framing hides segment buyers."
+        },
+        "forces": [
+          {
+            "forceId": "buyer_power",
+            "threatScore": 3,
+            "keyIndicators": [
+              "buyer_power concentration",
+              "buyer_power growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-001",
+              "ev-sr-002"
+            ],
+            "reasoning": "buyer_power pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "new_entrants",
+            "threatScore": 3,
+            "keyIndicators": [
+              "new_entrants concentration",
+              "new_entrants growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-003",
+              "ev-sr-004"
+            ],
+            "reasoning": "new_entrants pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "rivalry",
+            "threatScore": 3,
+            "keyIndicators": [
+              "rivalry concentration",
+              "rivalry growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-005",
+              "ev-sr-006"
+            ],
+            "reasoning": "rivalry pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "substitutes",
+            "threatScore": 3,
+            "keyIndicators": [
+              "substitutes concentration",
+              "substitutes growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-007",
+              "ev-sr-008"
+            ],
+            "reasoning": "substitutes pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "supplier_power",
+            "threatScore": 3,
+            "keyIndicators": [
+              "supplier_power concentration",
+              "supplier_power growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-009",
+              "ev-sr-010"
+            ],
+            "reasoning": "supplier_power pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          }
+        ],
+        "averageThreatScore": 3.0,
+        "changingTrend": "Public procurement standards for rescue robotics are tightening, shifting entry barriers year over year.",
+        "regulatoryAssessment": "Safety certification and emergency-services procurement rules assessed separately, not averaged as a sixth force.",
+        "complementors": [
+          "thermal cameras",
+          "incident-management software"
+        ]
+      },
+      {
+        "optionId": "option-home-service-market",
+        "industryBoundary": {
+          "coreValue": "Mobile spherical robot platform for the segment.",
+          "upstream": [
+            "drive units",
+            "battery packs",
+            "sensor suppliers"
+          ],
+          "downstream": [
+            "families"
+          ],
+          "adjacentMarkets": [
+            "inspection robots"
+          ],
+          "crossIndustrySubstitutes": [
+            "drones",
+            "fixed cameras"
+          ],
+          "boundaryRisk": "Too-wide 'robotics' framing hides segment buyers."
+        },
+        "forces": [
+          {
+            "forceId": "buyer_power",
+            "threatScore": 3,
+            "keyIndicators": [
+              "buyer_power concentration",
+              "buyer_power growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-011",
+              "ev-sr-012"
+            ],
+            "reasoning": "buyer_power pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "new_entrants",
+            "threatScore": 3,
+            "keyIndicators": [
+              "new_entrants concentration",
+              "new_entrants growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-013",
+              "ev-sr-014"
+            ],
+            "reasoning": "new_entrants pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "rivalry",
+            "threatScore": 3,
+            "keyIndicators": [
+              "rivalry concentration",
+              "rivalry growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-015",
+              "ev-sr-016"
+            ],
+            "reasoning": "rivalry pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "substitutes",
+            "threatScore": 3,
+            "keyIndicators": [
+              "substitutes concentration",
+              "substitutes growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-017",
+              "ev-sr-018"
+            ],
+            "reasoning": "substitutes pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          },
+          {
+            "forceId": "supplier_power",
+            "threatScore": 3,
+            "keyIndicators": [
+              "supplier_power concentration",
+              "supplier_power growth"
+            ],
+            "evidenceIds": [
+              "ev-sr-019",
+              "ev-sr-020"
+            ],
+            "reasoning": "supplier_power pressure grounded in gated evidence.",
+            "directionOfChange": "stable"
+          }
+        ],
+        "averageThreatScore": 3.0,
+        "changingTrend": "Public procurement standards for rescue robotics are tightening, shifting entry barriers year over year.",
+        "regulatoryAssessment": "Safety certification and emergency-services procurement rules assessed separately, not averaged as a sixth force.",
+        "complementors": [
+          "thermal cameras",
+          "incident-management software"
+        ]
+      }
+    ],
+    "crossMarketComparison": "Rescue shows weaker buyer power but tighter regulatory gates than home service; profiles differ per force.",
+    "strategicImplications": [
+      {
+        "optionId": "option-rescue-market",
+        "strategy": "focus",
+        "logic": "High entry barriers plus concentrated buyers reward a focused rescue niche, per rivalry and buyer-power evidence.",
+        "conditions": [
+          "Certification achieved within 12 months."
+        ]
+      }
+    ],
+    "scoreIsNotDecisionFormula": true
+  }
+}

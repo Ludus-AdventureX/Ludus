@@ -1,0 +1,313 @@
+{
+  "lensType": "scenario_planning",
+  "sourceSkillVersion": "1.0.0",
+  "phase": "strategic_synthesis",
+  "references": {
+    "sourcePacketIds": [
+      "rp-01"
+    ],
+    "claimIds": [
+      "cl-01"
+    ],
+    "evidenceIds": [
+      "ev-tender-2025",
+      "ev-budget-cycle",
+      "ev-consumer-survey"
+    ],
+    "assumptionIds": [
+      "as-01"
+    ],
+    "challengeIds": []
+  },
+  "researchRequests": [],
+  "content": {
+    "focusQuestion": "Should the resource-constrained spherical robot venture enter the rescue market first or the home service market first?",
+    "timeHorizon": "36 months (charter review window)",
+    "predeterminedElements": [
+      "BOM cost floor of current drivetrain generation is locked for 24 months",
+      "EU machinery directive revision takes effect within the horizon"
+    ],
+    "keyUncertainties": [
+      {
+        "uncertaintyId": "unc-procurement",
+        "factor": "Government rescue procurement cycle length and budget release rhythm",
+        "impact": "high",
+        "uncertainty": "high",
+        "evidenceIds": [
+          "ev-tender-2025",
+          "ev-budget-cycle"
+        ]
+      },
+      {
+        "uncertaintyId": "unc-adoption",
+        "factor": "Household adoption speed for autonomous service robots",
+        "impact": "high",
+        "uncertainty": "high",
+        "evidenceIds": [
+          "ev-consumer-survey"
+        ]
+      }
+    ],
+    "axes": [
+      {
+        "axisId": "axis-procurement",
+        "uncertaintyId": "unc-procurement",
+        "lowState": "tender cycle within 12 months",
+        "highState": "tender cycle beyond 24 months",
+        "selectionRationale": "Highest impact x uncertainty pair on cash runway."
+      },
+      {
+        "axisId": "axis-adoption",
+        "uncertaintyId": "unc-adoption",
+        "lowState": "household adoption stays niche",
+        "highState": "household adoption goes mainstream",
+        "selectionRationale": "Determines whether home revenue can fund R&D."
+      }
+    ],
+    "scenarios": [
+      {
+        "scenarioId": "sc-steady",
+        "name": "Frame sc-steady",
+        "kind": "baseline",
+        "axisStates": [
+          "tender cycle within 12 months",
+          "household adoption stays niche"
+        ],
+        "coreLogic": "Internally consistent structural logic for sc-steady.",
+        "timeline": [
+          {
+            "period": "0-12m",
+            "turningPoint": "First structural turning point in sc-steady."
+          },
+          {
+            "period": "12-36m",
+            "turningPoint": "Second structural turning point in sc-steady."
+          }
+        ],
+        "stakeholderStates": [
+          {
+            "stakeholder": "rescue agencies",
+            "state": "Procurement posture in sc-steady."
+          },
+          {
+            "stakeholder": "home consumers",
+            "state": "Adoption posture in sc-steady."
+          },
+          {
+            "stakeholder": "competitors",
+            "state": "Competitive posture in sc-steady."
+          }
+        ],
+        "earlySignals": [
+          {
+            "signalId": "sig-s1",
+            "type": "quantitative",
+            "observable": "observable metric for sig-s1",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          },
+          {
+            "signalId": "sig-s2",
+            "type": "quantitative",
+            "observable": "observable metric for sig-s2",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          },
+          {
+            "signalId": "sig-s3",
+            "type": "quantitative",
+            "observable": "observable metric for sig-s3",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          }
+        ]
+      },
+      {
+        "scenarioId": "sc-frozen",
+        "name": "Frame sc-frozen",
+        "kind": "structural_break",
+        "axisStates": [
+          "tender cycle beyond 24 months",
+          "household adoption stays niche"
+        ],
+        "coreLogic": "Internally consistent structural logic for sc-frozen.",
+        "timeline": [
+          {
+            "period": "0-12m",
+            "turningPoint": "First structural turning point in sc-frozen."
+          },
+          {
+            "period": "12-36m",
+            "turningPoint": "Second structural turning point in sc-frozen."
+          }
+        ],
+        "stakeholderStates": [
+          {
+            "stakeholder": "rescue agencies",
+            "state": "Procurement posture in sc-frozen."
+          },
+          {
+            "stakeholder": "home consumers",
+            "state": "Adoption posture in sc-frozen."
+          },
+          {
+            "stakeholder": "competitors",
+            "state": "Competitive posture in sc-frozen."
+          }
+        ],
+        "earlySignals": [
+          {
+            "signalId": "sig-f1",
+            "type": "quantitative",
+            "observable": "observable metric for sig-f1",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          },
+          {
+            "signalId": "sig-f2",
+            "type": "quantitative",
+            "observable": "observable metric for sig-f2",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          },
+          {
+            "signalId": "sig-f3",
+            "type": "quantitative",
+            "observable": "observable metric for sig-f3",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          }
+        ]
+      },
+      {
+        "scenarioId": "sc-boom",
+        "name": "Frame sc-boom",
+        "kind": "structural_break",
+        "axisStates": [
+          "tender cycle within 12 months",
+          "household adoption goes mainstream"
+        ],
+        "coreLogic": "Internally consistent structural logic for sc-boom.",
+        "timeline": [
+          {
+            "period": "0-12m",
+            "turningPoint": "First structural turning point in sc-boom."
+          },
+          {
+            "period": "12-36m",
+            "turningPoint": "Second structural turning point in sc-boom."
+          }
+        ],
+        "stakeholderStates": [
+          {
+            "stakeholder": "rescue agencies",
+            "state": "Procurement posture in sc-boom."
+          },
+          {
+            "stakeholder": "home consumers",
+            "state": "Adoption posture in sc-boom."
+          },
+          {
+            "stakeholder": "competitors",
+            "state": "Competitive posture in sc-boom."
+          }
+        ],
+        "earlySignals": [
+          {
+            "signalId": "sig-b1",
+            "type": "quantitative",
+            "observable": "observable metric for sig-b1",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          },
+          {
+            "signalId": "sig-b2",
+            "type": "quantitative",
+            "observable": "observable metric for sig-b2",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          },
+          {
+            "signalId": "sig-b3",
+            "type": "quantitative",
+            "observable": "observable metric for sig-b3",
+            "thresholdOrPattern": "3 consecutive monthly readings above trend",
+            "cadence": "monthly"
+          }
+        ]
+      }
+    ],
+    "strategyTests": [
+      {
+        "scenarioId": "sc-steady",
+        "optionId": "opt-rescue",
+        "performance": "viable_with_adjustment",
+        "failureReason": "Slow but predictable tenders compress margin, not viability.",
+        "requiredAdjustment": "Pre-qualify with two regional agencies before award season.",
+        "triggerSignalIds": [
+          "sig-s1"
+        ]
+      },
+      {
+        "scenarioId": "sc-steady",
+        "optionId": "opt-home",
+        "performance": "viable_with_adjustment",
+        "failureReason": "Niche adoption keeps volumes below contribution breakeven.",
+        "requiredAdjustment": "Restrict SKU to premium early-adopter bundle.",
+        "triggerSignalIds": [
+          "sig-s2"
+        ]
+      },
+      {
+        "scenarioId": "sc-frozen",
+        "optionId": "opt-rescue",
+        "performance": "killed",
+        "failureReason": "24m+ tender cycles exhaust runway before first award lands.",
+        "requiredAdjustment": "Exit trigger: pivot budget to home pilot within one quarter.",
+        "triggerSignalIds": [
+          "sig-f1",
+          "sig-f2"
+        ]
+      },
+      {
+        "scenarioId": "sc-frozen",
+        "optionId": "opt-home",
+        "performance": "high_risk",
+        "failureReason": "Niche adoption plus frozen tenders squeezes both channels.",
+        "requiredAdjustment": "Cut burn to survival mode; renegotiate supplier terms.",
+        "triggerSignalIds": [
+          "sig-f3"
+        ]
+      },
+      {
+        "scenarioId": "sc-boom",
+        "optionId": "opt-rescue",
+        "performance": "high_risk",
+        "failureReason": "Opportunity cost: rescue focus forfeits the adoption window.",
+        "requiredAdjustment": "License rescue IP; shift assembly line to home units.",
+        "triggerSignalIds": [
+          "sig-b1"
+        ]
+      },
+      {
+        "scenarioId": "sc-boom",
+        "optionId": "opt-home",
+        "performance": "robust",
+        "failureReason": "No structural failure identified in this frame.",
+        "requiredAdjustment": "Scale channel partnerships ahead of demand curve.",
+        "triggerSignalIds": [
+          "sig-b2",
+          "sig-b3"
+        ]
+      }
+    ],
+    "strategyKilledInAtLeastOneScenario": true,
+    "monitoringActions": [
+      "Track quarterly tender publication volume in target rescue regions",
+      "Track monthly sell-through of comparable home service robots"
+    ],
+    "irreducibleUnknowns": [
+      "Timing of the next major disaster-driven emergency budget release"
+    ]
+  }
+}

@@ -20,7 +20,9 @@ dependencies = [
   "jinja2>=3.1,<4",
   "playwright>=1.55,<2",
   "pypdf>=6,<7",
-  "python-docx>=1.2,<2"
+  "python-docx>=1.2,<2",
+  "a2a-sdk>=0.3,<0.4",
+  "panda-data>=0.0.12",
 ]
 
 [dependency-groups]
