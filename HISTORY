@@ -2747,3 +2747,13 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Verification gate (single pass): fresh PG16 alembic upgrade/heads/check clean (single head b2c7e9d4a1f6); pytest tests app/simulations/tests -q -W error -rxX = 493 passed / 0 failed / 0 xfailed / 0 xpassed; web 16 passed + build OK; CONTRACT_DRIFT_OK (run paths present, /api/auth/guest absent); ruff/compileall/diff-check clean; compose db/api/web healthy with API /health 200 and web /api/health 200; real smoke PASS over public HTTPS with AUTH_COOKIE_SECURE=true; /demo browser acceptance PASS incl. reload restoring the same guest.
 - Public naming: Simulation Technical Alpha. ready_for_public_https = YES; ready_for_main = YES (content), ff-only push withheld because the mandated re-read (main == bd9fde15) cannot be satisfied.
 - No credentials or secret values are recorded here.
+
+
+## Guest Simulation Technical Alpha Main Publication - 2026-07-25 (Asia/Shanghai)
+
+- Role: Mainline/Release Owner; authorized B1 publication from exact tested integration `codex/prototype-guest-alpha-integration` at `83df911c38b408fab7129abfd5d4468e125ec9e2`.
+- Baseline adjudication: live remote main was `51ae45c900ae4efa01b72d5d6842adb74ad50c91`; `merge-base(main, integration)` was exactly `51ae45c`, with `0` main-only and `13` integration-only commits. The older task-order expectation `bd9fde15` was therefore superseded without divergence.
+- Publication: ordinary non-force fast-forward push `51ae45c -> 83df911`; remote `main` was immediately re-read and verified exactly at `83df911c38b408fab7129abfd5d4468e125ec9e2`.
+- Acceptance inherited from the exact published commit: backend `493 passed / 0 failed`; web `16 passed` plus build; `CONTRACT_DRIFT_OK`; compose db/api/web healthy; public HTTPS real smoke and `/demo` browser flow PASS.
+- Public release label: **Simulation Technical Alpha** only. Rollback deployment SHA: `51ae45c900ae4efa01b72d5d6842adb74ad50c91`.
+- Remote: `https://github.com/Ludus-AdventureX/Ludus.git`. No credentials or secret values are recorded here.
