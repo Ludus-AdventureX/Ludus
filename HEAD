@@ -1,11 +1,11 @@
-# Work Log: Task 10/11 QA mainline integration (wave 1)
+# Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
 
-- Status: merges complete on worktree decision-lab-mainline-integration (main); post-merge gates running; push pending principal confirmation.
-- Merge 1/2 (342323f): no-ff adoption of codex/qa-task-10-lens-validators-r1 622f43bb6561c0054c50a5091275ee8afa0189ba = task-10 lens validators r1 impl chain (6790181 -> 0634e8c -> fac61e0, lane COMPLETE, 549 passed zero regression, CONTRACT_DRIFT_OK) + QA adversarial battery 8e748b7 + F401 cleanup 622f43b.
-- Merge 2/2 (this commit): no-ff adoption of codex/qa-task-11-phase0-shell-r1 4fb099930b8f237e02b536464e04af957dcbb03e = Task 11 Phase 0 shell Sessions A (b358706) + B (3d68730, all acceptance gates green, ready_for_qa YES) + adversarial QA supplement 4fb0999 (focus trap escape, URL abuse, hostile payloads, flag flip, a11y spot checks; tests-only additions).
-- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (prior HEAD worklogs archived into HISTORY, byte-verified base preservation).
-- Audit honesty: a first local resolution attempt of merge 1 (e0d8499) was discarded before any push after self-audit caught a PowerShell pipeline UTF-8 corruption of one pre-existing HISTORY byte; redone with a byte-safe resolver.
-- Excluded from this wave (audit verdicts): Task 8+9 family (c599030/ed65f40/e403c66/e4ac7dc) blocked on QA FAIL-P1 sec2.3 amendment durability + P2 race window, fix lane codex/task-09-amendment-durability-fast-fix in progress; 13 historical branches (behind 64-189) superseded or lifecycle-archive-only, not merged.
-- Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
+- Status: kickoff; merges pending on worktree decision-lab-mainline-integration (main, from 70e7dbe).
+- Authorization: principal explicitly authorized this session (Ways/Agent-Pipeline lane holder for the upcoming Task 10 quality-gate r1) to act as mainline integrator for this wave first; roles kept serial, no cross-writing.
+- Unblock basis: prior wave excluded Task 8+9 family on QA FAIL-P1 (sec2.3 amendment durability) + P2 race window; fix lane delivered r3 628f672 and QA lane codex/qa-task-09-idempotency-wire-r2 verified it (78c3ce6, Phase B lane PASS, both xfail probes promoted to hard assertions).
+- Plan merge 1/2: no-ff adopt codex/qa-task-09-idempotency-wire-r2 78c3ce6 = QA exact tested combination carrying Task 8 c599030 + Task 9 ed65f40 + r2 e403c66 + r3 628f672.
+- Plan merge 2/2: no-ff adopt codex/ccr-analysis-01-addendum-a1 9bb19eb = CCR-20260725-ANALYSIS-01 Addendum A1 (32dfbd1 ten-item gap reconciliation + 9bb19eb line-reference fix; docs-only, canonical syncs to 06/10).
+- Expected conflicts confined to HEAD/HISTORY; resolve append-only with byte-verified base preservation (python resolver; no PowerShell pipeline touches lifecycle bytes).
+- Post-merge gates before push: alembic single head == f9a4b7e2c8d3; api pytest full suite (-W error, disposable PG16); conflict-marker scan; CONTRACT_DRIFT_OK.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
