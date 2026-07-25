@@ -1,0 +1,212 @@
+{
+  "fixtureId": "simulation-alpha",
+  "demoEmail": "sim-alpha-demo@ludus.local",
+  "workspaceName": "Simulation Alpha Workspace",
+  "subject": {
+    "name": "Simulation Alpha Subject",
+    "slug": "simulation-alpha",
+    "description": "Deterministic demo subject for the SIM alpha seed + smoke prototype."
+  },
+  "case": {
+    "title": "Simulation Alpha Pricing Case",
+    "decisionQuestion": "Which launch price point maximizes first-year revenue without breaching the burn-rate constraint?",
+    "optionKeys": ["option-a", "option-b"]
+  },
+  "method": {
+    "methodId": "hardtech-market-direction",
+    "methodVersion": "1.1.0"
+  },
+  "graph": {
+    "title": "Simulation Alpha Pricing Graph",
+    "nodes": [
+      {
+        "key": "price_point",
+        "label": "Launch price point",
+        "type": "decision",
+        "baseline": 100.0,
+        "min": 50.0,
+        "max": 200.0,
+        "unit": "USD",
+        "normalization": "linear",
+        "controllability": "controllable",
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "evidenceQualityScore": 0.6,
+        "assumptionIds": ["asm-price-elasticity"],
+        "rationale": "Price is the only decision lever in the alpha fixture.",
+        "status": "confirmed"
+      },
+      {
+        "key": "adoption_rate",
+        "label": "Adoption rate",
+        "type": "intermediate",
+        "baseline": 0.3,
+        "min": 0.0,
+        "max": 1.0,
+        "unit": "ratio",
+        "normalization": "linear",
+        "controllability": "partially_controllable",
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "evidenceQualityScore": 0.5,
+        "assumptionIds": ["asm-adoption-curve"],
+        "rationale": "Adoption mediates price into revenue.",
+        "status": "confirmed"
+      },
+      {
+        "key": "annual_revenue",
+        "label": "First-year revenue",
+        "type": "outcome",
+        "baseline": 1.2,
+        "min": 0.0,
+        "max": 10.0,
+        "unit": "MUSD",
+        "normalization": "linear",
+        "controllability": "uncontrollable",
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "evidenceQualityScore": 0.5,
+        "assumptionIds": ["asm-revenue-model"],
+        "rationale": "Scored outcome node.",
+        "status": "confirmed"
+      },
+      {
+        "key": "burn_rate",
+        "label": "Burn rate",
+        "type": "constraint",
+        "baseline": 0.4,
+        "min": 0.0,
+        "max": 1.0,
+        "unit": "ratio",
+        "normalization": "linear",
+        "controllability": "partially_controllable",
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "evidenceQualityScore": 0.5,
+        "assumptionIds": ["asm-burn-baseline"],
+        "rationale": "Constraint node guarded by the score definition.",
+        "status": "confirmed"
+      }
+    ],
+    "edges": [
+      {
+        "key": "price_to_adoption",
+        "sourceKey": "price_point",
+        "targetKey": "adoption_rate",
+        "polarity": "negative",
+        "strength": 0.6,
+        "delaySteps": 0,
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "relationshipQualityScore": 0.6,
+        "rationale": "Higher price dampens adoption.",
+        "claimIds": ["clm-price-adoption"],
+        "status": "confirmed"
+      },
+      {
+        "key": "adoption_to_revenue",
+        "sourceKey": "adoption_rate",
+        "targetKey": "annual_revenue",
+        "polarity": "positive",
+        "strength": 0.8,
+        "delaySteps": 0,
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "relationshipQualityScore": 0.6,
+        "rationale": "Adoption drives revenue.",
+        "claimIds": ["clm-adoption-revenue"],
+        "status": "confirmed"
+      },
+      {
+        "key": "price_to_revenue",
+        "sourceKey": "price_point",
+        "targetKey": "annual_revenue",
+        "polarity": "positive",
+        "strength": 0.5,
+        "delaySteps": 0,
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "relationshipQualityScore": 0.5,
+        "rationale": "Unit economics improve with price.",
+        "claimIds": ["clm-price-revenue"],
+        "status": "confirmed"
+      },
+      {
+        "key": "adoption_to_burn",
+        "sourceKey": "adoption_rate",
+        "targetKey": "burn_rate",
+        "polarity": "negative",
+        "strength": 0.3,
+        "delaySteps": 1,
+        "authorship": "generated",
+        "evidenceStatus": "assumed",
+        "relationshipQualityScore": 0.5,
+        "rationale": "Faster adoption relieves the burn constraint.",
+        "claimIds": ["clm-adoption-burn"],
+        "status": "confirmed"
+      }
+    ]
+  },
+  "strategy": {
+    "optionKey": "option-a",
+    "version": 1,
+    "nodeOverrides": {
+      "price_point": 120.0
+    }
+  },
+  "scenario": {
+    "version": 1,
+    "name": "Baseline demand scenario",
+    "description": "Stable demand with a mild adoption tailwind.",
+    "sourceStrategicScenarioId": "scn-baseline",
+    "defaultEdgeMultiplier": 1.0,
+    "edgeMultipliers": {},
+    "nodeShifts": {
+      "adoption_rate": 0.05
+    },
+    "strategySurvives": true,
+    "damping": 0.85
+  },
+  "scoreDefinition": {
+    "version": "1.0.0",
+    "optionOutcomeMappings": [
+      {
+        "optionKey": "option-a",
+        "outcomeNodeKey": "annual_revenue",
+        "goalId": "goal-growth",
+        "weight": 0.7
+      }
+    ],
+    "riskWeights": [
+      {
+        "optionKey": "option-a",
+        "riskNodeKey": "burn_rate",
+        "weight": 0.3
+      }
+    ],
+    "constraintRules": [
+      {
+        "optionKey": "option-a",
+        "constraintNodeKey": "burn_rate",
+        "operator": "<=",
+        "threshold": 0.8,
+        "penalty": 0.5
+      }
+    ]
+  },
+  "profile": {
+    "displayName": "Simulation Alpha Demo Maker",
+    "version": 1,
+    "preferenceWeights": {
+      "growth": 0.6,
+      "risk": 0.4
+    },
+    "riskTolerance": 0.5
+  },
+  "run": {
+    "simulationMode": "formal",
+    "epsilon": 0.001,
+    "maxSteps": 12,
+    "includeSensitivity": false
+  }
+}
