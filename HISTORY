@@ -2757,3 +2757,45 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Acceptance inherited from the exact published commit: backend `493 passed / 0 failed`; web `16 passed` plus build; `CONTRACT_DRIFT_OK`; compose db/api/web healthy; public HTTPS real smoke and `/demo` browser flow PASS.
 - Public release label: **Simulation Technical Alpha** only. Rollback deployment SHA: `51ae45c900ae4efa01b72d5d6842adb74ad50c91`.
 - Remote: `https://github.com/Ludus-AdventureX/Ludus.git`. No credentials or secret values are recorded here.
+## Archived idle worklog before CCR Guest-Analysis contracts lane - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: idle
+
+- Status: idle; sim-eng-02 wave (SIM-02A prerequisites P1/P3 + ENG-02 P2 enforcement + contracts/adjudication + QA) published to remote main and live-verified.
+- Last archived: 2026-07-25 (Asia/Shanghai).
+- Last archive entry: `Archive Sim-ENG-02 Wave Main Publication - 2026-07-25 (Asia/Shanghai)`.
+- Remote main: d69fa54c40834dace5d1dc9d230ea7b18b6b30a4 + this archive commit (live ls-remote verified). Migration head now b2c7e9d4a1f6 (decision_maker_profiles + idempotency_records). Engine now sim-engine-1.1.0 with mandatory profile-aware inputHash.
+- Governance note: QA for this slice was executed by the Mainline Lead under an explicit principal directive (waiver recorded in SIM_ENG_02_PROFILE_ENFORCEMENT_QA_HANDOFF.md and HISTORY). Future slices revert to independent QA unless re-waived.
+- New frozen baselines: full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error); lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK (contracts unchanged this wave).
+- Archive-only now: 0289b2e / c8c9167 / 19f552c (contract chain), fb75b8f / edaa842 / d43e36e / d2ae634 / dc57fe6 (product+QA chain), d69fa54 integration branch; related worktrees retired.
+- Unlocked: SIM-02A I1 (routes/schemas/idempotency flow, Simulation Owner) -> I2 (mounting + contracts regeneration + 10-api P2 doc amendments, Contract Lead) -> I3 (QA). ready_for_public_route = NO until I1/I2/I3 land.
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## CCR Guest-Analysis Contracts Lane - 2026-07-25 (Asia/Shanghai)
+
+- Role: Contract/Mainline Lead (contracts function only; no mainline merge). Branch codex/ccr-guest-analysis-contracts; base bd9fde15278afd63d351b2adaeb95ec32441cd6f (live ls-remote at gate zero equaled the authorized baseline; main did not advance).
+- Delivery A (urgent, pushed separately at 21bbeff for immediate consumption): CCR-20260725-GUEST-01 adjudicated the POST /api/auth/guest response shape. Flat server shape wins: data = { workspaceId, decisionCaseId, graphId, graphVersionId, strategyVersionId, scenarioVersionId, scoreDefinitionId, decisionMakerProfileId, decisionMakerProfileVersion, reused }, 201 create / 200 reuse. Non-compliant side = codex/prototype-web-demo @ d504b4f0 (nested fixture wrapper, missing decisionCaseId); seed side @ 3278dd80 conforms and is unchanged. decisionCaseId must stay exposed (SIM-02A server-derived case + echo rulings); fixture nesting rejected (no canonical precedent). One-sided fix files + Vitest acceptance criteria recorded in the CCR. Alpha status recorded: include_in_schema=False + ENABLE_GUEST_ALPHA gate; not in packages/contracts; CONTRACT_DRIFT_OK unaffected.
+- Delivery B: CCR-20260725-ANALYSIS-01 pre-froze the Task 9/10 deep-analysis wire contract: Charter/Run transition matrices (NEW: strict linear six-stage order; ready/blocked only from validating); RunResolution closed 3-kind union + idempotency + amendment boundary (NEW details keys changedFrozenFields/replacementUrl); AnalysisEvent 5-category/20-type closed sets, per-run strictly increasing sequence (NEW explicit scope), SSE id/event/data/Last-Event-ID mapping, strategic_lens.completed payload frozen (lensArtifactId/lensType/producerRole/referenceCounts/contentHash) with persist-before-emit timing; five-lens normalization (focused empty, full = FULL_REQUIRED_STRATEGIC_LENSES) + quality-gate ownership split; error codes reaffirmed + ANALYSIS_TRANSITION_INVALID (409) reserved. IMPLEMENTATION_FREE items explicitly listed to avoid over-freezing.
+- Canonical text syncs (verbatim per CCR section 7): 06-data-model.md analysis-state paragraph (S1); 10-api-and-events.md lens event sentence (S2), error table row (S3), amendment details (S4), SSE sequence sentence (S5). No other canonical text touched.
+- Write scope honored: contract-changes/**, the five authorized subsections, docs/handoffs/CCR_GUEST_ANALYSIS_CONTRACTS_HANDOFF.md, HEAD, HISTORY. Zero product code, migrations, or test changes; no rebase/amend/force-push; no code from in-flight branches entered this branch.
+- No credentials or secret values are recorded here.
+
+## CCR-GUEST-01 Independent Adjudication Rescinded - 2026-07-25 (Asia/Shanghai)
+
+- Principal directive received after the original Delivery A push (21bbeff): stop the independent guest-endpoint shape adjudication; replace it with a transcription-only process - wait for the Guest Demo integration report, then copy the Release Owner's decision verbatim into a CCR record for the contract archive (no re-derivation by this lane).
+- Action taken (new commit; no amend/force-push/history rewrite): CCR-20260725-GUEST-01 flipped to Status: withdrawn with a normative Withdrawal Notice; "Adjudication" and "fix instructions" headings marked RESCINDED (analysis text preserved as archival record); Decision section records the rescission and points follow-up at CCR-20260725-GUEST-02 (the future verbatim transcription). Evidence section (byte-accurate two-sided shape extractions from d504b4f0 and 3278dd80 plus canonical envelope precedents) remains valid factual reference for the Release Owner.
+- Checked origin/main @ 51ae45c900ae4efa01b72d5d6842adb74ad50c91: no Guest integration report exists yet, so GUEST-02 is intentionally not created in this commit.
+- Delivery B (CCR-20260725-ANALYSIS-01, Task 9/10 wire pre-freeze) is explicitly unaffected by the directive and stands as delivered, including canonical syncs S1-S5.
+- Handoff and HEAD updated accordingly; ready_for_consumption: A = NO (await Release Owner + GUEST-02), B = YES.
+- No credentials or secret values are recorded here.
+
+## Guest Alpha CCR Contracts Merge onto Published Main - 2026-07-25 (Asia/Shanghai)
+
+- Role: Mainline Integration Lead. Sequence adjustment recorded for audit honesty: the originally planned B1 ff from this lane was superseded mid-operation - the Release Owner published B1 independently (51ae45c -> ff 83df911 -> archive 6679da1, live-verified); this lane's unpushed local merge attempt 44d0ef5 (based on pre-advance main) was discarded before reaching any remote and the B2 merge was redone cleanly on the published main 6679da1b79d76774ddd248e62524ae1a06a823c3.
+- This merge (B2): no-ff adoption of codex/ccr-guest-analysis-contracts d6675693fd2b7709d9ed4756489e633c49c869ee (docs-only: CCR-20260725-GUEST-01 withdrawn adjudication kept as archival evidence; CCR-20260725-ANALYSIS-01 Task 9/10 wire pre-freeze + canonical syncs S1-S5 into 06-data-model.md / 10-api-and-events.md; lane handoff). Conflicts confined to HEAD/HISTORY; resolved append-only preserving all lane records; zero product code.
+- Investigation 3 (Task 11 Session B status) cancelled by principal: Session B reported complete directly (branch 3d68730, ready_for_qa = YES); the missing decision-case list read-only route is handled by an honest empty state + disclosure in ProjectDrawer, non-blocking.
+- In-flight (NOT merged here): task-11 shell A/B b358706/3d68730 (QA pending); task-10 lens validators fac61e0 + QA battery 622f43b (QA verdict handoff not yet recorded).
+- Unblocked next: CCR-20260725-GUEST-02 verbatim transcription (guest integration record now on main); Task 9/10 implementation lanes may consume ANALYSIS-01 from canonical main.
+- No credentials or secret values are recorded here.

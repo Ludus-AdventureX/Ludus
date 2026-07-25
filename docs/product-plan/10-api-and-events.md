@@ -364,7 +364,7 @@ POST /api/workspaces/ws_demo/analysis-charters/charter_001/runs
 
 `lensType` 只允许 `porter_five_forces | pre_mortem | counterparty_response_matrix | scenario_planning | meadows_leverage_points`。item 接口返回 `06-data-model.md` 的完整 `StrategicLensArtifact`，包括 resolved reference IDs、`researchRequests` 与 lens-specific `content`。full Run 在进入 `ready` 前必须各有一份 `ready` 产物，报告恰好引用这五个 ID。数据库对 `(workspaceId, analysisRunId, lensType)` 建唯一约束；相同 `contentHash` 的幂等重放返回已有对象，不同哈希返回冲突，重做必须创建 new Run。服务端从 Run 和当前 Workspace 推导所有权，不接受客户端传入 `workspaceId/decisionCaseId/analysisRunId`，跨 Workspace 一律返回 `404`。响应不得包含隐藏思维链、原始 Provider `reasoning_content` 或未清洗的工具结果。
 
-每份产物完成时追加 `agent.task` 类别、`strategic_lens.completed` 类型的 SSE 事件，payload 只包含 `lensArtifactId`、`lensType`、`producerRole`、引用计数和 `contentHash`。事件消费者随后通过上述读取接口获取正文，避免把大型 content 重复写入事件流。
+每份产物完成时追加 `agent.task` 类别、`strategic_lens.completed` 类型的 SSE 事件，payload 只包含 `lensArtifactId`、`lensType`、`producerRole`、`referenceCounts`（与 `StrategicLensArtifactSummary.referenceCounts` 同形）和 `contentHash`，且只能在 artifact 行持久化提交成功后追加（CCR-20260725-ANALYSIS-01）。事件消费者随后通过上述读取接口获取正文，避免把大型 content 重复写入事件流。
 
 ## SSE 事件
 
@@ -421,7 +421,7 @@ data: {"id":"evt_045","sequence":45,"workspaceId":"ws_demo","decisionCaseId":"ca
 }
 ```
 
-事件只使用 `06-data-model.md` 的一套合同：`category` 固定为 `agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`，用于前端分发；`type` 使用同一合同中更具体的领域枚举，例如 `analysis.stage.progressed`、`research.packet.completed` 或 `tool.call.completed`。SSE 的 `event:` 等于 `category`，`data:` 始终是完整 `AnalysisEvent` 信封。SSE 支持 `Last-Event-ID`，浏览器重连后按持久化 `sequence` 从数据库历史继续。
+事件只使用 `06-data-model.md` 的一套合同：`category` 固定为 `agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`，用于前端分发；`type` 使用同一合同中更具体的领域枚举，例如 `analysis.stage.progressed`、`research.packet.completed` 或 `tool.call.completed`。SSE 的 `event:` 等于 `category`，`data:` 始终是完整 `AnalysisEvent` 信封。SSE 支持 `Last-Event-ID`，浏览器重连后按持久化 `sequence` 从数据库历史继续。`sequence` 在单个 `analysisRunId` 事件流内严格单调递增：由服务端在持久化时分配，禁止回退，允许缺口（CCR-20260725-ANALYSIS-01）。
 
 DeepSeek V4 Pro 的 `reasoning_content` 是 Provider 内部 transient 协议字段，不是 API 或事件字段。thinking mode 默认启用；同一 assistant turn 发起 tool call 时，Provider 后续回传工具结果必须在内存中原样带回该字段。它不得出现在响应、SSE、数据库、日志、tool trace、报告或 UI；无 tool call 时立即丢弃，中断后也不恢复。strict tool calls 可在 thinking/non-thinking 使用；JSON Output 空 `content` 视为结构失败并至多执行一次既有修复/重试。
 
@@ -896,6 +896,7 @@ Idempotency-Key: decision_001_review_2026_10_15
 | `ANALYSIS_RUN_NOT_CANCELLABLE` | 409 | ready/blocked Run 不是可取消的活动任务 | 否 |
 | `RUN_AMENDMENT_REQUIRED` | 409 | 输入改变 Charter 冻结字段，禁止原 Run 续跑 | 否，创建 replacement Charter + new Run |
 | `RUN_RESOLUTION_INVALID` | 422 | resolution 超出允许 payload 或引用不在冻结范围 | 否 |
+| `ANALYSIS_TRANSITION_INVALID` | 409 | 请求隐含的 Run 状态迁移不在 canonical 迁移矩阵内，且没有更具体的错误码适用（CCR-20260725-ANALYSIS-01） | 否 |
 | `MODEL_UNAVAILABLE` | 503 | 模型不可用 | 是，可切换或降级 |
 | `SEARCH_UNAVAILABLE` | 503 | 搜索不可用 | 是，可使用缓存或审核 fallback |
 | `CONNECTOR_NOT_ALLOWED` | 403 | Provider 或工具不在审核目录 | 否 |
@@ -994,7 +995,7 @@ Idempotency-Key: run_research_001_constraint_resolution_01
 
 Provider recovery 只能重试、使用已有缓存，或切换到 Charter `allowedConnectorIds` 中的连接器；不能增加连接器、材料或预算。`planning/retrieving/analyzing/criticizing/synthesizing/validating` 都可进入 `needs_attention`，resolution 只能回到持久化的 `lastResumableStage`，不能回到 `queued` 或由客户端指定阶段。
 
-改变问题、目标、选项、偏好权重、硬约束定义、材料/连接器范围、预算、方法或分析深度时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`，details 包含 `changedFrozenFields` 和 replacement URL。客户端随后调用：
+改变问题、目标、选项、偏好权重、硬约束定义、材料/连接器范围、预算、方法或分析深度时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`，details 固定为 `{ "changedFrozenFields": [...], "replacementUrl": "..." }`。客户端随后调用：
 
 ```http
 POST /api/workspaces/ws_demo/analysis-charters/charter_001/replacements
