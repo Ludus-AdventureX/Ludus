@@ -217,11 +217,14 @@ describe("ProjectDrawer + Session B shell completion (Task 11 Phase 0)", () => {
       "decision-health-bar",
       "decision-signoff",
       "review-dialog-trigger",
-      "project-drawer"
+      "project-drawer",
+      // Task 13 authorized shell increment: sandbox workspace mount slot.
+      "sandbox-workspace"
     ];
     expect(Object.keys(shellSlotContract).sort()).toEqual([...frozenSlotNames].sort());
     expect(shellSlotContract["project-drawer"].status).toBe("filled");
     expect(shellSlotContract["decision-health-bar"].status).toBe("filled");
+    expect(shellSlotContract["sandbox-workspace"].status).toBe("filled");
     for (const name of ["analysis-charter-form", "analysis-progress", "quality-gate-panel", "evidence-drawer-trigger", "decision-signoff", "review-dialog-trigger"] as const) {
       expect(shellSlotContract[name].status).toBe("reserved");
     }

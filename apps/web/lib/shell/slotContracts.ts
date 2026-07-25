@@ -54,6 +54,9 @@ export type ProjectDrawerSlotProps = {
   onClose: () => void;
 };
 
+/** SandboxWorkspace (Task 13, authorized shell increment) — SandboxView pressure-mode mount. */
+export type SandboxWorkspaceSlotProps = { decisionCaseId: string };
+
 // --- Contract registry -----------------------------------------------------
 
 export type SlotContractEntry = {
@@ -113,6 +116,12 @@ export const shellSlotContract: Record<PhaseSlotName, SlotContractEntry> = {
   "project-drawer": {
     host: "CaseShell masthead case-title trigger + drawer mount",
     owner: "ProjectDrawer（会话 B 已挂载）",
+    status: "filled",
+    mount: "replace-phase-slot-node"
+  },
+  "sandbox-workspace": {
+    host: "views/SandboxView pressure-mode（Look V7 #view-sandbox）",
+    owner: "SandboxWorkspace（Task 13，经授权的最小 shell 增量；无真实档案输入时保持诚实空态）",
     status: "filled",
     mount: "replace-phase-slot-node"
   }

@@ -3194,3 +3194,82 @@ Verbatim Phase A HEAD content:
 - Unlocked next: A3 mounting lane Gate 0 precondition now satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
 - Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Archived wave-1 integration worklog before Task 13 sandbox lane kickoff - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 10/11 QA mainline integration (wave 1)
+
+- Status: merges complete on worktree decision-lab-mainline-integration (main); post-merge gates running; push pending principal confirmation.
+- Merge 1/2 (342323f): no-ff adoption of codex/qa-task-10-lens-validators-r1 622f43bb6561c0054c50a5091275ee8afa0189ba = task-10 lens validators r1 impl chain (6790181 -> 0634e8c -> fac61e0, lane COMPLETE, 549 passed zero regression, CONTRACT_DRIFT_OK) + QA adversarial battery 8e748b7 + F401 cleanup 622f43b.
+- Merge 2/2 (this commit): no-ff adoption of codex/qa-task-11-phase0-shell-r1 4fb099930b8f237e02b536464e04af957dcbb03e = Task 11 Phase 0 shell Sessions A (b358706) + B (3d68730, all acceptance gates green, ready_for_qa YES) + adversarial QA supplement 4fb0999 (focus trap escape, URL abuse, hostile payloads, flag flip, a11y spot checks; tests-only additions).
+- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (prior HEAD worklogs archived into HISTORY, byte-verified base preservation).
+- Audit honesty: a first local resolution attempt of merge 1 (e0d8499) was discarded before any push after self-audit caught a PowerShell pipeline UTF-8 corruption of one pre-existing HISTORY byte; redone with a byte-safe resolver.
+- Excluded from this wave (audit verdicts): Task 8+9 family (c599030/ed65f40/e403c66/e4ac7dc) blocked on QA FAIL-P1 sec2.3 amendment durability + P2 race window, fix lane codex/task-09-amendment-durability-fast-fix in progress; 13 historical branches (behind 64-189) superseded or lifecycle-archive-only, not merged.
+- Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived Task 13 owner-lane worklog before QA lane kickoff - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 13 sandbox r1 — independent QA lane
+
+- Status: in progress on codex/qa-task-13-sandbox-r1 (worktree decision-lab-G0/worktrees/qa-task13-sandbox-r1; pre-existing clean worktree at candidate head reused, disclosed).
+- Gate 0 echo: refs/heads/main = 4941e58bee3b91f14a4a92b7fab92750ef85b3b6; candidate codex/task-13-sandbox-r1 = 904708780099db8000f99c55b0ef36a852fb5cdc (chain 70e7dbe -> 0d5e8be -> 9047087 verified linear; 70e7dbe is ancestor of main; merge-base(candidate, main) = 70e7dbe; interval apps/web zero diff re-verified).
+- Role: independent QA (not the implementing session). Scope: QA-owned adversarial test additions + audits only; no production file edits.
+- Gates: (1) independent rerun 56 tests + build + lint; (2) adversarial supplement >=5 (idempotency key reuse w/o new key, idempotencyReplay presentation, 404 anti-enumeration copy, interpret threshold no extrapolation beyond tested points, sandboxCaseDataRouteAvailable flip safety); (3) adjudication review: write-domain path per plan verbatim + 8-slot contract untouched/append-only + Phase 0 zero regression; (4) merge-base diff scope audit incl. simulation-demo-panel.test.tsx untouched; (5) handoff §8 spot checks.
+- Verdict + QA tip SHA reported at completion; PASS/FAIL honest.
+- Secret policy: do not record credentials here.
+
+## Archived A3 mount wave integration worklog before Task 13 integration - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: CCR mount wave — deep-research pipeline route mounting & contract regeneration (A3, r1)
+
+- Status: implementation COMPLETE on worktree decision-lab-ccr-mount-wave-r1; all wave gates green; pending commit + push (recorded on push).
+- Role: Contract/Mainline Lead (combined lane); the only lane authorized to touch `app/main.py` and `packages/contracts` this wave.
+- Branch: `codex/ccr-mount-wave-r1`, fresh worktree; parent = main @ `4941e58bee3b91f14a4a92b7fab92750ef85b3b6`. No rebase/amend/force-push/cherry-pick; main untouched.
+- Gate 0: base `4941e58…` = live `git ls-remote origin refs/heads/main` EXACT match; deviation protocol not needed.
+- Trigger: this is the A3 integration/mounting wave named by CCR-20260725-ANALYSIS-01-ADDENDUM-A1 §A1-4 (mount Charter/Run endpoints) + §A1-9 (canonicalize evidence read paths, then mount), plus Task 8 handoff §5.1 and Task 9 handoff §5.3.
+- Adjudication (docs/product-plan/docs/contract-changes/CCR-20260726-MOUNT-01.md): M1 evidence read paths NEW+MOUNT (7 GET, closes A1-9); M2 analyses SSE/resolutions/cancel REAFFIRM+MOUNT (already canonical L71/74/75, closes A1-4 delivered subset); M3 Charter create/PATCH/replacements/confirm/runs DEFERRED (no HTTP handler on main); M4 GET run status DEFERRED (no handler); M5 strategic-lenses read ×2 DEFERRED (lens_artifact_reads is a read service, no router); M6 cases routes NOT-MOUNTED (A2 undelivered); M7 mount mechanism VARIANCE (owner routers ship absolute /api/workspaces/{workspaceId} prefix + per-route require_workspace_context, mounted on app directly — contract-equivalent, no owner code touched); M8 CSRF on resolutions/cancel VARIANCE (compliant under literal cookie-mutation scope; security follow-up flagged for auth lane); M9 Idempotency-Key on cancel VARIANCE (natural idempotency covers the semantic; owner follow-up); M10 app.types enum promotion NOT a mount blocker.
+- Canonical text syncs (10-api-and-events.md): SM1 seven evidence read rows in the endpoint table; SM2 new "证据溯源与冲突读取 API" subsection (envelopes + DTO field sets + uniform CASE_NOT_FOUND + read-only posture).
+- Mount manifest (app/main.py, +2 mounts, both schema-visible; guest router keeps include_in_schema=False, untouched): `app.include_router(evidence_router)` (7 GET) + `app.include_router(analyses_router)` (1 GET SSE + 2 POST).
+- Contracts regenerated by the official scripts/generate_contracts.ps1 (uv + openapi-typescript 7.13.0): openapi.json + src/types.gen.ts. Published operations 8 → 18 (10 new; additive only, existing 8 byte-unchanged).
+- Gates (fresh disposable PG16 ludus-pg-ccr-mount @55450, main-checkout venv via junction, uv/pnpm offline, zero network installs):
+  - alembic upgrade head → single head `f9a4b7e2c8d3` exact.
+  - Wave suite `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed / 0 failed.
+  - Owner suites (diagnostic) `pytest app/evidence/tests app/analyses/tests -q -W error -rxX` = 207 passed / 0 failed — the custom lazy `_IncludedRouter` publishes the mounted paths in app.openapi() while keeping the owner `app.routes`-based "router-not-mounted" assertions valid, so mounting is transparent to the owner suites (no owner test breakage; no owner code touched).
+  - Functional smoke (ASGITransport): all four mounted paths serve and enforce auth/tenancy (401 SESSION_REVOKED_OR_EXPIRED envelope without a session); a bogus suffix returns bare Starlette 404 — confirming the four paths are registered.
+  - Official `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK (re-verified with real node_modules).
+  - `ruff check services/api` all-pass; `compileall app migrations` exit 0; `git diff --check` clean (0 whitespace/conflict-marker); secret scan 0.
+  - Web: `pnpm --dir apps/web test` (vitest run) = 41 passed / 0 failed; `pnpm --dir apps/web build` (next build --turbopack, incl. type-check against regenerated types.gen.ts) = success.
+- Scope audit (git diff --name-only + status): exactly `docs/product-plan/10-api-and-events.md`, `packages/contracts/openapi.json`, `packages/contracts/src/types.gen.ts`, `services/api/app/main.py` (modified) + new `docs/product-plan/docs/contract-changes/CCR-20260726-MOUNT-01.md` + HEAD/HISTORY. ZERO diff to app/evidence, app/analyses, app/tenancy, other app code, tests, pnpm-lock.yaml, ways, apps/web source.
+- ready_for_merge: YES (additive contract + mount; all wave gates green; owner code untouched).
+- Broadcast: B1/B2/B3 front-end lanes — the canonical path list is finalized (10 published ops; see CCR mount manifest). Deferred (next wave): M3/M4 Charter+Run creation & run-status, M5 strategic-lenses read, M6 cases (A2), plus owner follow-ups M8 (CSRF on resolutions/cancel) / M9 (Idempotency-Key on cancel) / M10 (enum promotion).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived Task 13 QA lane worklog at merge adoption (4bc752a) - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 13 sandbox r1 — independent QA lane
+
+- Status: COMPLETE — verdict PASS. (1) independent rerun 56/56 + build OK + lint 0 errors (1 pre-existing disclosed warning in forbidden-zone simulation-demo-panel.test.tsx); (2) adversarial supplement 12 tests in apps/web/tests/qa-task13-sandbox-adversarial.test.tsx, full suite 68/68 (A1 repeated network failures keep ONE distinct Idempotency-Key across 3 POSTs + IDEMPOTENCY_CONFLICT forces a fresh key on next explicit run; A2 idempotencyReplay badge renders only when meta present; A3 uniform 404 collapses any code/message to the same tenant-safe copy, no id/tenant/existence echo, no retry; A4 interpret thresholds only from really flipped tested points — no extrapolation from non-flipped 12 to 13-15, min-over-flipped honored, insufficient always null threshold; A5 sandboxCaseDataRouteAvailable=false today and mocked flip-to-true still renders honest empty frame; A6 hostile ok-without-data envelope degrades honestly); (3) adjudications: write-domain components/simulation/** per plan verbatim ACCEPT; shell increment = exactly the 4 disclosed files + project-drawer assertion, existing 8-slot contract byte-preserved and append-only (sole existing-line change is the syntactic trailing comma), Phase 0 tests zero regression; (4) merge-base(9047087, main 4941e58) = 70e7dbe, diff file list exactly matches handoff §2+§3 scope, simulation-demo-panel.test.tsx and all forbidden zones zero diff; (5) handoff §8 spot checks covered by baseline + A-battery. QA lane worktree pre-existed clean at candidate head and was reused (disclosed).
+- Gate 0 echo: refs/heads/main = 4941e58bee3b91f14a4a92b7fab92750ef85b3b6; candidate codex/task-13-sandbox-r1 = 904708780099db8000f99c55b0ef36a852fb5cdc (chain 70e7dbe -> 0d5e8be -> 9047087 verified linear; 70e7dbe is ancestor of main; merge-base(candidate, main) = 70e7dbe; interval apps/web zero diff re-verified).
+- Role: independent QA (not the implementing session). Scope: QA-owned adversarial test additions + audits only; no production file edits.
+- Gates: (1) independent rerun 56 tests + build + lint; (2) adversarial supplement >=5 (idempotency key reuse w/o new key, idempotencyReplay presentation, 404 anti-enumeration copy, interpret threshold no extrapolation beyond tested points, sandboxCaseDataRouteAvailable flip safety); (3) adjudication review: write-domain path per plan verbatim + 8-slot contract untouched/append-only + Phase 0 zero regression; (4) merge-base diff scope audit incl. simulation-demo-panel.test.tsx untouched; (5) handoff §8 spot checks.
+- Verdict + QA tip SHA reported at completion; PASS/FAIL honest.
+- Secret policy: do not record credentials here.
+
+## Correction (lifecycle, authorized) - 2026-07-25 (Asia/Shanghai): the HISTORY block above titled "Archived Task 13 owner-lane worklog before QA lane kickoff" (added in cfcf4a7) in fact archived the QA lane's own interim worklog, not the owner-lane worklog; that block stays untouched per append-only discipline. The Task 13 owner-lane worklog from 9047087:HEAD follows verbatim:
+
+# Work Log: Task 13 sandbox interaction frontend (r1)
+
+- Status: COMPLETE on codex/task-13-sandbox-r1 (worktree decision-lab-task13-sandbox-r1); all acceptance gates green (web test 56 passed = 41-test baseline zero regression incl. 1 authorized slot-coverage assertion update + 15 new Task 13 tests; build OK /cases/[decisionCaseId] 24.5 kB / 139 kB first load; lint 0 errors; diff --check + conflict-marker + secret + scope audits clean); handoff at docs/handoffs/TASK_13_SANDBOX_R1_HANDOFF.md; ready_for_qa = YES.
+- Adjudications (disclosed §1 of handoff): write-domain path conflict resolved to plan verbatim (components/simulation/**); sandbox slot missing from frozen slot contract → fail-closed report → principal explicitly authorized a minimal shell increment (PhaseSlot union + slotContracts registry + SandboxView thin mount + CaseViewRouter prop line + project-drawer slot-coverage assertion), fully disclosed in handoff §3.
+- Pre-existing base gap (not touched): apps/web/tests/simulation-demo-panel.test.tsx misses the DemoFlowResult import at base 70e7dbe8 → typecheck fails on clean base (TS2304); owner = demo/guest lane.
+- Gate 0: base pinned at remote main 70e7dbe810f13044c0afb46d5fe91dd4e31474df (verified live via git ls-remote; contains Task 11 Phase 0 shell Sessions A+B + adversarial QA 4fb0999, and SIM-02A run API mounted under tenancy workspace_router). Earlier same-day Gate 0 against 4508b30 was fail-closed reported (shell missing) and unblocked by the wave-2 main publication.
+- Role: Web/UX Owner (Fable5). Plan source: docs/product-plan/18-detailed-development-plan.md Task 13 section (L1248-1322), consumed verbatim; conflicts resolve to plan + canonical contracts, gaps fail-closed.
+- Objective: decision-user-first sandbox interaction consuming the mounted simulation run API (POST/GET /api/workspaces/{workspaceId}/simulations/{graphId}/runs; Idempotency-Key HTTP header; experimental/formal semantics; uniform cross-tenant 404; engineVersion=sim-engine-1.1.0; GET replay equivalence). Formal-mode entry disabled in UI while quality gates unpassed (feedback only; API remains the enforcer).
+- Write scope: apps/web/components/sandbox/** (new), sandbox workspace slot fill per apps/web/lib/shell/slotContracts.ts (fill only, never restructure), own tests, docs/handoffs/**, HEAD/HISTORY.
+- Forbidden this lane: rebase/amend/force-push/cherry-pick; advancing main; new dependencies/tool installs; touching existing shell files, other slots, /demo, guest client, next.config.ts, package.json, services/api/**, packages/contracts/**; secrets zero-record.
+- Acceptance gates: pnpm --dir apps/web test (existing baseline zero regression + new tests), build pass; diff --check / conflict-marker / scope / secret audits clean; handoff docs/handoffs/TASK_13_SANDBOX_R1_HANDOFF.md; push exact SHA + ready_for_qa.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

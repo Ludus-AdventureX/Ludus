@@ -26,7 +26,7 @@ export function CaseViewRouter({ decisionCaseId, activeWorkspace }: CaseViewRout
     case "report":
       return <ReportView />;
     case "sandbox":
-      return <SandboxView />;
+      return <SandboxView decisionCaseId={decisionCaseId} />;
     case "decision":
       return <DecisionView />;
     case "workspace":
