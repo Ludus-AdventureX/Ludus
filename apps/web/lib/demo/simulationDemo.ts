@@ -113,17 +113,28 @@ export async function fetchCsrfToken(): Promise<string> {
 
 /**
  * POST /api/auth/guest — create or restore a guest account. The server owns
- * the guest identity (cookie-bound session); the response returns the
- * workspace and fixture IDs the page needs to drive the demo.
+ * the guest identity (cookie-bound session); the response returns a FLAT
+ * ``data`` payload (workspaceId + frozen fixture identifiers) which the
+ * client normalizes into ``GuestSession.fixture``.
  */
+type GuestFlatPayload = {
+  workspaceId?: string;
+  decisionCaseId?: string;
+  graphId?: string;
+  graphVersionId?: string;
+  strategyVersionId?: string;
+  scenarioVersionId?: string;
+  scoreDefinitionId?: string;
+  decisionMakerProfileId?: string;
+  decisionMakerProfileVersion?: number;
+};
+
 export async function fetchGuestSession(csrfToken: string): Promise<GuestSession> {
   const envelope = await requestJson("/api/auth/guest", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
   });
-  const data = envelope.data as
-    | { workspaceId?: string; fixture?: Partial<DemoFixtureIds> }
-    | undefined;
+  const data = envelope.data as GuestFlatPayload | undefined;
   const missing = validateGuestPayload(data);
   if (missing.length > 0) {
     throw new DemoApiError(
@@ -135,28 +146,21 @@ export async function fetchGuestSession(csrfToken: string): Promise<GuestSession
   return {
     workspaceId: data!.workspaceId!,
     fixture: {
-      graphId: data!.fixture!.graphId!,
-      graphVersionId: data!.fixture!.graphVersionId!,
-      strategyVersionId: data!.fixture!.strategyVersionId!,
-      scenarioVersionId: data!.fixture!.scenarioVersionId!,
-      scoreDefinitionId: data!.fixture!.scoreDefinitionId!,
-      decisionMakerProfileId: data!.fixture!.decisionMakerProfileId!,
-      decisionMakerProfileVersion: data!.fixture!.decisionMakerProfileVersion!,
+      graphId: data!.graphId!,
+      graphVersionId: data!.graphVersionId!,
+      strategyVersionId: data!.strategyVersionId!,
+      scenarioVersionId: data!.scenarioVersionId!,
+      scoreDefinitionId: data!.scoreDefinitionId!,
+      decisionMakerProfileId: data!.decisionMakerProfileId!,
+      decisionMakerProfileVersion: data!.decisionMakerProfileVersion!,
     },
   };
 }
 
-function validateGuestPayload(
-  data: { workspaceId?: string; fixture?: Partial<DemoFixtureIds> } | undefined,
-): string[] {
+function validateGuestPayload(data: GuestFlatPayload | undefined): string[] {
   if (!data) return ["data"];
   const missing: string[] = [];
   if (!data.workspaceId) missing.push("workspaceId");
-  const fixture = data.fixture;
-  if (!fixture) {
-    missing.push("fixture");
-    return missing;
-  }
   const required: (keyof DemoFixtureIds)[] = [
     "graphId",
     "graphVersionId",
@@ -167,15 +171,15 @@ function validateGuestPayload(
     "decisionMakerProfileVersion",
   ];
   for (const key of required) {
-    const value = fixture[key];
-    if (value === undefined || value === null || value === "") missing.push(`fixture.${key}`);
+    const value = data[key];
+    if (value === undefined || value === null || value === "") missing.push(key);
   }
   if (
-    fixture.decisionMakerProfileVersion !== undefined &&
-    (!Number.isInteger(fixture.decisionMakerProfileVersion) ||
-      fixture.decisionMakerProfileVersion < 1)
+    data.decisionMakerProfileVersion !== undefined &&
+    (!Number.isInteger(data.decisionMakerProfileVersion) ||
+      data.decisionMakerProfileVersion < 1)
   ) {
-    missing.push("fixture.decisionMakerProfileVersion");
+    missing.push("decisionMakerProfileVersion");
   }
   return missing;
 }

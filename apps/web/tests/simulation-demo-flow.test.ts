@@ -82,7 +82,7 @@ describe("fetchCsrfToken / fetchGuestSession", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         ok: true,
-        data: { workspaceId: runData.workspaceId, fixture: guestFixture },
+        data: { workspaceId: runData.workspaceId, ...guestFixture },
       }),
     );
     const session = await fetchGuestSession("csrf-abc");
@@ -96,7 +96,7 @@ describe("fetchCsrfToken / fetchGuestSession", () => {
   });
 
   test("fetchGuestSession throws GUEST_PAYLOAD_INVALID when workspaceId is missing", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, data: { fixture: guestFixture } }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, data: { ...guestFixture } }));
     await expect(fetchGuestSession("csrf-abc")).rejects.toMatchObject({
       code: "GUEST_PAYLOAD_INVALID",
       status: 200,
@@ -105,12 +105,12 @@ describe("fetchCsrfToken / fetchGuestSession", () => {
 
   test("fetchGuestSession reports every missing fixture field", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ ok: true, data: { workspaceId: runData.workspaceId, fixture: {} } }),
+      jsonResponse({ ok: true, data: { workspaceId: runData.workspaceId } }),
     );
     const error = await fetchGuestSession("csrf-abc").catch((e) => e);
     expect(error).toBeInstanceOf(DemoApiError);
-    expect(error.message).toContain("fixture.graphId");
-    expect(error.message).toContain("fixture.decisionMakerProfileVersion");
+    expect(error.message).toContain("graphId");
+    expect(error.message).toContain("decisionMakerProfileVersion");
   });
 });
 
@@ -132,7 +132,7 @@ describe("establishGuestSession", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           ok: true,
-          data: { workspaceId: runData.workspaceId, fixture: guestFixture },
+          data: { workspaceId: runData.workspaceId, ...guestFixture },
         }),
       );
 
