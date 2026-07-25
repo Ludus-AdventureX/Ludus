@@ -38,7 +38,6 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 import app.simulations.engine as engine_module
-import app.simulations.repository as repository_module
 import app.simulations.service as service_module
 from app.db import Base, get_database_url
 from app.models import DecisionMakerProfile, IdempotencyRecord, SimulationRun as SimulationRunRow
