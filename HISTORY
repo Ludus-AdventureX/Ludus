@@ -2738,3 +2738,21 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Skipped by task order: migration downgrade/re-upgrade, full orphan battery, unrelated Lens reruns, repo-wide static re-audit, long byte-gate reports.
 - Release: deploy from the exact integration SHA, external network smoke, then ff-only advance of main (recorded in the worklog).
 - No credentials or secret values are recorded here.
+
+## Archive SIM Alpha Integration Worklog (HEAD -> HISTORY) - 2026-07-25 (Asia/Shanghai)
+
+- Verbatim HEAD archived before Task 11 Phase 0 Session A took over the worklog:
+- (HEAD) Status: verification complete on codex/prototype-simulation-alpha-integration (base = live-verified remote main 387041d40442faf16557b266ef3f844b7af8fb69); mainline sim-eng-02 wave publication bd9fde1 adopted mid-release (same contract/product chain; QA-owned files resolved to mainline QA dc57fe6 with the route-mount pin re-flipped for the mounted I1/I2 surface); release steps (deploy from exact SHA -> external smoke -> ff-only main) in progress.
+- (HEAD) Role: Integration/Release Lead (SIM_ALPHA_INTEGRATION_RELEASE).
+- (HEAD) Assembled: contract chain 0289b2e -> c8c9167 -> 19f552c + product d2ae634 (no-ff; HEAD/HISTORY append-only 3-way), then rolling no-ff merges of codex/prototype-sim-web 3b7d588, -seed-smoke f08b66b, -run-api 56e01ab, -deploy e150528 as each was pushed; then origin/main bd9fde1.
+- (HEAD) Integration-owned work: simulations router mounted under workspace_router + OpenAPI/types regenerated (drift = exactly the two SIM-02A paths); combination-only fixes: ENG-02 pinned QA flips (acceptance suite canonical fingerprint, hash-flip pin, route-mount pin), smoke rewritten onto the real SIM-02A routes with an idempotent re-POST probe, prototype_seed csrfToken key, next.config proxy merge (API_PROXY_TARGET/API_PROXY_ORIGIN + standalone), web Dockerfile + compose NEXT_PUBLIC_DEMO_* build args, seed-alpha/smoke-alpha compose lanes, web healthcheck /api/auth/csrf fix, .env.prototype.example additions.
+- (HEAD) Verification (single full pass, disposable PG16 ludus-pg-sim-alpha @55439): alembic upgrade head + check clean (single head b2c7e9d4a1f6); pytest tests app/simulations/tests -q -W error = 482 passed / 0 failed (re-run after mainline adoption recorded below); generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; pnpm web test = 14 passed, build OK; seed idempotent twice + SMOKE PASS (201, sim-engine-1.1.0, sha256 inputHash, idempotencyReplay=true, replay identical); manual browser login -> run -> result -> replay on /demo verified (hash equality shown); security smoke PASS (unauthenticated 401 on GET+POST, foreign workspace uniform 404, idempotency replay, secret diff scan clean).
+- The release itself was published to main as 51ae45c (merge adopting bd9fde1); that SHA is the live remote main at this kickoff.
+
+## Task 11 Phase 0 Session A Kickoff - 2026-07-25 (Asia/Shanghai)
+
+- Role: Web/UX Owner (Task 11 Phase 0 five-workspace shell, Session A of the A/B serial split; Session B must branch from this session's exact pushed SHA).
+- Gate 0: git ls-remote origin refs/heads/main = 51ae45c900ae4efa01b72d5d6842adb74ad50c91 (expected 51ae45c; no advance). Fresh worktree decision-lab-task11-phase0-shell-a, new branch codex/task-11-phase0-shell-a from 51ae45c.
+- Look snapshot discipline: all six look sources (VERSION, README.md, index.html, themes.css, styles.css, app.js) SHA256-verified byte-identical to the frozen design/look-source-manifest.json (bundle c5d5d65bf62efdd14e4e3e13d1c70b92f9d6b4cdd4dbd2f652107d84d1a55e98); no resample, no snapshot diff to report.
+- Write scope: apps/web/** new files + minimal existing route mount points + docs/handoffs/** + HEAD/HISTORY. Forbidden: /demo page, guest client, next.config.ts, package.json dependencies, services/api/**, packages/contracts/**, rebase/amend/force-push, loading ../look/app.js in production, parallel IA, mock analysis data posing as real APIs.
+- No credentials or secret values are recorded here.
