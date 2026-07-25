@@ -1,8 +1,10 @@
+import { EvidenceDrawerTrigger } from "@/components/quality/EvidenceDrawerTrigger";
 import { PhaseSlot } from "@/components/shell/PhaseSlot";
 
 // Look V7 `#view-analysis` static layout frame (Phase 0 skeleton).
 // No run, trace step, evidence count or gate verdict is fabricated here;
-// AnalysisProgress / QualityGatePanel / EvidenceDrawer fill the slots later.
+// AnalysisProgress / QualityGatePanel fill their slots later. Task 11 B2
+// fills the evidence-drawer-trigger anchor (replace-phase-slot-node only).
 
 export function AnalysisView() {
   return (
@@ -36,7 +38,7 @@ export function AnalysisView() {
 
       <section className="custody-strip" aria-label="证据保管链">
         <span className="custody-title">一条结论如何形成</span>
-        <PhaseSlot name="evidence-drawer-trigger" label="证据保管链" note="EvidenceDrawer 触发点：原始来源 → 命题 → 判断 → 决定，等待真实证据账本。" />
+        <EvidenceDrawerTrigger />
       </section>
     </section>
   );
