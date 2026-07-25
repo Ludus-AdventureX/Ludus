@@ -29,10 +29,10 @@ Legend used below for every ruling:
 **Gap:** AnalysisEventCategory (5 values), AnalysisEventType (20 values), ResearchPacket.role, InterventionResult (`resolution`|`amendment`), RunResolution.kind (3 kinds), CharterFrozenField (11 field names), AnalysisCharter.status (4 values) — all have canonical literal sets in 06-data-model.md but no corresponding Python `app.types` enums. Task 9 r1 handoff §5 item 1 reports they are persisted "per the SIM-02A precedent (CHECK strings; PG enums for status/role columns without parallel Python StrEnums)".
 
 **Evidence:**
-- 06-data-model.md L465-476: `CharterFrozenField` type with exactly 11 string literal members.
-- 06-data-model.md L28 (AnalysisCharter.status in the data-model table): `draft | awaiting_confirmation | confirmed | superseded`.
-- 06-data-model.md L31-33 (AnalysisRunStatus): 10 enum values, `types.py` has `AnalysisRunStatus` enum — this one IS promoted.
-- 06-data-model.md L149-157 (AnalysisEventCategory + AnalysisEventType): five categories + twenty types.
+- 06-data-model.md L467-478: `CharterFrozenField` type with exactly 11 string literal members.
+- 06-data-model.md L376 (AnalysisCharter.status): `"draft" | "awaiting_confirmation" | "confirmed" | "superseded"` — 4 values.
+- 06-data-model.md L415-426 (AnalysisRunStatus): 11 enum values; `types.py` has `AnalysisRunStatus` enum — this one IS promoted.
+- 06-data-model.md L521-548 (AnalysisEventCategory, 5 values, L521-526; AnalysisEventType, 20 values, L528-548).
 - 10-api-and-events.md L424: "事件只使用 `06-data-model.md` 的一套合同".
 - Task 9 r1 handoff §5 item 1: "CCR requested to promote them."
 
@@ -148,7 +148,7 @@ Legend used below for every ruling:
 - Task 8 r1 handoff §1: `app/evidence/routes.py` — "relative and NOT mounted"; `app/evidence/schemas_api.py` — "camelCase CanonicalModel views (NOT exported to generated contracts)."
 - QA Phase A verdict: PASS, with the unmounted-router state accepted as contract-mandated.
 
-**Ruling:** **DEFERRED-to-A3.** The evidence read API surface is a distinct contract surface from the analysis run API. The A3 lane receives the following as裁决输入: (a) the proposed path set and wire shapes in `app/evidence/schemas_api.py` (evidence detail, quality assessment, provenance chain, evidence direction, same-source group, run evidence list, conflict list), (b) the unmounted `app/evidence/routes.py`, (c) the canonical `EvidenceItem`/`QualityAssessment`/`RetrievalTask`/`RawArtifact` interfaces from 06-data-model.md L661-700. The A3 lane MUST produce a CCR adding the evidence read paths to 10-api-and-events.md before mounting. Until that CCR lands, the evidence router stays unmounted — this is the contract-mandated state.
+**Ruling:** **DEFERRED-to-A3.** The evidence read API surface is a distinct contract surface from the analysis run API. The A3 lane receives the following as 裁决输入: (a) the proposed path set and wire shapes in `app/evidence/schemas_api.py` (evidence detail, quality assessment, provenance chain, evidence direction, same-source group, run evidence list, conflict list), (b) the unmounted `app/evidence/routes.py`, (c) the canonical evidence interfaces from 06-data-model.md L585-700 (`RetrievalTask` L589-598, `RawArtifact` L602-615, `QualityAssessment` L621-638, `EvidenceItem` L665-690, `ClaimEvidence` L692-702). The A3 lane MUST produce a CCR adding the evidence read paths to 10-api-and-events.md before mounting. Until that CCR lands, the evidence router stays unmounted — this is the contract-mandated state.
 
 ---
 
@@ -157,9 +157,9 @@ Legend used below for every ruling:
 **Gap:** `SourceGrade` (L1-L6), `EvidenceVerdict` (four-tier), `RetrievalTaskStatus`, `FreshnessStatus` (fresh|aging|stale|unknown), `stableToolName` — all have canonical literal sets in 06-data-model.md but no `app.types` Python enums. Task 8 r1 handoff §5 item 2: "Persisted per the SIM-02A response_kind precedent (CHECK-constrained strings; retrieval_task_status as a PG enum from the canonical tuple). CCR requested to promote these sets into app.types."
 
 **Evidence:**
-- 06-data-model.md L670: `sourceGrade: "L1_primary" | "L2_reputable" | "L3_industry" | "L4_general" | "L5_opinion" | "L6_unverified"` — canonical six-tier literal.
-- 06-data-model.md L635: `verdict: EvidenceVerdict` — the four-tier verdict type.
-- 06-data-model.md L678: `freshnessStatus: "fresh" | "aging" | "stale" | "unknown"` — canonical four-value literal.
+- 06-data-model.md L672: `sourceGrade: "L1_primary" | "L2_reputable" | "L3_industry" | "L4_general" | "L5_opinion" | "L6_unverified"` — canonical six-tier literal.
+- 06-data-model.md L637: `verdict: EvidenceVerdict` — the four-tier verdict type.
+- 06-data-model.md L680: `freshnessStatus: "fresh" | "aging" | "stale" | "unknown"` — canonical four-value literal.
 - Task 8 r1 handoff §2: migration creates PG enums `evidence_verdict` and `retrieval_task_status`.
 - Task 8 r1 handoff §5 item 2: CCR requested.
 
@@ -175,7 +175,7 @@ Each amendment below is applied verbatim to the named subsection — nothing els
 
   "`AnalysisRun.idempotencyKey` 与 `DeepAnalysisRequest.idempotencyKey` 是 canonical **内部**字段（run/worker 生命周期关联），不属于 HTTP wire 请求体；HTTP 面以 `Idempotency-Key` header 为载体，请求体夹带 `idempotencyKey` 字段的请求必须返回 422（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）。"
 
-- **SA2** `10-api-and-events.md`, amendment paragraph (after "服务端保存 `result == amendment` 的 classification，不创建 resolution" in L998), append:
+- **SA2** `10-api-and-events.md`, amendment paragraph ("改变问题、目标…时，服务端保存 `result == amendment` 的 classification，不创建 resolution，并返回 `409 RUN_AMENDMENT_REQUIRED`" in L998), amend by appending before `details 固定为`:
 
   "分类与 `analysis.amendment_required` 事件先于 409 响应提交（CCR-20260725-ANALYSIS-01-ADDENDUM-A1）：持久化行在调用方收到错误前已 commit，不因 HTTP 响应状态回滚。"
 

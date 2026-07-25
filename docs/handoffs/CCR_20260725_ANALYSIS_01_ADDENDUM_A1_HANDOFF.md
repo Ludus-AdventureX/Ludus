@@ -40,7 +40,7 @@
 
 ## Verification
 
-- `git diff --name-only` expected: contract-changes/CCR-20260725-ANALYSIS-01-ADDENDUM-A1.md, 06-data-model.md, 10-api-and-events.md, docs/handoffs/CCR_20260725_ANALYSIS_01_ADDENDUM_A1_HANDOFF.md, HEAD, HISTORY
+- `git diff --name-only` expected: `docs/product-plan/docs/contract-changes/CCR-20260725-ANALYSIS-01-ADDENDUM-A1.md`, `docs/product-plan/06-data-model.md`, `docs/product-plan/10-api-and-events.md`, `docs/handoffs/CCR_20260725_ANALYSIS_01_ADDENDUM_A1_HANDOFF.md`, `HEAD`, `HISTORY`
 - `git diff --check` expected: clean
 - Conflict markers / secret scan expected: 0 / 0
 - `generate_contracts.ps1 -Check` expected: CONTRACT_DRIFT_OK (docs-only, no product change)
