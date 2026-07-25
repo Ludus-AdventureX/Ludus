@@ -1,0 +1,137 @@
+# Closed Alpha prototype stack: Web + API + Postgres behind one origin.
+#
+#   Start: docker compose --env-file .env.prototype -f compose.prototype.yaml up -d --build
+#   Seed:  docker compose --env-file .env.prototype -f compose.prototype.yaml run --rm seed
+#   Smoke: docker compose --env-file .env.prototype -f compose.prototype.yaml run --rm smoke
+#
+# Copy .env.prototype.example to .env.prototype first and fill in real values;
+# never commit the filled file (already covered by .gitignore).
+#
+# HTTPS: no managed cloud platform is assumed. The integration lane exposes
+# host port ${WEB_PORT} through a temporary HTTPS ingress (for example
+# `cloudflared tunnel --url http://localhost:3000`) and sets
+# AUTH_ALLOWED_ORIGINS to that public URL. The web container proxies /api/* to
+# FastAPI internally, so the tunnel is the single public origin.
+#
+# Migrations run as an explicit startup command (the `migrate` service) before
+# the API accepts traffic. Seeding is a separate explicit command and never
+# runs automatically, so restarts do not overwrite Closed Alpha data.
+
+name: decision-lab-prototype
+
+x-db-env: &db-env
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-decision_lab}
+  POSTGRES_USER: ${POSTGRES_USER:-decision_lab}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prototype}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-decision_lab}
+      POSTGRES_USER: ${POSTGRES_USER:-decision_lab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prototype}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-decision_lab} -d ${POSTGRES_DB:-decision_lab}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - decision_lab_prototype_db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  migrate:
+    build: services/api
+    image: decision-lab-api:prototype
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *db-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: decision-lab-api:prototype
+    environment:
+      <<: *db-env
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in .env.prototype}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
+      AUTH_SESSION_TTL_MINUTES: ${AUTH_SESSION_TTL_MINUTES:-720}
+      AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS:?set AUTH_ALLOWED_ORIGINS to the public HTTPS origin}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: decision-lab-web:prototype
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      # Exercises the same-origin /api proxy end to end (web -> FastAPI).
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  # Explicit one-off: registers the Closed Alpha account through the public
+  # auth contract. Idempotent; never runs on `up`.
+  seed:
+    image: decision-lab-api:prototype
+    profiles: ["ops"]
+    environment:
+      SEED_API_BASE_URL: http://api:8000
+      SEED_EMAIL: ${SEED_EMAIL:?set SEED_EMAIL in .env.prototype}
+      SEED_PASSWORD: ${SEED_PASSWORD:?set SEED_PASSWORD in .env.prototype}
+      SEED_WORKSPACE_NAME: ${SEED_WORKSPACE_NAME:-Closed Alpha Workspace}
+    volumes:
+      - ./scripts/prototype_seed.py:/opt/deploy/prototype_seed.py:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "/opt/deploy/prototype_seed.py"]
+    restart: "no"
+
+  # Explicit one-off: verifies API health directly and through the web proxy.
+  smoke:
+    image: decision-lab-api:prototype
+    profiles: ["ops"]
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    command:
+      - python
+      - -c
+      - |
+        import sys, urllib.request
+        for url in ("http://api:8000/health", "http://web:3000/api/health"):
+            status = urllib.request.urlopen(url, timeout=10).status
+            print(f"SMOKE {url} -> {status}")
+            if status != 200:
+                sys.exit(1)
+        print("SMOKE OK")
+    restart: "no"
+
+volumes:
+  decision_lab_prototype_db:

@@ -1,0 +1,11 @@
+# Keep the API build context minimal; only pyproject.toml, uv.lock,
+# alembic.ini, migrations/ and app/ are copied by the Dockerfile.
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+tests/
+Dockerfile
+.dockerignore

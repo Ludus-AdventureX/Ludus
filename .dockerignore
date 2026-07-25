@@ -1,0 +1,20 @@
+# Build context guard for apps/web/Dockerfile (context = repository root).
+# Never ship local env files, dependency trees, or build output into images.
+.git/
+.env
+.env.*
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+**/coverage/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/test-results/
+**/playwright-report/
+docs/
+design/
+compose.yaml
+compose.prototype.yaml

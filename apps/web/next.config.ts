@@ -1,7 +1,23 @@
 import type { NextConfig } from "next";
 
+// Prototype deploy (compose.prototype.yaml): the web container proxies /api/*
+// to FastAPI so browsers see a single origin. Both variables are unset in
+// local development, which keeps dev behaviour unchanged.
+const apiProxyTarget = process.env.API_PROXY_TARGET;
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: process.env.NEXT_OUTPUT_STANDALONE === "true" ? "standalone" : undefined,
+  async rewrites() {
+    if (!apiProxyTarget) {
+      return [];
+    }
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${apiProxyTarget}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
