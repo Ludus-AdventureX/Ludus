@@ -579,7 +579,7 @@ export interface QuickAnalysisResult {
 
 替代 draft 尚未确认时旧 confirmed Charter 继续有效；新 Charter 确认后才将旧 Charter 标记为 `superseded`。`blocked` 是质量门终态，不能创建 resolution 或恢复；重做必须创建新 Run。`cancelled` 也是终态，Worker 在下一安全检查点停止且不得再发布新产物，已持久化事件与不可变阶段产物保留。`quick` 使用 `QuickAnalysisResult`，不创建 Charter 或正式 Run；`focused` 和 `full` 必须绑定正式方法包 ID、版本和内容哈希。P0 同一 Case 同时最多存在一个活动正式 Run。
 
-合法中断边为 `planning | retrieving | analyzing | criticizing | synthesizing | validating -> needs_attention`；`needs_attention` 只能在成功追加 resolution 后回到该 Run 的 `lastResumableStage`。`queued` 只用于新 Run 等待 Worker 领取，不是恢复目标。queued、六个执行阶段和 needs_attention 可取消；ready、blocked、cancelled 都不得恢复。
+合法中断边为 `planning | retrieving | analyzing | criticizing | synthesizing | validating -> needs_attention`；`needs_attention` 只能在成功追加 resolution 后回到该 Run 的 `lastResumableStage`。`queued` 只用于新 Run 等待 Worker 领取，不是恢复目标。queued、六个执行阶段和 needs_attention 可取消；ready、blocked、cancelled 都不得恢复。六个执行阶段严格按 `planning → retrieving → analyzing → criticizing → synthesizing → validating` 线性推进，不得跳步；`ready` 与 `blocked` 只能从 `validating` 进入（CCR-20260725-ANALYSIS-01）。
 
 ## 陈述与证据
 

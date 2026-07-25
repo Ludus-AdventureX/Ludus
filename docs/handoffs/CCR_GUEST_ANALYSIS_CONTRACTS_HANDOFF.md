@@ -1,0 +1,97 @@
+# CCR Guest-Analysis Contracts Handoff
+
+- Lane: Contract/Mainline Lead — contracts function only (NO mainline merge performed here)
+- Branch: `codex/ccr-guest-analysis-contracts` (pushed)
+- Base: `bd9fde15278afd63d351b2adaeb95ec32441cd6f`
+  - Gate-zero live `git ls-remote origin refs/heads/main` = `bd9fde15278afd63d351b2adaeb95ec32441cd6f`
+    — EQUAL to the authorized baseline; main had NOT advanced, no old/new SHA split to disclose.
+- Date: 2026-07-25 (Asia/Shanghai)
+- Scope proof target: `git diff --name-only <base>..HEAD` contains ONLY
+  `docs/product-plan/docs/contract-changes/**`, the CCR-authorized subsections of
+  `docs/product-plan/06-data-model.md` + `docs/product-plan/10-api-and-events.md`,
+  `docs/handoffs/**`, `HEAD`, `HISTORY`. Zero product code, zero migrations, zero tests.
+
+## Delivery A — CCR-20260725-GUEST-01 (URGENT, unblocks the Guest Demo integration wave)
+
+- File: `docs/product-plan/docs/contract-changes/CCR-20260725-GUEST-01.md`
+- Committed and pushed SEPARATELY at `21bbeff` — **A is consumable on its own; do not wait
+  for anything else in this lane** (ready_for_consumption: YES).
+- One-line verdict: the **flat server shape wins** —
+  `data: { workspaceId, decisionCaseId, graphId, graphVersionId, strategyVersionId,
+  scenarioVersionId, scoreDefinitionId, decisionMakerProfileId,
+  decisionMakerProfileVersion, reused }` (201 create / 200 reuse);
+  **the web side (`codex/prototype-web-demo` @ d504b4f0) is the non-compliant side** and must
+  drop its nested `fixture` assumption; the seed side (@ 3278dd80) needs no change.
+- Rationale anchors: 10-api `{ ok, data }` flat-payload discipline; SIM-02A field ruling 1
+  (decisionCaseId is server-derived from graphId and can never be sent by clients) + echo
+  ruling; Run API `_success_payload` envelope precedent; the demo's own `SimulationRunData`
+  already consumes flat `decisionCaseId`.
+- `decisionCaseId` MUST stay exposed (only pre-run source of the case anchor for future
+  navigation); `reused` stays (201/200 discriminator); clients may ignore it.
+- Fix executor: WEB_DEMO owner or integration layer. Files + Vitest acceptance criteria are
+  enumerated in the CCR (§ "Non-compliant side and one-sided fix instructions").
+- Alpha status recorded: `include_in_schema=False` + `ENABLE_GUEST_ALPHA` hard gate (uniform
+  404 when off); NOT in `packages/contracts` artifacts; `CONTRACT_DRIFT_OK` unaffected.
+
+## Delivery B — CCR-20260725-ANALYSIS-01 (Task 9/10 wire pre-freeze)
+
+- File: `docs/product-plan/docs/contract-changes/CCR-20260725-ANALYSIS-01.md`
+  (ready_for_consumption: YES for Task 9 Phase B / Task 10 kickoff).
+- Frozen items:
+  1. Charter (`draft/awaiting_confirmation/confirmed/superseded`) + Run (11 canonical
+     values, `types.py` sole authority) transition matrices; 06 vs 18 Task 9 wording check =
+     no substantive divergence; two NEW cells adjudicated: strict linear six-stage order (no
+     skipping, focused included) and `ready`/`blocked` enterable ONLY from `validating`.
+  2. RunResolution: closed 3-kind union (`source_conflict` / `hard_constraint_confirmation` /
+     `provider_recovery`) with exact payload schemas; Idempotency-Key replay semantics;
+     amendment boundary — classification first, `changedFrozenFields != []` ⇒ NO resolution
+     row + `409 RUN_AMENDMENT_REQUIRED` with frozen details keys
+     `{ changedFrozenFields, replacementUrl }` (NEW key name `replacementUrl`).
+  3. AnalysisEvent: 5 categories + closed 20-value `type` union (lifecycle ledger events are
+     NOT AnalysisEvent types); envelope fields; NEW explicit ruling — `sequence` strictly
+     increasing per `analysisRunId`, gaps allowed; SSE `id:`=event id, `event:`=category,
+     `data:`=full envelope, `Last-Event-ID` resolves to persisted sequence;
+     `strategic_lens.completed` payload frozen as
+     `{ lensArtifactId, lensType, producerRole, referenceCounts, contentHash }` (NEW:
+     `referenceCounts` key + emit-only-after-artifact-commit timing).
+  4. Five-lens linkage: focused = empty set, full = exact `FULL_REQUIRED_STRATEGIC_LENSES`
+     canonical order; `strategicLensArtifactIds` population; producer mapping; Task 10
+     quality-gate ownership split (wire exact-set gate = 10-api
+     `STRATEGIC_LENS_INCOMPLETE`; behavior validators = method-pack/ways schema contract;
+     DB invariants = CCR-20260724-Ways-01, already live).
+  5. Error codes: full reaffirmed table + ONE new reserved code
+     `ANALYSIS_TRANSITION_INVALID` (409, backstop only); post-cancel publication uses
+     existing `REPORT_PUBLICATION_BLOCKED`/`EXPORT_NOT_ALLOWED`, no new code.
+- IMPLEMENTATION_FREE items (deliberately not frozen): Charter
+  `draft → awaiting_confirmation` trigger mechanics; worker claim primitive / heartbeat
+  interval / progress granularity; Idempotency-Key format details; sequence storage
+  mechanism and gap-freeness; SSE keep-alive/retry/buffering; additive payload keys on
+  non-lens event types; extra sanitized `details` members; all prompt/stage/provider
+  internals.
+- Canonical text syncs performed in this commit, verbatim per CCR §7: S1 (06 state
+  paragraph), S2 (10-api lens event sentence), S3 (10-api error table row), S4 (10-api
+  amendment details), S5 (10-api SSE sequence sentence). Nothing else touched in those docs.
+
+## Read-only inputs consumed (never merged/cherry-picked)
+
+- `codex/prototype-web-demo` @ `d504b4f0c204940edf6cd1f3b8d44f114f32e1bb` (git show only)
+- `codex/prototype-guest-seed-smoke` @ `3278dd809c1c30103e6949d9aef9f85a49a61b73` (git show only)
+- `codex/prototype-run-api` @ `56e01abd49adaa119dd296d70e6d59c67537a199` (git show only)
+- Canonical docs 06/08/10/18/26 + `services/api/app/types.py` at base `bd9fde15`
+- CCR precedents: Ways-01, SIM-01 + Addendum A1, SIM-02A + Addendum A1, ENG-02 (+A1)
+
+## Gates
+
+- docs-only diff proof, `git diff --check`, conflict-marker scan, HISTORY append-only,
+  secret scan: results recorded in the final lane report; no credential value appears in any
+  file of this branch.
+- This lane did NOT advance main, did NOT rebase/amend/force-push, and carried NO code from
+  the in-flight branches.
+
+## Consumers
+
+- Integration layer / WEB_DEMO owner: execute CCR-20260725-GUEST-01 §fix immediately.
+- Fable5 (Task 9 Phase B) and ways_agent_pipeline (Task 10): implement against
+  CCR-20260725-ANALYSIS-01; deviations require an addendum BEFORE code diverges.
+
+No credentials or secret values are recorded here.

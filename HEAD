@@ -1,13 +1,12 @@
-# Work Log: CCR Guest-Analysis Contracts Lane (in progress)
+# Work Log: CCR Guest-Analysis Contracts Lane (delivered)
 
-- Started: 2026-07-25 (Asia/Shanghai)
-- Role: Contract/Mainline Lead - contracts function only; this lane performs NO mainline merges.
-- Branch: codex/ccr-guest-analysis-contracts; fresh worktree.
-- Base: bd9fde15278afd63d351b2adaeb95ec32441cd6f (live ls-remote verified at gate zero; equals the authorized baseline; main has NOT advanced).
-- Objective (docs-only, zero product code / zero migrations / zero test changes):
-  - Delivery A (urgent, blocks integration wave): CCR-20260725-GUEST-01 - adjudicate the POST /api/auth/guest response shape dispute between codex/prototype-web-demo (d504b4f0) and codex/prototype-guest-seed-smoke (3278dd80); single authoritative shape + one-sided fix instructions; committed and pushed independently for early consumption.
-  - Delivery B: CCR-20260725-ANALYSIS-01 - pre-freeze of the Task 9/10 deep-analysis pipeline wire contract (state enums + transition matrix, RunResolution, AnalysisEvent envelope/SSE mapping, five-lens linkage, reserved fail-closed error codes).
-- Read-only inputs (consumed via git show at exact SHAs; never merged or cherry-picked): codex/prototype-web-demo @ d504b4f0c204940edf6cd1f3b8d44f114f32e1bb; codex/prototype-guest-seed-smoke @ 3278dd80...; codex/prototype-run-api @ 56e01abd...; canonical docs 06/08/10/26; existing CCR precedents; services/api/app/types.py.
-- Write scope: docs/product-plan/docs/contract-changes/**, CCR-authorized canonical doc subsections only, docs/handoffs/**, HEAD, HISTORY. Everything else is out of bounds.
-- Discipline: no rebase/amend/force-push; main is not advanced by this lane; no code from the two in-flight branches enters this branch.
+- Started / delivered: 2026-07-25 (Asia/Shanghai)
+- Role: Contract/Mainline Lead - contracts function only; this lane performed NO mainline merges.
+- Branch: codex/ccr-guest-analysis-contracts (pushed); base bd9fde15278afd63d351b2adaeb95ec32441cd6f (live ls-remote verified; equals the authorized baseline; main did NOT advance during this lane).
+- Delivery A (pushed separately at 21bbeff, consumable immediately): docs/product-plan/docs/contract-changes/CCR-20260725-GUEST-01.md - POST /api/auth/guest response-shape adjudication. Verdict: flat server shape wins (workspaceId + decisionCaseId + seven fixture ids + reused; 201 create / 200 reuse); non-compliant side = codex/prototype-web-demo @ d504b4f0 (nested fixture assumption); seed side @ 3278dd80 unchanged. decisionCaseId MUST stay exposed. Alpha status recorded (include_in_schema=False + ENABLE_GUEST_ALPHA; not in packages/contracts; CONTRACT_DRIFT_OK unaffected).
+- Delivery B: docs/product-plan/docs/contract-changes/CCR-20260725-ANALYSIS-01.md - Task 9/10 wire pre-freeze (state matrices with two NEW cells: strict linear six-stage order, ready/blocked only from validating; RunResolution 3-kind union + amendment boundary with frozen details keys; AnalysisEvent 5 categories / 20 types + per-run sequence monotonicity + SSE mapping + strategic_lens.completed payload/timing; five-lens normalization + quality-gate ownership split; error-code table reaffirmed + ANALYSIS_TRANSITION_INVALID reserved). IMPLEMENTATION_FREE items explicitly listed. Canonical syncs S1 (06-data-model) + S2-S5 (10-api-and-events) applied verbatim per CCR section 7.
+- Handoff: docs/handoffs/CCR_GUEST_ANALYSIS_CONTRACTS_HANDOFF.md.
+- Read-only inputs (git show only; never merged/cherry-picked): d504b4f0 web-demo, 3278dd80 guest-seed, 56e01abd run-api, canonical docs 06/08/10/18/26, types.py, CCR precedents.
+- Write scope honored: contract-changes/**, CCR-authorized subsections of 06/10, docs/handoffs/**, HEAD, HISTORY only. Zero product code / migrations / tests; no rebase/amend/force-push; main not advanced.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
