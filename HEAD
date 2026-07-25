@@ -1,13 +1,13 @@
-# Work Log: idle
+# Work Log: CCR Guest-Analysis Contracts Lane (in progress)
 
-- Status: idle; sim-eng-02 wave (SIM-02A prerequisites P1/P3 + ENG-02 P2 enforcement + contracts/adjudication + QA) published to remote main and live-verified.
-- Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive Sim-ENG-02 Wave Main Publication - 2026-07-25 (Asia/Shanghai)`.
-- Remote main: d69fa54c40834dace5d1dc9d230ea7b18b6b30a4 + this archive commit (live ls-remote verified). Migration head now b2c7e9d4a1f6 (decision_maker_profiles + idempotency_records). Engine now sim-engine-1.1.0 with mandatory profile-aware inputHash.
-- Governance note: QA for this slice was executed by the Mainline Lead under an explicit principal directive (waiver recorded in SIM_ENG_02_PROFILE_ENFORCEMENT_QA_HANDOFF.md and HISTORY). Future slices revert to independent QA unless re-waived.
-- New frozen baselines: full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error); lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK (contracts unchanged this wave).
-- Archive-only now: 0289b2e / c8c9167 / 19f552c (contract chain), fb75b8f / edaa842 / d43e36e / d2ae634 / dc57fe6 (product+QA chain), d69fa54 integration branch; related worktrees retired.
-- Unlocked: SIM-02A I1 (routes/schemas/idempotency flow, Simulation Owner) -> I2 (mounting + contracts regeneration + 10-api P2 doc amendments, Contract Lead) -> I3 (QA). ready_for_public_route = NO until I1/I2/I3 land.
-- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Started: 2026-07-25 (Asia/Shanghai)
+- Role: Contract/Mainline Lead - contracts function only; this lane performs NO mainline merges.
+- Branch: codex/ccr-guest-analysis-contracts; fresh worktree.
+- Base: bd9fde15278afd63d351b2adaeb95ec32441cd6f (live ls-remote verified at gate zero; equals the authorized baseline; main has NOT advanced).
+- Objective (docs-only, zero product code / zero migrations / zero test changes):
+  - Delivery A (urgent, blocks integration wave): CCR-20260725-GUEST-01 - adjudicate the POST /api/auth/guest response shape dispute between codex/prototype-web-demo (d504b4f0) and codex/prototype-guest-seed-smoke (3278dd80); single authoritative shape + one-sided fix instructions; committed and pushed independently for early consumption.
+  - Delivery B: CCR-20260725-ANALYSIS-01 - pre-freeze of the Task 9/10 deep-analysis pipeline wire contract (state enums + transition matrix, RunResolution, AnalysisEvent envelope/SSE mapping, five-lens linkage, reserved fail-closed error codes).
+- Read-only inputs (consumed via git show at exact SHAs; never merged or cherry-picked): codex/prototype-web-demo @ d504b4f0c204940edf6cd1f3b8d44f114f32e1bb; codex/prototype-guest-seed-smoke @ 3278dd80...; codex/prototype-run-api @ 56e01abd...; canonical docs 06/08/10/26; existing CCR precedents; services/api/app/types.py.
+- Write scope: docs/product-plan/docs/contract-changes/**, CCR-authorized canonical doc subsections only, docs/handoffs/**, HEAD, HISTORY. Everything else is out of bounds.
+- Discipline: no rebase/amend/force-push; main is not advanced by this lane; no code from the two in-flight branches enters this branch.
 - Secret policy: do not record credentials here.
