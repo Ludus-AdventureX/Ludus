@@ -7,6 +7,8 @@ import { caseWorkspaces, reviewTrigger, type CaseWorkspaceId } from "@/lib/shell
 type DecisionSpineProps = {
   activeWorkspace: CaseWorkspaceId;
   onSelectWorkspace: (workspace: CaseWorkspaceId) => void;
+  /** True while a modal drawer is open, so the spine leaves the tab order. */
+  inert?: boolean;
   /**
    * Task 14W review dialog trigger slot. When absent, a disabled placeholder
    * step keeps the Look V7 spine geometry without pretending review exists.
@@ -14,7 +16,7 @@ type DecisionSpineProps = {
   reviewSlot?: ReactNode;
 };
 
-export function DecisionSpine({ activeWorkspace, onSelectWorkspace, reviewSlot }: DecisionSpineProps) {
+export function DecisionSpine({ activeWorkspace, onSelectWorkspace, inert, reviewSlot }: DecisionSpineProps) {
   const navRef = useRef<HTMLElement>(null);
 
   // Roving arrow-key navigation across the spine steps (Look app.js keyboard
@@ -37,7 +39,7 @@ export function DecisionSpine({ activeWorkspace, onSelectWorkspace, reviewSlot }
   };
 
   return (
-    <nav ref={navRef} className="decision-spine" aria-label="决策生命周期" onKeyDown={onKeyDown}>
+    <nav ref={navRef} className="decision-spine" aria-label="决策生命周期" onKeyDown={onKeyDown} inert={inert}>
       <div className="spine-line" aria-hidden="true" />
       {caseWorkspaces.map(({ id, coordinate, label, description }) => {
         const active = activeWorkspace === id;

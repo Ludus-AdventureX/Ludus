@@ -1,16 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { CaseViewRouter } from "@/components/shell/CaseViewRouter";
 import { DecisionSpine } from "@/components/shell/DecisionSpine";
+import { ProjectDrawer } from "@/components/shell/ProjectDrawer";
 import { defaultWorkspaceId, isCaseWorkspaceId, type CaseWorkspaceId } from "@/lib/shell/workspaces";
 
-// Five-workspace case shell (Task 11 Phase 0 Session A).
-// Reads no analysis/case APIs yet: the masthead shows an honest
-// "not connected" source mode, and the project drawer trigger is a
-// reserved slot that Session B replaces with ProjectDrawer.
+// Five-workspace case shell (Task 11 Phase 0 Session A + B).
+// Session B fills the reserved project-drawer slot with the real
+// ProjectDrawer (Task 3 read-only session API); analysis/case data is
+// still not fabricated anywhere in the shell.
 
 type CaseShellProps = {
   /** null = empty state (no decision case yet). */
@@ -19,7 +20,10 @@ type CaseShellProps = {
 
 export function CaseShell({ decisionCaseId }: CaseShellProps) {
   const [activeWorkspace, setActiveWorkspace] = useState<CaseWorkspaceId>(defaultWorkspaceId);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const projectTrigger = useRef<HTMLButtonElement>(null);
+  const drawerTrigger = useRef<HTMLButtonElement | null>(null);
   const isEmpty = !decisionCaseId;
 
   useEffect(() => {
@@ -28,10 +32,13 @@ export function CaseShell({ decisionCaseId }: CaseShellProps) {
     return () => document.body.classList.remove("empty-case");
   }, [isEmpty]);
 
-  // Restore the workspace from the URL so a refresh keeps the user's place.
+  // Restore workspace and drawer state from the URL so a refresh keeps
+  // the user's place (view=<workspace>, panel=projects).
   useEffect(() => {
-    const requestedView = new URLSearchParams(window.location.search).get("view");
+    const params = new URLSearchParams(window.location.search);
+    const requestedView = params.get("view");
     if (isCaseWorkspaceId(requestedView)) setActiveWorkspace(requestedView);
+    if (params.get("panel") === "projects") setDrawerOpen(true);
     setReady(true);
   }, []);
 
@@ -39,39 +46,70 @@ export function CaseShell({ decisionCaseId }: CaseShellProps) {
     if (!ready) return;
     const params = new URLSearchParams(window.location.search);
     params.set("view", activeWorkspace);
+    if (drawerOpen) params.set("panel", "projects");
+    else params.delete("panel");
     window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
-  }, [activeWorkspace, ready]);
+  }, [activeWorkspace, drawerOpen, ready]);
+
+  const openDrawer = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    drawerTrigger.current = event.currentTarget;
+    setDrawerOpen(true);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    // Focus returns to the trigger that opened the drawer (or the masthead
+    // trigger after a URL-restored open) per the DecisionShell pattern.
+    window.setTimeout(() => {
+      const trigger = drawerTrigger.current;
+      (trigger?.isConnected ? trigger : projectTrigger.current)?.focus();
+      drawerTrigger.current = null;
+    }, 0);
+  }, []);
 
   return (
     <div className="app-shell">
-      <header className="masthead">
+      <header className="masthead" inert={drawerOpen}>
         <div className="brand-lockup" aria-label="Ludus">
           <Image className="brand-logo" src="/ludus-logo.svg" alt="Ludus" width={1478} height={406} priority />
         </div>
         <div className="case-title">
           <span>当前议题</span>
           <button
+            ref={projectTrigger}
             type="button"
             data-phase-slot="project-drawer"
             aria-haspopup="dialog"
-            aria-expanded={false}
-            disabled
-            aria-disabled="true"
-            title="项目抽屉由会话 B 接入"
+            aria-controls="project-drawer-dialog"
+            aria-expanded={drawerOpen}
+            onClick={openDrawer}
           >
             <span>{decisionCaseId ? `决策项目 ${decisionCaseId}` : "尚未创建决策项目"}</span> <i aria-hidden="true">{"\u2304"}</i>
           </button>
         </div>
         <div className="masthead-actions">
           <span className="source-mode is-empty"><i /> <span>档案未接入</span></span>
+          <button
+            className="mobile-case-trigger"
+            type="button"
+            aria-label="打开项目抽屉"
+            aria-haspopup="dialog"
+            aria-controls="project-drawer-dialog"
+            aria-expanded={drawerOpen}
+            onClick={openDrawer}
+          >
+            项
+          </button>
         </div>
       </header>
 
-      <DecisionSpine activeWorkspace={activeWorkspace} onSelectWorkspace={setActiveWorkspace} />
+      <DecisionSpine activeWorkspace={activeWorkspace} onSelectWorkspace={setActiveWorkspace} inert={drawerOpen} />
 
-      <main className="stage" id="mainStage">
+      <main className="stage" id="mainStage" inert={drawerOpen}>
         <CaseViewRouter decisionCaseId={decisionCaseId} activeWorkspace={activeWorkspace} />
       </main>
+
+      <ProjectDrawer open={drawerOpen} decisionCaseId={decisionCaseId} onClose={closeDrawer} />
     </div>
   );
 }

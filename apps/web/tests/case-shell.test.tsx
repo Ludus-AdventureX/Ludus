@@ -119,7 +119,10 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
     const user = userEvent.setup();
     const { container } = await renderCasePage("LX-2407");
 
-    expect(container.querySelector('[data-phase-slot="project-drawer"]')).toBeDisabled();
+    // Session B filled the project-drawer slot: the trigger is now live.
+    const projectTrigger = container.querySelector('[data-phase-slot="project-drawer"]');
+    expect(projectTrigger).toBeEnabled();
+    expect(projectTrigger).toHaveAttribute("aria-haspopup", "dialog");
     expect(container.querySelector('[data-phase-slot="analysis-charter-form"]')).toBeInTheDocument();
     expect(container.querySelector('[data-phase-slot="decision-health-bar"]')).toBeInTheDocument();
 
@@ -145,7 +148,9 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
     expect(container.querySelector(".empty-examples")).not.toBeInTheDocument();
     expect(container.querySelector(".folio-counts")).not.toBeInTheDocument();
     expect(document.body).toHaveClass("empty-case");
-    expect(screen.getByRole("button", { name: /尚未创建决策项目/ })).toBeDisabled();
+    // Session B: the project trigger stays honest about the missing case but
+    // is enabled so the drawer (real workspace list) remains reachable.
+    expect(screen.getByRole("button", { name: /尚未创建决策项目/ })).toBeEnabled();
 
     // Human-owned draft flow: empty submit returns focus to the question.
     await user.click(screen.getByRole("button", { name: /建立决策项目/ }));

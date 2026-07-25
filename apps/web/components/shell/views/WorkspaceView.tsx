@@ -1,8 +1,10 @@
+import { DecisionHealthBar } from "@/components/shell/DecisionHealthBar";
 import { PhaseSlot } from "@/components/shell/PhaseSlot";
 
 // Look V7 `#view-workspace` static layout frame (Phase 0 skeleton).
 // Real ledger notes, folio counts and charter entry arrive in later phases;
-// nothing here fabricates case, evidence or run state.
+// nothing here fabricates case, evidence or run state. Session B fills the
+// decision-health-bar slot with the five-segment skeleton (no data yet).
 
 type WorkspaceViewProps = {
   decisionCaseId: string;
@@ -35,7 +37,7 @@ export function WorkspaceView({ decisionCaseId }: WorkspaceViewProps) {
             <p><i className="human-dot" /> 只有你确认的内容才会进入正式档案</p>
           </header>
           <div className="ledger-body">
-            <PhaseSlot name="decision-health-bar" label="决策健康栏" note="DecisionHealthBar（五段，无总可信百分比）由会话 B 落骨架、后续 Phase 接数据。" />
+            <DecisionHealthBar />
           </div>
         </article>
 
