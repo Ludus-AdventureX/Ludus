@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { DemoFixtureIds, SimulationRunData } from "../lib/demo/simulationDemo";
+import type { DemoFixtureIds, DemoFlowResult, SimulationRunData } from "../lib/demo/simulationDemo";
 
 const { establishGuestSession, runSimulation } = vi.hoisted(() => ({
   establishGuestSession: vi.fn(),
