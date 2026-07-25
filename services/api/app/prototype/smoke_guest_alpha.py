@@ -92,13 +92,23 @@ def csrf_token(client: httpx.Client) -> str:
     return token
 
 
-def bootstrap_guest(client: httpx.Client) -> dict[str, Any]:
+def bootstrap_guest(client: httpx.Client, *, expect_reuse: bool = False) -> dict[str, Any]:
+    """Fresh bootstrap answers 201/reused=false; same-cookie restore 200/reused=true."""
+
     response = client.post(
         "/api/auth/guest",
         headers={"X-CSRF-Token": csrf_token(client)},
     )
-    check(response.status_code == 201, f"guest bootstrap failed: {response.status_code}")
+    expected_status = 200 if expect_reuse else 201
+    check(
+        response.status_code == expected_status,
+        f"guest bootstrap returned {response.status_code}, expected {expected_status}",
+    )
     data = response.json()["data"]
+    check(
+        data.get("reused") is expect_reuse,
+        f"guest bootstrap reused={data.get('reused')}, expected {expect_reuse}",
+    )
     for key in ("workspaceId", "graphId", *RUN_BODY_KEYS):
         check(bool(data.get(key)), f"guest payload missing {key}")
     return data
@@ -200,14 +210,13 @@ def run_smoke() -> dict[str, Any]:
         for key in ("workspaceId", "graphId", "decisionMakerProfileId"):
             check(guest_a[key] != guest_b[key], f"guest isolation violated on {key}")
 
-        # Same cookie jar restores the same guest.
-        restored = bootstrap_guest(client_a)
+        # Same cookie jar restores the same guest (200 + reused=true).
+        restored = bootstrap_guest(client_a, expect_reuse=True)
         check(
             restored["workspaceId"] == guest_a["workspaceId"]
             and restored["graphId"] == guest_a["graphId"],
             "same-cookie re-POST did not restore the same guest",
         )
-        check(restored.get("reused") is True, "restored guest must report reused=true")
 
         run_a = create_run(client_a, guest_a)
         run_b = create_run(client_b, guest_b)
