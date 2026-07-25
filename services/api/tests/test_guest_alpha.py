@@ -30,7 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from conftest import QA_ORIGIN, build_qa_app, csrf_headers
+from tests.conftest import QA_ORIGIN, build_qa_app, csrf_headers
 
 from app.db import get_database_url
 from app.models import GraphVersion, User, Workspace, WorkspaceMembership
