@@ -3,6 +3,7 @@ from typing import Literal
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from app.auth.guest import router as guest_alpha_router
 from app.auth.routes import router as auth_router
 from app.security.envelope import register_error_handlers
 from app.tenancy.routes import workspace_router
@@ -24,6 +25,9 @@ app = FastAPI(
 register_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(workspace_router)
+# PROTOTYPE (guest alpha): hidden from OpenAPI and hard-gated by
+# ENABLE_GUEST_ALPHA (uniform 404 when disabled); no product contract.
+app.include_router(guest_alpha_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
