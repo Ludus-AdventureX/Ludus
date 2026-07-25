@@ -418,16 +418,18 @@ async def test_qa6_fixture_provider_is_deterministic_across_calls() -> None:
 
 
 # ---------------------------------------------------------------------------
-# QA-7: migration lifecycle (deferred revision discipline)
+# QA-7: migration lifecycle (released revision chained to Task 10)
 # ---------------------------------------------------------------------------
 
 
-def test_qa7_no_lane_migration_until_task10_0004_lands() -> None:
-    """This lane's Alembic revision is deferred: no Task 4/5 revision has landed
-    and the frozen chain keeps its single head. On the new base ``4941e58`` that
-    head advanced from ``b2c7e9d4a1f6`` to ``f9a4b7e2c8d3`` when the Task 8/9
-    evidence-ledger + analysis-runtime migrations landed; Task 10's own migration
-    is still absent, so this lane stays deferred."""
+def test_qa7_lane_migration_chained_to_task10_revision() -> None:
+    """The deferral is RELEASED: A1 (Task 10) reported its migration rev-id
+    ``b6e8f3a1d7c2`` (add_analysis_outputs, after ``f9a4b7e2c8d3``), so this
+    lane's revision ``a7c3e9f1b5d8`` now exists with ``down_revision`` pointing
+    at it. The Task 10 FILE ships on the A1 branch, not here — in this worktree
+    the lane revision therefore has a dangling parent by design (lands last;
+    applicable only after the integration merge). This pin fails loudly if the
+    file set, the chain wiring or the dangling-parent state silently changes."""
 
     versions_dir = APP_DIR.parent / "migrations" / "versions"
     files = sorted(p.name for p in versions_dir.glob("*.py") if p.name != "__init__.py")
@@ -435,13 +437,14 @@ def test_qa7_no_lane_migration_until_task10_0004_lands() -> None:
         "0001_core_tenancy_and_dossiers.py",
         "6b246c283d7a_add_canonical_contract_foundations.py",
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
+        "a7c3e9f1b5d8_add_dossier_version_snapshots.py",
         "b2c7e9d4a1f6_add_decision_maker_profiles_and_idempotency_records.py",
         "c4a1f0b2d9e7_add_login_rate_buckets.py",
         "d7e2a91c5b48_add_strategic_lens_artifacts.py",
         "e7f3a2c9d5b1_add_evidence_ledger.py",
         "f850d361ee42_harden_canonical_contract_invariants.py",
         "f9a4b7e2c8d3_add_analysis_runtime.py",
-    ], "no Task 4/5 migration may land before Task 10's 0004 revision"
+    ], "exactly one Task 4/5 migration, chained after Task 10's b6e8f3a1d7c2"
 
     revisions: dict[str, str | None] = {}
     pattern_rev = re.compile(r"^revision(?::\s*str)?\s*=\s*['\"]([^'\"]+)['\"]", re.M)
@@ -453,13 +456,21 @@ def test_qa7_no_lane_migration_until_task10_0004_lands() -> None:
         revisions[pattern_rev.search(text).group(1)] = (
             pattern_down.search(text).group(1) if pattern_down.search(text) else None
         )
+    assert revisions["a7c3e9f1b5d8"] == "b6e8f3a1d7c2", (
+        "lane migration must chain after Task 10's reported rev-id"
+    )
+    # In-worktree heads: the frozen tip f9a4b7e2c8d3 (b6e8f3a1d7c2's file lives
+    # on the A1 branch) plus this lane's a7c3e9f1b5d8. After the integration
+    # merge the single head collapses to a7c3e9f1b5d8.
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"f9a4b7e2c8d3"}, f"frozen chain must keep one head, got {heads}"
+    assert heads == {"f9a4b7e2c8d3", "a7c3e9f1b5d8"}, (
+        f"unexpected in-worktree chain heads: {heads}"
+    )
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:
-    """The deferred migration will be generated from this metadata; until then
-    the canonical tables (frozen in the Task 19A migration) plus this lane's
+    """The lane migration a7c3e9f1b5d8 was generated from this metadata; the
+    canonical tables (frozen in the Task 19A migration) plus this lane's
     single companion table must all be registered and consistent."""
 
     canonical = {

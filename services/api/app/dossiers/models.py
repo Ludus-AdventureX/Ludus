@@ -10,8 +10,9 @@ statement type, scope and content hash, plus the decision-maker profile
 version and subject version pinned at snapshot time. Later entry edits never
 touch these rows.
 
-Migration discipline: the Alembic revision for this table is deferred until
-Task 10's ``0004`` migration lands; tests materialise it from this metadata.
+Migration discipline: the deferral is released — revision ``a7c3e9f1b5d8``
+(chained after Task 10's ``b6e8f3a1d7c2``) was generated from this metadata
+and lands last; tests still materialise the table from this metadata.
 """
 
 from __future__ import annotations
