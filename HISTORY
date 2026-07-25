@@ -2767,3 +2767,21 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Handoff: docs/handoffs/TASK11_PHASE0_SHELL_A_HANDOFF.md (component map index.html -> React, slot anchor table, Session B backlog: ProjectDrawer, slot/props contract, DecisionHealthBar skeleton, responsive/keyboard completion, cumulative report).
 - Session B rule: branch codex/task-11-phase0-shell-b with this branch's exact pushed SHA as its only parent.
 - No credentials or secret values are recorded here.
+
+## Archive Task 11 Phase 0 Session A Worklog (HEAD -> HISTORY) - 2026-07-25 (Asia/Shanghai)
+
+- Verbatim HEAD archived before Session B took over the worklog:
+- (HEAD) Status: Session A complete on codex/task-11-phase0-shell-a (base = live-verified remote main 51ae45c900ae4efa01b72d5d6842adb74ad50c91; Gate 0 exact match, no advance); all acceptance gates green (web test 20 passed incl. 14-test baseline zero regression, typecheck/lint clean, build OK with /cases/[decisionCaseId] 11 kB route / 125 kB first load, diff --check + conflict-marker + secret + scope audits clean); handoff at docs/handoffs/TASK11_PHASE0_SHELL_A_HANDOFF.md; Session B must branch from this branch's exact pushed SHA.
+- (HEAD) Role: Web/UX Owner (Fable5). Session A of the A/B serial split; Session B must use this session's exact pushed SHA as its only parent.
+- (HEAD) Scope: apps/web app/(workspace)/cases/[decisionCaseId] route skeleton, components/shell/DecisionSpine.tsx, components/shell/CaseViewRouter.tsx, structured per-workspace placeholder views (Look V7 static layout frames, no mock analysis data), empty view without a template card wall, component map recorded in docs/handoffs, new component tests (route render, five-workspace switching, empty state, a11y landmarks/focus).
+- (HEAD) Look snapshot: all six look sources SHA256-verified byte-identical to frozen design/look-source-manifest.json; index.html used as structure/accessibility reference only; app.js never loaded by production.
+- Session A was pushed as b35870635a601f09422d5c2d7a79cc10d15d6d85 (51ae45c base -> c67fb1a kickoff -> 9d17efa feat shell skeleton -> b358706 completion record); ready_for_qa = YES.
+
+## Task 11 Phase 0 Session B Kickoff - 2026-07-25 (Asia/Shanghai)
+
+- Role: Web/UX Owner (Fable5); Task 11 Phase 0 five-workspace shell, Session B of the A/B serial split (ProjectDrawer + slot/props contract + DecisionHealthBar skeleton + responsive/keyboard completion + cumulative report).
+- Gate 0: git ls-remote origin refs/heads/main = 51ae45c900ae4efa01b72d5d6842adb74ad50c91 (expected 51ae45c; no advance); refs/heads/codex/task-11-phase0-shell-a = b35870635a601f09422d5c2d7a79cc10d15d6d85 (exact match with the Session A report). Fresh worktree decision-lab-task11-phase0-shell-b, new branch codex/task-11-phase0-shell-b whose only parent is b358706.
+- Look snapshot discipline: Session A verified all six look sources byte-identical to the frozen design/look-source-manifest.json at this same base; Session B adds no new sampling and keeps index.html as structure reference only (app.js never loaded by production).
+- Write scope: apps/web/** new files + minimal existing shell mount-point edits (CaseShell project-drawer trigger slot -> real ProjectDrawer; WorkspaceView decision-health-bar slot -> skeleton) + docs/handoffs/** + HEAD/HISTORY. Forbidden: /demo page, guest client, next.config.ts, package.json dependencies, services/api/**, packages/contracts/**, rebase/amend/force-push, loading ../look/app.js in production, parallel IA, mock analysis data posing as real APIs.
+- Task 3 read-only surface for the drawer: GET /api/auth/session (workspace membership summaries). No decision-case list route exists yet; the drawer must render an honest empty state for cases and the gap is recorded in the Session B handoff (no backend invented).
+- No credentials or secret values are recorded here.
