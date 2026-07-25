@@ -182,6 +182,7 @@ async def test_resolution_endpoint_resumes_needs_attention_run(
 
     response = await client.post(
         f"/api/workspaces/{ws}/analyses/{run_id}/resolutions",
+        headers={"Idempotency-Key": f"idem-{uuid4().hex[:12]}"},
         json={
             "payload": {
                 "kind": "hard_constraint_confirmation",
@@ -209,6 +210,7 @@ async def test_resolution_endpoint_returns_amendment_409_for_lens_set_change(
 
     response = await client.post(
         f"/api/workspaces/{ws}/analyses/{run_id}/resolutions",
+        headers={"Idempotency-Key": f"idem-{uuid4().hex[:12]}"},
         json={
             "payload": {"kind": "hard_constraint_confirmation", "confirmedConstraintIds": []},
             "proposedCharterChanges": {"strategic_lens_set": FULL_SET[:-1]},
@@ -231,6 +233,7 @@ async def test_resolution_endpoint_rejects_invalid_payload_and_wrong_state(
 
     not_resumable = await client.post(
         f"/api/workspaces/{ws}/analyses/{run_id}/resolutions",
+        headers={"Idempotency-Key": f"idem-{uuid4().hex[:12]}"},
         json={"payload": {"kind": "hard_constraint_confirmation"}},
     )
     assert not_resumable.status_code == 409
@@ -240,6 +243,7 @@ async def test_resolution_endpoint_rejects_invalid_payload_and_wrong_state(
     await repo.transition(ws, run_id, S.NEEDS_ATTENTION)
     invalid = await client.post(
         f"/api/workspaces/{ws}/analyses/{run_id}/resolutions",
+        headers={"Idempotency-Key": f"idem-{uuid4().hex[:12]}"},
         json={"payload": {"kind": "budget_increase"}},
     )
     assert invalid.status_code == 422

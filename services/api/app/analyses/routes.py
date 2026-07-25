@@ -11,7 +11,15 @@ of these paths reach the generated contracts. Endpoints:
   intervention; only the three canonical payload kinds with an empty
   changed-frozen-fields diff append a RunResolution and resume the run to its
   persisted ``lastResumableStage``; frozen-field changes (lens set included)
-  return 409 RUN_AMENDMENT_REQUIRED.
+  return 409 RUN_AMENDMENT_REQUIRED. Idempotency per CCR-20260725-ANALYSIS-01
+  §2.1/§2.2 (consumed read-only @ d6675693fd2b7709d9ed4756489e633c49c869ee):
+  the ``Idempotency-Key`` HTTP header is mandatory (never a body field); same
+  key + same normalized body replays the original success with
+  ``meta.idempotencyReplay: true``; same key + different body answers 409
+  ``IDEMPOTENCY_CONFLICT``. ``ANALYSIS_TRANSITION_INVALID`` (409) is the
+  defense-in-depth backstop for races that surface an out-of-matrix
+  transition after the specific guards passed; it never replaces a more
+  specific code.
 - ``POST .../analyses/{analysisRunId}/cancel``: idempotent cooperative
   cancellation of queued / executing / needs_attention runs.
 
@@ -27,7 +35,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Path, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
@@ -38,13 +47,15 @@ from app.types import AnalysisRunStatus
 from .models import AnalysisEvent
 from .repository import (
     AnalysisRuntimeRepository,
+    IdempotencyConflict,
     RunAmendmentRequired,
     RunNotCancellable,
     RunNotFound,
     RunNotResumable,
     RunResolutionInvalid,
+    normalized_request_hash,
 )
-from .state_machine import TERMINAL_STATUSES
+from .state_machine import TERMINAL_STATUSES, InvalidTransition
 
 router = APIRouter(prefix="/api/workspaces/{workspaceId}")
 
@@ -57,6 +68,49 @@ def case_not_found() -> ApiFailure:
         "Case material not found.",
         http_status=404,
     )
+
+
+def _idempotency_conflict() -> ApiFailure:
+    """§2.2/§5: same Idempotency-Key reused with a different normalized body."""
+
+    return ApiFailure(
+        "IDEMPOTENCY_CONFLICT",
+        "This Idempotency-Key was already used with a different request body.",
+        http_status=409,
+    )
+
+
+def transition_invalid() -> ApiFailure:
+    """CCR-20260725-ANALYSIS-01 §5: the single NEW reserved backstop code.
+
+    Raised only when an API-reachable request implies a run transition outside
+    the canonical §1.4 matrix and no more specific code applies (e.g. a race
+    between the state check and the act). It MUST NOT replace the specific
+    codes, so every route maps the dedicated exceptions first.
+    """
+
+    return ApiFailure(
+        "ANALYSIS_TRANSITION_INVALID",
+        "The implied run state transition is outside the canonical matrix.",
+        http_status=409,
+    )
+
+
+def validate_idempotency_key(value: str | None) -> str:
+    """Mandatory Idempotency-Key header (§2.1); format per SIM-02A precedent.
+
+    Length bounds mirror the ``idempotency_records`` CHECK constraint
+    (1..200); format details are IMPLEMENTATION_FREE per §2.2.
+    """
+
+    if value is None or not value.strip() or len(value) > 200:
+        raise ApiFailure(
+            "VALIDATION_FAILED",
+            "The Idempotency-Key header is required and must be 1-200 characters.",
+            http_status=422,
+            details={"header": "Idempotency-Key"},
+        )
+    return value
 
 
 def _envelope(data: Any) -> dict[str, Any]:
@@ -145,14 +199,92 @@ async def stream_run_events(
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+def _resolution_success_data(
+    analysis_run_id: UUID,
+    classification_id: UUID,
+    classification_result: str,
+    changed_frozen_fields: list[str],
+    resolution_id: UUID,
+    resumed_stage: str,
+) -> dict[str, Any]:
+    """The §2.1 frozen success ``data`` shape (single builder so a replay is
+    byte-identical to the original response)."""
+
+    return {
+        "analysisRunId": str(analysis_run_id),
+        "classification": {
+            "classificationId": str(classification_id),
+            "result": classification_result,
+            "changedFrozenFields": changed_frozen_fields,
+        },
+        "resolutionId": str(resolution_id),
+        "status": resumed_stage,
+        "resumedFrom": resumed_stage,
+    }
+
+
+async def _replay_resolution_response(
+    repo: AnalysisRuntimeRepository,
+    workspace_id: UUID,
+    resolution_id: UUID,
+    http_status: int,
+) -> JSONResponse:
+    """§2.2 replay: original status, same body, ``meta.idempotencyReplay: true``."""
+
+    replay = await repo.load_resolution_replay(workspace_id, resolution_id)
+    if replay is None:
+        # The recorded resource vanished (should be impossible: resolutions are
+        # append-only); fail closed rather than fabricate a success.
+        raise case_not_found()
+    resolution, classification, resumed_event = replay
+    resumed_stage = AnalysisRunStatus(resolution.resume_stage).value
+    body = {
+        "ok": True,
+        "data": _resolution_success_data(
+            resolution.analysis_run_id,
+            classification.id,
+            classification.result,
+            list(classification.changed_frozen_fields),
+            resolution.id,
+            resumed_stage,
+        ),
+        "eventId": str(resumed_event.id) if resumed_event is not None else None,
+        "meta": {"idempotencyReplay": True},
+    }
+    return JSONResponse(status_code=http_status, content=body)
+
+
 @router.post("/analyses/{analysisRunId}/resolutions")
 async def post_run_resolution(
     body: dict[str, Any],
     analysis_run_id: UUID = Path(alias="analysisRunId"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     context: WorkspaceContext = Depends(require_workspace_context),
     db: AsyncSession = Depends(get_session),
-) -> dict[str, Any]:
+) -> Any:
     repo = AnalysisRuntimeRepository(db)
+    key = validate_idempotency_key(idempotency_key)
+    if "idempotencyKey" in body or "idempotency_key" in body:
+        # §2.1: the key travels ONLY via the Idempotency-Key header.
+        raise ApiFailure(
+            "VALIDATION_FAILED",
+            "The idempotency key must be sent as the Idempotency-Key header, "
+            "not in the request body.",
+            http_status=422,
+            details={"header": "Idempotency-Key"},
+        )
+    request_hash = normalized_request_hash(body)
+    try:
+        stored = await repo.check_resolution_idempotency(
+            context.workspace_id, key, request_hash
+        )
+    except IdempotencyConflict as exc:
+        raise _idempotency_conflict() from exc
+    if stored is not None:
+        return await _replay_resolution_response(
+            repo, context.workspace_id, stored.resource_id, stored.http_status
+        )
+
     payload = body.get("payload")
     if not isinstance(payload, dict):
         raise ApiFailure(
@@ -198,20 +330,48 @@ async def post_run_resolution(
             "Resolution payload is outside the allowed kinds or frozen scope.",
             http_status=422,
         ) from exc
-    await db.commit()
-    return _envelope(
-        {
-            "analysisRunId": str(analysis_run_id),
-            "classification": {
-                "classificationId": str(classification.id),
-                "result": classification.result,
-                "changedFrozenFields": list(classification.changed_frozen_fields),
-            },
-            "resolutionId": str(resolution.id),
-            "status": record.to_status.value,
-            "resumedFrom": record.to_status.value,
-        }
+    except InvalidTransition as exc:
+        # §5 backstop only: every specific code above is mapped first.
+        raise transition_invalid() from exc
+
+    await repo.record_resolution_idempotency(
+        context.workspace_id,
+        idempotency_key=key,
+        request_hash=request_hash,
+        resolution_id=resolution.id,
+        http_status=200,
     )
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        # Loser of a concurrent same-key race: the winner's record + resolution
+        # committed first, so answer per §2.2 (replay or conflict).
+        await db.rollback()
+        if "uq_idempotency_records_workspace_route_key" not in str(exc):
+            raise
+        try:
+            stored = await repo.check_resolution_idempotency(
+                context.workspace_id, key, request_hash
+            )
+        except IdempotencyConflict as conflict:
+            raise _idempotency_conflict() from conflict
+        if stored is None:
+            raise
+        return await _replay_resolution_response(
+            repo, context.workspace_id, stored.resource_id, stored.http_status
+        )
+    return {
+        "ok": True,
+        "data": _resolution_success_data(
+            analysis_run_id,
+            classification.id,
+            classification.result,
+            list(classification.changed_frozen_fields),
+            resolution.id,
+            record.to_status.value,
+        ),
+        "eventId": str(record.event_id),
+    }
 
 
 @router.post("/analyses/{analysisRunId}/cancel")
@@ -235,6 +395,9 @@ async def post_run_cancel(
             "Only queued, executing, or needs_attention runs can be cancelled.",
             http_status=409,
         ) from exc
+    except InvalidTransition as exc:
+        # §5 backstop only: RunNotCancellable is mapped first.
+        raise transition_invalid() from exc
     await db.commit()
     return _envelope(
         {

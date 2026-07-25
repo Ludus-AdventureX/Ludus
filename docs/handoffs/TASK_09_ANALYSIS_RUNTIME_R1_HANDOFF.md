@@ -216,3 +216,75 @@ to `expected`; the workspace-scope loop already passes.
 
 No credentials or secret values are recorded in this handoff, the code, the
 tests, or the lifecycle files.
+
+
+---
+
+## r2 fast-fix addendum - idempotency wire protocol alignment (2026-07-25)
+
+- Branch: `codex/task-09-idempotency-wire-fast-fix`, sole parent = r1 exact SHA
+  `ed65f40a0a905491c868a5ffb580ae808f52373f` (ENG-02 fast-fix precedent; no
+  rebase/amend/force-push).
+- CCR consumption declaration: CCR-20260725-ANALYSIS-01 was consumed READ-ONLY
+  in full for this addendum via `git show` from
+  `codex/ccr-guest-analysis-contracts` @ exact SHA
+  `d6675693fd2b7709d9ed4756489e633c49c869ee`. The r1 implementation predated
+  that consumption; four adjudicated deviations are closed here.
+
+### The four items
+
+1. **Mandatory `Idempotency-Key` header (2.1).** `POST
+   .../analyses/{analysisRunId}/resolutions` now requires the header
+   (`validate_idempotency_key`; 1..200 chars mirroring the
+   `idempotency_records` CHECK; format details IMPLEMENTATION_FREE per 2.2 /
+   SIM-02A precedent). Missing/blank/over-long header = 422
+   `VALIDATION_FAILED` with `details.header = "Idempotency-Key"`. A
+   body-smuggled `idempotencyKey`/`idempotency_key` member is rejected the
+   same way: the key travels ONLY via the header.
+   **Adjudication disclosed:** the r1 body fields
+   `AnalysisRun.idempotencyKey` (06-data-model L450 canonical) and
+   `DeepAnalysisRequest.idempotencyKey` (06 L2020 canonical) are the internal
+   run-creation/worker contracts, not this HTTP wire; they are deliberately
+   unchanged.
+2. **Same key + different body = 409 `IDEMPOTENCY_CONFLICT` (2.2).**
+   Conflict detection binds the key to `normalized_request_hash`
+   (canonical-JSON sha256, key-order/whitespace insensitive). Storage reuses
+   the generic `idempotency_records` table (SIM-02A schema already migrated -
+   ZERO new migration in this fast-fix), `route_key = "analyses.resolutions"`,
+   48h retention, `response_kind = "success"`. A concurrent same-key race
+   loser is answered per 2.2 through the unique-constraint IntegrityError
+   fallback (replay on same hash, conflict on different hash).
+3. **Replay carries `meta.idempotencyReplay: true` (2.2).** Same key + same
+   normalized body replays the ORIGINAL success: stored HTTP status,
+   byte-identical `data` and `eventId`, plus the meta flag; no second
+   `RunResolution` row is ever appended, and an idempotent hit is never
+   expressed as an error. The replay body is rebuilt from the append-only
+   RunResolution / classification / `analysis.resumed` event rows. The fresh
+   success response now also carries the 2.1 frozen envelope member `eventId`
+   (adjacent alignment required for coherent byte-identical replay -
+   disclosed).
+4. **`ANALYSIS_TRANSITION_INVALID` 409 registered (5).** Backstop mapping of
+   the pure state machine's `InvalidTransition` on the resolutions and cancel
+   endpoints, placed strictly AFTER every specific code
+   (`ANALYSIS_RUN_NOT_RESUMABLE`, `ANALYSIS_RUN_NOT_CANCELLABLE`,
+   `RUN_AMENDMENT_REQUIRED`, `RUN_RESOLUTION_INVALID`) so it can never shadow
+   them; it answers only the documented race window between state check and
+   act.
+
+### Scope and gates
+
+- Changed files: `app/analyses/routes.py`, `app/analyses/repository.py`
+  (+ helpers/exception, no state-machine/worker/SSE-envelope/migration
+  change), own tests `test_analysis_idempotency_wire.py` (NEW, 11 tests) and
+  `test_analysis_sse_and_commands.py` (three resolutions POSTs now send the
+  mandatory header - lane-owned file).
+- Gates: targeted suite 11/0 (`-W error`); analyses + evidence 203/0 (zero
+  regression vs r1's 102 + Phase A's 90); full suite 663 passed / 1 failed -
+  the sole failure remains the disclosed QA-owned exact-table-set assertion
+  (revision guidance in section 4 above; +1 name unchanged since r1);
+  ruff/compileall/diff-check/conflict-marker/secret-scan/scope-audit clean;
+  `generate_contracts.ps1 -Check` = **CONTRACT_DRIFT_OK**; `packages/contracts`
+  zero diff; alembic single head `f9a4b7e2c8d3` re-verified on disposable PG16
+  `ludus-pg-task09-fastfix` @55446 (deleted after use).
+- ready_for_fast_QA: **YES**. ready_for_public_route: **NO** (routers stay
+  unmounted).

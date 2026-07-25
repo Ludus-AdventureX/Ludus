@@ -30,7 +30,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AnalysisRun
+from app.models import AnalysisRun, IdempotencyRecord
 from app.types import AnalysisRunStatus, FormalAnalysisLevel, OriginMode
 
 from .models import (
@@ -50,6 +50,16 @@ from .state_machine import (
 )
 
 DEFAULT_HEARTBEAT_TIMEOUT = timedelta(seconds=120)
+
+# CCR-20260725-ANALYSIS-01 §2.1/§2.2 (consumed read-only from
+# codex/ccr-guest-analysis-contracts @ d6675693fd2b7709d9ed4756489e633c49c869ee):
+# the resolutions endpoint carries a mandatory Idempotency-Key header; same
+# key + same normalized body replays the original success, same key +
+# different body answers IDEMPOTENCY_CONFLICT 409. Storage reuses the generic
+# idempotency_records table (SIM-02A §4 schema, already migrated — no new
+# migration in this fast-fix); 48h retention per that table's contract.
+RESOLUTIONS_ROUTE_KEY = "analyses.resolutions"
+_IDEMPOTENCY_RETENTION = timedelta(hours=48)
 
 
 class AnalysisRuntimeError(RuntimeError):
@@ -101,6 +111,10 @@ class RunResolutionInvalid(AnalysisRuntimeError):
     code = "RUN_RESOLUTION_INVALID"
 
 
+class IdempotencyConflict(AnalysisRuntimeError):
+    code = "IDEMPOTENCY_CONFLICT"
+
+
 _RESOLUTION_KINDS = frozenset(
     {"source_conflict", "hard_constraint_confirmation", "provider_recovery"}
 )
@@ -118,6 +132,17 @@ def utc_now() -> datetime:
 
 def stage_io_hash(payload: Any) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def normalized_request_hash(body: Any) -> str:
+    """Canonical hash of a request body for idempotency comparison (§2.2).
+
+    Key-order and whitespace insensitive: two bodies that decode to the same
+    JSON document always hash identically.
+    """
+
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -660,6 +685,94 @@ class AnalysisRuntimeRepository:
             )
             recovered.append(run.analysis_run_id)
         return recovered
+
+    # --- resolution idempotency (CCR-20260725-ANALYSIS-01 §2.2) ------------------
+
+    async def check_resolution_idempotency(
+        self, workspace_id: UUID, idempotency_key: str, request_hash: str
+    ) -> IdempotencyRecord | None:
+        """Return the stored record on an exact replay, None when the key is new.
+
+        Same key + different normalized body hash raises
+        :class:`IdempotencyConflict` (wire: IDEMPOTENCY_CONFLICT 409).
+        """
+
+        record = await self._session.scalar(
+            select(IdempotencyRecord).where(
+                IdempotencyRecord.workspace_id == workspace_id,
+                IdempotencyRecord.route_key == RESOLUTIONS_ROUTE_KEY,
+                IdempotencyRecord.idempotency_key == idempotency_key,
+            )
+        )
+        if record is None:
+            return None
+        if record.normalized_request_hash != request_hash:
+            raise IdempotencyConflict(
+                "same Idempotency-Key was already used with a different body"
+            )
+        return record
+
+    async def record_resolution_idempotency(
+        self,
+        workspace_id: UUID,
+        *,
+        idempotency_key: str,
+        request_hash: str,
+        resolution_id: UUID,
+        http_status: int = 200,
+    ) -> IdempotencyRecord:
+        now = utc_now()
+        record = IdempotencyRecord(
+            id=uuid4(),
+            workspace_id=workspace_id,
+            route_key=RESOLUTIONS_ROUTE_KEY,
+            idempotency_key=idempotency_key,
+            normalized_request_hash=request_hash,
+            resource_type="run_resolution",
+            resource_id=resolution_id,
+            http_status=http_status,
+            response_kind="success",
+            created_at=now,
+            expires_at=now + _IDEMPOTENCY_RETENTION,
+        )
+        self._session.add(record)
+        await self._session.flush()
+        return record
+
+    async def load_resolution_replay(
+        self, workspace_id: UUID, resolution_id: UUID
+    ) -> tuple[RunResolution, RunInterventionClassification, AnalysisEvent | None] | None:
+        """Rebuild the pieces of the original success body for an idempotent replay."""
+
+        resolution = await self._session.scalar(
+            select(RunResolution).where(
+                RunResolution.workspace_id == workspace_id,
+                RunResolution.id == resolution_id,
+            )
+        )
+        if resolution is None:
+            return None
+        classification = await self._session.scalar(
+            select(RunInterventionClassification).where(
+                RunInterventionClassification.workspace_id == workspace_id,
+                RunInterventionClassification.id == resolution.classification_id,
+            )
+        )
+        if classification is None:
+            return None
+        events = await self.list_events_after(
+            workspace_id, resolution.analysis_run_id, 0
+        )
+        resumed_event = next(
+            (
+                event
+                for event in events
+                if event.type == "analysis.resumed"
+                and event.payload.get("resolutionId") == str(resolution.id)
+            ),
+            None,
+        )
+        return resolution, classification, resumed_event
 
     # --- interventions: resolution vs amendment ---------------------------------
 
