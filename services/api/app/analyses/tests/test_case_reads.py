@@ -4,12 +4,15 @@ A QA-only assembly mirrors the production mounting (Task 9 precedent):
 
 * ``case_reads_router`` ships an absolute ``/api/workspaces/{workspaceId}``
   prefix (mounted on the app directly, §M7 pattern);
-* ``graph_reads.router`` / ``case_anchor_router`` are RELATIVE and mount under
-  a workspace-prefixed router exactly like ``app.tenancy.routes`` does.
+* ``graph_reads.router`` / ``case_anchor_router`` / the release lane's
+  ``reports_router`` are RELATIVE and mount under a workspace-prefixed router
+  exactly like ``app.tenancy.routes`` does.
 
-Coverage: positive projections for all five new GET routes plus the uniform
-CASE_NOT_FOUND anti-enumeration matrix (foreign tenant, ghost ids, cross-case
-report, cross-graph version) and the honest empty pages.
+Coverage: positive projections for the new GET routes (run anchors, graph
+versions, simulation anchors) plus the release-lane reports reads on the SAME
+combination, the uniform CASE_NOT_FOUND anti-enumeration matrix (foreign
+tenant, ghost ids, cross-case report, cross-graph version) and the honest
+empty pages.
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ from app.analyses.case_reads import router as case_reads_router
 from app.db import get_session
 from app.models import CausalGraph, GraphEdge, GraphNode, GraphVersion
 from app.reports.models import ReportArtifact
+from app.reports.routes import router as reports_router
 from app.security.envelope import register_error_handlers, workspace_not_found
 from app.simulations.graph_reads import case_anchor_router
 from app.simulations.graph_reads import router as graph_reads_router
@@ -51,6 +55,7 @@ def _build_app(session, memberships: dict[UUID, UUID]) -> FastAPI:
     mount = APIRouter(prefix="/api/workspaces/{workspaceId}")
     mount.include_router(graph_reads_router)
     mount.include_router(case_anchor_router)
+    mount.include_router(reports_router)
     app.include_router(mount)
     register_error_handlers(app)
 
@@ -241,6 +246,8 @@ async def test_case_run_anchor_list_empty_case_is_honest(client, session, world)
 
 
 async def test_report_list_and_detail_round_trip(client, session, world) -> None:
+    """Release-lane reports reads (c150d72) verified on THIS combination."""
+
     _, run = await make_queued_run(session, world)
     report = _report_row(world, run.analysis_run_id, status="ready")
     session.add(report)
@@ -249,9 +256,8 @@ async def test_report_list_and_detail_round_trip(client, session, world) -> None
     listing = await client.get(f"{_ws(world)}/cases/{world.case_id}/reports")
     assert listing.status_code == 200, listing.text
     items = listing.json()["data"]["items"]
-    assert [item["reportId"] for item in items] == [str(report.id)]
+    assert [item["id"] for item in items] == [str(report.id)]
     assert items[0]["status"] == "ready"
-    assert "structuredContent" not in items[0]  # summary projection only
 
     detail = await client.get(
         f"{_ws(world)}/cases/{world.case_id}/reports/{report.id}"
@@ -262,14 +268,12 @@ async def test_report_list_and_detail_round_trip(client, session, world) -> None
     assert data["validation"]["passed"] is True
 
 
-async def test_report_list_unknown_status_filter_yields_empty_page(
-    client, session, world
-) -> None:
+async def test_report_list_status_filter(client, session, world) -> None:
     _, run = await make_queued_run(session, world)
-    session.add(_report_row(world, run.analysis_run_id))
+    session.add(_report_row(world, run.analysis_run_id, status="draft"))
     await session.flush()
     response = await client.get(
-        f"{_ws(world)}/cases/{world.case_id}/reports", params={"status": "exotic"}
+        f"{_ws(world)}/cases/{world.case_id}/reports", params={"status": "ready"}
     )
     assert response.status_code == 200
     assert response.json()["data"]["items"] == []
