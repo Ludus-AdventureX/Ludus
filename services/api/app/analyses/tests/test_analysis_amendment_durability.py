@@ -183,7 +183,11 @@ async def test_amendment_classification_survives_the_409(prod_like_factory) -> N
     app = _build_prod_like_app(factory, {ws_id: user_id})
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions now carry require_csrf (SIM-02A parity).
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-amend-csrf"},
+        cookies={"decision_lab_csrf": "qa-amend-csrf"},
     ) as client:
         response = await client.post(
             _url(ws_id, run_id),
@@ -226,7 +230,11 @@ async def test_repeated_amendments_append_only(prod_like_factory) -> None:
     app = _build_prod_like_app(factory, {ws_id: user_id})
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions now carry require_csrf (SIM-02A parity).
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-amend-csrf"},
+        cookies={"decision_lab_csrf": "qa-amend-csrf"},
     ) as client:
         for _ in range(2):
             response = await client.post(
@@ -260,7 +268,11 @@ async def test_dual_connection_same_key_race_both_sides_get_the_success(
     key = f"race-{uuid4().hex[:12]}"
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions now carry require_csrf (SIM-02A parity).
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-amend-csrf"},
+        cookies={"decision_lab_csrf": "qa-amend-csrf"},
     ) as client:
         first, second = await asyncio.gather(
             client.post(_url(ws_id, run_id), headers={"Idempotency-Key": key}, json=RESOLUTION_BODY),
@@ -287,7 +299,11 @@ async def test_not_resumable_is_preserved_for_a_fresh_key(prod_like_factory) -> 
     app = _build_prod_like_app(factory, {ws_id: user_id})
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions now carry require_csrf (SIM-02A parity).
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-amend-csrf"},
+        cookies={"decision_lab_csrf": "qa-amend-csrf"},
     ) as client:
         winner = await client.post(
             _url(ws_id, run_id),

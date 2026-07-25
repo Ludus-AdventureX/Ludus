@@ -89,6 +89,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Analysis Run
+         * @description Read the current AnalysisRun status (10-api §AnalysisRun 状态).
+         */
+        get: operations["get_analysis_run_api_workspaces__workspaceId__analyses__analysisRunId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/cancel": {
         parameters: {
             query?: never;
@@ -168,6 +188,146 @@ export interface paths {
         put?: never;
         /** Post Run Resolution */
         post: operations["post_run_resolution_api_workspaces__workspaceId__analyses__analysisRunId__resolutions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Run Strategic Lenses
+         * @description List the run's ready strategic-lens artifacts in canonical order.
+         */
+        get: operations["list_run_strategic_lenses_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses/{artifactId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Run Strategic Lens
+         * @description Read one ready strategic-lens artifact (full detail).
+         */
+        get: operations["get_run_strategic_lens_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses__artifactId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Analysis Charter
+         * @description Edit a draft charter in place (confirmed/superseded reject with 409).
+         */
+        patch: operations["patch_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__patch"];
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Analysis Charter
+         * @description Freeze a charter (draft -> awaiting_confirmation -> confirmed).
+         */
+        post: operations["confirm_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/replacements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Charter Replacement
+         * @description Clone a confirmed charter into a new draft carrying the amendment.
+         */
+        post: operations["create_charter_replacement_api_workspaces__workspaceId__analysis_charters__charterId__replacements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Analysis Run
+         * @description Create a queued Run from a confirmed charter (Idempotency-Key header).
+         */
+        post: operations["create_analysis_run_api_workspaces__workspaceId__analysis_charters__charterId__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analysis-charters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Analysis Charter
+         * @description Create a draft charter from the method-route result (10-api §方法路由).
+         */
+        post: operations["create_analysis_charter_api_workspaces__workspaceId__cases__decisionCaseId__analysis_charters_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1375,10 +1535,46 @@ export interface operations {
             };
         };
     };
-    post_run_cancel_api_workspaces__workspaceId__analyses__analysisRunId__cancel_post: {
+    get_analysis_run_api_workspaces__workspaceId__analyses__analysisRunId__get: {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                analysisRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_run_cancel_api_workspaces__workspaceId__analyses__analysisRunId__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 analysisRunId: string;
                 workspaceId: string;
@@ -1539,6 +1735,265 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_run_strategic_lenses_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysisRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_strategic_lens_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses__artifactId__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysisRunId: string;
+                artifactId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                charterId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                charterId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_charter_replacement_api_workspaces__workspaceId__analysis_charters__charterId__replacements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                charterId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_analysis_run_api_workspaces__workspaceId__analysis_charters__charterId__runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                charterId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_analysis_charter_api_workspaces__workspaceId__cases__decisionCaseId__analysis_charters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionCaseId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

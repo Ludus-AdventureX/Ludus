@@ -73,7 +73,12 @@ async def worlds_client(session, world, foreign_world):
         },
     )
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        # MOUNT-02 M8: resolutions/cancel now carry require_csrf (SIM-02A
+        # parity); same-origin + double-submit proof.
+        headers={"Origin": "http://testserver", "X-CSRF-Token": "qa-sse-csrf"},
+        cookies={"decision_lab_csrf": "qa-sse-csrf"},
     ) as client:
         yield client, world, foreign_world
 
@@ -259,12 +264,16 @@ async def test_cancel_endpoint_is_idempotent_and_guards_terminals(
     ws, run_id = world.workspace_id, run.analysis_run_id
     url = f"/api/workspaces/{ws}/analyses/{run_id}/cancel"
 
-    first = await client.post(url, json={"reason": "user_cancelled"})
+    first = await client.post(
+        url, json={"reason": "user_cancelled"}, headers={"Idempotency-Key": "cancel-1"}
+    )
     assert first.status_code == 200
     assert first.json()["data"]["status"] == "cancelled"
     cancelled_at = first.json()["data"]["cancelledAt"]
 
-    second = await client.post(url, json={"reason": "user_cancelled"})
+    second = await client.post(
+        url, json={"reason": "user_cancelled"}, headers={"Idempotency-Key": "cancel-2"}
+    )
     assert second.status_code == 200
     assert second.json()["data"]["cancelledAt"] == cancelled_at
 
@@ -280,6 +289,7 @@ async def test_cancel_endpoint_is_idempotent_and_guards_terminals(
     guarded = await client.post(
         f"/api/workspaces/{ws}/analyses/{run2.analysis_run_id}/cancel",
         json={"reason": "user_cancelled"},
+        headers={"Idempotency-Key": "cancel-guarded"},
     )
     assert guarded.status_code == 409
     assert guarded.json()["error"]["code"] == "ANALYSIS_RUN_NOT_CANCELLABLE"
@@ -291,10 +301,12 @@ async def test_cancel_and_resolution_anti_enumeration(session, worlds_client) ->
     foreign_cancel = await client.post(
         f"/api/workspaces/{foreign.workspace_id}/analyses/{run.analysis_run_id}/cancel",
         json={"reason": "user_cancelled"},
+        headers={"Idempotency-Key": "cancel-foreign"},
     )
     ghost_cancel = await client.post(
         f"/api/workspaces/{world.workspace_id}/analyses/{uuid4()}/cancel",
         json={"reason": "user_cancelled"},
+        headers={"Idempotency-Key": "cancel-ghost"},
     )
     assert foreign_cancel.status_code == ghost_cancel.status_code == 404
     assert foreign_cancel.content == ghost_cancel.content

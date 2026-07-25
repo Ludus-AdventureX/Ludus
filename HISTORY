@@ -3340,3 +3340,104 @@ Verbatim Phase A HEAD content:
 - Handoff: docs/handoffs/TASK_04_05_BACKEND_R1_HANDOFF.md (mount + migration follow-up instructions inside).
 - Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+## Archived work 2026-07-26 (Asia/Shanghai) — prior HEAD: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration (main @ 4941e58), archived by the Task 9 analyses-http-handlers lane
+
+# Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
+
+- Status: COMPLETE on worktree decision-lab-mainline-integration (main); both merges + QA-owned assertion revision landed; all gates green; push + live re-read recorded below.
+- Now canonical on main: Task 8 evidence ledger + Task 9 analysis runtime (charter/run state machines, DB-queue worker, SSE/resolutions/cancel routers UNMOUNTED) + r2/r3 idempotency & amendment-durability fixes + QA battery + ANALYSIS-01 Addendum A1 contract docs. ready_for_public_route: NO (mounting rights with the integration wave, A3).
+- Unlocked next: A3 mounting lane Gate 0 precondition satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
+- Gates recap: alembic single head f9a4b7e2c8d3; full pytest tests app/simulations/tests app/evidence/tests app/analyses/tests = 784 passed / 0 failed; generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; conflict-marker scan 0.
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T18:48:18.320789+08:00
+
+# Work Log: Analyses HTTP handlers (Task 9 owner follow-up; MOUNT-01 M3/M4/M5 + M9), r1
+
+- Status: implementation COMPLETE on worktree decision-lab-task09-analyses-http; all acceptance gates green; pending commit + push (recorded on push).
+- Role: Case/API/Data Owner (Task 9 owner follow-up).
+- Branch: `codex/task-09-analyses-http-handlers-r1`, fresh worktree; parent = main @ `4941e58bee3b91f14a4a92b7fab92750ef85b3b6` (live Gate 0 echo). No rebase/amend/force-push/cherry-pick; main untouched. Relative implementation — mounting is MOUNT-02's job; zero migration (domain layer already complete).
+- Contracts consumed read-only: ANALYSIS-01 + Addendum A1 + MOUNT-01 (M3/M4/M5 DEFERRED records = scope definition), 10-api-and-events.md canonical paths + envelope.
+- Delivered (app/analyses/routes.py, added to the existing UNMOUNTED analyses router; consumes the shipped repository + lens read service as-is): Charter create / PATCH(draft) / replacements / confirm; Run create (mandatory Idempotency-Key header per resolutions precedent; key-based replay + handler-level body-conflict → IDEMPOTENCY_CONFLICT); run status GET; strategic-lenses list + item read. All {ok,data} envelope + existing error codes; cross-tenant/missing → uniform CASE_NOT_FOUND 404. Confirm auto-bridges draft → awaiting_confirmation → confirmed (no separate submit endpoint in 10-api).
+- MOUNT-01 items: M9 adopted — cancel now enforces the mandatory Idempotency-Key header (10-api L953; body-smuggled key → 422; natural idempotency covers replay, no idempotency_records row, no repository change). M8 fix-plan written into the Task 9 handoff r4 addendum for the auth/security lane (add require_csrf to analyses unsafe writes, SIM-02A parity); NOT self-fixed (CSRF middleware is cross-cutting, outside this lane).
+- Scope: app/analyses/routes.py + own test test_analysis_http_handlers.py (NEW, 32) + disclosed M9 cancel-header maintenance in test_analysis_sse_and_commands.py (5 calls) & test_analysis_idempotency_wire.py (2 calls) + Task 9 handoff r4 addendum + HEAD/HISTORY. ZERO change to repository / state_machine / models / schemas / lens_artifact_reads / migrations / main.py / packages/contracts.
+- Gates (fresh disposable PG16 ludus-pg-task09-http @55451; main venv via junction; uv/pnpm offline, zero installs):
+  - Own suite `pytest app/analyses/tests/test_analysis_http_handlers.py -q -W error -rxX` = 32 passed (per-endpoint positive/negative + run-create idempotency replay/conflict + cancel header + cross-tenant/missing 404 matrix).
+  - Owner diagnostic zero-regression: `pytest app/analyses/tests app/evidence/tests` = 239 passed / 0 failed; full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests` = 816 passed / 0 failed (= mainline 784 + 32 new).
+  - `ruff check services/api` all-pass; `compileall app` exit 0; `git diff --check` clean; secret scan 0.
+  - Official `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK — the router stays UNMOUNTED, so `app.main.app.openapi()` is unchanged (8 published ops); the analyses router carries 11 routes (3 prior + 8 new) but reaches no generated contract.
+  - alembic single head `f9a4b7e2c8d3` re-verified on the disposable PG16.
+- ready_for_qa: YES. ready_for_public_route: NO (mounting is MOUNT-02's job).
+- Next: MOUNT-02 mounts the complete analyses router (11 routes) + regenerates contracts; the M8 CSRF hardening is the auth lane's to land.
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work (carried through MOUNT-02 adoption merge)
+
+# Work Log: Task 13 sandbox r1 mainline integration (wave 2 of 2)
+
+- Status: merge complete on codex/mainline-task13-integration (worktree decision-lab-G0/worktrees/mainline-a3-mount); serial-coordination protocol honored: A3 mount wave landed first (main 4941e58 -> 4e9c1b4), Task 13 wave re-merged from the new head per dispatcher directive.
+- Merge: no-ff adoption of codex/qa-task-13-sandbox-r1 4bc752a03562177d4ef95d6e21ad4c839a26b169 = Task 13 sandbox r1 owner chain (70e7dbe -> 0d5e8be -> 9047087, all acceptance gates green, ready_for_qa YES, verdict PASS) + QA kickoff cfcf4a7 + QA adversarial supplement (12 tests, full web suite 68/68). Content conflicts: none (A3 wave had zero apps/web diff); conflicts confined to HEAD/HISTORY, resolved append-only with a byte-safe Python resolver (base preservation verified by prefix check).
+- Lifecycle correction (authorized this wave): HISTORY block from cfcf4a7 mislabeled "owner-lane worklog" while archiving the QA lane interim worklog; correction appended to HISTORY with the owner-lane worklog restored verbatim from 9047087:HEAD. No existing bytes rewritten.
+- Combination fix (combination-only, this wave): apps/web/tests/simulation-demo-panel.test.tsx missing DemoFlowResult type import (pre-existing base gap disclosed in TASK_13_SANDBOX_R1_HANDOFF.md sec.7; TS2304 on clean base) - import added so the web typecheck gate passes on the tested combination; the pre-existing unused-var lint warning in the same file is left to the demo/guest owner lane.
+- Post-merge gates before push: pnpm --dir apps/web test (expect 68 passed) + typecheck (with combination fix) + build; conflict-marker scan on lifecycle files; api canonical baseline pytest tests app/simulations/tests -q -W error -rxX (exact count reported as the new cross-wave baseline per dispatcher directive; supersedes non-comparable 472/577 selection-set splits).
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T19:24:35.320890+08:00
+
+# Work Log: QA — Task 9 analyses HTTP handlers candidate acceptance (r1b)
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/qa-task09-analyses-r1b; verdict PASS.
+- Role: independent QA lane (session takeover authorized by dispatcher; the parallel QA session's worktree/container/branch untouched — isolated suffix -b resources).
+- Branch: `codex/qa-task-09-analyses-http-r1b`, cut from candidate tip `0f92b172c5d931531a1d450254655ed6b958a95f` (codex/task-09-analyses-http-handlers-r1) so the QA tip carries the candidate chain for MOUNT-02's single no-ff adoption. No rebase/amend/force.
+- Live main at Gate 0 = `23ab477649716f52b3aa913e5efb209442397efa`; candidate base = 4941e58. Merge-deviation reconciliation is MOUNT-02's job, not QA's (disclosed).
+- Scope: own adversarial tests + HEAD/HISTORY only. ZERO touch on app/analyses/routes.py, repository, state machine, models, schemas, migrations, main.py, packages/contracts.
+- Verification env: fresh disposable PG16 `ludus-pg-qa-task09-http-b` @55453; main venv/.tools/node_modules via junction; offline, zero installs; alembic single head f9a4b7e2c8d3 applied clean.
+- Five-gate results (all on the fresh PG16 @55453):
+  1. Independent rerun: own candidate suite 32/0; owner diagnostic `app/analyses/tests app/evidence/tests` 239/0; full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX` = 816 passed / 0 failed; canonical `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed (authoritative baseline matched). `ruff check services/api` all-pass; `compileall app` exit 0; `git diff --check` clean; official `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK (router still UNMOUNTED, published surface stays 8 ops, zero contract leak); secret scan clean (single hit = the `sk-` substring inside the literal branch name `task-09`, false positive).
+  2. Adversarial supplement `test_qa_adversarial_mount02_r1b.py` = 8 passed / 0 failed: (A1) key reuse across charters in-workspace -> IDEMPOTENCY_CONFLICT 409, no silent cross-charter replay; (A2) same key across tenants -> fresh run, no cross-tenant replay/leak; (A3) replay-after-cancel returns the terminal run (meta.idempotencyReplay true, status cancelled), no resurrection/duplicate, and a new key then creates a fresh queued run; (A4) body-smuggled Idempotency-Key on cancel -> 422 with details.header; (A5) byte-identical uniform CASE_NOT_FOUND 404 across ALL three new GET endpoints for foreign-tenant vs ghost ids; (A6) PATCH cannot flip status or smuggle non-editable fields (422, state pristine); (A7) hostile payloads (non-object JSON, weaponized enum) degrade into the {ok:false,error} envelope, no 500; (A8) confirm bridge also correct from awaiting_confirmation.
+  3. Disclosure adjudications: (a) M9 disclosed maintenance of 7 pre-existing cancel calls = header-only additions, zero assertion-semantics change — LEGITIMATE (and the cancel-1/cancel-2 distinct-key test correctly proves natural idempotency, matching the M9 ruling); (b) M8 CSRF fix-plan written into handoff r4 and NOT self-fixed — CORRECT lane discipline (CSRF is cross-cutting; app/security/csrf.py + main.py are outside the candidate's write domain); recommendation is complete and actionable for MOUNT-02 (require_csrf dependency, SIM-02A parity, canonical-text clarification).
+  4. Scope audit `git diff 4941e58...0f92b17 --name-only` = exactly HEAD, HISTORY, handoff r4 addendum, app/analyses/routes.py, own test (new), and the two disclosed test maintenance files. Zero out-of-domain touches; zero base gap files touched.
+  5. Handoff section-8/next-step probes: the r4 addendum's MOUNT-02 handover is accurate — analyses router verified carrying 11 routes while reaching no generated contract (CONTRACT_DRIFT_OK proves zero leak); alembic single head f9a4b7e2c8d3 re-verified; the M8 CSRF recommendation cross-checked against app/security/csrf.py double-submit semantics (Origin/Referer + cookie/header constant-time compare) and app/simulations/routes.py L145-156 precedent — dependency-order note holds (auth context resolves before require_csrf, so unauthenticated stays 401).
+- Verdict: **PASS**. ready_for_mount: YES — MOUNT-02 may adopt this QA tip (carries candidate 0f92b17) with a single --no-ff merge.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T19:45:21.530632+08:00
+
+# Work Log: CCR mount wave MOUNT-02 — Charter/Run/Lens route publication + M8 CSRF closure (r1)
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/mount-02; all wave gates green; ff-only push to main recorded below.
+- Role: Contract/Mainline Lead (combined lane). Branch `codex/ccr-mount-wave-02-r1`, base = live main `23ab477649716f52b3aa913e5efb209442397efa` (exact Gate 0 echo). No rebase/amend/force.
+- Trigger credential: handlers QA r1b verdict PASS (QA tip 7978dd8 carrying candidate 0f92b17), adopted via a single --no-ff merge (e1655dc; base deviation 4941e58->23ab477 reconciled there).
+- Adjudication: docs/product-plan/docs/contract-changes/CCR-20260726-MOUNT-02.md — M1-M3 REAFFIRM+PUBLISH (charter create/PATCH/replacements/confirm, run create, run status GET, strategic-lenses list/item; closes MOUNT-01 M3/M4/M5); M4 zero-main.py mount (lazy _IncludedRouter expands the adopted 8 handlers automatically, MOUNT-01 M7 reaffirmed); M5 M8 CSRF closure (require_csrf on the 7 analyses unsafe writes, SIM-02A parity + 10-api §CSRF clarification SM1 + wave regression battery); M6 M9 reaffirmed closed; M7 cases DEFERRED again (A2 still undelivered).
+- Contracts: official generate_contracts.ps1 — openapi.json + types.gen.ts regenerated; ops 18 -> 26 (+8 additive, exactly the canonical L65-70/72-73 set); schemas 56 -> 56; cancel additively documents the M9 Idempotency-Key header; 17 ops byte-unchanged.
+- Disclosed connected maintenance (M8): same-origin double-submit proof added to six test fixtures (5 analyses + tests/test_task09_idempotency_qa_r2.py); header/cookie/Origin only, zero assertion-semantics change.
+- Wave gates (fresh disposable PG16 ludus-pg-mount02b @55455; main venv junction; pnpm offline install, zero downloads):
+  - Full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX` = 832 passed / 0 failed (= 816 candidate baseline + 8 QA adversarial + 8 MOUNT-02 CSRF regression).
+  - Canonical `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed (authoritative cross-wave baseline unchanged).
+  - Functional smoke (canonical app, no overrides): all 8 new routes DISPATCH and answer the 401 envelope unauthenticated (SESSION_REVOKED_OR_EXPIRED — auth before CSRF confirmed); pseudo path answers bare 404.
+  - `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK; `pnpm --dir apps/web test` = 68 passed / 0 failed; `pnpm --dir apps/web build` exit 0.
+  - ruff all-pass; compileall exit 0; `git diff --check` clean; conflict-marker scan 0; secret scan 0; scope audit vs origin/main = 14 files, all in the wave write domain.
+  - alembic single head f9a4b7e2c8d3 on the disposable PG16.
+- Now canonical on main: the complete analyses HTTP surface (11 routes) published in contracts; analyses unsafe writes CSRF-guarded; MOUNT-01 M3/M4/M5/M8/M9 all closed; M6 cases remains DEFERRED (A2 lane).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived work 2026-07-25T20:24:33.264176+08:00 (MOUNT-02 r2 worklog archived by the A1+A2 joint wave reconcile merge; verbatim from origin/main 8ac555d:HEAD)
+
+# Work Log: MOUNT-02 addendum r2 — dispatcher additions ⑥/⑦/⑧
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/mount-02; ff-only push to main recorded below.
+- Role: Contract/Mainline Lead. Branch `codex/ccr-mount-wave-02-r2`, base = live main `cacf2a35f892fc22ab8ef21a029667a0053b8342` (MOUNT-02 r1 head; serial clause verified — A1+A2 joint wave 40d2f34 NOT yet on main at Gate 0). No rebase/amend/force.
+- Context: the dispatcher's MOUNT-02 launch order carried three additions after the loaded wave body shipped as r1 (same adoption object 7978dd8). ⑧ was already closed by r1 §M5; this r2 closes ⑦ and the closable half of ⑥.
+- Adjudication: docs/product-plan/docs/contract-changes/CCR-20260726-MOUNT-02-ADDENDUM-A1.md — A1-⑦ NEW/fixed (run-create §2.2 replay compare set + `supersedesAnalysisRunId`; same-key supersedes-only change now 409 IDEMPOTENCY_CONFLICT; exact replay incl. non-null supersedes still replays); A1-⑥ PINNED (strategicLensArtifactIds verbatim passthrough, hostile negative acceptance) + audit binding DEFERRED-to-A1+A2-landing (`audit_full_run_lens_set` lives only on 40d2f34, no main call site); A1-⑧ no-op (closed in r1).
+- Write domain: app/analyses/routes.py (compare-set line only) + app/analyses/tests/test_mount02_addendum_r2.py (NEW, 3) + the addendum CCR + HEAD/HISTORY. Zero contracts/canonical-text/migration change.
+- Gates (disposable PG16 ludus-pg-mount02b @55455): addendum suite 3/0; full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX` = 835 passed / 0 failed (= r1 832 + 3); canonical `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed (baseline unchanged); `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK (zero face change, as adjudicated); ruff all-pass; compileall exit 0; `git diff --check` clean.
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

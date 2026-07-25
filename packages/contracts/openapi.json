@@ -2765,6 +2765,59 @@
         ]
       }
     },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}": {
+      "get": {
+        "description": "Read the current AnalysisRun status (10-api §AnalysisRun 状态).",
+        "operationId": "get_analysis_run_api_workspaces__workspaceId__analyses__analysisRunId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Analysis Run Api Workspaces  Workspaceid  Analyses  Analysisrunid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analysis Run"
+      }
+    },
     "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/cancel": {
       "post": {
         "operationId": "post_run_cancel_api_workspaces__workspaceId__analyses__analysisRunId__cancel_post",
@@ -2787,6 +2840,22 @@
               "format": "uuid",
               "title": "Workspaceid",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
             }
           }
         ],
@@ -3079,6 +3148,451 @@
           }
         },
         "summary": "Post Run Resolution"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses": {
+      "get": {
+        "description": "List the run's ready strategic-lens artifacts in canonical order.",
+        "operationId": "list_run_strategic_lenses_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Run Strategic Lenses Api Workspaces  Workspaceid  Analyses  Analysisrunid  Strategic Lenses Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Run Strategic Lenses"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analyses/{analysisRunId}/strategic-lenses/{artifactId}": {
+      "get": {
+        "description": "Read one ready strategic-lens artifact (full detail).",
+        "operationId": "get_run_strategic_lens_api_workspaces__workspaceId__analyses__analysisRunId__strategic_lenses__artifactId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysisRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysisrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifactId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Artifactid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Run Strategic Lens Api Workspaces  Workspaceid  Analyses  Analysisrunid  Strategic Lenses  Artifactid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Strategic Lens"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}": {
+      "patch": {
+        "description": "Edit a draft charter in place (confirmed/superseded reject with 409).",
+        "operationId": "patch_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Analysis Charter Api Workspaces  Workspaceid  Analysis Charters  Charterid  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Analysis Charter"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/confirm": {
+      "post": {
+        "description": "Freeze a charter (draft -> awaiting_confirmation -> confirmed).",
+        "operationId": "confirm_analysis_charter_api_workspaces__workspaceId__analysis_charters__charterId__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Confirm Analysis Charter Api Workspaces  Workspaceid  Analysis Charters  Charterid  Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Analysis Charter"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/replacements": {
+      "post": {
+        "description": "Clone a confirmed charter into a new draft carrying the amendment.",
+        "operationId": "create_charter_replacement_api_workspaces__workspaceId__analysis_charters__charterId__replacements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Charter Replacement"
+      }
+    },
+    "/api/workspaces/{workspaceId}/analysis-charters/{charterId}/runs": {
+      "post": {
+        "description": "Create a queued Run from a confirmed charter (Idempotency-Key header).",
+        "operationId": "create_analysis_run_api_workspaces__workspaceId__analysis_charters__charterId__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "charterId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Charterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Analysis Run"
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analysis-charters": {
+      "post": {
+        "description": "Create a draft charter from the method-route result (10-api §方法路由).",
+        "operationId": "create_analysis_charter_api_workspaces__workspaceId__cases__decisionCaseId__analysis_charters_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Analysis Charter"
       }
     },
     "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}": {
