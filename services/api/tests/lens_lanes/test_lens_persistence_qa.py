@@ -16,7 +16,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import delete, func, insert, select
+from sqlalchemy import delete, func, insert, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -361,6 +361,12 @@ async def test_concurrent_verdicts_on_one_draft_fail_closed_for_the_loser() -> N
         try:
             if run_id is not None:
                 async with engine.begin() as cleanup:
+                    # Task 10 ready-row immutability trigger: test cleanup is a
+                    # maintenance purge, opted in per transaction (combination-
+                    # only change; assertions untouched).
+                    await cleanup.execute(
+                        text("SET LOCAL ludus.allow_ready_artifact_purge = 'on'")
+                    )
                     await cleanup.execute(
                         delete(StrategicLensArtifact).where(
                             StrategicLensArtifact.analysis_run_id == run_id

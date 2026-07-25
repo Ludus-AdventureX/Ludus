@@ -136,6 +136,14 @@ def test_core_table_set_and_workspace_scope() -> None:
         "research_packets",
         "run_intervention_classifications",
         "run_resolutions",
+        # Task 10: propositions & adversarial arc (claims ledger).
+        "claims",
+        "claim_evidence",
+        "challenges",
+        # Task 10: formal quality gate & report objects.
+        "quality_gate_results",
+        "report_artifacts",
+        "export_artifacts",
     }
     assert set(Base.metadata.tables) == expected
 

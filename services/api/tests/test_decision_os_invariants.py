@@ -108,9 +108,14 @@ def test_tenant_unique_constraints_include_workspace() -> None:
 
 def test_database_status_columns_use_enums() -> None:
     status_like_names = {"status", "operational_status", "role", "scope", "formality", "actor"}
+    # Canonical exemption: 06-data-model `Claim.scope: string` is contractually
+    # free text (适用范围), never an enum (Task 10 handoff §4.2).
+    free_text_exemptions = {("claims", "scope")}
     for table in Base.metadata.tables.values():
         for column in table.c:
             if column.name in status_like_names:
+                if (table.name, column.name) in free_text_exemptions:
+                    continue
                 assert isinstance(column.type, Enum), f"{table.name}.{column.name}"
 
 _CANONICAL_TIME = datetime(2026, 7, 23, 12, 0, tzinfo=timezone.utc)

@@ -19,6 +19,15 @@ import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
 # including the active-run partial unique index attached to analysis_runs.
 import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
 
+# Task 10 analysis output tables register the same way: claims/claim_evidence
+# (app/analyses/claims.py), challenges (app/analyses/devils_advocate.py),
+# quality_gate_results (app/analyses/quality_gate.py) and report/export
+# artifacts (app/reports/models.py).
+import app.analyses.claims  # noqa: F401  (registers claims + claim_evidence)
+import app.analyses.devils_advocate  # noqa: F401  (registers challenges)
+import app.analyses.quality_gate  # noqa: F401  (registers quality_gate_results)
+import app.reports.models  # noqa: F401  (registers report/export artifacts)
+
 config = context.config
 # The login throttle table lives on a deliberate module-local MetaData
 # (see app/security/rate_limits.py); include it so autogenerate/check do not
