@@ -19,6 +19,11 @@ import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
 # including the active-run partial unique index attached to analysis_runs.
 import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
 
+# Task 4/5 companion table (dossier_version_snapshots) registers the same way;
+# without this import `alembic check` on the merged chain reports a spurious
+# remove_table drift (QA finding F1, codex/qa-task-04-05-backend-r1).
+import app.dossiers.models  # noqa: F401  (registers dossier_version_snapshots)
+
 # Task 10 analysis output tables register the same way: claims/claim_evidence
 # (app/analyses/claims.py), challenges (app/analyses/devils_advocate.py),
 # quality_gate_results (app/analyses/quality_gate.py) and report/export
