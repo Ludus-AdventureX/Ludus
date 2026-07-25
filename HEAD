@@ -1,26 +1,8 @@
-﻿# Work Log: idle
+# Work Log: QA - ENG-02 profile enforcement (governance-waiver lane)
 
-- Status: idle after CCR-ENG-02 profile enforcement fast fix; ready_for_fast_QA=YES.
-- Last archived: 2026-07-25 (Asia/Shanghai).
-- Last archive entry: `Archive CCR-ENG-02 Profile Enforcement Fast Fix - 2026-07-25 (Asia/Shanghai)`.
-- Role: Simulation/Graph Owner (Fable5).
-- Branch: codex/sim-eng-02-profile-enforcement-fast-fix, sole parent = live-resolved P2 head
-  d43e36eb399900e24ec171c8cf02eff3048cf089 (itself sole-child of edaa8421; main 387041d4 and
-  ENG-02 contract c8c9167b unmoved; fresh worktree; no amend/rebase/force).
-- Delivered: ProfileFingerprint now MANDATORY keyword-only on compute_input_hash and
-  run_simulation (omission = TypeError; explicit None/bare dict = SimulationInputError
-  fail-fast; profile block unconditional - no 1.1.0 missing-profile/legacy/mixed hash mode);
-  sensitivity.py minimal pass-through of the ONE verified fingerprint to base + every
-  sweep/flip-grid run (zero numeric/perturbation/ordering changes); service passes the
-  fingerprint into analyze_sensitivity; Task 12 owner suite fed a fixed deterministic
-  canonical OWNER_FP (zero numeric-input changes); +2 owner probe tests.
-- Fast gates: owner suite 84 passed / 0 failed; four no-profile probes REJECTED as required;
-  sensitivity capture probe = 0 None calls, all fingerprints identical; ruff/compileall/
-  diff-check/conflict/scope clean; services/api/tests, migrations, models/types/schemas,
-  packages/contracts, routes/web all ZERO diff. Full battery deferred to the integration
-  gate per task order (QA-owned no-profile acceptance calls will need the P2 QA flip).
-- Handoff: docs/handoffs/SIM_ENG_02_PROFILE_ENFORCEMENT_FAST_FIX_HANDOFF.md.
-- ready_for_public_route: NO.
-- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and
-  replace this idle record before modifying task-owned files.
+- Status: QA complete on codex/qa-sim-eng-02-profile-enforcement-r1 (direct child of fix d2ae634f23e9e50a92020ca014d3ce380810f4b1). RELEASE_CONTENT_VERDICT PASS; merge object = this QA head; mainline integration next.
+- Role: QA for CCR-ENG-02 P2 enforcement fix, executed by the Contract/Mainline Lead under an explicit principal directive cancelling independent QA for this slice (waiver recorded in the QA handoff and HISTORY; all other discipline unchanged).
+- QA delta: exactly two QA-owned files - pinned P2 test flipped to permanent green (1.1.0 + profile block + hash-flip assertions) and canonical QA_FP fingerprint threaded through the 6 direct engine/sensitivity call sites of the Task 12 acceptance battery; numeric expectations byte-untouched.
+- Fresh acceptance (disposable PG16 @55432): alembic single head b2c7e9d4a1f6 clean; full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error, new frozen count); same-db lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; ruff/compileall/diff-check clean; changed-path exactly the two QA files.
+- ready_for_public_route = NO. Next: mainline integration candidate (kickoff -> no-ff adjudication chain 19f552c -> no-ff this QA head) -> SHA-anchored acceptance -> ff-only publication.
 - Secret policy: do not record credentials here.

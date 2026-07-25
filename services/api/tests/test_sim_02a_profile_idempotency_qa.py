@@ -8,7 +8,8 @@ authority with an INDEPENDENT hashlib re-derivation, pg_catalog shape of the
 frozen run->profile FK (convalidated + ON DELETE RESTRICT), service-side
 riskTolerance authority end to end, engine-not-run precedence for profile scope
 denials, the exact idempotency persistence schema (no runtime flow, no route),
-and the accepted-pending P2 engine-hash gap pinned as current behavior.
+and the CCR-ENG-02 profile-aware engine hash locked as a permanent green
+regression (flipped from the former accepted-pending P2 pin).
 
 Owner seeding helpers are loaded by file path (the owner tests directory is
 not a package); loading them does not modify any owner file.
@@ -521,22 +522,21 @@ def test_no_idempotency_runtime_flow_and_public_route_stays_blocked() -> None:
 
 
 # ---------------------------------------------------------------------------
-# G: P2 (engine hash) is an accepted pending dependency, not regressed
+# G: P2 (engine hash) delivered - CCR-ENG-02 behavior locked as permanent green
 # ---------------------------------------------------------------------------
 
 
 async def test_p2_engine_hash_gap_is_pinned_pending_dependency(session) -> None:
-    # Engine untouched by this slice: version pinned, hash payload unchanged,
-    # profile identity/content hash NOT in the hash source yet.
-    assert engine_module.ENGINE_VERSION == "sim-engine-1.0.0"
+    # CCR-ENG-02 landed (adjudication A1 fix d2ae634): version bumped, hash
+    # payload carries the mandatory profile block sourced from the verified row.
+    assert engine_module.ENGINE_VERSION == "sim-engine-1.1.0"
     hash_source = inspect.getsource(engine_module.compute_input_hash)
-    assert "profile" not in hash_source.lower()
-    assert "content_hash" not in hash_source and "contentHash" not in hash_source
+    assert "profile" in hash_source.lower()
+    assert "content_hash" in hash_source or "contentHash" in hash_source
 
-    # Pinned CURRENT behavior (contract §3 gap): two different frozen profiles
-    # with the SAME riskTolerance still produce the SAME inputHash. CCR-ENG-02
-    # MUST flip this assertion together with the ENGINE_VERSION bump; until
-    # then the public POST route stays blocked (ready_for_public_route = NO).
+    # FLIPPED assertion (former pinned gap): two different frozen profiles with
+    # the SAME riskTolerance MUST now produce DIFFERENT inputHashes; identity is
+    # witnessed by the nested profile block (id/version/contentHash).
     world = await seed_world(session, f"qa02a-p2-{uuid4().hex[:6]}")
     service = SimulationRunService(session)
     baseline = await service.run_and_record(world.context, request_for(world))
@@ -554,4 +554,6 @@ async def test_p2_engine_hash_gap_is_pinned_pending_dependency(session) -> None:
         world.context, request_for(world, decision_maker_profile_id=twin_profile)
     )
     assert twin.decision_maker_profile_id != baseline.decision_maker_profile_id
-    assert twin.input_hash == baseline.input_hash
+    assert twin.input_hash != baseline.input_hash
+    assert baseline.engine_version == "sim-engine-1.1.0"
+    assert twin.engine_version == "sim-engine-1.1.0"
