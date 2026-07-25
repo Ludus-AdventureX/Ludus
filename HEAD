@@ -1,18 +1,9 @@
-# Work Log: CCR mount wave MOUNT-02 — Charter/Run/Lens route publication + M8 CSRF closure (r1)
+# Work Log: Release integration Task 4/5/9/10/17/18/19 closure (r1)
 
-- Status: COMPLETE on worktree decision-lab-G0/worktrees/mount-02; all wave gates green; ff-only push to main recorded below.
-- Role: Contract/Mainline Lead (combined lane). Branch `codex/ccr-mount-wave-02-r1`, base = live main `23ab477649716f52b3aa913e5efb209442397efa` (exact Gate 0 echo). No rebase/amend/force.
-- Trigger credential: handlers QA r1b verdict PASS (QA tip 7978dd8 carrying candidate 0f92b17), adopted via a single --no-ff merge (e1655dc; base deviation 4941e58->23ab477 reconciled there).
-- Adjudication: docs/product-plan/docs/contract-changes/CCR-20260726-MOUNT-02.md — M1-M3 REAFFIRM+PUBLISH (charter create/PATCH/replacements/confirm, run create, run status GET, strategic-lenses list/item; closes MOUNT-01 M3/M4/M5); M4 zero-main.py mount (lazy _IncludedRouter expands the adopted 8 handlers automatically, MOUNT-01 M7 reaffirmed); M5 M8 CSRF closure (require_csrf on the 7 analyses unsafe writes, SIM-02A parity + 10-api §CSRF clarification SM1 + wave regression battery); M6 M9 reaffirmed closed; M7 cases DEFERRED again (A2 still undelivered).
-- Contracts: official generate_contracts.ps1 — openapi.json + types.gen.ts regenerated; ops 18 -> 26 (+8 additive, exactly the canonical L65-70/72-73 set); schemas 56 -> 56; cancel additively documents the M9 Idempotency-Key header; 17 ops byte-unchanged.
-- Disclosed connected maintenance (M8): same-origin double-submit proof added to six test fixtures (5 analyses + tests/test_task09_idempotency_qa_r2.py); header/cookie/Origin only, zero assertion-semantics change.
-- Wave gates (fresh disposable PG16 ludus-pg-mount02b @55455; main venv junction; pnpm offline install, zero downloads):
-  - Full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX` = 832 passed / 0 failed (= 816 candidate baseline + 8 QA adversarial + 8 MOUNT-02 CSRF regression).
-  - Canonical `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed (authoritative cross-wave baseline unchanged).
-  - Functional smoke (canonical app, no overrides): all 8 new routes DISPATCH and answer the 401 envelope unauthenticated (SESSION_REVOKED_OR_EXPIRED — auth before CSRF confirmed); pseudo path answers bare 404.
-  - `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK; `pnpm --dir apps/web test` = 68 passed / 0 failed; `pnpm --dir apps/web build` exit 0.
-  - ruff all-pass; compileall exit 0; `git diff --check` clean; conflict-marker scan 0; secret scan 0; scope audit vs origin/main = 14 files, all in the wave write domain.
-  - alembic single head f9a4b7e2c8d3 on the disposable PG16.
-- Now canonical on main: the complete analyses HTTP surface (11 routes) published in contracts; analyses unsafe writes CSRF-guarded; MOUNT-01 M3/M4/M5/M8/M9 all closed; M6 cases remains DEFERRED (A2 lane).
-- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
-- Secret policy: do not record credentials here.
+- Status: ACTIVE on isolated worktree `decision-lab-release-integration-r1`; no mainline write is permitted until every release gate is green.
+- Role: Release Integration / Mainline Audit owner. Branch `codex/release-integration-task04-19-r1`, base = live remote main `cacf2a35f892fc22ab8ef21a029667a0053b8342` (verified against `git ls-remote` on July 25, 2026). No rebase/amend/force.
+- Scope: dependency/security baseline repairs; independent Task 4/5 QA; ordered Task 10 -> Task 4/5 -> Task 9 integration reconciliation; Case/Conversation/Charter/Run/Report publication; live provider wiring; Signoff + append-only DecisionRecord + Review; independent Playwright golden path; CI and Task 19/17/18 release gates.
+- Mainline observation: base already contains MOUNT-02 (`cacf2a3`) with the Task 9 Charter/Run/Lens route publication and CSRF closure; integration will preserve that accepted history and will not replay already-canonical commits.
+- Release invariants: no automatic `decided`; DecisionRecord is append-only; no qualifying Run means no Report; Workspace scope on every read/write; no hidden reasoning persistence; official contract generator only.
+- Push policy: pin implementation and QA SHAs, require P0/P1 = 0, run migration/contract/Decision OS/static/security/E2E gates, re-read live remote main immediately before push/merge, and never force push.
+- Secret policy: do not read, print, persist, or commit credentials.

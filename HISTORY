@@ -3339,3 +3339,22 @@ Verbatim Phase A HEAD content:
   5. Handoff section-8/next-step probes: the r4 addendum's MOUNT-02 handover is accurate — analyses router verified carrying 11 routes while reaching no generated contract (CONTRACT_DRIFT_OK proves zero leak); alembic single head f9a4b7e2c8d3 re-verified; the M8 CSRF recommendation cross-checked against app/security/csrf.py double-submit semantics (Origin/Referer + cookie/header constant-time compare) and app/simulations/routes.py L145-156 precedent — dependency-order note holds (auth context resolves before require_csrf, so unauthenticated stays 401).
 - Verdict: **PASS**. ready_for_mount: YES — MOUNT-02 may adopt this QA tip (carries candidate 0f92b17) with a single --no-ff merge.
 - Secret policy: do not record credentials here.
+
+# Work Log: CCR mount wave MOUNT-02 — Charter/Run/Lens route publication + M8 CSRF closure (r1)
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/mount-02; all wave gates green; ff-only push to main recorded below.
+- Role: Contract/Mainline Lead (combined lane). Branch `codex/ccr-mount-wave-02-r1`, base = live main `23ab477649716f52b3aa913e5efb209442397efa` (exact Gate 0 echo). No rebase/amend/force.
+- Trigger credential: handlers QA r1b verdict PASS (QA tip 7978dd8 carrying candidate 0f92b17), adopted via a single --no-ff merge (e1655dc; base deviation 4941e58->23ab477 reconciled there).
+- Adjudication: docs/product-plan/docs/contract-changes/CCR-20260726-MOUNT-02.md — M1-M3 REAFFIRM+PUBLISH (charter create/PATCH/replacements/confirm, run create, run status GET, strategic-lenses list/item; closes MOUNT-01 M3/M4/M5); M4 zero-main.py mount (lazy _IncludedRouter expands the adopted 8 handlers automatically, MOUNT-01 M7 reaffirmed); M5 M8 CSRF closure (require_csrf on the 7 analyses unsafe writes, SIM-02A parity + 10-api §CSRF clarification SM1 + wave regression battery); M6 M9 reaffirmed closed; M7 cases DEFERRED again (A2 still undelivered).
+- Contracts: official generate_contracts.ps1 — openapi.json + types.gen.ts regenerated; ops 18 -> 26 (+8 additive, exactly the canonical L65-70/72-73 set); schemas 56 -> 56; cancel additively documents the M9 Idempotency-Key header; 17 ops byte-unchanged.
+- Disclosed connected maintenance (M8): same-origin double-submit proof added to six test fixtures (5 analyses + tests/test_task09_idempotency_qa_r2.py); header/cookie/Origin only, zero assertion-semantics change.
+- Wave gates (fresh disposable PG16 ludus-pg-mount02b @55455; main venv junction; pnpm offline install, zero downloads):
+  - Full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX` = 832 passed / 0 failed (= 816 candidate baseline + 8 QA adversarial + 8 MOUNT-02 CSRF regression).
+  - Canonical `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed (authoritative cross-wave baseline unchanged).
+  - Functional smoke (canonical app, no overrides): all 8 new routes DISPATCH and answer the 401 envelope unauthenticated (SESSION_REVOKED_OR_EXPIRED — auth before CSRF confirmed); pseudo path answers bare 404.
+  - `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK; `pnpm --dir apps/web test` = 68 passed / 0 failed; `pnpm --dir apps/web build` exit 0.
+  - ruff all-pass; compileall exit 0; `git diff --check` clean; conflict-marker scan 0; secret scan 0; scope audit vs origin/main = 14 files, all in the wave write domain.
+  - alembic single head f9a4b7e2c8d3 on the disposable PG16.
+- Now canonical on main: the complete analyses HTTP surface (11 routes) published in contracts; analyses unsafe writes CSRF-guarded; MOUNT-01 M3/M4/M5/M8/M9 all closed; M6 cases remains DEFERRED (A2 lane).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

@@ -32,7 +32,8 @@ out/
 dist/
 coverage/
 
-# Tests and generated artifacts`r`n.contract-check/
+# Tests and generated artifacts
+.contract-check/
 playwright-report/
 test-results/
 artifacts/
