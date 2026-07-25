@@ -2934,3 +2934,277 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Archived Task 10/11 QA mainline integration worklog before Task 8/9 + Addendum A1 wave adoption - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 10/11 QA mainline integration (wave 1)
+
+- Status: merges complete on worktree decision-lab-mainline-integration (main); post-merge gates running; push pending principal confirmation.
+- Merge 1/2 (342323f): no-ff adoption of codex/qa-task-10-lens-validators-r1 622f43bb6561c0054c50a5091275ee8afa0189ba = task-10 lens validators r1 impl chain (6790181 -> 0634e8c -> fac61e0, lane COMPLETE, 549 passed zero regression, CONTRACT_DRIFT_OK) + QA adversarial battery 8e748b7 + F401 cleanup 622f43b.
+- Merge 2/2 (this commit): no-ff adoption of codex/qa-task-11-phase0-shell-r1 4fb099930b8f237e02b536464e04af957dcbb03e = Task 11 Phase 0 shell Sessions A (b358706) + B (3d68730, all acceptance gates green, ready_for_qa YES) + adversarial QA supplement 4fb0999 (focus trap escape, URL abuse, hostile payloads, flag flip, a11y spot checks; tests-only additions).
+- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (prior HEAD worklogs archived into HISTORY, byte-verified base preservation).
+- Audit honesty: a first local resolution attempt of merge 1 (e0d8499) was discarded before any push after self-audit caught a PowerShell pipeline UTF-8 corruption of one pre-existing HISTORY byte; redone with a byte-safe resolver.
+- Excluded from this wave (audit verdicts): Task 8+9 family (c599030/ed65f40/e403c66/e4ac7dc) blocked on QA FAIL-P1 sec2.3 amendment durability + P2 race window, fix lane codex/task-09-amendment-durability-fast-fix in progress; 13 historical branches (behind 64-189) superseded or lifecycle-archive-only, not merged.
+- Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T10:07:57.765905+08:00
+
+# Archive Idle Baseline (post sim-eng-02 wave) Before Task 08 Evidence Ledger R1 - 2026-07-25 (Asia/Shanghai)
+
+Verbatim idle HEAD content archived before starting Task 08 (base main bd9fde15278afd63d351b2adaeb95ec32441cd6f):
+
+# Work Log: idle
+
+- Status: idle; sim-eng-02 wave (SIM-02A prerequisites P1/P3 + ENG-02 P2 enforcement + contracts/adjudication + QA) published to remote main and live-verified.
+- Last archived: 2026-07-25 (Asia/Shanghai).
+- Last archive entry: `Archive Sim-ENG-02 Wave Main Publication - 2026-07-25 (Asia/Shanghai)`.
+- Remote main: d69fa54c40834dace5d1dc9d230ea7b18b6b30a4 + this archive commit (live ls-remote verified). Migration head now b2c7e9d4a1f6 (decision_maker_profiles + idempotency_records). Engine now sim-engine-1.1.0 with mandatory profile-aware inputHash.
+- Governance note: QA for this slice was executed by the Mainline Lead under an explicit principal directive (waiver recorded in SIM_ENG_02_PROFILE_ENFORCEMENT_QA_HANDOFF.md and HISTORY). Future slices revert to independent QA unless re-waived.
+- New frozen baselines: full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error); lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK (contracts unchanged this wave).
+- Archive-only now: 0289b2e / c8c9167 / 19f552c (contract chain), fb75b8f / edaa842 / d43e36e / d2ae634 / dc57fe6 (product+QA chain), d69fa54 integration branch; related worktrees retired.
+- Unlocked: SIM-02A I1 (routes/schemas/idempotency flow, Simulation Owner) -> I2 (mounting + contracts regeneration + 10-api P2 doc amendments, Contract Lead) -> I3 (QA). ready_for_public_route = NO until I1/I2/I3 land.
+- Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this idle record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T11:17:39.958698+08:00
+
+# Archive Task 08 Evidence Ledger R1 (Phase A) - 2026-07-25 (Asia/Shanghai)
+
+Phase A shipped at c599030a54db591528bf9e7b62850e5869c686e2 on
+codex/task-08-evidence-ledger-r1 (pushed, live ls-remote verified); Phase B
+(Task 09) continues in this lane with parent = that exact SHA.
+Mid-lane deviation disclosure: remote main advanced during Phase A work
+(bd9fde1 -> 51ae45c, guest demo wave). Post-hoc check per the deviation
+protocol: bd9fde1 IS an ancestor of 51ae45c and
+git diff bd9fde1..51ae45c -- services/api/app/evidence services/api/app/analyses
+services/api/app/workers services/api/app/connectors is EMPTY, so the lane's
+surfaces are untouched by the wave and the pinned base stays legitimate.
+
+Verbatim Phase A HEAD content:
+
+# Work Log: in-progress
+
+- Status: Phase A COMPLETE (Task 08 Evidence Ledger & Information Quality Gateway,
+  ready_for_qa = YES); Phase B (Task 09 Analysis Runtime) starts next in this lane on
+  branch codex/task-09-analysis-runtime-r1 with parent = this commit.
+- Role: Case/API/Data Owner (Fable5).
+- Branch: codex/task-08-evidence-ledger-r1; base = origin/main
+  bd9fde15278afd63d351b2adaeb95ec32441cd6f (live ls-remote at Gate 0; EXACT match with
+  the authorized baseline - no deviation protocol). Fresh worktree
+  decision-lab-task08-evidence; no rebase/amend/force-push/cherry-pick; main untouched.
+- Delivered: evidence ledger tables retrieval_tasks / raw_artifacts /
+  quality_assessments / evidence_items / evidence_relations (workspace-scoped,
+  composite case/run FKs, CASE_NOT_FOUND anti-enumeration); migration e7f3a2c9d5b1 on
+  b2c7e9d4a1f6 (single head kept; new PG enums evidence_verdict +
+  retrieval_task_status; origin_mode reused); deterministic quality gateway (L1-L6
+  category + orthogonal dimensions + four-tier verdict accepted/conditional(limits
+  mandatory)/lead_only(next-retrieval only)/rejected + reason codes + remediation
+  actions; L1 never auto-accepts; three articles citing one report = 1 independent
+  source); provider adapters exa (default) -> tavily failover, firecrawl fetch
+  (crawl disabled by default, allowlist + caps), fixture provider (spherical-robot
+  query keys, origin_mode=fixture); SSRF guard (scheme/port whitelist,
+  loopback/private/link-local/metadata rejection, DNS fail-closed, injectable
+  resolver); RawArtifact-first ingestion (immutable rows before references);
+  unmounted relative provenance/conflict router (main.py untouched); 90 own tests in
+  app/evidence/tests.
+- Gates: own suite 90/0 (-W error); full suite 550 passed / 1 failed / 0 xfailed /
+  0 xpassed vs start baseline 461/0/0/0 - the single failure is the QA-owned
+  tests/test_models.py exact-table-set equality (contract-driven, SIM-02A precedent,
+  revision guidance in handoff); filtered regression deselecting exactly that node =
+  550/0; alembic upgrade/current/check/downgrade-roundtrip clean on disposable PG16
+  ludus-pg-task08 @55441; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK
+  (preset read-only toolchain, zero installs/network); packages/contracts zero diff;
+  ruff/compileall/diff-check/conflict-marker/secret-scan/scope-audit clean;
+  migrations/env.py +5 disclosed lines (evidence metadata import).
+- Contract gaps recorded as CCR requests in the handoff (evidence API paths,
+  SourceGrade/FreshnessStatus/stableToolName enum promotion, independent-source
+  group canonical field, evidence_relations schema, SSRF client unification).
+- Handoff: docs/handoffs/TASK_08_EVIDENCE_LEDGER_R1_HANDOFF.md.
+- ready_for_public_route: NO (router unmounted; evidence API paths await CCR).
+- Secret policy: no credentials in code, logs, HEAD/HISTORY, or handoffs.
+
+## Archived work 2026-07-25T13:40:21.550512+08:00
+
+# Work Log: in-progress
+
+- Status: Phase B COMPLETE (Task 09 Persistent Deep Analysis State Machine & Worker,
+  ready_for_qa = YES). Lane (Task 8 -> Task 9) fully delivered; awaiting independent QA
+  for both phases.
+- Role: Case/API/Data Owner (Fable5).
+- Branch: codex/task-09-analysis-runtime-r1; parent = Phase A exact SHA
+  c599030a54db591528bf9e7b62850e5869c686e2 (codex/task-08-evidence-ledger-r1, pushed).
+  Lane base = authorized main bd9fde1 (exact ls-remote at Gate 0); mid-lane main advance
+  to 51ae45c disclosed in HISTORY with the ancestor + empty-lane-diff proof.
+- Delivered: analysis_charters / analysis_events / research_packets /
+  run_intervention_classifications / run_resolutions via forward migration
+  f9a4b7e2c8d3 on e7f3a2c9d5b1 (single head; new PG enums analysis_charter_status +
+  research_packet_role; formal_analysis_level/analysis_run_status/origin_mode reused)
+  plus the canonical partial unique index uq_analysis_runs_one_active_per_case on the
+  pre-existing analysis_runs; charter machine (draft -> awaiting_confirmation ->
+  confirmed -> superseded; frozen fields; focused lens set empty / full normalized to
+  the five-set; replacement-confirm supersedes + cancels the old run with
+  charter_replaced); run machine (six sequential stages; ready only from validating +
+  quality gate; blocked = validating quality terminal; needs_attention resumes ONLY to
+  lastResumableStage; terminals immutable; every transition locks the row, appends
+  analysis_events with strictly increasing per-run sequence and records stage
+  input/output hashes); DB-queue worker (FOR UPDATE SKIP LOCKED claim, heartbeat,
+  persisted cancellation checks at stage + external-call boundaries, stale-heartbeat
+  recovery to needs_attention, four role executors on fixture/stub providers, Critic
+  mandatory Safety Anchor sub-stage, Validation blocking-only, full runs schedule five
+  lens stages through the SHIPPED strategic_lenses write path import-only and record
+  strategicLensArtifactIds, focused keeps []); classification-first interventions
+  (three canonical resolution kinds; provider recovery restricted to charter
+  allowlist; any frozen-field change incl. strategic_lens_set => persisted amendment +
+  RUN_AMENDMENT_REQUIRED, never a RunResolution); relative UNMOUNTED routers: SSE
+  events (event:=category, full envelope, Last-Event-ID replay from persisted
+  sequence), resolutions, idempotent cancel; 102 own tests in app/analyses/tests.
+- Gates: own suite 102/0 (-W error); full suite 652 passed / 1 failed / 0 xfailed /
+  0 xpassed - sole failure is the SAME disclosed QA-owned exact-table-set assertion
+  (now +10 canonical tables; SIM-02A precedent; guidance in handoff); filtered
+  regression deselecting exactly that node = 652/0 (zero regression vs the 461 lane
+  baseline and Phase A's 550); alembic upgrade/current/check/downgrade-roundtrip clean
+  on disposable PG16 @55441 db decision_lab_task09; official generate_contracts.ps1
+  -Check = CONTRACT_DRIFT_OK (preset read-only toolchain, zero installs/network);
+  packages/contracts zero diff; ruff/compileall/diff-check/conflict/secret/scope all
+  clean; migrations/env.py +4 disclosed lines; evidence own-test maintenance
+  (conftest ambiguity fix via evidence_world.py + chain-robust head assertion)
+  disclosed, zero QA-owned files touched.
+- Contract gaps recorded as CCR requests in the handoff (event/enum promotion,
+  RunManifest storage decision, charter/run HTTP endpoints belong to the mounting
+  wave, heartbeat timeout config, lens payload end-to-end = Task 10 scope).
+- Handoff: docs/handoffs/TASK_09_ANALYSIS_RUNTIME_R1_HANDOFF.md.
+- ready_for_public_route: NO (routers unmounted; mounting rights with the
+  integration layer).
+- Secret policy: no credentials in code, logs, HEAD/HISTORY, or handoffs.
+
+## Archived work 2026-07-25T14:10:28.871267+08:00
+
+# Work Log: Task 09 r3 fast-fix — QA-P1 + QA-P2 closure
+
+- Status: COMPLETE (ready_for_fast_QA = YES; the two QA xfail probes on
+  codex/qa-task-09-idempotency-wire-r2 are expected to flip green against this
+  head — xfail-promotion applies).
+- Role: Case/API/Data Owner (Fable5); directed fast-fix per QA report
+  QA_TASK_09_IDEMPOTENCY_WIRE_R2_REPORT.md (QA tip e4ac7dc).
+- Branch: codex/task-09-amendment-durability-fast-fix; sole parent = r2 exact
+  SHA e403c665364d6260ad6199f283a5964db070f436. Fresh worktree
+  decision-lab-task09-durability-fastfix. No rebase/amend/force-push; main
+  untouched.
+- CCR: same read-only consumption as r2 — CCR-20260725-ANALYSIS-01 @
+  d6675693fd2b7709d9ed4756489e633c49c869ee.
+- Delivered (routes.py only + one new owner test file; repository, state
+  machine, worker, SSE envelope, migrations ZERO diff):
+  1. QA-P1 (§2.3): the amendment path now COMMITS the append-only
+     RunInterventionClassification + analysis.amendment_required event BEFORE
+     raising 409 RUN_AMENDMENT_REQUIRED, so both survive the production
+     get_session lifecycle. Proven with production-like one-session-per-request
+     tests (a brand-new session sees both rows after the 409; repeated
+     amendments append one classification row each).
+  2. QA-P2 (§2.2): the RunNotResumable handler re-checks the idempotency
+     record before answering — a same-key same-body duplicate that lost the
+     concurrency race now replays the winner's success
+     (meta.idempotencyReplay: true) instead of 409; same key + different body
+     still answers IDEMPOTENCY_CONFLICT; a FRESH key on an already-resumed run
+     still answers the specific ANALYSIS_RUN_NOT_RESUMABLE (no shadowing).
+- Gates: new owner suite test_analysis_amendment_durability.py 4/0 (-W error;
+  incl. dual-connection race with BOTH sides 200 and exactly one replay flag);
+  full suite 667 passed / 1 failed — sole failure remains the disclosed
+  QA-owned exact-table-set assertion (zero regression vs r2's 663);
+  ruff/compileall/diff-check clean; generate_contracts.ps1 -Check =
+  CONTRACT_DRIFT_OK; packages/contracts zero diff; no migration touched
+  (single head f9a4b7e2c8d3 on disposable PG16 ludus-pg-task09-r3 @55448,
+  deleted after use).
+- Handoff: r3 addendum appended to
+  docs/handoffs/TASK_09_ANALYSIS_RUNTIME_R1_HANDOFF.md.
+- ready_for_public_route: NO (routers stay unmounted).
+- Secret policy: no credentials in code, logs, HEAD/HISTORY, or handoffs.
+
+## Archived Task 8/9 QA idempotency-wire r2 lane worklog (merged into main at QA verification point 78c3ce6) - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 09 r3 fast-fix — QA-P1 + QA-P2 closure
+
+- Status: COMPLETE (ready_for_fast_QA = YES; the two QA xfail probes on
+  codex/qa-task-09-idempotency-wire-r2 are expected to flip green against this
+  head — xfail-promotion applies).
+- Role: Case/API/Data Owner (Fable5); directed fast-fix per QA report
+  QA_TASK_09_IDEMPOTENCY_WIRE_R2_REPORT.md (QA tip e4ac7dc).
+- Branch: codex/task-09-amendment-durability-fast-fix; sole parent = r2 exact
+  SHA e403c665364d6260ad6199f283a5964db070f436. Fresh worktree
+  decision-lab-task09-durability-fastfix. No rebase/amend/force-push; main
+  untouched.
+- CCR: same read-only consumption as r2 — CCR-20260725-ANALYSIS-01 @
+  d6675693fd2b7709d9ed4756489e633c49c869ee.
+- Delivered (routes.py only + one new owner test file; repository, state
+  machine, worker, SSE envelope, migrations ZERO diff):
+  1. QA-P1 (§2.3): the amendment path now COMMITS the append-only
+     RunInterventionClassification + analysis.amendment_required event BEFORE
+     raising 409 RUN_AMENDMENT_REQUIRED, so both survive the production
+     get_session lifecycle. Proven with production-like one-session-per-request
+     tests (a brand-new session sees both rows after the 409; repeated
+     amendments append one classification row each).
+  2. QA-P2 (§2.2): the RunNotResumable handler re-checks the idempotency
+     record before answering — a same-key same-body duplicate that lost the
+     concurrency race now replays the winner's success
+     (meta.idempotencyReplay: true) instead of 409; same key + different body
+     still answers IDEMPOTENCY_CONFLICT; a FRESH key on an already-resumed run
+     still answers the specific ANALYSIS_RUN_NOT_RESUMABLE (no shadowing).
+- Gates: new owner suite test_analysis_amendment_durability.py 4/0 (-W error;
+  incl. dual-connection race with BOTH sides 200 and exactly one replay flag);
+  full suite 667 passed / 1 failed — sole failure remains the disclosed
+  QA-owned exact-table-set assertion (zero regression vs r2's 663);
+  ruff/compileall/diff-check clean; generate_contracts.ps1 -Check =
+  CONTRACT_DRIFT_OK; packages/contracts zero diff; no migration touched
+  (single head f9a4b7e2c8d3 on disposable PG16 ludus-pg-task09-r3 @55448,
+  deleted after use).
+- Handoff: r3 addendum appended to
+  docs/handoffs/TASK_09_ANALYSIS_RUNTIME_R1_HANDOFF.md.
+- ready_for_public_route: NO (routers stay unmounted).
+- Secret policy: no credentials in code, logs, HEAD/HISTORY, or handoffs.
+
+## CCR-20260725-ANALYSIS-01 Addendum A1 — 2026-07-25 (Asia/Shanghai)
+
+- Role: Contract/Mainline Lead (contract_lead), docs-only lane.
+- Branch: `codex/ccr-analysis-01-addendum-a1`, parent = main @ `4508b3059e1a71f62f90bdabcfb7a36cfc50cac4` (live ls-remote verified at Gate 0).
+- Trigger: full-chain accumulated pending ruling items consolidated into a single addendum — Task 9 r1 handoff §5-6, r2 QA disclosure (ACCEPT, pending contract ratification), r3 QA hard-assertion-locked fixes, and Task 8 r1 handoff §5.
+- Input evidence: CCR body (main), Task 9 r1 handoff (codex/task-09-analysis-runtime-r1), Task 8 r1 handoff (codex/task-08-evidence-ledger-r1 @ c599030), QA r2+r3 report (codex/qa-task-09-idempotency-wire-r2 @ 78c3ce6), 06-data-model.md / 10-api-and-events.md (main), format precedent CCR-20260724-SIM-01-ADDENDUM-A1.md.
+- 10 ruling items adjudicated: A1-1 DB-first IMPLEMENTATION_FREE (enum promotion → A3), A1-2 RunManifest REAFFIRM, A1-3 Heartbeat IMPLEMENTATION_FREE, A1-4 Endpoint mounting DEFERRED-to-A3, A1-5 Idempotency-Key layering NEW (ratified + SA1), A1-6 eventId on fresh success NEW (ratified, already synced via S4), A1-7 Amendment commit-before-raise NEW (ratified + SA2), A1-8 Idempotency race loser replay NEW (ratified + SA3), A1-9 Evidence read paths DEFERRED-to-A3, A1-10 Evidence enums IMPLEMENTATION_FREE (→ A3).
+- Canonical text syncs: SA1 (06-data-model.md, idempotencyKey layering), SA2 (10-api-and-events.md, amendment timing), SA3 (10-api-and-events.md, idempotency race safety).
+- 4 items requiring A3 code follow-up: A1-1 enum promotion, A1-4 endpoint mounting, A1-9 evidence path CCR+mount, A1-10 evidence enum promotion.
+- ready_for_merge: YES (docs-only; zero code, migration, test, or generated-contract change).
+- No credentials or secret values are recorded here.
+
+## Archived CCR-20260725-ANALYSIS-01 Addendum A1 lane worklog (merged into main at 9bb19eb) - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: CCR-20260725-ANALYSIS-01 Addendum A1
+
+- Status: addendum A1 authored, pending push (2026-07-25, Asia/Shanghai).
+- Branch: `codex/ccr-analysis-01-addendum-a1`, parent = main @ `4508b3059e1a71f62f90bdabcfb7a36cfc50cac4` (live ls-remote verified).
+- Mode: docs-only lane. No code/migration/test/packages/contracts touched; no rebase/amend/force-push.
+- Scope: 1 addendum file (CCR-20260725-ANALYSIS-01-ADDENDUM-A1.md) + 3 canonical text syncs (SA1: 06-data-model.md; SA2+SA3: 10-api-and-events.md) + this HEAD update + HISTORY append + handoff.
+- 10 ruling items adjudicated: A1-1 DB-first IMPLEMENTATION_FREE (enum promotion → A3), A1-2 RunManifest REAFFIRM, A1-3 Heartbeat IMPLEMENTATION_FREE, A1-4 Endpoint mounting DEFERRED-to-A3, A1-5 Idempotency-Key layering NEW (ratified + SA1), A1-6 eventId on fresh success NEW (ratified, already synced via S4), A1-7 Amendment commit-before-raise NEW (ratified + SA2), A1-8 Idempotency race loser replay NEW (ratified + SA3), A1-9 Evidence read paths DEFERRED-to-A3, A1-10 Evidence enums IMPLEMENTATION_FREE (→ A3).
+- Next work should follow push: merge to main via standard no-ff flow per contract-lead protocol.
+- Secret policy: do not record credentials here.
+
+## Archived upstream main HEAD before Task 13 latest-main refresh - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
+
+- Status: COMPLETE on worktree decision-lab-mainline-integration (main); both merges + QA-owned assertion revision landed; all gates green; push + live re-read recorded below.
+- Authorization: principal explicitly authorized this session (Ways/Agent-Pipeline lane holder for the upcoming Task 10 quality-gate r1) to act as mainline integrator for this wave first; mid-wave the principal handed completion (merge 2/2 verification, gates, push) to the auditor session; roles kept serial, no cross-writing.
+- Unblock basis: prior wave excluded Task 8+9 family on QA FAIL-P1 (sec2.3 amendment durability) + P2 race window; fix lane delivered r3 628f672 and QA lane codex/qa-task-09-idempotency-wire-r2 verified it (78c3ce6, Phase B lane PASS, both xfail probes promoted to hard assertions).
+- Merge 1/2 (3b317e1): no-ff adoption of codex/qa-task-09-idempotency-wire-r2 78c3ce6 = QA exact tested combination carrying Task 8 c599030 + Task 9 ed65f40 + r2 e403c66 + r3 628f672.
+- Merge 2/2 (1f2999f): no-ff adoption of codex/ccr-analysis-01-addendum-a1 9bb19eb = CCR-20260725-ANALYSIS-01 Addendum A1 (32dfbd1 ten-item gap reconciliation + 9bb19eb line-reference fix; docs-only, canonical syncs to 06/10).
+- Integration-owned QA revision (this commit, per QA report directive "extend expected with the ten Task 8/9 tables when integrating", SIM-01/SIM-02A precedent): tests/test_models.py exact-table-set extended with the 5 Task 8 + 5 Task 9 canonical tables (equality kept, not relaxed) + explicit app.evidence.models / app.analyses.models imports so the assertion is deterministic under any test selection (same registration pattern as migrations/env.py).
+- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (byte-verified base preservation; python resolver, no PowerShell pipeline touches lifecycle bytes).
+- Audit honesty (carried from the integrator session): a first local resolution attempt of merge 1 (fae72ff) was discarded before any push after self-audit caught PowerShell inline-quoting breaking the resolver, which left raw conflict markers in the committed lifecycle files; redone with the file-based byte-safe resolver as 3b317e1.
+- Audit note (carried from the integrator session): pre-existing pushed main lineage (SIM Alpha wave) dropped the final 53-byte line of bd9fde1:HISTORY tail; not introduced here, not rewritten (append-only); lane suffix computed against the full bd9fde1 base so no lane bytes were lost.
+- Gates (disposable PG16 ludus-pg-mainline-w1 @55447, main venv, zero installs): alembic heads = single f9a4b7e2c8d3 exact; upgrade + check clean; full suite pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX = 784 passed / 0 failed / 0 xfailed / 0 xpassed (the previously disclosed QA-owned exact-table-set failure is now green via the directed revision); ruff tests/test_models.py all-pass; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; conflict-marker scan 0; HISTORY pure-append vs published main (deleted-lines = 0).
+- Now canonical on main: Task 8 evidence ledger (retrieval_tasks/raw_artifacts/quality_assessments/evidence_items/evidence_relations, quality gateway, provider adapters, SSRF guard) + Task 9 analysis runtime (analysis_charters/analysis_events/research_packets/run_intervention_classifications/run_resolutions, charter/run state machines, DB-queue worker, SSE/resolutions/cancel routers UNMOUNTED) + r2/r3 idempotency & amendment-durability fixes + QA battery + ANALYSIS-01 Addendum A1 contract docs. ready_for_public_route: NO (mounting rights with the integration wave, A3).
+- Unlocked next: A3 mounting lane Gate 0 precondition now satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.

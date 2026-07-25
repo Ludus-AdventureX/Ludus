@@ -11,6 +11,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 from app.db import Base, get_database_url
+
+# Task 8/9 models live in their own modules but register on the shared Base;
+# import them so the exact-table-set assertion is deterministic regardless of
+# test selection (same pattern as migrations/env.py).
+import app.analyses.models  # noqa: F401  (registers analysis runtime tables)
+import app.evidence.models  # noqa: F401  (registers evidence ledger tables)
 from app.models import (
     AnalysisRun,
     CausalGraph,
@@ -118,6 +124,18 @@ def test_core_table_set_and_workspace_scope() -> None:
         # CCR-20260724-SIM-02A P1+P3: frozen profiles + idempotency persistence.
         "decision_maker_profiles",
         "idempotency_records",
+        # Task 8: evidence ledger & information quality gateway.
+        "retrieval_tasks",
+        "raw_artifacts",
+        "quality_assessments",
+        "evidence_items",
+        "evidence_relations",
+        # Task 9: persistent deep analysis state machine & worker.
+        "analysis_charters",
+        "analysis_events",
+        "research_packets",
+        "run_intervention_classifications",
+        "run_resolutions",
     }
     assert set(Base.metadata.tables) == expected
 
