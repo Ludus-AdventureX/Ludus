@@ -1,6 +1,13 @@
 ﻿# Ludus
 
 > Ludus is an AI-native decision operating system that turns complex questions into traceable evidence, structured analysis, causal simulations, and human-signed, reviewable decisions.
+## Promotion animation
+
+
+
+https://github.com/user-attachments/assets/89ed0993-a0e2-4159-a5f6-9ec83a8b0f5a
+
+
 
 ## Current status
 
