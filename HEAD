@@ -1,9 +1,9 @@
-# Work Log: sim-eng-02 mainline integration r1
+# Work Log: sim-eng-02 mainline integration - acceptance complete
 
-- Status: active; assembling integration candidate codex/sim-eng-02-mainline-integration-r1 from remote main 387041d40442faf16557b266ef3f844b7af8fb69 (live re-read at kickoff).
-- Role: Mainline Audit / Integration Lead (QA executed by Lead this slice under principal governance waiver, recorded in the QA lane).
-- Inputs (live-verified): adjudication chain codex/ccr-eng-02-implementation-adjudication-a1 @ 19f552c901789371a23c6b0d3af7fb32b8823254 (carries SIM-02A contract 0289b2e + ENG-02 contract c8c9167 + adjudication A1); QA exact combination codex/qa-sim-eng-02-profile-enforcement-r1 @ dc57fe60b56fc547f31d9231ee8277979bf77de0 (carries product chain fb75b8f -> edaa842 -> d43e36e -> d2ae634 + QA flip; fresh 461/121, CONTRACT_DRIFT_OK, migration head b2c7e9d4a1f6).
-- Plan: kickoff -> --no-ff merge 19f552c -> --no-ff merge dc57fe6 -> byte gates -> SHA-anchored fresh acceptance (expect exact 461 / lens_lanes 121, single head b2c7e9d4a1f6, CONTRACT_DRIFT_OK) -> acceptance archive -> live re-read -> ff-only publication.
-- No cherry-picks; both audit chains enter via independent no-ff merges; conflicts allowed only on HEAD/HISTORY (append-only 3-way).
-- Incorporated lane HEAD records (three-party lifecycle rule): adjudication lane (PRODUCT_FIX_REQUIRED verdict, addenda frozen) and QA lane (governance-waiver QA, RELEASE_CONTENT PASS, 461/121 fresh, merge object = QA head dc57fe6).
+- Status: acceptance complete on candidate 4d6dfab8165118b1d267e67564a09e74ea7541bb; publication pending final live re-read + ff-only push.
+- Role: Mainline Audit / Integration Lead (QA executed by Lead this slice under principal governance waiver, recorded in the QA lane and handoff).
+- Topology: 387041d -> 39897e9 kickoff -> 27ddf1e (--no-ff adjudication chain 19f552c: SIM-02A 0289b2e + ENG-02 c8c9167 + adjudication A1) -> 4d6dfab (--no-ff QA exact dc57fe6: fb75b8f -> edaa842 -> d43e36e -> d2ae634 + QA flip). Conflicts confined to HEAD/HISTORY, resolved append-only 3-way; one local mis-resolved merge attempt (36d1049, conflict markers in HEAD) was detected by self-audit, discarded BEFORE any push, and redone cleanly - no remote ever saw it.
+- Byte gates ALL_PASS: 24 QA-exact paths blob-identical to dc57fe6; 7 contract-doc paths blob-identical to 19f552c; strategic_lenses/analyses/agents/workers/apps/web/packages/contracts/scripts/types.py/schemas.py untouched vs main; candidate changed-path set (33) exactly the union of the two chains + lifecycle.
+- Fresh SHA-anchored acceptance (detached 4d6dfab, disposable PG16 @55432, removed after): alembic heads/current = b2c7e9d4a1f6 single head, upgrade + check clean; full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed (-W error, exact repeat of QA count); same-db lens_lanes 121; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; ruff all-pass; packages/contracts git-clean.
+- Next: live re-read remote main (must still be 387041d) -> ff-only -> push -> re-read -> publication archive.
 - Secret policy: do not record credentials here.
