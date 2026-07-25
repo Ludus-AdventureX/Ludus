@@ -3600,7 +3600,9 @@ Verbatim Phase A HEAD content:
 - Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
 
-## Archived work 2026-07-25 (Asia/Shanghai) - prior main HEAD: READ-01 case/sandbox read surface + audit binding (main @ 465869a), displaced by the release-integration reconcile merge (verbatim from origin/main:HEAD)
+## Archived work (replaced by READ-01 web flip lane)
+
+## Archived work 2026-07-25 (Asia/Shanghai) - prior main HEAD: READ-01 case/sandbox read surface + audit binding (main @ 465869a), carried through the release-integration reconcile merge (verbatim from origin/main:HEAD; original main archive header restored above, zero-deletion audit)
 
 # Work Log: READ-01 case/sandbox read surface + audit binding (r1, reconciled)
 
