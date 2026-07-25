@@ -483,11 +483,19 @@ async def test_idempotency_schema_check_constraints_fail_closed(
     await session.flush()
 
 
-def test_no_idempotency_runtime_flow_exists_in_this_slice() -> None:
-    """P3 is persistence only: the simulations package must not grow replay logic here."""
+def test_idempotency_runtime_flow_now_lives_in_the_run_api_slice() -> None:
+    """Superseded P3 guard: the SIM-02A implementation wave (I1) delivered the
+    replay/conflict runtime flow, so "no runtime flow" no longer holds. The
+    invariant that survives is placement: the service only persists the record
+    atomically with its run; header parsing, hashing, replay, and conflict
+    decisions live in the dedicated route-layer modules.
+    """
 
+    import app.simulations.idempotency as idempotency_module
     import app.simulations.service as service_module
 
     source = inspect.getsource(service_module)
-    assert "IdempotencyRecord" not in source
-    assert "idempotency" not in source.lower()
+    assert "insert_idempotency_record" in source  # same-transaction persistence
+    for route_layer_only in ("validate_idempotency_key", "normalized_request_hash"):
+        assert route_layer_only not in source
+        assert hasattr(idempotency_module, route_layer_only)
