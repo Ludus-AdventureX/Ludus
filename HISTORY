@@ -2934,3 +2934,14 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Post-merge gates before any push: api pytest full suite (-W error, disposable PG16) + web pnpm test/build + conflict-marker scan + CONTRACT_DRIFT_OK.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
+
+## Archived Task 13 owner-lane worklog before QA lane kickoff - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 13 sandbox r1 — independent QA lane
+
+- Status: in progress on codex/qa-task-13-sandbox-r1 (worktree decision-lab-G0/worktrees/qa-task13-sandbox-r1; pre-existing clean worktree at candidate head reused, disclosed).
+- Gate 0 echo: refs/heads/main = 4941e58bee3b91f14a4a92b7fab92750ef85b3b6; candidate codex/task-13-sandbox-r1 = 904708780099db8000f99c55b0ef36a852fb5cdc (chain 70e7dbe -> 0d5e8be -> 9047087 verified linear; 70e7dbe is ancestor of main; merge-base(candidate, main) = 70e7dbe; interval apps/web zero diff re-verified).
+- Role: independent QA (not the implementing session). Scope: QA-owned adversarial test additions + audits only; no production file edits.
+- Gates: (1) independent rerun 56 tests + build + lint; (2) adversarial supplement >=5 (idempotency key reuse w/o new key, idempotencyReplay presentation, 404 anti-enumeration copy, interpret threshold no extrapolation beyond tested points, sandboxCaseDataRouteAvailable flip safety); (3) adjudication review: write-domain path per plan verbatim + 8-slot contract untouched/append-only + Phase 0 zero regression; (4) merge-base diff scope audit incl. simulation-demo-panel.test.tsx untouched; (5) handoff §8 spot checks.
+- Verdict + QA tip SHA reported at completion; PASS/FAIL honest.
+- Secret policy: do not record credentials here.
