@@ -313,10 +313,19 @@ class DeepSeekModelProvider:
     transport: httpx.AsyncBaseTransport | None = None
 
     def _client(self) -> httpx.AsyncClient:
+        # When no test transport is injected, use a default transport WITH
+        # connection-level retries: DeepSeek intermittently drops the first cold
+        # TLS connection, and a multi-stage analysis run makes many sequential
+        # calls, so a single un-retried ConnectError would fail the whole run.
+        # httpx retries only the connection establishment (before any bytes are
+        # sent), so it stays idempotent and never replays a partial request.
+        transport = self.transport
+        if transport is None:
+            transport = httpx.AsyncHTTPTransport(retries=3)
         return httpx.AsyncClient(
             base_url=self.base_url,
             timeout=self.timeout_seconds,
-            transport=self.transport,
+            transport=transport,
             headers={"Authorization": f"Bearer {self.api_key}"},
         )
 

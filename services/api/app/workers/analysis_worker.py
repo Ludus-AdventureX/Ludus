@@ -395,9 +395,15 @@ _STAGE_RESULT_SCHEMA: Mapping[str, Any] = {
     "type": "object",
     "required": ["output"],
     "properties": {
-        "output": {"type": "object"},
+        # Live models emit `output` as an object OR a plain summary string; the
+        # executor below normalizes any non-object output to {"value": ...}
+        # before persistence, so tolerate both here rather than failing the
+        # whole multi-stage run on a cosmetic type variance.
+        "output": {"type": ["object", "string"]},
         "packets": {"type": "array"},
-        "lensPayloads": {"type": "object"},
+        # Some models emit [] instead of {} for "no lenses"; the executor
+        # coerces a non-object lensPayloads to {} before use.
+        "lensPayloads": {"type": ["object", "array"]},
         "qualityGatePassed": {"type": "boolean"},
         "validatorFindings": {"type": "array"},
     },
@@ -434,9 +440,19 @@ def build_role_executors_from_model_provider(
         completion = await complete_structured_checked(
             provider,
             system=(
-                "You are a Ludus analysis stage executor. Return ONLY JSON with "
-                "keys output, packets, lensPayloads, qualityGatePassed and "
-                "validatorFindings. Do not include hidden reasoning."
+                "You are a Ludus analysis stage executor. Return ONLY a JSON "
+                "object with EXACTLY these keys and value types: "
+                '"output" a JSON OBJECT (never a string) holding this stage\'s '
+                "structured findings; "
+                '"packets" a JSON ARRAY of objects (may be empty); '
+                '"lensPayloads" a JSON OBJECT keyed by lens type (use {} if none, '
+                "never an array); "
+                '"qualityGatePassed" a boolean; '
+                '"validatorFindings" a JSON ARRAY (may be empty). '
+                "Example: {\"output\":{\"summary\":\"...\",\"keyFindings\":[]},"
+                '"packets":[],"lensPayloads":{},"qualityGatePassed":true,'
+                '"validatorFindings":[]}. '
+                "Do not include hidden reasoning."
             ),
             messages=(
                 ModelMessage(
