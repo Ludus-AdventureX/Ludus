@@ -2604,3 +2604,10 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Stage: Simulation Repository/Service Foundation Complete. Unlocked next: CCR-SIM-02 (routes/API contract) from this new baseline. Web r2 remains REMOTE_SYNC_BLOCKED.
 - Baseline rule: all subsequent lanes must branch from the latest remote-verified main (>= this archive commit).
 - No credentials or secret values are recorded here.
+
+## Sim-ENG-02 Mainline Integration Kickoff - 2026-07-25 (Asia/Shanghai)
+
+- Role: Mainline Audit / Integration Lead. Live gate: remote main = 387041d40442faf16557b266ef3f844b7af8fb69; adjudication head 19f552c901789371a23c6b0d3af7fb32b8823254; QA exact head dc57fe60b56fc547f31d9231ee8277979bf77de0 (chain 387041d -> fb75b8f -> edaa842 -> d43e36e -> d2ae634 -> dc57fe6, each single-parent proven in prior lanes).
+- Governance waiver in force for this slice (principal directive): QA authority merged into the Lead; recorded in SIM_ENG_02_PROFILE_ENFORCEMENT_QA_HANDOFF.md and the QA lane HISTORY. All other mainline discipline unchanged.
+- Assembly plan: kickoff (this commit) -> --no-ff merge adjudication chain 19f552c (contract docs + addenda + handoffs) -> --no-ff merge QA exact combination dc57fe6 (product + owner tests + QA flip + handoffs) -> byte gates -> fresh SHA-anchored acceptance on disposable PG16 @55432 (expected exact full suite 461 passed / 0 failed / 0 xfailed / 0 xpassed with -W error; same-db lens_lanes 121; alembic single head b2c7e9d4a1f6; official CONTRACT_DRIFT_OK) -> acceptance archive -> live re-read of main (must still be 387041d) -> ff-only push -> re-read -> publication archive.
+- No credentials or secret values are recorded here.
