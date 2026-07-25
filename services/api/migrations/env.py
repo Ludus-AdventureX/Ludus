@@ -27,6 +27,10 @@ import app.analyses.claims  # noqa: F401  (registers claims + claim_evidence)
 import app.analyses.devils_advocate  # noqa: F401  (registers challenges)
 import app.analyses.quality_gate  # noqa: F401  (registers quality_gate_results)
 import app.reports.models  # noqa: F401  (registers report/export artifacts)
+# Task 4/5 companion table (dossier_version_snapshots) registers the same way;
+# without this import `alembic check` on the merged chain reports a spurious
+# remove_table drift (QA finding F1, codex/qa-task-04-05-backend-r1).
+import app.dossiers.models  # noqa: F401  (registers dossier_version_snapshots)
 
 config = context.config
 # The login throttle table lives on a deliberate module-local MetaData
