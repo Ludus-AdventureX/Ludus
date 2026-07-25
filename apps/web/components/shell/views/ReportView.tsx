@@ -1,8 +1,9 @@
-import { PhaseSlot } from "@/components/shell/PhaseSlot";
+import { EvidenceDrawerTrigger } from "@/components/quality/EvidenceDrawerTrigger";
 
 // Look V7 `#view-report` static layout frame (Phase 0 skeleton).
 // Recommendation, conditions and dissent render only from canonical
-// Report contracts in later phases; no verdict is fabricated here.
+// Report contracts in later phases; no verdict is fabricated here. Task 11
+// B2 fills the evidence-drawer-trigger anchor (replace-phase-slot-node only).
 
 export function ReportView() {
   return (
@@ -34,7 +35,7 @@ export function ReportView() {
           <span className="margin-label">最强反对意见</span>
           <p>反方审查与建议翻转条件将随真实报告一同呈现。</p>
           <hr />
-          <PhaseSlot name="evidence-drawer-trigger" label="关键证据入口" note="EvidenceDrawer 触发点：主要判断可点击，抽屉展示支持/反对证据与来源等级。" />
+          <EvidenceDrawerTrigger />
         </aside>
       </article>
     </section>

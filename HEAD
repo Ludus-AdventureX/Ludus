@@ -1,10 +1,11 @@
 # Work Log: Task 10 + Task 4/5 remaining mainline integration glue (PR1)
 
 - Status: ACTIVE on isolated worktree `decision-lab-pr1-task10-0405-r1`.
-- Branch: `codex/integration-task10-task04-05-r1`; base = live remote main `420a42ceca73dea7fb44d427683c431ab3092f1e` verified on July 25, 2026.
-- Mainline fact: accepted Task 10 QA tip `2bc4da7` and Task 4/5 QA tip `636831e` are already ancestors of live main; this PR will not replay them.
-- Scope: publish the remaining Report read/export routes; mount Task 4/5 subjects/cases/conversations and reports under the workspace router; add the provider-neutral AnalysisWorker executor seam; regenerate official contracts; add integration-only tests.
+- Branch: `codex/integration-task10-task04-05-r1`; original base `420a42ceca73dea7fb44d427683c431ab3092f1e`, reconciled by no-ff merge with live main `81304102178f1b647148b82fd90d5730e65bcd64` after Task 11 B2 landed concurrently.
+- Mainline fact: accepted Task 10 QA `2bc4da7`, Task 4/5 QA `636831e`, Task 11 candidate `895e3c8`, and Task 11 QA battery `66e8205` are already present; this PR does not replay them.
+- Scope: publish remaining Report read/export routes; mount subjects/cases/conversations/reports under the workspace router; add provider-neutral AnalysisWorker executor seam; regenerate official contracts; add integration-only tests.
 - Explicit exclusions: Decision/Signoff/Review routes, models, migration and generated contract surface remain outside PR1.
-- Source policy: `codex/release-integration-task04-19-r1@9806043` is read-only evidence; its dirty Playwright/config files are not touched. No rebase/amend/force.
-- Release gates: API/Web/contracts/Alembic/Decision OS/static/security gates, P0/P1 = 0, PR review, merge commit, and live remote-main re-read.
+- Source policy: `codex/release-integration-task04-19-r1@9806043` remains read-only evidence; its dirty Playwright/config files are untouched. No rebase/amend/force.
+- Verification so far: targeted Task 10/4/5/Report suite 92 passed on disposable PostgreSQL 16; full API suite 927 passed; web 68 passed, typecheck/lint/build passed; Alembic single head `a7c3e9f1b5d8`; contract drift and Decision OS checks passed. All gates will be rerun after reconciliation.
+- Release gates: P0/P1 = 0, PR review, merge commit, and live remote-main re-read.
 - Secret policy: do not read, print, persist, or commit credentials.
