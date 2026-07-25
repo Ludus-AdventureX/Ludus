@@ -6,8 +6,8 @@ import pytest
 
 from app.agents.model_provider import FixtureModelProvider
 from app.main import app
-from app.workers.analysis_worker import build_role_executors_from_model_provider
 from app.types import AnalysisRunStatus
+from app.workers.analysis_worker import build_role_executors_from_model_provider
 
 
 def test_release_resource_routes_are_published_in_openapi() -> None:
@@ -25,6 +25,7 @@ def test_release_resource_routes_are_published_in_openapi() -> None:
         "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}",
         "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/reports/{reportId}/exports",
         "/api/workspaces/{workspaceId}/exports/{exportArtifactId}",
+        "/api/workspaces/{workspaceId}/exports/{exportArtifactId}/content",
         "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/signoff-requests",
         "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}/sign",
         "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/decisions",
@@ -35,8 +36,11 @@ def test_release_resource_routes_are_published_in_openapi() -> None:
 
 
 def test_decision_record_append_only_migration_is_present() -> None:
-    migration = Path(
-        "services/api/migrations/versions/c8d4e6f0a1b2_add_decision_records_reviews.py"
+    migration = (
+        Path(__file__).resolve().parents[1]
+        / "migrations"
+        / "versions"
+        / "c8d4e6f0a1b2_add_decision_records_reviews.py"
     ).read_text(encoding="utf-8")
     assert "decision_records_append_only" in migration
     assert "BEFORE UPDATE OR DELETE ON decision_records" in migration

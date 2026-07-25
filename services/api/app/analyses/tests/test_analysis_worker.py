@@ -85,11 +85,37 @@ def _recording_lens_writer():
     return writer, written
 
 
+def _stub_lens_audit(*, ok: bool = True):
+    """Recording audit stub (MOUNT-02 Addendum A1 §A1-⑥ binding tests).
+
+    The stub records the referenced_artifact_ids EXACTLY as the worker passed
+    them so the as-is (no parse/normalize/dedup/reorder) contract is pinned;
+    the real audit's own semantics are covered by test_analysis_quality_gate.
+    """
+
+    from app.analyses.quality_gate import LensSetAudit
+
+    calls: list[dict] = []
+
+    async def audit(session, **kwargs) -> LensSetAudit:
+        calls.append(dict(kwargs))
+        return LensSetAudit(
+            ok=ok,
+            reason_codes=() if ok else ("strategic_lens_incomplete",),
+            findings=(),
+        )
+
+    return audit, calls
+
+
 async def test_full_run_pipeline_reaches_ready_with_five_lenses(session, world) -> None:
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
     executors, calls = _stub_executors()
     writer, written = _recording_lens_writer()
-    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+    audit, audit_calls = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
 
     claimed = await worker.run_once(workspace_id=world.workspace_id)
     assert claimed == run.analysis_run_id
@@ -106,6 +132,13 @@ async def test_full_run_pipeline_reaches_ready_with_five_lenses(session, world) 
         "meadows_leverage_points",
     ]
     assert len(refreshed.strategic_lens_artifact_ids) == 5
+    # §A1-⑥ binding: the audit ran once for the full run and received the
+    # persisted id list AS-IS (same order, same values, no normalization).
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["referenced_artifact_ids"] == list(
+        refreshed.strategic_lens_artifact_ids
+    )
+    assert audit_calls[0]["charter_id"] == refreshed.charter_id
     # Safety Anchor sub-stage ran inside criticizing before the main call.
     assert ("critic", "criticizing", "safety_anchor") in calls
     anchor_index = calls.index(("critic", "criticizing", "safety_anchor"))
@@ -143,7 +176,10 @@ async def test_focused_run_skips_all_lens_stages(session, world) -> None:
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FOCUSED)
     executors, calls = _stub_executors()
     writer, written = _recording_lens_writer()
-    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+    audit, audit_calls = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
 
     await worker.run_once(workspace_id=world.workspace_id)
 
@@ -152,6 +188,8 @@ async def test_focused_run_skips_all_lens_stages(session, world) -> None:
     assert AnalysisRunStatus(refreshed.status) == S.READY
     assert written == []  # no lens scheduling at all
     assert refreshed.strategic_lens_artifact_ids == []
+    # Focused runs have zero lens surface: the audit never runs (§A1-⑥).
+    assert audit_calls == []
     # Safety Anchor still mandatory for focused critics.
     assert ("critic", "criticizing", "safety_anchor") in calls
     events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
@@ -162,7 +200,10 @@ async def test_validation_failure_blocks_and_never_repairs(session, world) -> No
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
     executors, _ = _stub_executors(quality_gate_passed=False)
     writer, written = _recording_lens_writer()
-    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+    audit, _audit_calls = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
 
     await worker.run_once(workspace_id=world.workspace_id)
 
@@ -174,6 +215,36 @@ async def test_validation_failure_blocks_and_never_repairs(session, world) -> No
     assert len(written) == 5
     events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
     assert events[-1].type == "analysis.blocked"
+
+
+async def test_real_audit_blocks_full_run_when_persisted_set_is_corrupt(
+    session, world
+) -> None:
+    """§A1-⑥ red light with the DEFAULT (real) audit: the recording writer
+    persists NO ready rows, so the persisted five-lens set is corrupt and the
+    validating gate must land on blocked — the executor's own quality verdict
+    (passed) cannot override the audit."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors(quality_gate_passed=True)
+    writer, written = _recording_lens_writer()
+    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
+    assert len(written) == 5  # the stages did hand payloads to the writer
+    events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
+    blocked = [event for event in events if event.type == "analysis.blocked"]
+    assert blocked, "corrupt persisted lens set must block readiness"
+    codes = {
+        finding["code"]
+        for finding in blocked[-1].payload.get("findings", [])
+        if finding.get("source") == "lens_set_audit"
+    }
+    assert "strategic_lens_incomplete" in codes
 
 
 async def test_cooperative_cancellation_stops_at_next_boundary(session, world) -> None:

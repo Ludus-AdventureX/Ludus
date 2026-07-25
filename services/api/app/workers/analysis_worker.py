@@ -52,6 +52,8 @@ from app.strategic_lenses.repository import (
     apply_validation_verdict,
     persist_lens_stage_output,
 )
+from app.analyses.models import AnalysisCharter
+from app.analyses.quality_gate import audit_full_run_lens_set
 from app.analyses.repository import AnalysisRuntimeRepository
 from app.models import AnalysisRun
 from app.types import AnalysisRunStatus, FormalAnalysisLevel, OriginMode
@@ -102,6 +104,7 @@ class StageResult:
 
 RoleExecutor = Callable[[AnalysisRun, AnalysisRunStatus, Mapping[str, Any]], Awaitable[StageResult]]
 LensWriter = Callable[..., Awaitable[UUID]]
+LensAudit = Callable[..., Awaitable[Any]]
 
 
 @dataclass(frozen=True)
@@ -165,12 +168,17 @@ class AnalysisWorker:
         *,
         executors: RoleExecutors,
         lens_writer: LensWriter | None = None,
+        lens_audit: LensAudit | None = None,
         origin_mode: OriginMode = OriginMode.FIXTURE,
     ) -> None:
         self._session = session
         self._repo = AnalysisRuntimeRepository(session)
         self._executors = executors
         self._lens_writer = lens_writer or default_lens_writer
+        # MOUNT-02 Addendum A1 §A1-⑥ binding: the Task 10 five-lens audit is the
+        # DEFAULT consumer at the validating gate; injection exists for stubbed
+        # orchestration tests only, production wiring uses the shipped audit.
+        self._lens_audit = lens_audit or audit_full_run_lens_set
         self._origin_mode = origin_mode
 
     @property
@@ -263,6 +271,43 @@ class AnalysisWorker:
                     # Validation validates and blocks ONLY: no artifact writes,
                     # no synthesis, no repair of missing artifacts here.
                     passed = bool(result.quality_gate_passed)
+                    audit_findings: list[dict[str, Any]] = []
+                    if is_full:
+                        # MOUNT-02 Addendum A1 §A1-⑥ audit binding: the persisted
+                        # lens-id list travels AS-IS — exact-equality (and any
+                        # normalization question) is the audit's job, never the
+                        # caller's. A failed audit blocks readiness like any
+                        # other severe validation failure.
+                        fresh = await self._fresh(run)
+                        charter = await self._session.get(
+                            AnalysisCharter, fresh.charter_id
+                        )
+                        frozen_types = (
+                            list(charter.required_strategic_lens_types)
+                            if charter is not None
+                            else [
+                                lens
+                                for lenses in FULL_LENS_SCHEDULE.values()
+                                for lens in lenses
+                            ]
+                        )
+                        audit = await self._lens_audit(
+                            self._session,
+                            workspace_id=workspace_id,
+                            decision_case_id=fresh.decision_case_id,
+                            analysis_run_id=run_id,
+                            charter_id=fresh.charter_id,
+                            frozen_lens_types=frozen_types,
+                            referenced_artifact_ids=list(
+                                fresh.strategic_lens_artifact_ids
+                            ),
+                        )
+                        if not audit.ok:
+                            passed = False
+                            audit_findings = [
+                                {"code": code, "source": "lens_set_audit"}
+                                for code in audit.reason_codes
+                            ]
                     await self._repo.record_stage_completed(
                         workspace_id,
                         run_id,
@@ -281,6 +326,7 @@ class AnalysisWorker:
                         quality_gate_passed=passed,
                         payload={
                             "findings": [dict(f) for f in result.validator_findings]
+                            + audit_findings
                         },
                     )
                     return

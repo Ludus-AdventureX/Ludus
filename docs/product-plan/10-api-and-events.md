@@ -54,6 +54,7 @@ Idempotency-Key: charter_001_v1_full
 | `GET` | `/api/workspaces/{workspaceId}/cases` | 列出当前 Workspace 的案例 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}` | 读取当前 `DecisionCase`、确认档案版本和 `ArgumentNode[]` 投影 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/versions/{version}` | 读取历史版本 |
+| `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analyses` | 按创建时间倒序列出该 Case 的 AnalysisRun 锚点（CCR-20260726-READ-01；anchor 投影，完整状态仍走 run 状态路由） |
 | `PATCH` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}` | 更新用户确认的结构化档案 |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/messages` | 发送讨论消息并生成候选档案变更 |
 | `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/candidates` | 读取待审阅 `CandidateRevision` |
@@ -89,6 +90,7 @@ Idempotency-Key: charter_001_v1_full
 | `POST` | `/api/workspaces/{workspaceId}/files` | 上传 Workspace 文件并创建 RawArtifact |
 | `GET` | `/api/workspaces/{workspaceId}/files/{rawArtifactId}` | 鉴权读取上传文件 metadata/content |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations/from-report` | 从 ready 报告生成沙盘 |
+| `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations` | 列出该 Case 的因果图锚点（CCR-20260726-READ-01；graphId/title/currentGraphVersionId/reportArtifactId） |
 | `GET` | `/api/workspaces/{workspaceId}/simulations/{graphId}/versions` | 分页读取图版本历史 |
 | `GET` | `/api/workspaces/{workspaceId}/simulations/{graphId}/versions/{graphVersionId}` | 读取精确图版本 |
 | `POST` | `/api/workspaces/{workspaceId}/simulations/{graphId}/runs` | 运行持久化的 experimental/formal 情景推演 |

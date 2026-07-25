@@ -349,6 +349,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analyses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Case Analysis Runs
+         * @description Run-anchor list for one decision case (CCR-20260726-READ-01 §1).
+         */
+        get: operations["list_case_analysis_runs_api_workspaces__workspaceId__cases__decisionCaseId__analyses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/analysis-charters": {
         parameters: {
             query?: never;
@@ -414,23 +434,6 @@ export interface paths {
         put?: never;
         /** Reject Candidate */
         post: operations["reject_candidate_api_workspaces__workspaceId__cases__decisionCaseId__candidates__candidateId__reject_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/decisions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Case Decisions */
-        get: operations["list_case_decisions_api_workspaces__workspaceId__cases__decisionCaseId__decisions_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -505,17 +508,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/signoff-requests": {
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/simulations": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Case Simulation Anchors
+         * @description Case→graph anchor list (CCR-20260726-READ-01 §2).
+         *
+         *     Anchors only: graph id, title, current-version pointer and the source
+         *     report — enough for the sandbox to key the mounted graph/run reads.
+         */
+        get: operations["list_case_simulation_anchors_api_workspaces__workspaceId__cases__decisionCaseId__simulations_get"];
         put?: never;
-        /** Create Signoff Request */
-        post: operations["create_signoff_request_api_workspaces__workspaceId__cases__decisionCaseId__signoff_requests_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -550,58 +559,6 @@ export interface paths {
         put?: never;
         /** Create Quick Analysis */
         post: operations["create_quick_analysis_api_workspaces__workspaceId__conversations__conversationId__quick_analyses_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/workspaces/{workspaceId}/decisions/{decisionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Decision */
-        get: operations["read_decision_api_workspaces__workspaceId__decisions__decisionId__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/workspaces/{workspaceId}/decisions/{decisionId}/reviews": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Decision Reviews */
-        get: operations["list_decision_reviews_api_workspaces__workspaceId__decisions__decisionId__reviews_get"];
-        put?: never;
-        /** Create Decision Review */
-        post: operations["create_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/workspaces/{workspaceId}/decisions/{decisionId}/reviews/{reviewId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Decision Review */
-        get: operations["read_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews__reviewId__get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -744,57 +701,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Signoff Request */
-        get: operations["read_signoff_request_api_workspaces__workspaceId__signoff_requests__signoffRequestId__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}/nonce-rotations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rotate Signoff Nonce */
-        post: operations["rotate_signoff_nonce_api_workspaces__workspaceId__signoff_requests__signoffRequestId__nonce_rotations_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/workspaces/{workspaceId}/signoff-requests/{signoffRequestId}/sign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sign Signoff Request */
-        post: operations["sign_signoff_request_api_workspaces__workspaceId__signoff_requests__signoffRequestId__sign_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/workspaces/{workspaceId}/simulations/{graphId}/runs": {
         parameters: {
             query?: never;
@@ -827,6 +733,46 @@ export interface paths {
          * @description GET replay (§6): active membership only; byte-equal frozen inputs + results.
          */
         get: operations["get_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs__simulationRunId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Graph Versions
+         * @description Paged graph-version history, newest first (canonical 10-api row).
+         */
+        get: operations["list_graph_versions_api_workspaces__workspaceId__simulations__graphId__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/versions/{graphVersionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Graph Version
+         * @description Exact immutable graph version with nodes and edges (canonical row).
+         */
+        get: operations["get_graph_version_api_workspaces__workspaceId__simulations__graphId__versions__graphVersionId__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -920,18 +866,6 @@ export interface components {
             status: "open" | "done" | "blocked";
             /** Text */
             text: string;
-        };
-        /** AssumptionResult */
-        AssumptionResult: {
-            /** Assumptionid */
-            assumptionId: string;
-            /** Observation */
-            observation: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "supported" | "weakened" | "falsified" | "unknown";
         };
         /** AuthSessionData */
         AuthSessionData: {
@@ -1321,67 +1255,6 @@ export interface components {
             /** Workspacename */
             workspaceName?: string | null;
         };
-        /** ReviewCreateRequest */
-        ReviewCreateRequest: {
-            /** Actualoutcomes */
-            actualOutcomes: string[];
-            /** Assumptionresults */
-            assumptionResults: components["schemas"]["AssumptionResult"][];
-            /**
-             * Decisionprocessassessment
-             * @enum {string}
-             */
-            decisionProcessAssessment: "sound" | "mixed" | "flawed";
-            /**
-             * Executionassessment
-             * @enum {string}
-             */
-            executionAssessment: "as_planned" | "minor_deviation" | "major_deviation" | "not_executed";
-            /** Externalchanges */
-            externalChanges: string[];
-            /** Lessons */
-            lessons: string[];
-            /** Nextdecisionchanges */
-            nextDecisionChanges: string[];
-            /** Nextreviewdate */
-            nextReviewDate?: string | null;
-            /** Notes */
-            notes: string;
-            /** Observedindicatorvalues */
-            observedIndicatorValues: {
-                [key: string]: string;
-            };
-            /**
-             * Outcome
-             * @enum {string}
-             */
-            outcome: "on_track" | "adjust" | "reverse" | "close";
-            /**
-             * Outcomequality
-             * @enum {string}
-             */
-            outcomeQuality: "positive" | "mixed" | "negative" | "not_yet_observable";
-            /**
-             * Recommendationadoption
-             * @enum {string}
-             */
-            recommendationAdoption: "adopted" | "partially_adopted" | "not_adopted";
-            /**
-             * Reviewdate
-             * Format: date
-             */
-            reviewDate: string;
-            /** Sourceanalysisrunid */
-            sourceAnalysisRunId: string;
-            /** Sourcecaseversion */
-            sourceCaseVersion: number;
-            /** Sourcecausalgraphversionid */
-            sourceCausalGraphVersionId?: string | null;
-            /** Sourcesimulationrunid */
-            sourceSimulationRunId?: string | null;
-            /** Thresholdbreaches */
-            thresholdBreaches: string[];
-        };
         /** RunFrozenSourceRecord */
         RunFrozenSourceRecord: {
             /** Analysisrunid */
@@ -1475,10 +1348,6 @@ export interface components {
              * Format: date-time
              */
             lastSeenAt: string;
-        };
-        /** SignoffCreateRequest */
-        SignoffCreateRequest: {
-            payload: components["schemas"]["SignoffPayload"];
         };
         /** SignoffPayload */
         SignoffPayload: {
@@ -2645,6 +2514,42 @@ export interface operations {
             };
         };
     };
+    list_case_analysis_runs_api_workspaces__workspaceId__cases__decisionCaseId__analyses_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                decisionCaseId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_analysis_charter_api_workspaces__workspaceId__cases__decisionCaseId__analysis_charters_post: {
         parameters: {
             query?: never;
@@ -2772,42 +2677,6 @@ export interface operations {
                 "application/json": components["schemas"]["CandidateRejectRequest"] | null;
             };
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_case_decisions_api_workspaces__workspaceId__cases__decisionCaseId__decisions_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                decisionCaseId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -2978,9 +2847,11 @@ export interface operations {
             };
         };
     };
-    create_signoff_request_api_workspaces__workspaceId__cases__decisionCaseId__signoff_requests_post: {
+    list_case_simulation_anchors_api_workspaces__workspaceId__cases__decisionCaseId__simulations_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+            };
             header?: never;
             path: {
                 decisionCaseId: string;
@@ -2988,14 +2859,10 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SignoffCreateRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
-            201: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3069,149 +2936,6 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_decision_api_workspaces__workspaceId__decisions__decisionId__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                decisionId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_decision_reviews_api_workspaces__workspaceId__decisions__decisionId__reviews_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                decisionId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                decisionId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReviewCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews__reviewId__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                decisionId: string;
-                reviewId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3506,112 +3230,6 @@ export interface operations {
             };
         };
     };
-    read_signoff_request_api_workspaces__workspaceId__signoff_requests__signoffRequestId__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                signoffRequestId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rotate_signoff_nonce_api_workspaces__workspaceId__signoff_requests__signoffRequestId__nonce_rotations_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                signoffRequestId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sign_signoff_request_api_workspaces__workspaceId__signoff_requests__signoffRequestId__sign_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                signoffRequestId: string;
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SignoffSignCommand"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     create_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs_post: {
         parameters: {
             query?: never;
@@ -3655,6 +3273,77 @@ export interface operations {
             path: {
                 graphId: string;
                 simulationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_graph_versions_api_workspaces__workspaceId__simulations__graphId__versions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                graphId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_graph_version_api_workspaces__workspaceId__simulations__graphId__versions__graphVersionId__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                graphId: string;
+                graphVersionId: string;
                 workspaceId: string;
             };
             cookie?: never;

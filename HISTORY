@@ -1,4 +1,4 @@
-﻿# Ludus Work History
+# Ludus Work History
 
 
 ## Archived work 2026-07-22T09:14:38.4399429+08:00
@@ -3177,6 +3177,7 @@ Verbatim Phase A HEAD content:
 - Secret policy: do not record credentials here.
 
 ## Archived Task 8/9 + Addendum A1 integration wave worklog before Task 10 quality-gate r1 kickoff - 2026-07-25 (Asia/Shanghai)
+## Archived work 2026-07-26 (Asia/Shanghai) — prior HEAD: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration (main @ 4941e58), archived by the A3 CCR mount wave
 
 # Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
 
@@ -3304,6 +3305,73 @@ Verbatim Phase A HEAD content:
 - Forbidden this lane: rebase/amend/force-push/cherry-pick; advancing main; new dependencies/tool installs; touching existing shell files, other slots, /demo, guest client, next.config.ts, package.json, services/api/**, packages/contracts/**; secrets zero-record.
 - Acceptance gates: pnpm --dir apps/web test (existing baseline zero regression + new tests), build pass; diff --check / conflict-marker / scope / secret audits clean; handoff docs/handoffs/TASK_13_SANDBOX_R1_HANDOFF.md; push exact SHA + ready_for_qa.
 - Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived Task 8/9 + Addendum A1 integration wave worklog before Task 10 quality-gate r1 kickoff - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
+
+- Status: COMPLETE on worktree decision-lab-mainline-integration (main); both merges + QA-owned assertion revision landed; all gates green; push + live re-read recorded below.
+- Authorization: principal explicitly authorized this session (Ways/Agent-Pipeline lane holder for the upcoming Task 10 quality-gate r1) to act as mainline integrator for this wave first; mid-wave the principal handed completion (merge 2/2 verification, gates, push) to the auditor session; roles kept serial, no cross-writing.
+- Unblock basis: prior wave excluded Task 8+9 family on QA FAIL-P1 (sec2.3 amendment durability) + P2 race window; fix lane delivered r3 628f672 and QA lane codex/qa-task-09-idempotency-wire-r2 verified it (78c3ce6, Phase B lane PASS, both xfail probes promoted to hard assertions).
+- Merge 1/2 (3b317e1): no-ff adoption of codex/qa-task-09-idempotency-wire-r2 78c3ce6 = QA exact tested combination carrying Task 8 c599030 + Task 9 ed65f40 + r2 e403c66 + r3 628f672.
+- Merge 2/2 (1f2999f): no-ff adoption of codex/ccr-analysis-01-addendum-a1 9bb19eb = CCR-20260725-ANALYSIS-01 Addendum A1 (32dfbd1 ten-item gap reconciliation + 9bb19eb line-reference fix; docs-only, canonical syncs to 06/10).
+- Integration-owned QA revision (this commit, per QA report directive "extend expected with the ten Task 8/9 tables when integrating", SIM-01/SIM-02A precedent): tests/test_models.py exact-table-set extended with the 5 Task 8 + 5 Task 9 canonical tables (equality kept, not relaxed) + explicit app.evidence.models / app.analyses.models imports so the assertion is deterministic under any test selection (same registration pattern as migrations/env.py).
+- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (byte-verified base preservation; python resolver, no PowerShell pipeline touches lifecycle bytes).
+- Audit honesty (carried from the integrator session): a first local resolution attempt of merge 1 (fae72ff) was discarded before any push after self-audit caught PowerShell inline-quoting breaking the resolver, which left raw conflict markers in the committed lifecycle files; redone with the file-based byte-safe resolver as 3b317e1.
+- Audit note (carried from the integrator session): pre-existing pushed main lineage (SIM Alpha wave) dropped the final 53-byte line of bd9fde1:HISTORY tail; not introduced here, not rewritten (append-only); lane suffix computed against the full bd9fde1 base so no lane bytes were lost.
+- Gates (disposable PG16 ludus-pg-mainline-w1 @55447, main venv, zero installs): alembic heads = single f9a4b7e2c8d3 exact; upgrade + check clean; full suite pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX = 784 passed / 0 failed / 0 xfailed / 0 xpassed (the previously disclosed QA-owned exact-table-set failure is now green via the directed revision); ruff tests/test_models.py all-pass; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; conflict-marker scan 0; HISTORY pure-append vs published main (deleted-lines = 0).
+- Now canonical on main: Task 8 evidence ledger (retrieval_tasks/raw_artifacts/quality_assessments/evidence_items/evidence_relations, quality gateway, provider adapters, SSRF guard) + Task 9 analysis runtime (analysis_charters/analysis_events/research_packets/run_intervention_classifications/run_resolutions, charter/run state machines, DB-queue worker, SSE/resolutions/cancel routers UNMOUNTED) + r2/r3 idempotency & amendment-durability fixes + QA battery + ANALYSIS-01 Addendum A1 contract docs. ready_for_public_route: NO (mounting rights with the integration wave, A3).
+- Unlocked next: A3 mounting lane Gate 0 precondition now satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Task 10 quality-gate r1 kickoff worklog archived at completion - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 10 claims/synthesis/devils-advocate/quality-gate (r1)
+
+- Status: kickoff on worktree decision-lab-task10-quality-gate-r1, branch codex/task-10-quality-gate-r1, sole parent = main 4941e58bee3b91f14a4a92b7fab92750ef85b3b6 (remote-verified; carries Task 8/9 full chain + ANALYSIS-01 Addendum A1).
+- Role: Ways/Agent-Pipeline Owner (Fable5). The four app/analyses files belong to case_api_data scope per CCR-20260724-Ways-01; this session lands TWO commits with distinct scope trailers (case_api_data: app/analyses four files; ways_agent_pipeline: app/reports + migration + tests + handoff).
+- Plan source: 18-detailed-development-plan.md Task 10 section (L1020-1105 @ 4941e58), consumed verbatim. Contract: CCR-20260725-ANALYSIS-01 (introduced 5ffccf8) + Addendum A1 (32dfbd1 + 9bb19eb), both read from main @ 4941e58.
+- Migration window: sole holder; exactly ONE forward revision chained after f9a4b7e2c8d3, single head preserved; tables claims/claim_evidence/challenges/quality_gate_results/report_artifacts/export_artifacts; strategic_lens_artifacts already exists (d7e2a91c5b48) and is NOT recreated.
+- Write scope: app/analyses/claims.py|synthesis.py|devils_advocate.py|quality_gate.py, app/reports/models.py|schemas.py, one migration, own tests (services/api/tests/test_analysis_quality_gate.py + test_reports_artifacts.py), docs/handoffs, HEAD/HISTORY.
+- Forbidden: app/strategic_lenses/** existing files (validators import-only), app/evidence/**, app/workers/**, app/simulations/**, apps/web/**, packages/contracts/**, app/main.py, rebase/amend/force-push. Routers stay relative/unmounted.
+- Acceptance gates: own tests all green incl. red-light batch (unsupported core claim blocked; full missing/duplicate/wrong-role/cross-run/non-ready lens all blocked; focused lens persistence rejected; Validation never writes artifacts); migration lifecycle clean on disposable PG16; CONTRACT_DRIFT_OK; ruff/compileall/diff-check/secret scan; report SHA + ready_for_qa.
+- Secret policy: do not record credentials here.
+
+## Archived Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration worklog before Task 4+5 backend r1 - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration
+
+- Status: COMPLETE on worktree decision-lab-mainline-integration (main); both merges + QA-owned assertion revision landed; all gates green; push + live re-read recorded below.
+- Authorization: principal explicitly authorized this session (Ways/Agent-Pipeline lane holder for the upcoming Task 10 quality-gate r1) to act as mainline integrator for this wave first; mid-wave the principal handed completion (merge 2/2 verification, gates, push) to the auditor session; roles kept serial, no cross-writing.
+- Unblock basis: prior wave excluded Task 8+9 family on QA FAIL-P1 (sec2.3 amendment durability) + P2 race window; fix lane delivered r3 628f672 and QA lane codex/qa-task-09-idempotency-wire-r2 verified it (78c3ce6, Phase B lane PASS, both xfail probes promoted to hard assertions).
+- Merge 1/2 (3b317e1): no-ff adoption of codex/qa-task-09-idempotency-wire-r2 78c3ce6 = QA exact tested combination carrying Task 8 c599030 + Task 9 ed65f40 + r2 e403c66 + r3 628f672.
+- Merge 2/2 (1f2999f): no-ff adoption of codex/ccr-analysis-01-addendum-a1 9bb19eb = CCR-20260725-ANALYSIS-01 Addendum A1 (32dfbd1 ten-item gap reconciliation + 9bb19eb line-reference fix; docs-only, canonical syncs to 06/10).
+- Integration-owned QA revision (this commit, per QA report directive "extend expected with the ten Task 8/9 tables when integrating", SIM-01/SIM-02A precedent): tests/test_models.py exact-table-set extended with the 5 Task 8 + 5 Task 9 canonical tables (equality kept, not relaxed) + explicit app.evidence.models / app.analyses.models imports so the assertion is deterministic under any test selection (same registration pattern as migrations/env.py).
+- Conflicts both merges confined to HEAD/HISTORY; resolved append-only preserving all lane records (byte-verified base preservation; python resolver, no PowerShell pipeline touches lifecycle bytes).
+- Audit honesty (carried from the integrator session): a first local resolution attempt of merge 1 (fae72ff) was discarded before any push after self-audit caught PowerShell inline-quoting breaking the resolver, which left raw conflict markers in the committed lifecycle files; redone with the file-based byte-safe resolver as 3b317e1.
+- Audit note (carried from the integrator session): pre-existing pushed main lineage (SIM Alpha wave) dropped the final 53-byte line of bd9fde1:HISTORY tail; not introduced here, not rewritten (append-only); lane suffix computed against the full bd9fde1 base so no lane bytes were lost.
+- Gates (disposable PG16 ludus-pg-mainline-w1 @55447, main venv, zero installs): alembic heads = single f9a4b7e2c8d3 exact; upgrade + check clean; full suite pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX = 784 passed / 0 failed / 0 xfailed / 0 xpassed (the previously disclosed QA-owned exact-table-set failure is now green via the directed revision); ruff tests/test_models.py all-pass; official generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; conflict-marker scan 0; HISTORY pure-append vs published main (deleted-lines = 0).
+- Now canonical on main: Task 8 evidence ledger (retrieval_tasks/raw_artifacts/quality_assessments/evidence_items/evidence_relations, quality gateway, provider adapters, SSRF guard) + Task 9 analysis runtime (analysis_charters/analysis_events/research_packets/run_intervention_classifications/run_resolutions, charter/run state machines, DB-queue worker, SSE/resolutions/cancel routers UNMOUNTED) + r2/r3 idempotency & amendment-durability fixes + QA battery + ANALYSIS-01 Addendum A1 contract docs. ready_for_public_route: NO (mounting rights with the integration wave, A3).
+- Unlocked next: A3 mounting lane Gate 0 precondition now satisfiable (c599030 and ed65f40 ancestors of main; TASK_08/TASK_09 handoffs readable in docs/handoffs/).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived Task 4+5 backend r1 worklog before QA lane qa-task-04-05-backend-r1 - 2026-07-25 (Asia/Shanghai)
+
+# Work Log: Task 4+5 backend (dossiers, candidate memory, daily dialogue) r1
+
+- Lane: Case/API/Data Owner (Fable5); branch `codex/task-04-05-backend-r1`; worktree `decision-lab-task04-05-backend-r1`.
+- Gate 0: base = remote-verified main `4941e58bee3b91f14a4a92b7fab92750ef85b3b6` (2026-07-25, Asia/Shanghai; `git ls-remote origin refs/heads/main` confirmed).
+- Rebuild lineage (principal-approved "backup-then-port"): the prior r1 attempt was a single commit `1ea3925` on the stale base `4508b3059e1a71f62f90bdabcfb7a36cfc50cac4`. Gate 0's "zero-commit" premise did not hold; the commit was preserved as tag `archive/task-04-05-backend-r1-1ea3925` (zero work lost, never pushed to origin), the old worktree/branch were removed, this fresh worktree + same-name branch were rebuilt from the new base, and the prior implementation was ported via `git cherry-pick -n 1ea3925`. No rebase/amend/force.
+- New-base adaptation surface (4508b30..4941e58 = 27 commits): `app/models.py`, `app/agents/model_provider.py`, `app/tenancy/routes.py`, `main.py` are byte-identical across the two bases, so the port applied clean (only HEAD/HISTORY conflicted, resolved append-only). Migration chain advanced from head `b2c7e9d4a1f6` to single head `f9a4b7e2c8d3` (via `e7f3a2c9d5b1` evidence-ledger + `f9a4b7e2c8d3` analysis-runtime); the lane's migration-lifecycle test is re-pinned to this new head.
+- Delivered: (1) case list/create/read canonical routes (relative router, frozen 10-api shapes; frontend `caseListRouteAvailable` flips at the mounting wave); (2) ProposeEntry/ConfirmEntry/RejectEntry/ExpireEntry/ReclassifyEntry command objects on frozen canonical tables; (3) immutable snapshots (`dossier_versions` + companion `dossier_version_snapshots`); (4) DeepSeek env-only provider + fixture provider + `complete_structured_checked` (empty-content detection, canonical schema validation, single repair retry, no free-text fallback; reasoning_content dropped in-provider, zero persistence/logging); (5) message persistence with provider/model/token metadata + DecisionSubject binding; (6) post-reply candidate extraction writing only `candidate_revisions` (decision questions + options; opt-out -> empty); (7) QuickAnalysisResult from confirmed entries only, permanently non-formal.
+- Write scope honored: app/dossiers/**, app/cases/**, app/conversations/**, app/agents/model_provider.py (additive only), migrations/versions/a7c3e9f1b5d8 (the released deferred revision, single new file), own tests, handoff, HEAD/HISTORY. Forbidden domains untouched (evidence/analyses/workers/strategic_lenses/simulations, apps/web, packages/contracts, main.py, models.py, all pre-existing migration files).
+- Migration discipline: code-first; deferral RELEASED. A1 (Task 10) reported migration rev-id `b6e8f3a1d7c2` (add_analysis_outputs, after `f9a4b7e2c8d3`); this lane's `a7c3e9f1b5d8_add_dossier_version_snapshots.py` now lands with `down_revision = 'b6e8f3a1d7c2'`, generated from `app/dossiers/models.py` metadata. The parent FILE ships on the A1 branch, so in-worktree the revision has a dangling parent by design (lands last; alembic-applicable only after the integration merge — lifecycle upgrade/downgrade verification is INTEGRATION-WAVE-owned). QA-7 re-pinned to the released state (exact 10-file `versions/` set, chain wiring `a7c3e9f1b5d8` -> `b6e8f3a1d7c2`, expected in-worktree head pair).
+- Gates: "PENDING" in the earlier revision of this line referred ONLY to the pre-push re-verification pass on the new base; it was COMPLETED before the port commit `6edeb4a` and the numbers are final in the handoff §Acceptance gates (owner+QA battery 33 passed on migrated disposable PG16; regression smoke 81 passed; ruff/compileall/diff-check/marker/scope/secret scans clean; CONTRACT_DRIFT_OK). Migration follow-up delta (this update) re-verified: QA battery re-run green + ruff clean on touched files.
+- Handoff: docs/handoffs/TASK_04_05_BACKEND_R1_HANDOFF.md (mount + migration follow-up instructions inside).
+- Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
 ## Archived work 2026-07-26 (Asia/Shanghai) — prior HEAD: Task 8/9 + ANALYSIS-01 Addendum A1 mainline integration (main @ 4941e58), archived by the Task 9 analyses-http-handlers lane
 
@@ -3443,6 +3511,8 @@ Verbatim Phase A HEAD content:
 - Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.
 
+## Archived work 2026-07-25T20:24:33.264176+08:00 (MOUNT-02 r2 worklog archived by the A1+A2 joint wave reconcile merge; verbatim from origin/main 8ac555d:HEAD)
+
 # Work Log: MOUNT-02 addendum r2 — dispatcher additions ⑥/⑦/⑧
 
 - Status: COMPLETE on worktree decision-lab-G0/worktrees/mount-02; ff-only push to main recorded below.
@@ -3452,4 +3522,94 @@ Verbatim Phase A HEAD content:
 - Write domain: app/analyses/routes.py (compare-set line only) + app/analyses/tests/test_mount02_addendum_r2.py (NEW, 3) + the addendum CCR + HEAD/HISTORY. Zero contracts/canonical-text/migration change.
 - Gates (disposable PG16 ludus-pg-mount02b @55455): addendum suite 3/0; full `pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX` = 835 passed / 0 failed (= r1 832 + 3); canonical `pytest tests app/simulations/tests -q -W error -rxX` = 577 passed (baseline unchanged); `generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK (zero face change, as adjudicated); ruff all-pass; compileall exit 0; `git diff --check` clean.
 - Next work must start from the latest remote-verified `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T21:10:27+08:00 (previous main HEAD before PR1 integration-glue task)
+
+# Work Log: A1+A2 joint wave — quality gate + dossier QA mainline integration
+
+- Status: COMPLETE on codex/task-10-0405-mainline-integration (fresh worktree decision-lab-task10-0405-mainline from main 23ab477, remote-verified echo); all post-merge gates green; pushed ff-only to main.
+- Merge (1): no-ff adoption of codex/qa-task-10-quality-gate-r1 2bc4da72f064c339e7e4596151aaa14e45f324e5 = Task 10 quality-gate combo (82ee67c impl + 1f014b7 QA revision + adversarial battery; QA PASS 829/0; combination adopted as-is per dispatch, revisions NOT redone). Content conflicts: none beyond lifecycle.
+- Merge (2): no-ff adoption of codex/qa-task-04-05-backend-r1 636831e84895be73a288a6a93e85772481b309ae (carries a51a4f9 impl + migration a7c3e9f1b5d8 + F1/F2 fixes). Semantic merges per A2 QA report integration notes: migrations/env.py keeps BOTH import blocks live (A2 dossiers F1 import placed before the A1 four-module Task 10 block); tests/test_models.py exact-table-set = union (A1 +6 Task 10 tables ∪ A2 +dossier_version_snapshots) with equality kept, A2 deterministic dossiers import auto-merged in the import header (F2). HEAD/HISTORY resolved append-only with byte-safe resolver both merges (merge-base prefix checks fail-closed; incoming worklogs already self-archived in their own HISTORY).
+- Wave commit: QA-7 re-pinned to the merged chain (11-file versions set incl. b6e8f3a1d7c2; head pair collapses to single a7c3e9f1b5d8) per the A2 QA report integration note; test included in the green full suite below.
+- Gates (all green, disposable PG16 ludus-pg-a1a2-wave @55460, real runs): alembic heads = single a7c3e9f1b5d8; upgrade head clean -> check "No new upgrade operations detected" (F1 semantic merge effective) -> downgrade -1 = b6e8f3a1d7c2 -> downgrade -1 = f9a4b7e2c8d3 -> re-upgrade head clean -> re-check clean. Full suite pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX = 874 passed / 0 failed (new cross-wave baseline; comparable to A1 821-collected / A2 829-collected scopes; QA-7 green on merged tree; F3 self-healed - evidence suite zero failures); canonical two-dir command pytest tests app/simulations/tests -q -W error -rxX = 667 passed / 0 failed. pnpm --dir apps/web test = 68/68; build clean. generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK. ruff all-pass; compileall exit 0; git diff --check clean; conflict-marker scan 0 on all changed files; scope audit = exactly the two lanes' declared write scopes + lifecycle + QA-7 re-pin; secret scan clean; HEAD/HISTORY append-only three-way preservation byte-verified (base prefix + A1 suffix + A2 suffix all kept).
+- Reconcile merge: main advanced 23ab477 -> 8ac555d during the wave (MOUNT-02 route publication + contracts regen + addendum A1 landed first). Fail-closed pre-push check caught it; origin/main merged back --no-ff (serial-coordination, append-only; no rebase). Lifecycle-only conflicts; MOUNT-02 r2 worklog was NOT self-archived, so it was archived verbatim into HISTORY by this wave (authorized lifecycle correction precedent). All gates re-run on the reconciled tree.
+- Combination-only fix (this wave): app/evidence/tests/test_evidence_models.py retrieval-task factory pins created_at=NOW - pre-existing base time bomb (frozen completed_at 2026-07-25T12:00Z vs DB now() default) flipped ck_retrieval_tasks_completed_after_created red once the wall clock passed 12:00Z; byte-identical on 23ab477 and 8ac555d, environment-triggered, 15 failures across evidence models/routes suites; assertion semantics untouched (90/90 green after pin).
+- Reconciled-tree gates (final, all green): alembic lifecycle re-run clean on fresh DB (single head a7c3e9f1b5d8, upgrade/check/downgrade x2 to f9a4b7e2c8d3/re-upgrade); full suite = 925 passed / 0 failed (NEW cross-wave baseline; = 874 merged-tree + 51 MOUNT-02-side tests); canonical two-dir command = 667 passed / 0 failed; web 68/68 + build clean; CONTRACT_DRIFT_OK; ruff/compileall/diff-check clean; conflict-marker scan 0 over 39 changed files vs main 8ac555d; secret scan clean.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+
+## Archived work 2026-07-25T18:14:57.384487+08:00
+
+# Work Log: Task 13 sandbox r1 mainline integration (wave 2 of 2)
+
+- Status: merge complete on codex/mainline-task13-integration (worktree decision-lab-G0/worktrees/mainline-a3-mount); serial-coordination protocol honored: A3 mount wave landed first (main 4941e58 -> 4e9c1b4), Task 13 wave re-merged from the new head per dispatcher directive.
+- Merge: no-ff adoption of codex/qa-task-13-sandbox-r1 4bc752a03562177d4ef95d6e21ad4c839a26b169 = Task 13 sandbox r1 owner chain (70e7dbe -> 0d5e8be -> 9047087, all acceptance gates green, ready_for_qa YES, verdict PASS) + QA kickoff cfcf4a7 + QA adversarial supplement (12 tests, full web suite 68/68). Content conflicts: none (A3 wave had zero apps/web diff); conflicts confined to HEAD/HISTORY, resolved append-only with a byte-safe Python resolver (base preservation verified by prefix check).
+- Lifecycle correction (authorized this wave): HISTORY block from cfcf4a7 mislabeled "owner-lane worklog" while archiving the QA lane interim worklog; correction appended to HISTORY with the owner-lane worklog restored verbatim from 9047087:HEAD. No existing bytes rewritten.
+- Combination fix (combination-only, this wave): apps/web/tests/simulation-demo-panel.test.tsx missing DemoFlowResult type import (pre-existing base gap disclosed in TASK_13_SANDBOX_R1_HANDOFF.md sec.7; TS2304 on clean base) - import added so the web typecheck gate passes on the tested combination; the pre-existing unused-var lint warning in the same file is left to the demo/guest owner lane.
+- Post-merge gates before push: pnpm --dir apps/web test (expect 68 passed) + typecheck (with combination fix) + build; conflict-marker scan on lifecycle files; api canonical baseline pytest tests app/simulations/tests -q -W error -rxX (exact count reported as the new cross-wave baseline per dispatcher directive; supersedes non-comparable 472/577 selection-set splits).
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived work (carried through Task 11 B2 adoption merge - displaced main worklog)
+
+# Work Log: A1+A2 joint wave — quality gate + dossier QA mainline integration
+
+- Status: COMPLETE on codex/task-10-0405-mainline-integration (fresh worktree decision-lab-task10-0405-mainline from main 23ab477, remote-verified echo); all post-merge gates green; pushed ff-only to main.
+- Merge (1): no-ff adoption of codex/qa-task-10-quality-gate-r1 2bc4da72f064c339e7e4596151aaa14e45f324e5 = Task 10 quality-gate combo (82ee67c impl + 1f014b7 QA revision + adversarial battery; QA PASS 829/0; combination adopted as-is per dispatch, revisions NOT redone). Content conflicts: none beyond lifecycle.
+- Merge (2): no-ff adoption of codex/qa-task-04-05-backend-r1 636831e84895be73a288a6a93e85772481b309ae (carries a51a4f9 impl + migration a7c3e9f1b5d8 + F1/F2 fixes). Semantic merges per A2 QA report integration notes: migrations/env.py keeps BOTH import blocks live (A2 dossiers F1 import placed before the A1 four-module Task 10 block); tests/test_models.py exact-table-set = union (A1 +6 Task 10 tables ∪ A2 +dossier_version_snapshots) with equality kept, A2 deterministic dossiers import auto-merged in the import header (F2). HEAD/HISTORY resolved append-only with byte-safe resolver both merges (merge-base prefix checks fail-closed; incoming worklogs already self-archived in their own HISTORY).
+- Wave commit: QA-7 re-pinned to the merged chain (11-file versions set incl. b6e8f3a1d7c2; head pair collapses to single a7c3e9f1b5d8) per the A2 QA report integration note; test included in the green full suite below.
+- Gates (all green, disposable PG16 ludus-pg-a1a2-wave @55460, real runs): alembic heads = single a7c3e9f1b5d8; upgrade head clean -> check "No new upgrade operations detected" (F1 semantic merge effective) -> downgrade -1 = b6e8f3a1d7c2 -> downgrade -1 = f9a4b7e2c8d3 -> re-upgrade head clean -> re-check clean. Full suite pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX = 874 passed / 0 failed (new cross-wave baseline; comparable to A1 821-collected / A2 829-collected scopes; QA-7 green on merged tree; F3 self-healed - evidence suite zero failures); canonical two-dir command pytest tests app/simulations/tests -q -W error -rxX = 667 passed / 0 failed. pnpm --dir apps/web test = 68/68; build clean. generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK. ruff all-pass; compileall exit 0; git diff --check clean; conflict-marker scan 0 on all changed files; scope audit = exactly the two lanes' declared write scopes + lifecycle + QA-7 re-pin; secret scan clean; HEAD/HISTORY append-only three-way preservation byte-verified (base prefix + A1 suffix + A2 suffix all kept).
+- Reconcile merge: main advanced 23ab477 -> 8ac555d during the wave (MOUNT-02 route publication + contracts regen + addendum A1 landed first). Fail-closed pre-push check caught it; origin/main merged back --no-ff (serial-coordination, append-only; no rebase). Lifecycle-only conflicts; MOUNT-02 r2 worklog was NOT self-archived, so it was archived verbatim into HISTORY by this wave (authorized lifecycle correction precedent). All gates re-run on the reconciled tree.
+- Combination-only fix (this wave): app/evidence/tests/test_evidence_models.py retrieval-task factory pins created_at=NOW - pre-existing base time bomb (frozen completed_at 2026-07-25T12:00Z vs DB now() default) flipped ck_retrieval_tasks_completed_after_created red once the wall clock passed 12:00Z; byte-identical on 23ab477 and 8ac555d, environment-triggered, 15 failures across evidence models/routes suites; assertion semantics untouched (90/90 green after pin).
+- Reconciled-tree gates (final, all green): alembic lifecycle re-run clean on fresh DB (single head a7c3e9f1b5d8, upgrade/check/downgrade x2 to f9a4b7e2c8d3/re-upgrade); full suite = 925 passed / 0 failed (NEW cross-wave baseline; = 874 merged-tree + 51 MOUNT-02-side tests); canonical two-dir command = 667 passed / 0 failed; web 68/68 + build clean; CONTRACT_DRIFT_OK; ruff/compileall/diff-check clean; conflict-marker scan 0 over 39 changed files vs main 8ac555d; secret scan clean.
+- Next work must start from the latest local `main`, use a new `codex/<task-name>` branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived work (carried through Task 11 B2 adoption merge - B2 owner-lane worklog)
+
+# Work Log: Task 11 data access — evidence provenance line (B2 r1)
+
+- Status: complete; ready_for_qa = YES. Gates: web test 82 passed (baseline 68 zero-regression + 14 new), typecheck pass, lint 0 error (1 pre-existing base warning in demo lane), build pass; diff/scope/secret/marker audits clean.
+- Handoff: docs/handoffs/TASK_11_EVIDENCE_UI_R1_HANDOFF.md (adjudications: slotContracts.ts status flip + decisionCaseId threading are shell increments left for authorization per Task 13 precedent; evidenceAnchorsRouteAvailable single switch for the missing case→run resolution route).
+- Branch: codex/task-11-evidence-ui-r1 (fresh worktree decision-lab-task11-evidence-ui-r1)
+- Base: 23ab477649716f52b3aa913e5efb209442397efa (= origin/main at Gate 0; ls-remote echoed to dispatcher)
+- Role: Web/UX Owner, Fable5 throughout.
+- Scope (write domain): components/quality/EvidenceDrawer.tsx + evidence subcomponents, lib/api/evidence.ts, evidence-drawer-trigger slot fill (fill-only per apps/web/lib/shell/slotContracts.ts), own tests, handoff, HEAD/HISTORY.
+- Contract sources (read-only, no shape guessing): 10-api-and-events.md "证据溯源与冲突读取 API" subsection + services/api/app/evidence/schemas_api.py + packages/contracts types.gen.ts path types. 7 evidence GET routes + GET .../analyses/{runId}/events (SSE); {ok,data} envelope.
+- Deliverables: evidence drawer (L1-L6 source classes + orthogonal quality dimensions + verdict/rationale/limitations; NO aggregate credibility percentage anywhere), provenance chain (raw sources, same-origin groups = 1 independent source, conflict list with support/oppose direction), state handling (loading/401/404 anti-enumeration unified copy/slow network/empty-state honest degradation with single availability switch per sandbox precedent), SSE passive-refresh hook reserved for citation.added only (full progress bar belongs to B1).
+- Prohibitions: no rebase/amend/force; no new dependencies; no edits to existing shell files (slot fill only; any shell increment requires prior authorization per Task 13 precedent); no /demo, guest, simulation, next.config.ts, services/api, packages/contracts.
+- Acceptance gates: pnpm --dir apps/web test (zero regression on existing baseline + new), typecheck, build; diff-check/scope/secret clean. Report SHA + ready_for_qa.
+- Secret policy: do not record credentials here.
+
+## Archived work (replaced by read-routes backend lane kickoff)
+
+# Work Log: Task 11 B2 evidence provenance line mainline integration - WAVE_REPORT
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/mainline-t11b2; branch codex/mainline-task11-b2-integration; ff-only push to main recorded below. No rebase/amend/force.
+- Role: Contract/Mainline Lead (integration lane).
+- Gate 0 echo: ls-remote main = 420a42ceca73dea7fb44d427683c431ab3092f1e (A1+A2 joint wave head); candidate codex/task-11-evidence-ui-r1 = 895e3c81c3373ab93f1e0fe1a4e89014d352c833 (base 23ab477).
+- Merge: no-ff adoption f609c2f (conflicts HEAD/HISTORY only, byte-safe append-only; base deviation 23ab477 -> 420a42c has ZERO apps/web overlap - the advance touched only packages/contracts additive regen + services/api).
+- QA battery adoption 66e8205 (disclosed): qa-evidence-b2-adversarial.test.tsx (P1-P7) was left UNCOMMITTED in the QA lane worktree decision-lab-qa-task11-evidence-b2-r1 (branch qa/task-11-evidence-b2-r1); adopted byte-identical per the battery-must-ship discipline; QA worktree untouched.
+- Gates: pnpm --dir apps/web test = 89 passed / 0 failed (82 owner incl. 14 new B2 + 7 QA battery; baseline 68 zero-regression); typecheck exit 0; build exit 0; lint 0 error (1 pre-existing demo-lane warning, disclosed by owner); generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK; git diff --check clean; conflict-marker scan 0.
+- Backend regression: git diff 420a42c..HEAD -- services/api packages/contracts = ZERO files; the landed A1+A2 wave verified full 925/0 + canonical 667/0 on this byte-identical backend tree, so the pytest gates hold by construction (no redundant rerun).
+- Environment incident (disclosed, repaired): during the duplicate-A1+A2-lane cleanup a PowerShell Remove-Item -Recurse traversed the .tools junction inside the abandoned worktree and emptied the MAIN repo .tools/uv toolchain (junction-follow behavior); .venv and node_modules were NOT affected (removed via [System.IO.Directory]::Delete non-recursive before the incident); restored uv.exe/uvx.exe/uvw.exe via pip target-install (uv 0.11.32), contracts gate re-verified green. Lesson recorded: never Remove-Item -Recurse a worktree containing junctions - delete junctions first.
+- Fail-closed reminders unchanged: evidenceAnchorsRouteAvailable stays false (case->run resolution route still missing - read-route small wave); slotContracts.ts status flip + decisionCaseId threading remain awaiting authorization per Task 13 precedent; MOUNT-02 audit binding remains an analyses-owner follow-up.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
+- Secret policy: do not record credentials here.
+
+## Archived work 2026-07-25 (Asia/Shanghai) - prior main HEAD: READ-01 case/sandbox read surface + audit binding (main @ 465869a), displaced by the release-integration reconcile merge (verbatim from origin/main:HEAD)
+
+# Work Log: READ-01 case/sandbox read surface + audit binding (r1, reconciled)
+
+- Status: COMPLETE on worktree decision-lab-G0/worktrees/read-routes-r1; branch codex/task-read-routes-backend-r1, base = main 8130410, reconciled with post-dispatch main advance cdc0103 (release lane c150d72: reports/exports routes + Task 4/5 mounts + provider seam). No rebase/amend/force; zero new dependencies.
+- Role: Case/API/Data + Analyses Owner (integration-lane dispatch READ-ROUTES-BACKEND-R1), Fable5.
+- Adjudication: docs/product-plan/docs/contract-changes/CCR-20260726-READ-01.md - (1) case reports list/detail surface CEDED to the release lane implementation (app/reports/routes.py @ c150d72; duplicate implementation dropped in e1aa4ff, owner tests re-pinned to verify the release reads on this combination); (2) TWO new canonical anchor rows (GET /cases/{id}/analyses via app/analyses/case_reads.py, GET /cases/{id}/simulations via app/simulations/graph_reads.py) plus graph versions list/detail; (3) tenancy mounts = UNION of c150d72 mounts + graph_reads/case-anchor routers (reports_router mount preserved); (4) MOUNT-02 Addendum A1 SS A1-6 audit binding CLOSED at worker VALIDATING (referenced ids AS-IS from run.strategic_lens_artifact_ids; frozen set from charter; audit fail => blocked; focused skips); coexists with the release lane's provider-seam additions in the same module (disjoint regions, auto-merged).
+- Base gap fixed (disclosed, 77437c3): .gitignore carried a PowerShell-corrupted line (literal backtick-r-backtick-n gluing the comment to `.contract-check/`), so the scratch dir was NEVER ignored; repaired + accidentally committed scratch artifacts dropped.
+- Contracts: regenerated via official generate_contracts.ps1 on the MERGED tree; -Check = CONTRACT_DRIFT_OK (counts recorded in the merge commit).
+- Gates on the merged tree (disposable PG16 ludus-pg-read01 @55463): full battery 936 passed / 0 failed (NEW count; = 934 wave + 2 release-lane tests); canonical pytest tests app/simulations/tests -q -W error -rxX = 669 passed (NEW cross-wave baseline, supersedes 667; the release lane test pair joined the selection set); web 89/89 + typecheck + build green; contracts ops=47 CONTRACT_DRIFT_OK; ruff all-pass; compileall exit 0; git diff --check clean. Combination fix 86c6dc9: c150d72 case-not-found path called zero-arg workspace_not_found with 2 args (TypeError 500) - caught by the READ-01 uniform-404 matrix, repaired with the byte-identical analyses envelope copy.
+- ready_for_qa: YES.
+- Next work must start from the latest remote-verified main, use a new codex/<task-name> branch, and replace this record before modifying task-owned files.
 - Secret policy: do not record credentials here.

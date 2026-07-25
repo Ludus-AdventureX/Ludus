@@ -28,7 +28,7 @@ from app.db import get_session
 from app.models import DecisionCase
 from app.reports.models import ExportArtifact, ReportArtifact
 from app.security.csrf import require_csrf
-from app.security.envelope import ApiFailure, workspace_not_found
+from app.security.envelope import ApiFailure
 from app.tenancy.context import WorkspaceContext, require_workspace_context
 from app.types import OriginMode
 
@@ -51,7 +51,17 @@ def _envelope(data: Any, event_id: str | None = None) -> dict[str, Any]:
 
 
 def _not_found() -> ApiFailure:
-    return workspace_not_found("CASE_NOT_FOUND", "The requested case was not found.")
+    # Combination fix (READ-01 reconcile, disclosed): the c150d72 version called
+    # workspace_not_found("CASE_NOT_FOUND", ...) but that helper takes ZERO
+    # arguments - every missing/foreign-case path raised TypeError (500) and no
+    # release-lane test covered the 404 branch; the READ-01 uniform-404 matrix
+    # caught it. Copy matches the analyses-domain case_not_found() byte-for-byte
+    # so the case-scoped anti-enumeration surface stays ONE copy.
+    return ApiFailure(
+        "CASE_NOT_FOUND",
+        "Case material not found.",
+        http_status=404,
+    )
 
 
 def _report_blocked(exc: Exception) -> ApiFailure:
