@@ -1731,6 +1731,77 @@
         "title": "SimulationRun",
         "type": "object"
       },
+      "SimulationRunCreateRequest": {
+        "additionalProperties": false,
+        "description": "Frozen POST body (§5): anchors only; every authority field is server-owned.",
+        "properties": {
+          "decisionMakerProfileId": {
+            "format": "uuid",
+            "title": "Decisionmakerprofileid",
+            "type": "string"
+          },
+          "decisionMakerProfileVersion": {
+            "minimum": 1.0,
+            "title": "Decisionmakerprofileversion",
+            "type": "integer"
+          },
+          "epsilon": {
+            "default": 0.001,
+            "exclusiveMinimum": 0.0,
+            "maximum": 0.1,
+            "title": "Epsilon",
+            "type": "number"
+          },
+          "graphVersionId": {
+            "format": "uuid",
+            "title": "Graphversionid",
+            "type": "string"
+          },
+          "maxSteps": {
+            "default": 12,
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Maxsteps",
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SimulationMode"
+          },
+          "nodeOverrides": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Nodeoverrides",
+            "type": "object"
+          },
+          "scenarioVersionId": {
+            "format": "uuid",
+            "title": "Scenarioversionid",
+            "type": "string"
+          },
+          "scoreDefinitionId": {
+            "format": "uuid",
+            "title": "Scoredefinitionid",
+            "type": "string"
+          },
+          "strategyVersionId": {
+            "format": "uuid",
+            "title": "Strategyversionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "graphVersionId",
+          "strategyVersionId",
+          "scenarioVersionId",
+          "scoreDefinitionId",
+          "decisionMakerProfileId",
+          "decisionMakerProfileVersion"
+        ],
+        "title": "SimulationRunCreateRequest",
+        "type": "object"
+      },
       "SimulationTopDriver": {
         "additionalProperties": false,
         "properties": {
@@ -2691,6 +2762,136 @@
         "summary": "Read Session",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/runs": {
+      "post": {
+        "description": "POST run (§5): membership + contribute + CSRF + Idempotency-Key required.",
+        "operationId": "create_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "graphId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRunCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Simulation Run",
+        "tags": [
+          "workspaces",
+          "simulations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/runs/{simulationRunId}": {
+      "get": {
+        "description": "GET replay (§6): active membership only; byte-equal frozen inputs + results.",
+        "operationId": "get_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs__simulationRunId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "graphId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Graphid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "simulationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Simulationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Simulation Run Api Workspaces  Workspaceid  Simulations  Graphid  Runs  Simulationrunid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Simulation Run",
+        "tags": [
+          "workspaces",
+          "simulations"
         ]
       }
     },

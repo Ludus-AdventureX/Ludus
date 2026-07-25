@@ -89,6 +89,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Simulation Run
+         * @description POST run (§5): membership + contribute + CSRF + Idempotency-Key required.
+         */
+        post: operations["create_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/simulations/{graphId}/runs/{simulationRunId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Simulation Run
+         * @description GET replay (§6): active membership only; byte-equal frozen inputs + results.
+         */
+        get: operations["get_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs__simulationRunId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -717,6 +757,54 @@ export interface components {
             /** Workspaceid */
             workspaceId: string;
         };
+        /**
+         * SimulationRunCreateRequest
+         * @description Frozen POST body (§5): anchors only; every authority field is server-owned.
+         */
+        SimulationRunCreateRequest: {
+            /**
+             * Decisionmakerprofileid
+             * Format: uuid
+             */
+            decisionMakerProfileId: string;
+            /** Decisionmakerprofileversion */
+            decisionMakerProfileVersion: number;
+            /**
+             * Epsilon
+             * @default 0.001
+             */
+            epsilon: number;
+            /**
+             * Graphversionid
+             * Format: uuid
+             */
+            graphVersionId: string;
+            /**
+             * Maxsteps
+             * @default 12
+             */
+            maxSteps: number;
+            mode: components["schemas"]["SimulationMode"];
+            /** Nodeoverrides */
+            nodeOverrides?: {
+                [key: string]: number;
+            };
+            /**
+             * Scenarioversionid
+             * Format: uuid
+             */
+            scenarioVersionId: string;
+            /**
+             * Scoredefinitionid
+             * Format: uuid
+             */
+            scoreDefinitionId: string;
+            /**
+             * Strategyversionid
+             * Format: uuid
+             */
+            strategyVersionId: string;
+        };
         /** SimulationTopDriver */
         SimulationTopDriver: {
             /** Nodeid */
@@ -1113,6 +1201,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthSessionEnvelope"];
+                };
+            };
+        };
+    };
+    create_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                graphId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulationRunCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_simulation_run_api_workspaces__workspaceId__simulations__graphId__runs__simulationRunId__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                graphId: string;
+                simulationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

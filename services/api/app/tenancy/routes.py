@@ -20,3 +20,10 @@ workspace_router = APIRouter(
     dependencies=[Depends(require_workspace_context)],
     tags=["workspaces"],
 )
+
+# SIM-02A run surface (CCR-20260724-SIM-02A §10): the simulations router is
+# RELATIVE (/simulations/{graphId}) and must live under this tenancy guard so
+# every path inherits require_workspace_context's uniform 404 denial.
+from app.simulations.routes import router as simulations_router  # noqa: E402
+
+workspace_router.include_router(simulations_router)
