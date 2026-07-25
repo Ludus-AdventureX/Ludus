@@ -572,4 +572,3 @@ async def read_decision_review(
     if review is None:
         raise _not_found()
     return _envelope(_review_data(review))
-
