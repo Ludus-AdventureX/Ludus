@@ -1,58 +1,39 @@
-# Work Log: Task 09 r2 fast-fix — idempotency wire protocol alignment
+# Work Log: Task 09 r3 fast-fix — QA-P1 + QA-P2 closure
 
-- Status: COMPLETE (ready_for_fast_QA = YES).
-- Role: Case/API/Data Owner (Fable5); directed fast-fix lane per the ENG-02
-  fast-fix precedent.
-- Branch: codex/task-09-idempotency-wire-fast-fix; sole parent = Phase B exact
-  SHA ed65f40a0a905491c868a5ffb580ae808f52373f (codex/task-09-analysis-runtime-r1,
-  pushed). Fresh worktree decision-lab-task09-idem-fastfix. No
-  rebase/amend/force-push/cherry-pick; main untouched.
-- CCR consumption declaration: CCR-20260725-ANALYSIS-01 consumed READ-ONLY in
-  full (sections 2.1, 2.2, 2.3, 5) via git show from branch
-  codex/ccr-guest-analysis-contracts @ exact SHA
-  d6675693fd2b7709d9ed4756489e633c49c869ee (the CCR is not on main yet). The
-  r1 Phase B implementation predated this consumption; this fast-fix closes
-  the four adjudicated deviations.
-- Delivered (write scope: app/analyses/** only; migrations, state machine
-  internals, worker, SSE event envelope ZERO diff):
-  1. §2.1 mandatory Idempotency-Key HTTP header on POST .../resolutions
-     (validate_idempotency_key, 1..200 chars per the idempotency_records CHECK,
-     format IMPLEMENTATION_FREE per §2.2/SIM-02A precedent); a body-smuggled
-     idempotencyKey/idempotency_key is rejected VALIDATION_FAILED 422. The
-     canonical body fields AnalysisRun.idempotencyKey (06 L450) and
-     DeepAnalysisRequest.idempotencyKey (06 L2020) are internal worker/run
-     contracts, NOT this HTTP wire — deliberately unchanged (adjudication
-     disclosed in the handoff addendum).
-  2. §2.2 same key + different normalized body = 409 IDEMPOTENCY_CONFLICT;
-     storage reuses the generic idempotency_records table (SIM-02A §4 schema,
-     already migrated — zero new migration), route_key analyses.resolutions,
-     normalized_request_hash = canonical-JSON sha256, 48h retention;
-     concurrent same-key race loser answers per §2.2 via IntegrityError
-     fallback on the partial unique constraint.
-  3. §2.2 replay = original HTTP status + byte-identical data/eventId +
-     meta.idempotencyReplay: true, rebuilt from the append-only
-     RunResolution/classification/analysis.resumed rows (never an error, never
-     a second resolution row). Fresh success now carries the §2.1 frozen
-     envelope member eventId (adjacent alignment, disclosed).
-  4. §5 ANALYSIS_TRANSITION_INVALID (409) registered as the defense-in-depth
-     backstop on resolutions + cancel, mapped strictly AFTER every specific
-     code (never shadows ANALYSIS_RUN_NOT_RESUMABLE / _NOT_CANCELLABLE /
-     RUN_AMENDMENT_REQUIRED / RUN_RESOLUTION_INVALID).
-- Own-test maintenance disclosed: the three r1 resolutions POSTs in
-  test_analysis_sse_and_commands.py now send the mandatory header (lane-owned
-  file; zero QA-owned files touched).
-- Gates: new targeted suite app/analyses/tests/test_analysis_idempotency_wire.py
-  11/0 (-W error); analyses+evidence 203 passed / 0 failed (r1's 102 + 11 new +
-  evidence 90, zero regression); full suite 663 passed / 1 failed — the sole
-  failure is the SAME disclosed QA-owned exact-table-set assertion carried
-  since Phase A (no new failure); ruff/compileall/diff-check/conflict-marker/
-  secret-scan/scope-audit clean; generate_contracts.ps1 -Check =
-  CONTRACT_DRIFT_OK (preset read-only toolchain via junctions, zero
-  installs/network); packages/contracts zero diff; no migration touched
-  (alembic single head f9a4b7e2c8d3 verified on disposable PG16
-  ludus-pg-task09-fastfix @55446, deleted after use).
-- Handoff: r2 addendum appended to
+- Status: COMPLETE (ready_for_fast_QA = YES; the two QA xfail probes on
+  codex/qa-task-09-idempotency-wire-r2 are expected to flip green against this
+  head — xfail-promotion applies).
+- Role: Case/API/Data Owner (Fable5); directed fast-fix per QA report
+  QA_TASK_09_IDEMPOTENCY_WIRE_R2_REPORT.md (QA tip e4ac7dc).
+- Branch: codex/task-09-amendment-durability-fast-fix; sole parent = r2 exact
+  SHA e403c665364d6260ad6199f283a5964db070f436. Fresh worktree
+  decision-lab-task09-durability-fastfix. No rebase/amend/force-push; main
+  untouched.
+- CCR: same read-only consumption as r2 — CCR-20260725-ANALYSIS-01 @
+  d6675693fd2b7709d9ed4756489e633c49c869ee.
+- Delivered (routes.py only + one new owner test file; repository, state
+  machine, worker, SSE envelope, migrations ZERO diff):
+  1. QA-P1 (§2.3): the amendment path now COMMITS the append-only
+     RunInterventionClassification + analysis.amendment_required event BEFORE
+     raising 409 RUN_AMENDMENT_REQUIRED, so both survive the production
+     get_session lifecycle. Proven with production-like one-session-per-request
+     tests (a brand-new session sees both rows after the 409; repeated
+     amendments append one classification row each).
+  2. QA-P2 (§2.2): the RunNotResumable handler re-checks the idempotency
+     record before answering — a same-key same-body duplicate that lost the
+     concurrency race now replays the winner's success
+     (meta.idempotencyReplay: true) instead of 409; same key + different body
+     still answers IDEMPOTENCY_CONFLICT; a FRESH key on an already-resumed run
+     still answers the specific ANALYSIS_RUN_NOT_RESUMABLE (no shadowing).
+- Gates: new owner suite test_analysis_amendment_durability.py 4/0 (-W error;
+  incl. dual-connection race with BOTH sides 200 and exactly one replay flag);
+  full suite 667 passed / 1 failed — sole failure remains the disclosed
+  QA-owned exact-table-set assertion (zero regression vs r2's 663);
+  ruff/compileall/diff-check clean; generate_contracts.ps1 -Check =
+  CONTRACT_DRIFT_OK; packages/contracts zero diff; no migration touched
+  (single head f9a4b7e2c8d3 on disposable PG16 ludus-pg-task09-r3 @55448,
+  deleted after use).
+- Handoff: r3 addendum appended to
   docs/handoffs/TASK_09_ANALYSIS_RUNTIME_R1_HANDOFF.md.
-- ready_for_public_route: NO (routers stay unmounted; mounting rights with the
-  integration layer).
+- ready_for_public_route: NO (routers stay unmounted).
 - Secret policy: no credentials in code, logs, HEAD/HISTORY, or handoffs.
