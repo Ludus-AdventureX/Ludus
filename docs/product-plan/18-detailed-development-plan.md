@@ -1262,6 +1262,12 @@ Commit: `feat: add deterministic causal simulation engine`
 - Create: `apps/web/components/simulation/BranchTimeline.tsx`
 - Create: `apps/web/components/simulation/ImpactPathOverlay.tsx`
 - Test: `apps/web/tests/sandbox-view.test.tsx`
+- Modify (bounded Web/UX secondary scope, CCR-20260725-SANDBOX-01): `apps/web/components/shell/CaseViewRouter.tsx`
+- Modify (bounded Web/UX secondary scope, CCR-20260725-SANDBOX-01): `apps/web/components/shell/PhaseSlot.tsx`
+- Modify (bounded Web/UX secondary scope, CCR-20260725-SANDBOX-01): `apps/web/components/shell/views/SandboxView.tsx`
+- Modify (bounded Web/UX secondary scope, CCR-20260725-SANDBOX-01): `apps/web/lib/shell/slotContracts.ts`
+
+`sandbox-workspace` is an additive frozen slot with `{ decisionCaseId: string }`. The four shell paths above are the complete secondary-owner boundary: slot registration, prop pass-through, and placeholder replacement only; other shell files and slots remain out of scope.
 
 - [ ] **Step 1: 写默认压力测试主流程的交互测试**
 

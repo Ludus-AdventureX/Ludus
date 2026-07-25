@@ -1,16 +1,19 @@
 # Task 13 Sandbox Interaction r1 Handoff — 决策用户优先的沙盘交互
 
 - Date: 2026-07-25 (Asia/Shanghai)
-- Role: Web/UX Owner (Fable5)
+- Role: Simulation/Graph Owner (primary) with principal-authorized Web/UX secondary-owner slot integration
 - Branch: `codex/task-13-sandbox-r1`（全新 worktree `decision-lab-task13-sandbox-r1`）
-- Base（钉死）：remote main `70e7dbe810f13044c0afb46d5fe91dd4e31474df`
+- Original Gate 0 base: remote main `70e7dbe810f13044c0afb46d5fe91dd4e31474df`
+- Latest-main refresh: merge commit `8bf6a77` incorporates remote-verified main `4941e58bee3b91f14a4a92b7fab92750ef85b3b6` without rewriting the published Task 13 history.
 - Gate 0 记录：本会话第一次 Gate 0 命中 `4508b30`（不含 Task 11 Phase 0 shell），按任务书 fail-closed 阻断上报；波次一发布 `70e7dbe8`（含 shell Sessions A+B + 对抗 QA `4fb0999`）后重跑 Gate 0 三项验收（祖先关系双向、shell 文件树、SIM-02A run API 挂载）全部通过后开工。
 - 计划依据：`docs/product-plan/18-detailed-development-plan.md` Task 13 节（L1248-1322），逐字消费。
+- Scope authority: accepted `CCR-20260725-SANDBOX-01`; `agent-work-manifest.yaml` records `simulation_graph` as primary owner and `web_ux` as secondary owner for the four exact shell integration paths.
 
 ## 1. 任务书裁决记录（两处，均先上报后执行）
 
 1. **写域路径冲突**：任务书写 `components/sandbox/**`，计划原文 Files 节逐字要求 `apps/web/components/simulation/*.tsx` + `apps/web/tests/sandbox-view.test.tsx`。按任务书自身条款「与本任务书冲突时以原文为准」采**计划原文路径**。
 2. **slot 合同缺口**：冻结的 `lib/shell/slotContracts.ts`（8 slot 注册表）不含任何沙盘 slot，`SandboxView` 无锚点；合同规则「slot 名冻结；新增 slot 需要新的 shell 会话」与本任务书「禁碰 shell 既有文件」叠加后无合法挂载路径。上报后获调度方**显式授权最小 shell 增量**（本 handoff §3 全量披露）。
+3. **Governance closure**: `CCR-20260725-SANDBOX-01` synchronizes the primary/secondary owners, four shell paths, and additive-only slot semantics into the manifest and detailed plan; scope gates no longer depend on a temporary exception.
 
 ## 2. 交付物（新建 `apps/web/components/simulation/**`）
 
@@ -78,5 +81,13 @@
 - 404 呈现：`runStressTest` 的 `isUniformNotFound` 分支。
 - slot 合同：`shellSlotContract["sandbox-workspace"]` + 锚点 `data-phase-slot="sandbox-workspace"`；shell 增量以 §3 清单为界做 merge-base diff scope audit。
 - a11y/键盘：滑杆/数值输入均有显式 label；fragile 列表 `aria-pressed`；结果区 `aria-live="polite"`；错误 `role="alert"`；渐进展开按钮 `aria-expanded`。
+
+## 9. Latest-main refresh and governance closure
+
+- Published Task 13 implementation commit `904708780099db8000f99c55b0ef36a852fb5cdc` remains in history unchanged; no rebase, amend, force-push, or replacement commit was used.
+- Merge commit `8bf6a77530234d2d77eac6e5fb428273b1fdc46b` refreshes the branch onto live-verified `main` `4941e58bee3b91f14a4a92b7fab92750ef85b3b6`.
+- Accepted `CCR-20260725-SANDBOX-01`, `agent-work-manifest.yaml`, and Task 13 Files now agree on `simulation_graph` primary ownership plus `web_ux` secondary ownership for the four exact shell integration paths in section 3.
+- Post-refresh verification: `pnpm --dir apps/web test` = **56 passed / 0 failed**; `pnpm --dir apps/web build` = **PASS**; `scripts/verify_decision_os_contracts.py` = **PASS**; API/OpenAPI/generated-contract input diff against latest `main` = empty.
+- The remaining branch delta is intentionally limited to Task 13 simulation components, the four CCR-authorized shell files, QA evidence, lifecycle/handoff records, and canonical governance synchronization. Final publication uses normal push followed by live `ls-remote` SHA equality verification.
 
 - 本文档不含任何凭据或 secret 值。

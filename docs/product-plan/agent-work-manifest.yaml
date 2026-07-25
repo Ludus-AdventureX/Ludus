@@ -18,6 +18,7 @@ canonical_contracts:
   accepted_ccrs:
   - docs/contract-changes/CCR-20260719-002.md
   - docs/contract-changes/CCR-20260721-003.md
+  - docs/contract-changes/CCR-20260725-SANDBOX-01.md
   runtime_rules: AGENTS.md
 global_rules:
 - one_write_owner_per_path
@@ -428,11 +429,18 @@ tasks:
 - id: task-13
   title: Full-size sandbox interaction and graph versioning
   owner: simulation_graph
+  secondary_owner: web_ux
+  contract_change_owner: contract_lead
   depends_on:
   - task-11
   - task-12
   write_scope:
   - apps/web/components/simulation/**
+  secondary_write_scope:
+  - apps/web/components/shell/CaseViewRouter.tsx
+  - apps/web/components/shell/PhaseSlot.tsx
+  - apps/web/components/shell/views/SandboxView.tsx
+  - apps/web/lib/shell/slotContracts.ts
   acceptance:
   - pnpm --dir apps/web test -- simulation
   - pnpm --dir apps/web build
