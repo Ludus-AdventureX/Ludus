@@ -333,10 +333,9 @@ Hackathon Prototype 候选只有在不可降级主链路、Web App、5 分钟演
 
 ## 17. 知识产权、许可与公开发布
 
-- 截至 2026-07-22，本仓库 MUST 保持 Private，根目录 MUST NOT 添加 `LICENSE`；Ludus 自有内容按 `LICENSING.md` 和 `COPYRIGHT` 的 **All Rights Reserved** 状态管理。不得把当前仓库描述为已经采用 MIT、Apache-2.0、AGPL-3.0、BSL 1.1 或其他公开许可。
-- 当前候选商业化结构是“核心私有 + 可选择性开放外围能力”。`ways/**` 自有方法、决策/评分/质量门、Agent 编排、因果模拟策略、系统 Prompt、eval corpus、golden fixtures、调优数据和可实质复现核心技术的资料默认 Proprietary；不得复制到公开仓库、公开包、公开镜像或公开演示资产。
-- SDK、API client、插件接口和非核心示例只有在路径级 IP boundary audit 后 MAY 候选 Apache-2.0；经拆分的社区 Web/API shell MAY 候选 AGPL-3.0-only + 商业双许可；选定服务器模块 MAY 候选 BSL 1.1，但 BSL 必须称为 Source Available，不得称为 OSI Open Source。以上均不是当前已授予许可。
-- 任何开发者或 Agent MUST NOT 擅自创建、替换或修改根 `LICENSE`、SPDX header、版权主体、CLA/DCO、公开包发布配置或仓库可见性。许可变更必须获得产品方对具体路径、版本与许可的书面批准，并同步 `LICENSING.md`、`COPYRIGHT`、`README.md`、本文件和发布物。
+- 自 2026-07-26 起，经产品方批准，本仓库正式采用 **AGPL-3.0-only + 商业双许可**，根目录 `LICENSE` 为 GNU AGPL v3 官方全文；Ludus 自有内容按 `LICENSING.md` 和 `COPYRIGHT` 的双许可结构管理。仓库当前仍保持 Private，公开发布须另行完成 `LICENSING.md` 第 4 节的全部 Gate。
+- 双许可结构：AGPL-3.0-only 社区侧对外开放全部功能并施加网络服务源码义务（AGPL §13）；商业许可侧面向托管服务、企业私有部署、OEM、方法包授权和支持服务，条款以书面协议为准。原“核心私有 + 外围开放”Open Core 分层策略已停用。
+- 任何开发者或 Agent MUST NOT 擅自替换或修改根 `LICENSE` 文本、SPDX header、版权主体、CLA/DCO、公开包发布配置或仓库可见性。许可策略再变更必须获得产品方书面批准，并同步 `LICENSING.md`、`COPYRIGHT`、`README.md`、本文件和发布物。
 - 未经产品方确认，MUST NOT 把仓库改为 Public，也不得向任何公开 remote、registry 或镜像仓库推送核心内容。向当前受控 Private `origin` 首次 push 前仍必须确认远程可见性并完成当前树及 Git 历史的 secret/IP scan。
 - 第三方材料不因进入私有仓库而变成 Ludus Proprietary。任何 Extract & adapt 必须保留上游版权/许可证并记录精确版本、commit、源路径、函数和修改；公开发布前必须完成 `THIRD_PARTY_NOTICES.md`、资产授权、专利/商业秘密、商标与贡献者权利链审计。
 - 如果仓库公开边界、第三方许可、贡献者再许可权或可专利披露存在不确定性，任务状态 MUST 标为 blocked 并交由产品方/法律顾问决定；不得以实现便利替代法律决策。

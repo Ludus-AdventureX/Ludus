@@ -1,10 +1,20 @@
 ﻿Copyright (c) 2026 xiayuzizhuo666 / Ludus.
-All rights reserved.
 
-No license is granted to use, copy, modify, distribute, sublicense, host,
-or commercially exploit the Ludus source code, documentation, methods,
-prompts, datasets, designs, or other original materials except under a
-separate written agreement from the rights holder.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, version 3 of the License
+only (AGPL-3.0-only). See the LICENSE file in the repository root.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+Ludus is dual-licensed. As an alternative to the AGPL-3.0-only terms,
+a separate commercial license is available from the rights holder for
+organizations that cannot or do not wish to comply with the AGPL
+source-code obligations. See LICENSING.md for the dual-licensing
+policy and contact process.
 
 Third-party components remain subject to their respective licenses and
 copyright notices.

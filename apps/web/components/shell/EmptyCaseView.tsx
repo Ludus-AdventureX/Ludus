@@ -2,10 +2,16 @@
 
 import { FormEvent, useRef, useState } from "react";
 
+import {
+  CaseCreateFlowError,
+  createDecisionCase,
+  navigateToCreatedCase
+} from "@/lib/shell/createCase";
+
 // Look V7 `#view-empty` frame for the case shell: question-first empty state.
 // Deliberately no template card wall, no method gallery and no fabricated
-// progress/evidence/run counters. Creation still only produces a local draft
-// notice in Phase 0; the real create flow arrives with the Case write API.
+// progress/evidence/run counters. Submit drives the real guest-backed create
+// flow (csrf -> guest -> POST /cases) and opens the created case route.
 
 const copy = {
   coordinate: "NEW-00",
@@ -19,27 +25,43 @@ const copy = {
   formPrivacy: "项目创建前不会生成证据、模型、报告或正式档案。",
   createText: "建立决策项目",
   createSubline: "进入问题边界确认，而不是立即开始分析",
-  draftedTitle: "项目草稿已建立",
-  draftedSubline: "创建 API 接入后才会生成正式 Case",
-  submitNotice: "已建立决策项目草稿；尚未生成证据、分析或正式档案。",
-  noQuestionNotice: "先写下一个需要承担后果的问题。"
+  creatingTitle: "正在建立决策项目…",
+  creatingSubline: "建立访客会话并写入决策问题",
+  draftedTitle: "决策项目已建立",
+  draftedSubline: "正在打开五工作台",
+  submitNotice: "决策项目已建立，正在打开工作台…",
+  noQuestionNotice: "先写下一个需要承担后果的问题。",
+  createFailedFallback: "建立决策项目失败，请稍后重试。"
 } as const;
 
 export function EmptyCaseView() {
   const [question, setQuestion] = useState("");
   const [notice, setNotice] = useState("");
   const [isDrafted, setIsDrafted] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const questionInput = useRef<HTMLTextAreaElement>(null);
 
-  const submitDraft = (event: FormEvent<HTMLFormElement>) => {
+  const submitDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isCreating || isDrafted) return;
     if (!question.trim()) {
       setNotice(copy.noQuestionNotice);
       questionInput.current?.focus();
       return;
     }
-    setIsDrafted(true);
-    setNotice(copy.submitNotice);
+    setIsCreating(true);
+    setNotice("");
+    try {
+      const created = await createDecisionCase(question.trim());
+      setIsDrafted(true);
+      setNotice(copy.submitNotice);
+      navigateToCreatedCase(created);
+    } catch (error) {
+      setNotice(error instanceof CaseCreateFlowError ? error.message : copy.createFailedFallback);
+      questionInput.current?.focus();
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -65,9 +87,9 @@ export function EmptyCaseView() {
               placeholder={copy.formPlaceholder}
             />
             <div className="empty-form-actions">
-              <button type="submit" className="primary-action">
-                <span>{isDrafted ? copy.draftedTitle : copy.createText}</span>
-                <small>{isDrafted ? copy.draftedSubline : copy.createSubline}</small>
+              <button type="submit" className="primary-action" disabled={isCreating}>
+                <span>{isDrafted ? copy.draftedTitle : isCreating ? copy.creatingTitle : copy.createText}</span>
+                <small>{isDrafted ? copy.draftedSubline : isCreating ? copy.creatingSubline : copy.createSubline}</small>
               </button>
             </div>
             <p className="empty-privacy">{copy.formPrivacy}</p>
