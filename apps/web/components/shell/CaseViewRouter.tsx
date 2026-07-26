@@ -37,6 +37,6 @@ export function CaseViewRouter({
       return <DecisionView />;
     case "workspace":
     default:
-      return <WorkspaceView decisionCaseId={decisionCaseId} />;
+      return <WorkspaceView decisionCaseId={decisionCaseId} workspaceId={tenantWorkspaceId} />;
   }
 }
