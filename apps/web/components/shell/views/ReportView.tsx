@@ -1,4 +1,5 @@
 import { EvidenceDrawerTrigger } from "@/components/quality/EvidenceDrawerTrigger";
+import { ReportListPanel } from "@/components/shell/views/ReportListPanel";
 
 // Look V7 `#view-report` static layout frame (Phase 0 skeleton).
 // Recommendation, conditions and dissent render only from canonical
@@ -30,6 +31,10 @@ export function ReportView({ workspaceId = null, decisionCaseId }: ReportViewPro
         <section className="recommendation-page" aria-label="当前建议">
           <div className="recommendation-rule"><span>当前建议</span><i /><b>等待分析完成</b></div>
           <p className="lead-paragraph">结构化报告只在真实 AnalysisRun 通过质量门后出现；这里不展示示例结论。</p>
+          <ReportListPanel
+            {...(workspaceId ? { workspaceId } : {})}
+            {...(decisionCaseId ? { decisionCaseId } : {})}
+          />
           <div className="condition-list" />
           <footer className="report-signature">
             <span>系统综合</span>

@@ -6,6 +6,7 @@ import {
   DecisionLoopError,
   launchAnalysisForCase,
   pollRunUntilTerminal,
+  type AnalysisLevel,
   type LaunchStep,
   type RunSnapshot,
 } from "@/lib/shell/decisionLoop";
@@ -59,6 +60,7 @@ export type AnalysisLaunchPanelProps = {
 
 export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: AnalysisLaunchPanelProps) {
   const [state, setState] = useState<PanelState>({ phase: "idle" });
+  const [level, setLevel] = useState<AnalysisLevel>("focused");
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     setState({ phase: "launching" });
     try {
       const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, {
+        level,
         onStep: (step) => setState({ phase: "launching", step }),
       });
       setState({
@@ -108,7 +111,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         }));
       }
     }
-  }, [decisionCaseId, state.phase, workspaceId]);
+  }, [decisionCaseId, level, state.phase, workspaceId]);
 
   if (!workspaceId || !decisionCaseId) {
     // Same honest gap-state discipline as EvidenceDrawerTrigger: without the
@@ -125,6 +128,29 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
 
   return (
     <div className="analysis-launch" data-analysis-launch="ready">
+      <fieldset className="analysis-level" disabled={busy}>
+        <legend>分析深度</legend>
+        <label>
+          <input
+            type="radio"
+            name="analysisLevel"
+            value="focused"
+            checked={level === "focused"}
+            onChange={() => setLevel("focused")}
+          />
+          聚焦研究（focused）
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="analysisLevel"
+            value="full"
+            checked={level === "full"}
+            onChange={() => setLevel("full")}
+          />
+          完整战略分析（full，含五 Lens）
+        </label>
+      </fieldset>
       <button
         type="button"
         className="primary-action small"

@@ -121,13 +121,28 @@ function newUuid(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
-/** Charter body proven live against the deployed stack (focused level). */
-export function buildCharterBody(decisionSubjectId: string, decisionQuestion: string) {
+/** Canonical five-lens set required by the FULL analysis level. */
+export const FULL_LENS_TYPES = [
+  "porter_five_forces",
+  "pre_mortem",
+  "counterparty_response_matrix",
+  "scenario_planning",
+  "meadows_leverage_points",
+] as const;
+
+export type AnalysisLevel = "focused" | "full";
+
+/** Charter body proven live against the deployed stack. */
+export function buildCharterBody(
+  decisionSubjectId: string,
+  decisionQuestion: string,
+  level: AnalysisLevel = "focused",
+) {
   return {
     decisionSubjectId,
     caseVersion: 1,
     caseSnapshotHash: `sha256:${randomHex(32)}`,
-    analysisLevel: "focused",
+    analysisLevel: level,
     decisionQuestion,
     dossierSnapshotVersion: 1,
     dossierSnapshotHash: `sha256:${randomHex(32)}`,
@@ -135,7 +150,7 @@ export function buildCharterBody(decisionSubjectId: string, decisionQuestion: st
     constraints: [{ id: "c1", text: "以现有资源与时间窗口为边界" }],
     optionIds: ["opt_a", "opt_b"],
     preferenceWeights: { risk: 0.5, speed: 0.5 },
-    requiredStrategicLensTypes: [] as string[],
+    requiredStrategicLensTypes: level === "full" ? [...FULL_LENS_TYPES] : ([] as string[]),
     methodId: "hardtech-market-direction",
     methodVersion: "1.1.0",
     methodContentHash: `sha256:${randomHex(32)}`,
@@ -149,6 +164,7 @@ export async function createCharter(
   seed: CaseAnalysisSeed,
   csrfToken: string,
   fetchImpl: FetchLike = defaultFetch(),
+  level: AnalysisLevel = "focused",
 ): Promise<{ charterId: string }> {
   const envelope = await requestJson(
     fetchImpl,
@@ -156,7 +172,7 @@ export async function createCharter(
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
-      body: JSON.stringify(buildCharterBody(seed.decisionSubjectId, seed.decisionQuestion)),
+      body: JSON.stringify(buildCharterBody(seed.decisionSubjectId, seed.decisionQuestion, level)),
     },
   );
   const charterId = (envelope.data as { charterId?: string } | undefined)?.charterId;
@@ -182,6 +198,7 @@ export async function createRun(
   charterId: string,
   csrfToken: string,
   fetchImpl: FetchLike = defaultFetch(),
+  level: AnalysisLevel = "focused",
 ): Promise<{ analysisRunId: string; status: string }> {
   const envelope = await requestJson(
     fetchImpl,
@@ -194,7 +211,7 @@ export async function createRun(
         "Idempotency-Key": `loop-${newUuid()}`,
       },
       body: JSON.stringify({
-        analysisLevel: "focused",
+        analysisLevel: level,
         cynefinGateResultId: newUuid(),
         runManifestHash: `sha256:${randomHex(32)}`,
       }),
@@ -243,19 +260,20 @@ export type LaunchedAnalysis = {
 export async function launchAnalysisForCase(
   workspaceId: string,
   decisionCaseId: string,
-  options: { fetchImpl?: FetchLike; onStep?: (step: LaunchStep) => void } = {},
+  options: { fetchImpl?: FetchLike; onStep?: (step: LaunchStep) => void; level?: AnalysisLevel } = {},
 ): Promise<LaunchedAnalysis> {
   const fetchImpl = options.fetchImpl ?? defaultFetch();
+  const level = options.level ?? "focused";
   options.onStep?.("csrf");
   const csrfToken = await fetchCsrfToken(fetchImpl);
   options.onStep?.("seed");
   const seed = await getCaseAnalysisSeed(workspaceId, decisionCaseId, fetchImpl);
   options.onStep?.("charter");
-  const { charterId } = await createCharter(workspaceId, decisionCaseId, seed, csrfToken, fetchImpl);
+  const { charterId } = await createCharter(workspaceId, decisionCaseId, seed, csrfToken, fetchImpl, level);
   options.onStep?.("confirm");
   await confirmCharter(workspaceId, charterId, csrfToken, fetchImpl);
   options.onStep?.("run");
-  const run = await createRun(workspaceId, charterId, csrfToken, fetchImpl);
+  const run = await createRun(workspaceId, charterId, csrfToken, fetchImpl, level);
   return { charterId, analysisRunId: run.analysisRunId, status: run.status };
 }
 
