@@ -21,6 +21,8 @@ from fastapi import APIRouter, Depends, Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import httpx
+
 from app.agents.errors import StructuredOutputError
 from app.agents.model_provider import (
     ModelMessage,
@@ -72,6 +74,20 @@ def _model_failure(exc: StructuredOutputError) -> ApiFailure:
         http_status=502,
         retryable=True,
         details={"reason": exc.code},
+    )
+
+
+def _model_transport_failure(exc: httpx.HTTPError) -> ApiFailure:
+    # Live-provider transport faults (TLS resets, mid-stream drops, timeouts)
+    # must surface as an honest retryable envelope, never an unhandled 500
+    # with an empty body (QC finding: composer POST crashed bare on a
+    # DeepSeek cold-TLS ConnectError).
+    return ApiFailure(
+        "MODEL_UPSTREAM_UNAVAILABLE",
+        "模型服务暂时不可达，请稍后重试。",
+        http_status=502,
+        retryable=True,
+        details={"reason": type(exc).__name__},
     )
 
 
@@ -155,6 +171,8 @@ async def post_case_message(
         completion.require_non_empty()
     except StructuredOutputError as exc:
         raise _model_failure(exc)
+    except httpx.HTTPError as exc:
+        raise _model_transport_failure(exc)
     assistant_text = str(completion.content.get("assistantMessage", "")).strip()
     if not assistant_text:
         raise _model_failure(StructuredOutputError("assistantMessage missing"))
@@ -185,6 +203,8 @@ async def post_case_message(
             extraction = await extractor.extract(body.message, case_bound=True)
         except StructuredOutputError as exc:
             raise _model_failure(exc)
+        except httpx.HTTPError as exc:
+            raise _model_transport_failure(exc)
         proposals = extraction.to_proposals(case_bound=True)
         if proposals:
             try:
@@ -290,5 +310,7 @@ async def create_quick_analysis(
         )
     except StructuredOutputError as exc:
         raise _model_failure(exc)
+    except httpx.HTTPError as exc:
+        raise _model_transport_failure(exc)
     await db.commit()
     return {"ok": True, "data": quick_analysis_projection(result)}

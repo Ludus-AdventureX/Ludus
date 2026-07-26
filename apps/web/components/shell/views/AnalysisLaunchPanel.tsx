@@ -62,6 +62,9 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
   const [state, setState] = useState<PanelState>({ phase: "idle" });
   const [level, setLevel] = useState<AnalysisLevel>("focused");
   const abortRef = useRef<AbortController | null>(null);
+  // Synchronous re-entrancy guard: state.phase updates are async, so a fast
+  // double click could otherwise start two polling loops (review finding P1).
+  const busyRef = useRef(false);
 
   useEffect(() => {
     return () => abortRef.current?.abort();
@@ -69,7 +72,8 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
 
   const launch = useCallback(async () => {
     if (!workspaceId || !decisionCaseId) return;
-    if (state.phase === "launching" || state.phase === "analyzing") return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     const abort = new AbortController();
     abortRef.current = abort;
     setState({ phase: "launching" });
@@ -110,8 +114,10 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
           error: error instanceof DecisionLoopError ? error.message : "发起分析失败，请稍后重试。",
         }));
       }
+    } finally {
+      busyRef.current = false;
     }
-  }, [decisionCaseId, level, state.phase, workspaceId]);
+  }, [decisionCaseId, level, workspaceId]);
 
   if (!workspaceId || !decisionCaseId) {
     // Same honest gap-state discipline as EvidenceDrawerTrigger: without the
