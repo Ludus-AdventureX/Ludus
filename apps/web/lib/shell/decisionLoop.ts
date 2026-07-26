@@ -1,0 +1,293 @@
+/**
+ * In-case deep-analysis launch client (second half of the core decision loop;
+ * guest bootstrap + case creation live in lib/shell/createCase.ts):
+ *
+ *   GET  /api/auth/csrf
+ *   GET  /api/workspaces/{ws}/cases/{decisionCaseId}
+ *   POST /api/workspaces/{ws}/cases/{decisionCaseId}/analysis-charters
+ *   POST /api/workspaces/{ws}/analysis-charters/{charterId}/confirm
+ *   POST /api/workspaces/{ws}/analysis-charters/{charterId}/runs
+ *   GET  /api/workspaces/{ws}/analyses/{analysisRunId}
+ *
+ * Same-origin `/api` with credentials:"include", the {ok,data} envelope and
+ * CSRF double-submit — the exact pattern proven by lib/demo/simulationDemo.ts
+ * and lib/shell/createCase.ts. Every function accepts an injectable fetch
+ * implementation for tests.
+ */
+
+export class DecisionLoopError extends Error {
+  readonly code: string;
+  readonly status: number;
+  readonly details: unknown;
+
+  constructor(code: string, message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = "DecisionLoopError";
+    this.code = code;
+    this.status = status;
+    this.details = details;
+  }
+}
+
+type Envelope = { ok?: boolean; data?: unknown; meta?: Record<string, unknown> };
+
+export type FetchLike = typeof fetch;
+
+function defaultFetch(): FetchLike {
+  return (input, init) => fetch(input, init);
+}
+
+async function requestJson(
+  fetchImpl: FetchLike,
+  path: string,
+  init: RequestInit = {},
+): Promise<Envelope> {
+  let response: Response;
+  try {
+    response = await fetchImpl(path, { credentials: "include", ...init });
+  } catch {
+    throw new DecisionLoopError("NETWORK_ERROR", "无法连接 /api 服务，请确认后端可用。", 0);
+  }
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+  if (!response.ok) {
+    const error =
+      body && typeof body === "object" && "error" in body
+        ? (body as { error: { code?: string; message?: string; details?: unknown } }).error
+        : null;
+    throw new DecisionLoopError(
+      error?.code ?? "HTTP_ERROR",
+      error?.message ?? `请求失败（HTTP ${response.status}）。`,
+      response.status,
+      error?.details,
+    );
+  }
+  return (body ?? {}) as Envelope;
+}
+
+export async function fetchCsrfToken(fetchImpl: FetchLike = defaultFetch()): Promise<string> {
+  const envelope = await requestJson(fetchImpl, "/api/auth/csrf");
+  const token = (envelope.data as { csrfToken?: string } | undefined)?.csrfToken;
+  if (!token) throw new DecisionLoopError("CSRF_TOKEN_MISSING", "CSRF token 响应缺少 csrfToken。", 200);
+  return token;
+}
+
+export type CaseAnalysisSeed = {
+  decisionSubjectId: string;
+  decisionQuestion: string;
+};
+
+export async function getCaseAnalysisSeed(
+  workspaceId: string,
+  decisionCaseId: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<CaseAnalysisSeed> {
+  const envelope = await requestJson(
+    fetchImpl,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(decisionCaseId)}`,
+  );
+  const data = envelope.data as
+    | { decisionSubjectId?: string; decisionQuestion?: string; title?: string }
+    | undefined;
+  if (!data?.decisionSubjectId) {
+    throw new DecisionLoopError("CASE_DETAIL_INVALID", "案件详情缺少 decisionSubjectId。", 200);
+  }
+  return {
+    decisionSubjectId: data.decisionSubjectId,
+    decisionQuestion: data.decisionQuestion ?? data.title ?? "",
+  };
+}
+
+function randomHex(bytes: number): string {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const buffer = new Uint8Array(bytes);
+    crypto.getRandomValues(buffer);
+    return Array.from(buffer, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  let out = "";
+  while (out.length < bytes * 2) out += Math.floor(Math.random() * 16).toString(16);
+  return out.slice(0, bytes * 2);
+}
+
+function newUuid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const hex = randomHex(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+/** Charter body proven live against the deployed stack (focused level). */
+export function buildCharterBody(decisionSubjectId: string, decisionQuestion: string) {
+  return {
+    decisionSubjectId,
+    caseVersion: 1,
+    caseSnapshotHash: `sha256:${randomHex(32)}`,
+    analysisLevel: "focused",
+    decisionQuestion,
+    dossierSnapshotVersion: 1,
+    dossierSnapshotHash: `sha256:${randomHex(32)}`,
+    goals: [{ id: "g1", text: "看清这项取舍的关键前提" }],
+    constraints: [{ id: "c1", text: "以现有资源与时间窗口为边界" }],
+    optionIds: ["opt_a", "opt_b"],
+    preferenceWeights: { risk: 0.5, speed: 0.5 },
+    requiredStrategicLensTypes: [] as string[],
+    methodId: "hardtech-market-direction",
+    methodVersion: "1.1.0",
+    methodContentHash: `sha256:${randomHex(32)}`,
+    formalAnalysisAllowed: true,
+  };
+}
+
+export async function createCharter(
+  workspaceId: string,
+  decisionCaseId: string,
+  seed: CaseAnalysisSeed,
+  csrfToken: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<{ charterId: string }> {
+  const envelope = await requestJson(
+    fetchImpl,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(decisionCaseId)}/analysis-charters`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+      body: JSON.stringify(buildCharterBody(seed.decisionSubjectId, seed.decisionQuestion)),
+    },
+  );
+  const charterId = (envelope.data as { charterId?: string } | undefined)?.charterId;
+  if (!charterId) throw new DecisionLoopError("CHARTER_PAYLOAD_INVALID", "Charter 创建响应缺少 charterId。", 200);
+  return { charterId };
+}
+
+export async function confirmCharter(
+  workspaceId: string,
+  charterId: string,
+  csrfToken: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<void> {
+  await requestJson(
+    fetchImpl,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/analysis-charters/${encodeURIComponent(charterId)}/confirm`,
+    { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken } },
+  );
+}
+
+export async function createRun(
+  workspaceId: string,
+  charterId: string,
+  csrfToken: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<{ analysisRunId: string; status: string }> {
+  const envelope = await requestJson(
+    fetchImpl,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/analysis-charters/${encodeURIComponent(charterId)}/runs`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+        "Idempotency-Key": `loop-${newUuid()}`,
+      },
+      body: JSON.stringify({
+        analysisLevel: "focused",
+        cynefinGateResultId: newUuid(),
+        runManifestHash: `sha256:${randomHex(32)}`,
+      }),
+    },
+  );
+  const data = envelope.data as { analysisRunId?: string; status?: string } | undefined;
+  if (!data?.analysisRunId) throw new DecisionLoopError("RUN_PAYLOAD_INVALID", "Run 创建响应缺少 analysisRunId。", 200);
+  return { analysisRunId: data.analysisRunId, status: data.status ?? "queued" };
+}
+
+export type RunSnapshot = {
+  status: string;
+  progress: number;
+  lastResumableStage: string | null;
+};
+
+export async function getRunStatus(
+  workspaceId: string,
+  analysisRunId: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<RunSnapshot> {
+  const envelope = await requestJson(
+    fetchImpl,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/analyses/${encodeURIComponent(analysisRunId)}`,
+  );
+  const data = envelope.data as
+    | { status?: string; progress?: number; lastResumableStage?: string | null }
+    | undefined;
+  if (!data?.status) throw new DecisionLoopError("RUN_STATUS_INVALID", "分析状态响应缺少 status。", 200);
+  return {
+    status: data.status,
+    progress: typeof data.progress === "number" ? data.progress : 0,
+    lastResumableStage: data.lastResumableStage ?? null,
+  };
+}
+
+export type LaunchStep = "csrf" | "seed" | "charter" | "confirm" | "run";
+
+export type LaunchedAnalysis = {
+  charterId: string;
+  analysisRunId: string;
+  status: string;
+};
+
+/** csrf -> case seed -> charter -> confirm -> run, reporting each step. */
+export async function launchAnalysisForCase(
+  workspaceId: string,
+  decisionCaseId: string,
+  options: { fetchImpl?: FetchLike; onStep?: (step: LaunchStep) => void } = {},
+): Promise<LaunchedAnalysis> {
+  const fetchImpl = options.fetchImpl ?? defaultFetch();
+  options.onStep?.("csrf");
+  const csrfToken = await fetchCsrfToken(fetchImpl);
+  options.onStep?.("seed");
+  const seed = await getCaseAnalysisSeed(workspaceId, decisionCaseId, fetchImpl);
+  options.onStep?.("charter");
+  const { charterId } = await createCharter(workspaceId, decisionCaseId, seed, csrfToken, fetchImpl);
+  options.onStep?.("confirm");
+  await confirmCharter(workspaceId, charterId, csrfToken, fetchImpl);
+  options.onStep?.("run");
+  const run = await createRun(workspaceId, charterId, csrfToken, fetchImpl);
+  return { charterId, analysisRunId: run.analysisRunId, status: run.status };
+}
+
+export const TERMINAL_RUN_STATUSES = new Set([
+  "ready",
+  "blocked",
+  "cancelled",
+  "needs_attention",
+]);
+
+/** Poll GET /analyses/{runId} until a terminal status (or abort/timeout). */
+export async function pollRunUntilTerminal(
+  workspaceId: string,
+  analysisRunId: string,
+  options: {
+    fetchImpl?: FetchLike;
+    onTick?: (snapshot: RunSnapshot) => void;
+    intervalMs?: number;
+    maxTicks?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<RunSnapshot> {
+  const fetchImpl = options.fetchImpl ?? defaultFetch();
+  const intervalMs = options.intervalMs ?? 3000;
+  const maxTicks = options.maxTicks ?? 200;
+  let last: RunSnapshot = { status: "queued", progress: 0, lastResumableStage: null };
+  for (let tick = 0; tick < maxTicks; tick += 1) {
+    if (options.signal?.aborted) return last;
+    last = await getRunStatus(workspaceId, analysisRunId, fetchImpl);
+    options.onTick?.(last);
+    if (TERMINAL_RUN_STATUSES.has(last.status)) return last;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new DecisionLoopError("RUN_POLL_TIMEOUT", "分析轮询超时，run 仍未到达终态。", 0, last);
+}

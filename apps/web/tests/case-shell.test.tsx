@@ -142,7 +142,7 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
 
     const spine = screen.getByRole("navigation", { name: "决策生命周期" });
     await user.click(within(spine).getByRole("button", { name: /证据/ }));
-    expect(container.querySelector('[data-phase-slot="analysis-progress"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-analysis-launch]')).toBeInTheDocument();
     expect(container.querySelector('[data-phase-slot="quality-gate-panel"]')).toBeInTheDocument();
     expect(container.querySelector('[data-phase-slot="evidence-drawer-trigger"]')).toBeInTheDocument();
     // No total confidence percentage and no fabricated counters anywhere.

@@ -1,10 +1,13 @@
 import { EvidenceDrawerTrigger } from "@/components/quality/EvidenceDrawerTrigger";
 import { PhaseSlot } from "@/components/shell/PhaseSlot";
+import { AnalysisLaunchPanel } from "@/components/shell/views/AnalysisLaunchPanel";
 
 // Look V7 `#view-analysis` static layout frame (Phase 0 skeleton).
 // No run, trace step, evidence count or gate verdict is fabricated here;
-// AnalysisProgress / QualityGatePanel fill their slots later. Task 11 B2
-// fills the evidence-drawer-trigger anchor (replace-phase-slot-node only).
+// the analysis-progress slot is now FILLED by AnalysisLaunchPanel (real
+// charter -> confirm -> run launch + status polling; replace-phase-slot-node
+// per the Task 11 B2 precedent). QualityGatePanel still fills later. Task 11
+// B2 fills the evidence-drawer-trigger anchor (replace-phase-slot-node only).
 // READ-01 flip: the shell threads { workspaceId, decisionCaseId } so the
 // trigger can resolve real run anchors (null workspaceId keeps the gap state).
 
@@ -34,7 +37,10 @@ export function AnalysisView({ workspaceId = null, decisionCaseId }: AnalysisVie
             <div><span>Analysis movement</span><h2>研究轨迹</h2></div>
             <small>等待真实 Run 事件</small>
           </header>
-          <PhaseSlot name="analysis-progress" label="分析进度" note="AnalysisProgress（可恢复 SSE 进度、固定高度状态行）将挂载于此。" />
+          <AnalysisLaunchPanel
+            {...(workspaceId ? { workspaceId } : {})}
+            {...(decisionCaseId ? { decisionCaseId } : {})}
+          />
         </article>
 
         <div className="quality-margin">
