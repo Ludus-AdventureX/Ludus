@@ -371,6 +371,7 @@ class AnalysisWorker:
                         stage=stage,
                         output=dict(result.output),
                         progress=_PROGRESS_AT_STAGE[stage],
+                        digest=_extract_digest(result.output),
                     )
                     await self._check_cancelled(run)
                     target = (
@@ -406,6 +407,7 @@ class AnalysisWorker:
                     stage=stage,
                     output=dict(result.output),
                     progress=_PROGRESS_AT_STAGE[stage],
+                    digest=_extract_digest(result.output),
                 )
                 stage_inputs = {"previousStage": stage.value, **dict(result.output)}
         except CooperativeStop:
@@ -545,6 +547,71 @@ def _provider_request_model(provider: ModelProvider, request_model: str | None) 
     return "default"
 
 
+# Stage-specific asks (hermes-agent enforcement style): every stage must
+# deliver a dense, structured digest - no filler, no restated inputs.
+_STAGE_ASKS: Mapping[str, str] = {
+    "planning": (
+        "Decompose the decision question into the decisive sub-questions and "
+        "name the single assumption that, if wrong, flips the recommendation."
+    ),
+    "retrieving": (
+        "State what evidence exists vs. what is missing. Every keyFinding names "
+        "a concrete fact or a concrete evidence gap - never 'more research needed'."
+    ),
+    "analyzing": (
+        "Weigh the options against the goals and constraints. Every keyFinding "
+        "is a causal claim with its strongest supporting factor, and set "
+        "output.whyNow to why this decision cannot wait."
+    ),
+    "criticizing": (
+        "Attack the emerging recommendation. Set output.strongestObjection to "
+        "the single most dangerous objection, and every keyFinding names a "
+        "specific failure mode with its trigger condition."
+    ),
+    "synthesizing": (
+        "Commit. Set output.decision to one conditional commitment sentence "
+        "(what to do + under which conditions + exit rule). keyFindings carry "
+        "the 2-4 reasons that survived criticism."
+    ),
+    "validating": (
+        "Audit the chain: does the decision follow from the evidence, and did "
+        "the strongest objection get a real answer? Fail the gate when the "
+        "chain has a hole, and say which link broke in validatorFindings."
+    ),
+}
+
+_DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
+
+
+def _extract_digest(output: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Best-effort structured digest from a stage output (bounded, fail-open).
+
+    The digest is the run's visible thinking trace: it rides the
+    analysis.stage.completed event into the SSE stream and the report
+    builder. Malformed shapes degrade to None - a missing trace never
+    fails a stage.
+    """
+
+    raw = output.get("digest")
+    if not isinstance(raw, Mapping):
+        # Fall back to prominent scalar fields so older outputs still trace.
+        headline = output.get("summary") or output.get("decision") or output.get("value")
+        if not isinstance(headline, str) or not headline.strip():
+            return None
+        return {"headline": headline.strip()[:300]}
+    digest: dict[str, Any] = {}
+    headline = raw.get("headline") or raw.get("summary")
+    if isinstance(headline, str) and headline.strip():
+        digest["headline"] = headline.strip()[:300]
+    for key in _DIGEST_LIST_KEYS:
+        values = raw.get(key)
+        if isinstance(values, (list, tuple)):
+            clean = [str(v).strip()[:300] for v in values if str(v).strip()][:5]
+            if clean:
+                digest[key] = clean
+    return digest or None
+
+
 def build_role_executors_from_model_provider(
     provider: ModelProvider,
     *,
@@ -574,9 +641,16 @@ def build_role_executors_from_model_provider(
                 "never an array); "
                 '"qualityGatePassed" a boolean; '
                 '"validatorFindings" a JSON ARRAY (may be empty). '
-                "Example: {\"output\":{\"summary\":\"...\",\"keyFindings\":[]},"
-                '"packets":[],"lensPayloads":{},"qualityGatePassed":true,'
-                '"validatorFindings":[]}. '
+                "output MUST include a \"digest\" object: "
+                '{"headline": one specific sentence with this stage\'s decisive '
+                "conclusion, \"keyFindings\": 2-4 concrete claims, "
+                '"risks": 0-3 specific dangers, "openQuestions": 0-3 questions '
+                "that would change the verdict}. "
+                f"THIS STAGE'S JOB: {_STAGE_ASKS.get(stage.value, 'Advance the analysis with concrete findings.')} "
+                "Be dense and specific: never emit filler like 'analysis "
+                "complete' or restate the inputs; every claim must be one a "
+                "reader could falsify. Write digest text in the user's "
+                "language (Chinese question -> Chinese digest). "
                 "Do not include hidden reasoning."
             ),
             messages=(

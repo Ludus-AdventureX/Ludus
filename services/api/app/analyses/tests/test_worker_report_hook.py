@@ -1,4 +1,4 @@
-﻿"""READY report hook tests: canonical report artifacts materialize from runs.
+"""READY report hook tests: canonical report artifacts materialize from runs.
 
 The worker's _persist_run_report assembles a deterministic canonical document
 (report_builder) and persists + publishes it through the shipped synthesis
@@ -12,9 +12,11 @@ from __future__ import annotations
 from sqlalchemy import select
 
 from app.analyses.repository import AnalysisRuntimeRepository
+from app.analyses.synthesis import validate_content_for_level
 from app.reports.models import ReportArtifact
-from app.types import AnalysisRunStatus, FormalAnalysisLevel
-from app.workers.analysis_worker import AnalysisWorker
+from app.types import AnalysisRunStatus, FormalAnalysisLevel, OriginMode
+from app.workers.analysis_worker import AnalysisWorker, _extract_digest
+from app.workers.report_builder import build_focused_document
 
 from runtime_world import make_queued_run
 from test_analysis_worker import _stub_executors, _recording_lens_writer, _stub_lens_audit
@@ -99,3 +101,53 @@ async def test_full_ready_run_persists_detailed_report_with_five_lens_ids(sessio
     assert reports[0].type == "detailed"
     assert reports[0].status == "ready"
     assert len(reports[0].structured_content["lensArtifactIds"]) == 5
+
+class _FakeCharter:
+    decision_question = "Exclusive terms in 90 days or exit?"
+    option_ids = ["opt_go", "opt_wait"]
+    goals = [{"id": "g1", "text": "secure the channel"}]
+    constraints = [{"id": "c1", "text": "cash window closes in 6 months"}]
+    method_id = "hardtech-market-direction"
+    method_version = "1.1.0"
+    method_content_hash = "sha256:method"
+
+
+def test_digest_material_feeds_the_report_body() -> None:
+    """Stage digests become counterarguments/risks/uncertainty - and the
+    document stays canonical (validate_content_for_level is the judge)."""
+
+    stage_outputs = {
+        "analyzing": {"digest": {"headline": "Channel demand is real but conditional.",
+                                 "risks": ["tender cycle may exceed the cash window"]}},
+        "criticizing": {
+            "strongestObjection": "The counterparty can clone the offer in 60 days.",
+            "digest": {
+                "keyFindings": ["pilot fails if certification slips past Q3"],
+                "risks": ["single-buyer dependency"],
+                "openQuestions": ["will the buyer sign exclusivity at all?"],
+            },
+        },
+        "synthesizing": {"decision": "Proceed only with a signed exclusivity LOI.", "digest": {}},
+    }
+    document = build_focused_document(
+        charter=_FakeCharter(), stage_outputs=stage_outputs, origin_mode=OriginMode.LIVE
+    )
+    validate_content_for_level(FormalAnalysisLevel.FOCUSED, document)  # fail-loud gate
+
+    texts = [c["text"] for c in document["counterArguments"]]
+    assert "The counterparty can clone the offer in 60 days." in texts
+    assert "pilot fails if certification slips past Q3" in texts
+    assert "single-buyer dependency" in document["recommendation"]["risks"]
+    questions = [u["question"] for u in document["residualUncertainty"]]
+    assert "will the buyer sign exclusivity at all?" in questions
+    assert document["executiveBrief"]["decision"] == "Proceed only with a signed exclusivity LOI."
+
+
+def test_extract_digest_is_bounded_and_fail_open() -> None:
+    assert _extract_digest({}) is None
+    assert _extract_digest({"summary": "plain summary"}) == {"headline": "plain summary"}
+    big = _extract_digest({"digest": {"headline": "h" * 999, "keyFindings": ["x"] * 99, "risks": 42}})
+    assert len(big["headline"]) == 300
+    assert len(big["keyFindings"]) == 5
+    assert "risks" not in big
+

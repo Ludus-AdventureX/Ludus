@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -568,6 +569,7 @@ class AnalysisRuntimeRepository:
         stage: AnalysisRunStatus,
         output: Any,
         progress: float,
+        digest: Mapping[str, Any] | None = None,
     ) -> None:
         run = await self._lock_run(workspace_id, analysis_run_id)
         results = dict(run.stage_results)
@@ -577,11 +579,16 @@ class AnalysisRuntimeRepository:
         run.stage_results = results
         run.progress = max(0.0, min(1.0, progress))
         await self._session.flush()
+        # The digest rides the persisted event so the thinking trace is both
+        # streamed (SSE) and replayable (Last-Event-ID) without a new table.
+        payload: dict[str, Any] = {"stage": stage.value, "outputHash": entry["outputHash"]}
+        if digest:
+            payload["digest"] = dict(digest)
         await self.append_event(
             run,
             category="agent.status",
             type="analysis.stage.completed",
-            payload={"stage": stage.value, "outputHash": entry["outputHash"]},
+            payload=payload,
         )
 
     # --- queue / worker --------------------------------------------------------

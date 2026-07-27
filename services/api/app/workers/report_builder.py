@@ -24,11 +24,33 @@ def _stage_text(stage_outputs: Mapping[str, Any], stage: AnalysisRunStatus, *key
     output = stage_outputs.get(stage.value)
     if not isinstance(output, Mapping):
         return ""
+    digest = output.get("digest")
     for key in (*keys, "summary", "value", "conclusion", "text"):
         value = output.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
+    if isinstance(digest, Mapping):
+        headline = digest.get("headline")
+        if isinstance(headline, str) and headline.strip():
+            return headline.strip()
     return ""
+
+
+def _stage_digest_list(
+    stage_outputs: Mapping[str, Any], stage: AnalysisRunStatus, key: str
+) -> list[str]:
+    """A digest list (keyFindings/risks/openQuestions) from one stage."""
+
+    output = stage_outputs.get(stage.value)
+    if not isinstance(output, Mapping):
+        return []
+    digest = output.get("digest")
+    if not isinstance(digest, Mapping):
+        return []
+    values = digest.get(key)
+    if not isinstance(values, (list, tuple)):
+        return []
+    return [str(v).strip() for v in values if str(v).strip()]
 
 
 def _texts(values: Sequence[Any], fallback: str) -> list[str]:
@@ -93,6 +115,45 @@ def build_focused_document(
         "Which unverified assumption flips this recommendation first?"
     )
 
+    # Dense digest material (the run's real thinking) feeds the body: failure
+    # modes from the critic become counterarguments, open questions across
+    # stages become residual uncertainty, analysis risks become risks.
+    critic_findings = _stage_digest_list(stage_outputs, AnalysisRunStatus.CRITICIZING, "keyFindings")
+    risk_lines = _texts(
+        [
+            *_stage_digest_list(stage_outputs, AnalysisRunStatus.ANALYZING, "risks"),
+            *_stage_digest_list(stage_outputs, AnalysisRunStatus.CRITICIZING, "risks"),
+        ],
+        counter_text,
+    )[:4]
+    open_questions = [
+        *_stage_digest_list(stage_outputs, AnalysisRunStatus.RETRIEVING, "openQuestions"),
+        *_stage_digest_list(stage_outputs, AnalysisRunStatus.CRITICIZING, "openQuestions"),
+        *_stage_digest_list(stage_outputs, AnalysisRunStatus.VALIDATING, "openQuestions"),
+    ][:4] or [gap_question]
+    counter_arguments = [
+        {
+            "id": f"ch-worker-{index:03d}",
+            "category": "counterargument",
+            "text": text,
+            "severity": "high" if index == 1 else "medium",
+            "affectedOptionIds": [option_ids[0]],
+            "evidenceIds": [],
+            "mitigation": "revisit at the review date",
+            "status": "confirmed",
+        }
+        for index, text in enumerate([counter_text, *critic_findings][:3], start=1)
+    ]
+    residual_uncertainty = [
+        {
+            "id": f"unk-worker-{index:03d}",
+            "question": question,
+            "priority": "high" if index == 1 else "medium",
+            "status": "open",
+        }
+        for index, question in enumerate(open_questions, start=1)
+    ]
+
     return {
         "schemaVersion": "report-1.0.0",
         "methodId": charter.method_id,
@@ -120,7 +181,7 @@ def build_focused_document(
                 }
             ],
             "exitCriteria": constraints,
-            "risks": [counter_text],
+            "risks": risk_lines,
             "fragileAssumptionIds": [],
             "leadingIndicators": [
                 {
@@ -149,26 +210,8 @@ def build_focused_document(
             "freshnessWarnings": [],
             "reconciliationFindings": [],
         },
-        "counterArguments": [
-            {
-                "id": "ch-worker-001",
-                "category": "counterargument",
-                "text": counter_text,
-                "severity": "high",
-                "affectedOptionIds": [option_ids[0]],
-                "evidenceIds": [],
-                "mitigation": "revisit at the review date",
-                "status": "confirmed",
-            }
-        ],
-        "residualUncertainty": [
-            {
-                "id": "unk-worker-001",
-                "question": gap_question,
-                "priority": "high",
-                "status": "open",
-            }
-        ],
+        "counterArguments": counter_arguments,
+        "residualUncertainty": residual_uncertainty,
         "qualityGate": _deterministic_quality_gate(anchor),
         "originModes": [origin_mode.value],
     }
