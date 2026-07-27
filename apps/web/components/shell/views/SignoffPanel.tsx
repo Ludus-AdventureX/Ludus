@@ -23,6 +23,8 @@ type PanelPhase = "loading" | "no-report" | "form" | "signing" | "signed" | "err
 export type SignoffPanelProps = {
   workspaceId?: string | null;
   decisionCaseId?: string;
+  /** Called after a DecisionRecord is successfully signed (provenance reload). */
+  onSigned?: () => void;
 };
 
 function defaultReviewDate(): string {
@@ -31,7 +33,7 @@ function defaultReviewDate(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function SignoffPanel({ workspaceId = null, decisionCaseId }: SignoffPanelProps) {
+export function SignoffPanel({ workspaceId = null, decisionCaseId, onSigned }: SignoffPanelProps) {
   const [phase, setPhase] = useState<PanelPhase>("loading");
   const [report, setReport] = useState<ReadyReport | null>(null);
   const [decisions, setDecisions] = useState<DecisionRecordView[]>([]);
@@ -99,6 +101,7 @@ export function SignoffPanel({ workspaceId = null, decisionCaseId }: SignoffPane
       const record = await signSignoffRequest(workspaceId, created, statement.trim());
       setDecisions([record]);
       setPhase("signed");
+      onSigned?.();
     } catch (err) {
       setError(err instanceof SignoffError ? err.message : "签署失败，请重试。");
       setPhase("form");

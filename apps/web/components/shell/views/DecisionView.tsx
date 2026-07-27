@@ -1,9 +1,14 @@
-import { SignoffPanel } from "@/components/shell/views/SignoffPanel";
+"use client";
 
-// Look V7 `#view-decision` layout frame. The decision-signoff slot is now
-// FILLED by SignoffPanel (ready-report gated create -> sign -> DecisionRecord;
-// replace-phase-slot-node per the B2 precedent); the record sheet below stays
-// honest until a real signed decision exists.
+import { useState } from "react";
+
+import { SignoffPanel } from "@/components/shell/views/SignoffPanel";
+import { ProvenancePanel } from "@/components/shell/views/ProvenancePanel";
+
+// Look V7 `#view-decision` layout frame. The decision-signoff slot is FILLED
+// by SignoffPanel; once a decision is signed, ProvenancePanel renders the
+// tamper-evident hash chain ("how this decision was reached"). The record
+// sheet below stays honest until a real signed decision exists.
 
 export type DecisionViewProps = {
   workspaceId?: string | null;
@@ -11,6 +16,7 @@ export type DecisionViewProps = {
 };
 
 export function DecisionView({ workspaceId = null, decisionCaseId }: DecisionViewProps = {}) {
+  const [signedAt, setSignedAt] = useState(0);
   return (
     <section className="view is-active" id="view-decision" data-view-panel="decision" aria-labelledby="decision-view-title">
       <header className="view-intro decision-intro">
@@ -24,10 +30,17 @@ export function DecisionView({ workspaceId = null, decisionCaseId }: DecisionVie
             <SignoffPanel
               {...(workspaceId ? { workspaceId } : {})}
               {...(decisionCaseId ? { decisionCaseId } : {})}
+              onSigned={() => setSignedAt((n) => n + 1)}
             />
           </div>
         </div>
       </header>
+
+      <ProvenancePanel
+        {...(workspaceId ? { workspaceId } : {})}
+        {...(decisionCaseId ? { decisionCaseId } : {})}
+        refreshKey={signedAt}
+      />
 
       <article className="decision-sheet">
         <header className="decision-sheet-header">
