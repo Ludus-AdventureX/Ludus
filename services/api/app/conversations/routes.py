@@ -195,16 +195,21 @@ async def post_case_message(
     await db.flush()
 
     # 3. Candidate extraction after the reply — writes candidate_revisions only.
+    # Extraction is a best-effort ENRICHMENT: if the model's candidate JSON
+    # fails the strict schema (or the upstream hiccups), the user still gets
+    # the persisted note + assistant reply with zero candidates this turn
+    # (QC finding: a strict-schema miss here was failing the WHOLE message
+    # POST with 502 even though the reply had already succeeded).
     candidate_id: UUID | None = None
     patch = ProposedPatchData()
+    extraction = None
     if body.propose_structured_updates:
         extractor = MemoryExtractor(provider=provider)
         try:
             extraction = await extractor.extract(body.message, case_bound=True)
-        except StructuredOutputError as exc:
-            raise _model_failure(exc)
-        except httpx.HTTPError as exc:
-            raise _model_transport_failure(exc)
+        except (StructuredOutputError, httpx.HTTPError):
+            extraction = None
+    if extraction is not None:
         proposals = extraction.to_proposals(case_bound=True)
         if proposals:
             try:
