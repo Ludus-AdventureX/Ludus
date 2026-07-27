@@ -32,10 +32,11 @@ the executor protocol mirrors what the Task 7 ``WorkerRunner`` produces.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid5, NAMESPACE_URL
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -254,6 +255,9 @@ class AnalysisWorker:
         run_id = run.analysis_run_id
         is_full = FormalAnalysisLevel(run.analysis_level) == FormalAnalysisLevel.FULL
         stage_inputs: dict[str, Any] = {"analysisRunId": str(run_id)}
+        # In-process stage output capture for the READY report hook (stage_results
+        # on the run persists hashes only, not the output bodies).
+        stage_outputs: dict[str, Any] = {}
 
         try:
             for index, stage in enumerate(_STAGE_SEQUENCE):
@@ -292,6 +296,7 @@ class AnalysisWorker:
                 # Boundary check immediately after the external call returns:
                 # a cancellation observed here stops before any new persistence.
                 await self._check_cancelled(run)
+                stage_outputs[stage.value] = dict(result.output)
 
                 for packet in result.packets:
                     clean = _sanitize_packet(packet)
@@ -381,6 +386,18 @@ class AnalysisWorker:
                             + audit_findings
                         },
                     )
+                    if passed:
+                        # READY report hook: assemble + persist the canonical
+                        # report artifact from confirmed inputs. "No qualifying
+                        # run, no report" holds: blocked/needs_attention never
+                        # reach this line. A report failure must not roll back
+                        # the READY state - log and continue (compensable).
+                        try:
+                            await self._persist_run_report(run, stage_outputs)
+                        except Exception:
+                            logging.getLogger(__name__).exception(
+                                "report persistence failed for READY run %s", run_id
+                            )
                     return
 
                 await self._repo.record_stage_completed(
@@ -400,6 +417,62 @@ class AnalysisWorker:
         refreshed = await self._repo.get_run(run.workspace_id, run.analysis_run_id)
         assert refreshed is not None
         return refreshed
+
+    async def _persist_run_report(
+        self, run: AnalysisRun, stage_outputs: Mapping[str, Any]
+    ) -> None:
+        """READY hook: assemble + persist + publish the canonical report.
+
+        Judgment set and dissent record are logical source ids (no tables of
+        their own); their content ships inside the report document. The
+        persist path is canonical-hash idempotent, so a crash between READY
+        and publish is safely re-runnable.
+        """
+
+        from app.analyses.synthesis import (
+            build_report_validation,
+            persist_report_artifact,
+            publish_report_artifact,
+        )
+        from app.workers.report_builder import build_document_for_level
+
+        fresh = await self._fresh(run)
+        charter = await self._session.get(AnalysisCharter, fresh.charter_id)
+        if charter is None:
+            return
+        # Deterministic per-run source ids: the judgment set / dissent record
+        # are logical references whose content ships inside the document; a
+        # stable derivation keeps the canonical hash (and thus idempotent
+        # re-persistence) intact across retries.
+        judgment_set_id = uuid5(NAMESPACE_URL, f"ludus:judgment-set:{fresh.analysis_run_id}")
+        dissent_record_id = uuid5(NAMESPACE_URL, f"ludus:dissent-record:{fresh.analysis_run_id}")
+        level = FormalAnalysisLevel(fresh.analysis_level)
+        document = build_document_for_level(
+            analysis_level=level,
+            charter=charter,
+            stage_outputs=stage_outputs,
+            origin_mode=self._origin_mode,
+            lens_artifact_ids=list(fresh.strategic_lens_artifact_ids),
+            anchor=fresh.completed_at,
+        )
+        report = await persist_report_artifact(
+            self._session,
+            workspace_id=fresh.workspace_id,
+            decision_case_id=fresh.decision_case_id,
+            analysis_run_id=fresh.analysis_run_id,
+            source_judgment_set_id=judgment_set_id,
+            source_dissent_record_id=dissent_record_id,
+            case_version=charter.case_version,
+            content=document,
+            validation=build_report_validation(passed=True),
+            origin_modes=(self._origin_mode,),
+        )
+        await publish_report_artifact(
+            self._session,
+            workspace_id=fresh.workspace_id,
+            report_artifact_id=report.id,
+            gate_status="passed",
+        )
 
     async def _run_lens_stages(
         self,
