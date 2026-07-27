@@ -496,11 +496,15 @@ class AnalysisWorker:
             stage_outputs[role] = dict(result.output)
             digest = _extract_digest(result.output)
             if digest:
+                # Reuse the canonical research.packet.completed event type (the
+                # analysis_events CHECK constraint whitelists types); the role
+                # + digest ride the payload so the SSE trace can label them
+                # without a schema migration.
                 await self._repo.append_event(
                     await self._fresh(run),
                     category="agent.task",
-                    type=f"analysis.{role}.completed",
-                    payload={"role": role, "digest": dict(digest)},
+                    type="research.packet.completed",
+                    payload={"role": role, "enrichmentRole": role, "digest": dict(digest)},
                     origin_mode=self._origin_mode,
                 )
         except Exception:

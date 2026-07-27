@@ -350,14 +350,13 @@ function parseTraceEvent(data: unknown): RunTraceEvent | null {
     if (type === "analysis.stage.completed" && digest) {
       return { type, stage: String(payload.stage ?? ""), digest };
     }
-    // Independent enrichment roles ride agent.task events with their own
-    // digest; surface them in the trace as pseudo-stages so the user sees the
-    // safety anchor's blind spots and the chief of staff's actions live.
-    if (type === "analysis.safety_anchor.completed" && digest) {
-      return { type, stage: "safety_anchor", digest };
-    }
-    if (type === "analysis.chief_of_staff.completed" && digest) {
-      return { type, stage: "chief_of_staff", digest };
+    // Independent enrichment roles ride research.packet.completed with an
+    // enrichmentRole marker + their own digest; surface them in the trace as
+    // pseudo-stages so the user sees the safety anchor's blind spots and the
+    // chief of staff's actions live.
+    const enrichmentRole = payload.enrichmentRole as string | undefined;
+    if (enrichmentRole && digest) {
+      return { type, stage: enrichmentRole, digest };
     }
     if (Array.isArray(findings) && findings.length > 0) {
       return { type, findings };
