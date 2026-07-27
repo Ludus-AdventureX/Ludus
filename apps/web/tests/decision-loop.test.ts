@@ -11,6 +11,8 @@ import {
   buildCharterBody,
   launchAnalysisForCase,
   pollRunUntilTerminal,
+  watchRunUntilTerminal,
+  type RunEventSourceLike,
 } from "../lib/shell/decisionLoop";
 
 type Call = { path: string; method: string; headers: Record<string, string>; body: unknown };
@@ -149,6 +151,58 @@ describe("pollRunUntilTerminal", () => {
     await expect(
       pollRunUntilTerminal(WS, "run-1", { fetchImpl, intervalMs: 1, maxTicks: 3 }),
     ).rejects.toBeInstanceOf(DecisionLoopError);
+  });
+});
+
+describe("watchRunUntilTerminal", () => {
+  test("SSE events drive status re-reads to the terminal verdict", async () => {
+    const snapshots = [
+      { status: "planning", progress: 0.14, lastResumableStage: null },
+      { status: "validating", progress: 0.86, lastResumableStage: null },
+      { status: "ready", progress: 1.0, lastResumableStage: null },
+    ];
+    let index = 0;
+    const fetchImpl: typeof fetch = async () => jsonResponse(200, { ok: true, data: snapshots[Math.min(index++, 2)] });
+
+    const listeners: Array<() => void> = [];
+    let closed = false;
+    const source: RunEventSourceLike = {
+      addEventListener: (_type, listener) => listeners.push(() => listener({})),
+      close: () => {
+        closed = true;
+      },
+    };
+    const factory = (url: string) => {
+      expect(url).toMatch(/\/analyses\/run-1\/events$/);
+      // Emit one event per pending snapshot shortly after subscription.
+      setTimeout(() => listeners.forEach((fire) => fire()), 1);
+      setTimeout(() => listeners.forEach((fire) => fire()), 5);
+      return source;
+    };
+
+    const ticks: string[] = [];
+    const final = await watchRunUntilTerminal(WS, "run-1", {
+      fetchImpl,
+      factory,
+      safetyPollMs: 60,
+      onTick: (snapshot) => ticks.push(snapshot.status),
+    });
+
+    expect(final.status).toBe("ready");
+    expect(ticks).toEqual(["planning", "validating", "ready"]);
+    expect(closed).toBe(true);
+  });
+
+  test("falls back to plain polling when no EventSource factory exists", async () => {
+    const snapshots = [
+      { status: "queued", progress: 0, lastResumableStage: null },
+      { status: "blocked", progress: 0.86, lastResumableStage: null },
+    ];
+    let index = 0;
+    const fetchImpl: typeof fetch = async () => jsonResponse(200, { ok: true, data: snapshots[Math.min(index++, 1)] });
+
+    const final = await watchRunUntilTerminal(WS, "run-1", { fetchImpl, factory: null });
+    expect(final.status).toBe("blocked");
   });
 });
 

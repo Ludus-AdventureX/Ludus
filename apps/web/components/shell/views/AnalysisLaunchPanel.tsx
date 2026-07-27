@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DecisionLoopError,
   launchAnalysisForCase,
-  pollRunUntilTerminal,
+  watchRunUntilTerminal,
   type AnalysisLevel,
   type LaunchStep,
   type RunSnapshot,
@@ -88,7 +88,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         progress: 0,
         status: launched.status,
       });
-      const final = await pollRunUntilTerminal(workspaceId, launched.analysisRunId, {
+      const final = await watchRunUntilTerminal(workspaceId, launched.analysisRunId, {
         signal: abort.signal,
         onTick: (snapshot: RunSnapshot) =>
           setState((prev) => ({

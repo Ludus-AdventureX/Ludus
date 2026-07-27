@@ -309,3 +309,87 @@ export async function pollRunUntilTerminal(
   }
   throw new DecisionLoopError("RUN_POLL_TIMEOUT", "分析轮询超时，run 仍未到达终态。", 0, last);
 }
+
+// --- SSE-driven watching (polling stays as the fallback) ---------------------
+
+/** Minimal EventSource surface (mirrors the evidence.ts precedent). */
+export type RunEventSourceLike = {
+  addEventListener(type: string, listener: (event: { data?: unknown }) => void): void;
+  close(): void;
+};
+
+export type RunEventSourceFactory = (url: string) => RunEventSourceLike;
+
+/** Default factory: the browser EventSource, when the runtime provides one. */
+export function defaultRunEventSourceFactory(): RunEventSourceFactory | null {
+  if (typeof EventSource === "undefined") return null;
+  return (url: string) => new EventSource(url, { withCredentials: true });
+}
+
+/**
+ * Event-driven run watching over GET /analyses/{runId}/events (SSE frames use
+ * `event:` = canonical category). Every observed event triggers a status
+ * re-read (GET stays the source of truth), with a slow safety poll so a
+ * dropped stream cannot strand the UI. When no EventSource is available the
+ * caller-visible behaviour degrades to the plain 3s poll.
+ */
+export async function watchRunUntilTerminal(
+  workspaceId: string,
+  analysisRunId: string,
+  options: {
+    fetchImpl?: FetchLike;
+    onTick?: (snapshot: RunSnapshot) => void;
+    factory?: RunEventSourceFactory | null;
+    safetyPollMs?: number;
+    signal?: AbortSignal;
+    maxTicks?: number;
+  } = {},
+): Promise<RunSnapshot> {
+  const factory = options.factory === undefined ? defaultRunEventSourceFactory() : options.factory;
+  if (!factory) {
+    return pollRunUntilTerminal(workspaceId, analysisRunId, {
+      fetchImpl: options.fetchImpl,
+      onTick: options.onTick,
+      signal: options.signal,
+      maxTicks: options.maxTicks,
+    });
+  }
+  const fetchImpl = options.fetchImpl ?? defaultFetch();
+  const safetyPollMs = options.safetyPollMs ?? 15000;
+  const maxTicks = options.maxTicks ?? 400;
+
+  let wake: (() => void) | null = null;
+  const kick = () => {
+    wake?.();
+    wake = null;
+  };
+  const url =
+    `/api/workspaces/${encodeURIComponent(workspaceId)}` +
+    `/analyses/${encodeURIComponent(analysisRunId)}/events`;
+  let source: RunEventSourceLike | null = null;
+  try {
+    source = factory(url);
+    for (const category of ["agent.status", "agent.task", "error"]) {
+      source.addEventListener(category, kick);
+    }
+  } catch {
+    source = null; // stream refused: the safety poll below still completes
+  }
+
+  let last: RunSnapshot = { status: "queued", progress: 0, lastResumableStage: null };
+  try {
+    for (let tick = 0; tick < maxTicks; tick += 1) {
+      if (options.signal?.aborted) return last;
+      last = await getRunStatus(workspaceId, analysisRunId, fetchImpl);
+      options.onTick?.(last);
+      if (TERMINAL_RUN_STATUSES.has(last.status)) return last;
+      await new Promise<void>((resolve) => {
+        wake = resolve;
+        setTimeout(resolve, safetyPollMs);
+      });
+    }
+  } finally {
+    source?.close();
+  }
+  throw new DecisionLoopError("RUN_POLL_TIMEOUT", "分析监听超时，run 仍未到达终态。", 0, last);
+}
