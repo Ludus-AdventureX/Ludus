@@ -92,6 +92,24 @@ def _funnel_audit(stage_outputs: Mapping[str, Any]) -> Mapping[str, Any]:
     return {}
 
 
+def _role_digest(stage_outputs: Mapping[str, Any], role: str) -> Mapping[str, Any]:
+    """The digest of an enrichment role (safety_anchor / chief_of_staff)."""
+
+    output = stage_outputs.get(role)
+    if isinstance(output, Mapping):
+        digest = output.get("digest")
+        if isinstance(digest, Mapping):
+            return digest
+    return {}
+
+
+def _role_list(stage_outputs: Mapping[str, Any], role: str, key: str) -> list[str]:
+    values = _role_digest(stage_outputs, role).get(key)
+    if not isinstance(values, (list, tuple)):
+        return []
+    return [str(v).strip() for v in values if str(v).strip()]
+
+
 def build_focused_document(
     *,
     charter: Any,
@@ -140,6 +158,13 @@ def build_focused_document(
         *_stage_digest_list(stage_outputs, AnalysisRunStatus.CRITICIZING, "openQuestions"),
         *_stage_digest_list(stage_outputs, AnalysisRunStatus.VALIDATING, "openQuestions"),
     ][:4] or [gap_question]
+    # Independent safety anchor: collective blind spots lead the residual
+    # uncertainty (its headline is the 'if all wrong because' single reason).
+    anchor_headline = _role_digest(stage_outputs, "safety_anchor").get("headline")
+    blind_spots = _role_list(stage_outputs, "safety_anchor", "keyFindings")
+    if isinstance(anchor_headline, str) and anchor_headline.strip():
+        blind_spots = [f"集体盲区：若所有方向均错，最可能因为——{anchor_headline.strip()}", *blind_spots]
+    open_questions = ([f"安全锚：{b}" for b in blind_spots[:2]] + open_questions)[:5]
     counter_arguments = [
         {
             "id": f"ch-worker-{index:03d}",
@@ -202,13 +227,25 @@ def build_focused_document(
                 }
             ],
             "nextActions": [
+                *[
+                    {
+                        "id": f"act-cos-{index:03d}",
+                        "text": action,
+                        "owner": "chief of staff",
+                        "dueAt": review_date,
+                        "status": "open",
+                    }
+                    for index, action in enumerate(
+                        _role_list(stage_outputs, "chief_of_staff", "keyFindings")[:3], start=1
+                    )
+                ],
                 {
                     "id": "act-review",
                     "text": "confirm the stated conditions before the review date",
                     "owner": "decision owner",
                     "dueAt": review_date,
                     "status": "open",
-                }
+                },
             ],
             "reviewDate": review_date,
             "quality": _quality_block(),

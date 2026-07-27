@@ -356,6 +356,22 @@ class AnalysisWorker:
                 if is_full and stage in FULL_LENS_SCHEDULE:
                     await self._run_lens_stages(run, stage, result)
 
+                # Grey-goo v6 roles that Ludus previously dropped, re-added as
+                # best-effort enrichment calls (no state transition, no gate):
+                # an INDEPENDENT safety anchor after criticizing (collective
+                # blind spots + if-all-wrong-because), and a chief of staff
+                # after synthesizing ("so what to do" - conditional actions).
+                if stage == AnalysisRunStatus.CRITICIZING:
+                    await self._enrich_role(
+                        run, "safety_anchor", self._executors.critic,
+                        AnalysisRunStatus.CRITICIZING, stage_inputs, stage_outputs,
+                    )
+                elif stage == AnalysisRunStatus.SYNTHESIZING:
+                    await self._enrich_role(
+                        run, "chief_of_staff", self._executors.synthesis,
+                        AnalysisRunStatus.SYNTHESIZING, stage_inputs, stage_outputs,
+                    )
+
                 if stage == AnalysisRunStatus.VALIDATING:
                     # Validation validates and blocks ONLY: no artifact writes,
                     # no synthesis, no repair of missing artifacts here.
@@ -455,6 +471,43 @@ class AnalysisWorker:
         refreshed = await self._repo.get_run(run.workspace_id, run.analysis_run_id)
         assert refreshed is not None
         return refreshed
+
+    async def _enrich_role(
+        self,
+        run: AnalysisRun,
+        role: str,
+        executor: RoleExecutor,
+        stage: AnalysisRunStatus,
+        stage_inputs: Mapping[str, Any],
+        stage_outputs: dict[str, Any],
+    ) -> None:
+        """Best-effort extra role call; its digest lands in stage_outputs[role].
+
+        No state transition and no quality gate - a failure here degrades to a
+        missing section, never a failed run. The role marker rides in the
+        stage inputs so the live executor swaps in the role's ask (fixture/stub
+        executors ignore it and simply return their canned StageResult).
+        """
+
+        try:
+            enriched_inputs = {**dict(stage_inputs), "roleOverride": role,
+                               "substage": role}
+            result = await executor(run, stage, enriched_inputs)
+            stage_outputs[role] = dict(result.output)
+            digest = _extract_digest(result.output)
+            if digest:
+                await self._repo.append_event(
+                    await self._fresh(run),
+                    category="agent.task",
+                    type=f"analysis.{role}.completed",
+                    payload={"role": role, "digest": dict(digest)},
+                    origin_mode=self._origin_mode,
+                )
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "role enrichment %s failed for run %s", role, run.analysis_run_id,
+                exc_info=True,
+            )
 
     async def _persist_run_report(
         self, run: AnalysisRun, stage_outputs: Mapping[str, Any]
@@ -626,6 +679,31 @@ _STAGE_ASKS: Mapping[str, str] = {
 
 _DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
 
+# Independent-role asks (grey-goo v6 safety-anchor / chief-of-staff). Selected
+# via inputs["roleOverride"] so the same executor serves an extra pass without
+# a new pipeline stage.
+_ROLE_ASKS: Mapping[str, str] = {
+    "safety_anchor": (
+        "You are an INDEPENDENT safety anchor, not an analyst. Ignore whether "
+        "the prior stages agree - hunt COLLECTIVE blind spots. digest.headline "
+        "answers 'if every prior direction is wrong, the most likely single "
+        "reason is ___'. digest.keyFindings are 2-4 shared unexamined "
+        "assumptions the whole analysis rests on; digest.risks are the most "
+        "vulnerable links; digest.openQuestions are what must be checked before "
+        "trusting the convergence. Name real blind spots, never 'looks fine'."
+    ),
+    "chief_of_staff": (
+        "You are the chief of staff: convert analysis into ACTION. Not 'what "
+        "this means' but 'so what to do'. digest.headline is ONE falsifiable, "
+        "concrete recommendation naming the actor and the move (BANNED vague "
+        "verbs: strengthen/optimize/enhance/leverage/balance). digest.keyFindings "
+        "are 2-4 near-term actions, each 'who does what, precondition, failure "
+        "signal'. digest.risks are the top risks with a pre-positioned response; "
+        "digest.openQuestions are the decision gates. Do not invent actions for "
+        "findings that have no handle."
+    ),
+}
+
 
 def _extract_digest(output: Mapping[str, Any]) -> dict[str, Any] | None:
     """Best-effort structured digest from a stage output (bounded, fail-open).
@@ -673,6 +751,12 @@ def build_role_executors_from_model_provider(
     async def execute(
         run: AnalysisRun, stage: AnalysisRunStatus, inputs: Mapping[str, Any]
     ) -> StageResult:
+        role_override = inputs.get("roleOverride") if isinstance(inputs, Mapping) else None
+        stage_ask = (
+            _ROLE_ASKS.get(str(role_override))
+            if role_override
+            else _STAGE_ASKS.get(stage.value)
+        ) or "Advance the analysis with concrete findings."
         completion = await complete_structured_checked(
             provider,
             system=(
@@ -690,7 +774,7 @@ def build_role_executors_from_model_provider(
                 "conclusion, \"keyFindings\": 2-4 concrete claims, "
                 '"risks": 0-3 specific dangers, "openQuestions": 0-3 questions '
                 "that would change the verdict}. "
-                f"THIS STAGE'S JOB: {_STAGE_ASKS.get(stage.value, 'Advance the analysis with concrete findings.')} "
+                f"THIS STAGE'S JOB: {stage_ask} "
                 "Be dense and specific: never emit filler like 'analysis "
                 "complete' or restate the inputs; every claim must be one a "
                 "reader could falsify. Write digest text in the user's "

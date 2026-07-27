@@ -151,3 +151,29 @@ def test_extract_digest_is_bounded_and_fail_open() -> None:
     assert len(big["keyFindings"]) == 5
     assert "risks" not in big
 
+def test_safety_anchor_and_chief_of_staff_feed_the_report() -> None:
+    stage_outputs = {
+        "synthesizing": {"decision": "Proceed under signed LOI.", "digest": {}},
+        "safety_anchor": {"digest": {
+            "headline": "buyer commitment is assumed, not verified",
+            "keyFindings": ["all agents assume the LOI converts to a binding contract"],
+        }},
+        "chief_of_staff": {"digest": {
+            "headline": "CFO signs the exclusivity LOI before Q3",
+            "keyFindings": [
+                "legal drafts the exclusivity clause this week",
+                "sales secures a volume floor within 30 days",
+            ],
+        }},
+    }
+    document = build_focused_document(
+        charter=_FakeCharter(), stage_outputs=stage_outputs, origin_mode=OriginMode.LIVE
+    )
+    validate_content_for_level(FormalAnalysisLevel.FOCUSED, document)
+
+    questions = " ".join(u["question"] for u in document["residualUncertainty"])
+    assert "集体盲区" in questions and "buyer commitment is assumed" in questions
+    actions = [a["text"] for a in document["recommendation"]["nextActions"]]
+    assert "legal drafts the exclusivity clause this week" in actions
+    assert any(a["owner"] == "chief of staff" for a in document["recommendation"]["nextActions"])
+

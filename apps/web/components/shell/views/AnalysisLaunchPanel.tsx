@@ -63,6 +63,8 @@ const stageTraceLabels: Record<string, string> = {
   criticizing: "反方",
   synthesizing: "综合",
   validating: "验证",
+  safety_anchor: "安全锚（盲区）",
+  chief_of_staff: "参谋长（行动）",
 };
 
 function traceEntryFrom(trace: RunTraceEvent): TraceEntry | null {
