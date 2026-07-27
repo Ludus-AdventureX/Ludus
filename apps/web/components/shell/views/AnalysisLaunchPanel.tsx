@@ -9,6 +9,7 @@ import {
   type AnalysisLevel,
   type LaunchStep,
   type RunSnapshot,
+  type RunTraceEvent,
 } from "@/lib/shell/decisionLoop";
 
 // Fills the reserved `analysis-progress` PhaseSlot with the REAL deep-analysis
@@ -44,6 +45,8 @@ function statusLabel(status?: string): string {
 
 type PanelPhase = "idle" | "launching" | "analyzing" | "done" | "error";
 
+type TraceEntry = { stage: string; headline: string; details: string[] };
+
 type PanelState = {
   phase: PanelPhase;
   step?: LaunchStep;
@@ -53,6 +56,34 @@ type PanelState = {
   error?: string;
 };
 
+const stageTraceLabels: Record<string, string> = {
+  planning: "规划",
+  retrieving: "检索",
+  analyzing: "分析",
+  criticizing: "反方",
+  synthesizing: "综合",
+  validating: "验证",
+};
+
+function traceEntryFrom(trace: RunTraceEvent): TraceEntry | null {
+  if (!trace.digest) return null;
+  const details = [
+    ...(trace.digest.keyFindings ?? []),
+    ...(trace.digest.risks ?? []).map((risk) => `风险：${risk}`),
+  ].slice(0, 4);
+  const headline = trace.digest.headline ?? details[0] ?? "";
+  if (!headline) return null;
+  return { stage: trace.stage ?? "", headline, details };
+}
+
+function findingText(finding: Record<string, unknown>): string {
+  for (const key of ["message", "detail", "reason", "code"]) {
+    const value = finding[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return JSON.stringify(finding);
+}
+
 export type AnalysisLaunchPanelProps = {
   workspaceId?: string | null;
   decisionCaseId?: string;
@@ -61,6 +92,8 @@ export type AnalysisLaunchPanelProps = {
 export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: AnalysisLaunchPanelProps) {
   const [state, setState] = useState<PanelState>({ phase: "idle" });
   const [level, setLevel] = useState<AnalysisLevel>("focused");
+  const [trace, setTrace] = useState<TraceEntry[]>([]);
+  const [findings, setFindings] = useState<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   // Synchronous re-entrancy guard: state.phase updates are async, so a fast
   // double click could otherwise start two polling loops (review finding P1).
@@ -77,6 +110,8 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     const abort = new AbortController();
     abortRef.current = abort;
     setState({ phase: "launching" });
+    setTrace([]);
+    setFindings([]);
     try {
       const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, {
         level,
@@ -90,6 +125,17 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
       });
       const final = await watchRunUntilTerminal(workspaceId, launched.analysisRunId, {
         signal: abort.signal,
+        onTrace: (event: RunTraceEvent) => {
+          const entry = traceEntryFrom(event);
+          if (entry) {
+            setTrace((prev) =>
+              prev.some((p) => p.stage === entry.stage) ? prev : [...prev, entry],
+            );
+          }
+          if (event.findings) {
+            setFindings(event.findings.map(findingText).filter(Boolean).slice(0, 5));
+          }
+        },
         onTick: (snapshot: RunSnapshot) =>
           setState((prev) => ({
             ...prev,
@@ -188,6 +234,39 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
             </p>
           )}
           {state.phase === "error" && <p>{state.error}</p>}
+        </div>
+      )}
+
+      {trace.length > 0 && (
+        <ol className="analysis-trace" data-analysis-trace aria-label="分析思考轨迹">
+          {trace.map((entry) => (
+            <li key={entry.stage} data-trace-stage={entry.stage}>
+              <b>{stageTraceLabels[entry.stage] ?? entry.stage}</b>：{entry.headline}
+              {entry.details.length > 0 && (
+                <ul>
+                  {entry.details.map((detail) => (
+                    <li key={detail}>{detail}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {state.phase === "done" && state.status === "blocked" && (
+        <div className="analysis-blocked-guide" data-analysis-blocked-guide>
+          <p>质量门拦截了本次分析——不是失败，而是证据链还支撑不起结论。卡点：</p>
+          {findings.length > 0 ? (
+            <ul>
+              {findings.map((text) => (
+                <li key={text}>{text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>验证阶段判定证据支撑不足（未给出具体条目）。</p>
+          )}
+          <p>建议：回到 Q 区把上面缺口对应的事实补进档案（确认候选），再发起一次分析。</p>
         </div>
       )}
     </div>

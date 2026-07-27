@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { AnalysisLaunchPanel } from "../components/shell/views/AnalysisLaunchPanel";
+import type { RunEventSourceLike } from "../lib/shell/decisionLoop";
 
 // Panel battery: honest gap state without the workspace anchor, real launch
 // sequence to a terminal verdict, and honest error surface on failure.
@@ -90,5 +91,81 @@ describe("AnalysisLaunchPanel", () => {
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("CSRF 校验失败"));
     expect(screen.getByRole("button", { name: /重试发起分析/ })).toBeEnabled();
+  });
+
+  test("renders the SSE thinking trace and the blocked guidance from findings", async () => {
+    const user = userEvent.setup();
+    // A fake browser EventSource: the default factory picks it up in jsdom.
+    const listeners: Array<[string, (event: { data?: unknown }) => void]> = [];
+    class FakeEventSource implements RunEventSourceLike {
+      constructor(_url: string, _init?: unknown) {}
+      addEventListener(type: string, listener: (event: { data?: unknown }) => void) {
+        listeners.push([type, listener]);
+      }
+      close() {}
+    }
+    vi.stubGlobal("EventSource", FakeEventSource);
+
+    const responses: Array<[RegExp, Response]> = [
+      [/\/api\/auth\/csrf$/, jsonResponse(200, { ok: true, data: { csrfToken: "tok" } })],
+      [
+        new RegExp(`/cases/${CASE}$`),
+        jsonResponse(200, { ok: true, data: { decisionSubjectId: "sub-1", decisionQuestion: "问题？" } }),
+      ],
+      [/analysis-charters$/, jsonResponse(201, { ok: true, data: { charterId: "ch-1" } })],
+      [/\/confirm$/, jsonResponse(200, { ok: true, data: {} })],
+      [/\/runs$/, jsonResponse(201, { ok: true, data: { analysisRunId: "run-12345678", status: "queued" } })],
+      [
+        /\/analyses\/run-12345678$/,
+        jsonResponse(200, { ok: true, data: { status: "analyzing", progress: 0.4, lastResumableStage: null } }),
+      ],
+      [
+        /\/analyses\/run-12345678$/,
+        jsonResponse(200, { ok: true, data: { status: "blocked", progress: 0.86, lastResumableStage: null } }),
+      ],
+    ];
+    let index = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const path = String(input);
+        const step = responses[Math.min(index, responses.length - 1)];
+        index += 1;
+        if (!step[0].test(path)) throw new Error(`request ${index} was ${path}`);
+        return step[1].clone();
+      }),
+    );
+
+    render(createElement(AnalysisLaunchPanel, { workspaceId: WS, decisionCaseId: CASE }));
+    await user.click(screen.getByRole("button", { name: /发起聚焦深度分析/ }));
+
+    await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
+    const fire = (payload: unknown) =>
+      listeners.forEach(([, listener]) => listener({ data: JSON.stringify(payload) }));
+    fire({
+      type: "analysis.stage.completed",
+      payload: {
+        stage: "criticizing",
+        digest: { headline: "独家条款可能根本签不下来", keyFindings: ["对手 60 天内可复制报价"] },
+      },
+    });
+    fire({
+      type: "analysis.blocked",
+      payload: { findings: [{ code: "claim_support_below_threshold" }] },
+    });
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-analysis-trace]")).toHaveTextContent("独家条款可能根本签不下来"),
+    );
+    expect(document.querySelector("[data-trace-stage='criticizing']")).toHaveTextContent(
+      "对手 60 天内可复制报价",
+    );
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-analysis-blocked-guide]")).toBeInTheDocument(),
+    );
+    expect(document.querySelector("[data-analysis-blocked-guide]")).toHaveTextContent(
+      "claim_support_below_threshold",
+    );
   });
 });

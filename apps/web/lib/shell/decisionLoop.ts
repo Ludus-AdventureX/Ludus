@@ -320,6 +320,45 @@ export type RunEventSourceLike = {
 
 export type RunEventSourceFactory = (url: string) => RunEventSourceLike;
 
+/** One stage's visible thinking (the digest riding analysis.stage.completed). */
+export type RunDigest = {
+  headline?: string;
+  keyFindings?: string[];
+  risks?: string[];
+  openQuestions?: string[];
+};
+
+/** A trace observation surfaced to the UI from the run's SSE event stream. */
+export type RunTraceEvent = {
+  type: string;
+  stage?: string;
+  digest?: RunDigest;
+  findings?: Array<Record<string, unknown>>;
+};
+
+function parseTraceEvent(data: unknown): RunTraceEvent | null {
+  if (typeof data !== "string" || !data) return null;
+  try {
+    const envelope = JSON.parse(data) as {
+      type?: string;
+      payload?: Record<string, unknown>;
+    };
+    const type = envelope.type ?? "";
+    const payload = envelope.payload ?? {};
+    const digest = payload.digest as RunDigest | undefined;
+    const findings = payload.findings as Array<Record<string, unknown>> | undefined;
+    if (type === "analysis.stage.completed" && digest) {
+      return { type, stage: String(payload.stage ?? ""), digest };
+    }
+    if (Array.isArray(findings) && findings.length > 0) {
+      return { type, findings };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Default factory: the browser EventSource, when the runtime provides one. */
 export function defaultRunEventSourceFactory(): RunEventSourceFactory | null {
   if (typeof EventSource === "undefined") return null;
@@ -339,6 +378,7 @@ export async function watchRunUntilTerminal(
   options: {
     fetchImpl?: FetchLike;
     onTick?: (snapshot: RunSnapshot) => void;
+    onTrace?: (trace: RunTraceEvent) => void;
     factory?: RunEventSourceFactory | null;
     safetyPollMs?: number;
     signal?: AbortSignal;
@@ -367,10 +407,17 @@ export async function watchRunUntilTerminal(
     `/api/workspaces/${encodeURIComponent(workspaceId)}` +
     `/analyses/${encodeURIComponent(analysisRunId)}/events`;
   let source: RunEventSourceLike | null = null;
+  const onMessage = (event: { data?: unknown }) => {
+    if (options.onTrace) {
+      const trace = parseTraceEvent(event.data);
+      if (trace) options.onTrace(trace);
+    }
+    kick();
+  };
   try {
     source = factory(url);
     for (const category of ["agent.status", "agent.task", "error"]) {
-      source.addEventListener(category, kick);
+      source.addEventListener(category, onMessage);
     }
   } catch {
     source = null; // stream refused: the safety poll below still completes
