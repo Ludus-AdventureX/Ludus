@@ -159,6 +159,55 @@ async def default_lens_writer(
 LENS_VALIDATION_VERDICT = apply_validation_verdict
 
 
+# Untrusted model packets must NEVER be spread raw into the ORM constructor:
+# an extra key (e.g. "type") raises TypeError and kills the whole run (QC
+# finding). Whitelist + normalize the model-fillable ResearchPacket fields;
+# packets without a non-empty conclusion are dropped fail-closed (DB check
+# conclusion_not_empty would reject them anyway).
+_PACKET_FIELD_MAP: Mapping[str, str] = {
+    "factor": "factor",
+    "framework_used": "framework_used",
+    "frameworkUsed": "framework_used",
+    "conclusion": "conclusion",
+    "direction": "direction",
+    "claim_support_score": "claim_support_score",
+    "claimSupportScore": "claim_support_score",
+    "evidence_ids": "evidence_ids",
+    "evidenceIds": "evidence_ids",
+    "discarded_claims": "discarded_claims",
+    "discardedClaims": "discarded_claims",
+    "remaining_gaps": "remaining_gaps",
+    "remainingGaps": "remaining_gaps",
+    "disclaimer": "disclaimer",
+}
+
+
+def _sanitize_packet(raw: Mapping[str, Any]) -> dict[str, Any] | None:
+    out: dict[str, Any] = {}
+    for key, target in _PACKET_FIELD_MAP.items():
+        if key in raw and target not in out and raw[key] is not None:
+            out[target] = raw[key]
+    conclusion = str(out.get("conclusion") or "").strip()
+    if not conclusion:
+        return None
+    out["conclusion"] = conclusion
+    try:
+        score = float(out.get("claim_support_score", 0.5))
+    except (TypeError, ValueError):
+        score = 0.5
+    out["claim_support_score"] = min(1.0, max(0.0, score))
+    for text_field, limit in (("factor", 400), ("framework_used", 400), ("direction", 200)):
+        if text_field in out:
+            out[text_field] = str(out[text_field])[:limit]
+    for list_field in ("evidence_ids", "discarded_claims", "remaining_gaps"):
+        value = out.get(list_field)
+        if value is not None:
+            out[list_field] = [str(item) for item in value] if isinstance(value, (list, tuple)) else [str(value)]
+    if "disclaimer" in out:
+        out["disclaimer"] = str(out["disclaimer"])
+    return out
+
+
 class AnalysisWorker:
     """One worker loop iteration: claim, execute, finish or park the run."""
 
@@ -245,12 +294,15 @@ class AnalysisWorker:
                 await self._check_cancelled(run)
 
                 for packet in result.packets:
+                    clean = _sanitize_packet(packet)
+                    if clean is None:
+                        continue
                     saved = await self._repo.add_research_packet(
                         workspace_id=workspace_id,
                         decision_case_id=run.decision_case_id,
                         analysis_run_id=run_id,
                         role=_STAGE_ROLE[stage],
-                        **dict(packet),
+                        **clean,
                     )
                     await self._repo.append_event(
                         await self._fresh(run),
