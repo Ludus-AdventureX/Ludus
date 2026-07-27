@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 
 import { SandboxWorkspace } from "@/components/simulation/SandboxWorkspace";
+import { FactorSandboxPanel } from "@/components/shell/views/FactorSandboxPanel";
 import { loadSandboxCaseData } from "@/components/simulation/sandboxData";
 import type { SandboxCaseData } from "@/components/simulation/types";
 import type { SandboxWorkspaceSlotProps } from "@/lib/shell/slotContracts";
@@ -36,6 +37,10 @@ export function SandboxView({ workspaceId = null, decisionCaseId, fetchImpl }: S
 
   return (
     <section className="view is-active" id="view-sandbox" data-view-panel="sandbox" aria-labelledby="sandbox-view-title">
+      <FactorSandboxPanel
+        {...(workspaceId ? { workspaceId } : {})}
+        {...(decisionCaseId ? { decisionCaseId } : {})}
+      />
       <SandboxWorkspace decisionCaseId={decisionCaseId} data={data} />
     </section>
   );

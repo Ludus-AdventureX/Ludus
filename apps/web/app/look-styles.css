@@ -877,3 +877,28 @@ body.empty-case .source-mode.is-empty i {
 .provenance-chain dt { opacity: 0.6; white-space: nowrap; }
 .provenance-chain dd { margin: 0; font-family: var(--mono, monospace); word-break: break-all; }
 .provenance-arrow { display: block; margin-top: 0.5rem; font-size: 0.72rem; opacity: 0.5; }
+
+/* Factor sandbox (g4): deterministic three-layer what-if over report factors */
+.factor-sandbox { margin: 1rem 0 1.5rem; padding: 1rem 1.25rem; border: 1px solid var(--hairline, #2a2a35); border-radius: 12px; }
+.factor-sandbox > header h3 { margin: 0.15rem 0; font-size: 1.05rem; }
+.sandbox-outcome { margin: 0.75rem 0; }
+.sandbox-meter { position: relative; height: 12px; border-radius: 6px; background: var(--surface-2, rgba(255,255,255,0.06)); overflow: hidden; }
+.sandbox-meter > span { display: block; height: 100%; background: linear-gradient(90deg,#3a7,#6c9); transition: width 0.25s; }
+.sandbox-outcome[data-sandbox-verdict="hold"] .sandbox-meter > span { background: linear-gradient(90deg,#a55,#c86); }
+.sandbox-meter > i { position: absolute; top: -2px; width: 2px; height: 16px; background: var(--text, #ddd); opacity: 0.5; }
+.sandbox-factors { list-style: none; margin: 0.5rem 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.sandbox-factors > li { padding: 0.55rem 0.7rem; border: 1px solid var(--hairline, #2a2a35); border-radius: 10px; }
+.sandbox-factors > li[data-factor-direction="opposing"] { border-left: 3px solid #c86; }
+.sandbox-factors > li[data-factor-direction="supporting"] { border-left: 3px solid #6c9; }
+.sandbox-factor-head { display: flex; align-items: baseline; gap: 0.5rem; }
+.sandbox-factor-head b { flex: 1; }
+.sandbox-factor-tag { font-size: 0.72rem; opacity: 0.65; }
+.sandbox-remove { font-size: 0.72rem; background: none; border: 1px solid var(--hairline,#2a2a35); border-radius: 6px; padding: 0.1rem 0.4rem; cursor: pointer; }
+.sandbox-factors input[type="range"] { width: 100%; margin: 0.35rem 0 0.2rem; }
+.sandbox-factor-source { font-size: 0.74rem; opacity: 0.6; margin: 0; }
+.sandbox-drivers { margin-top: 0.75rem; font-size: 0.8rem; }
+.sandbox-drivers h4 { margin: 0 0 0.3rem; font-size: 0.85rem; }
+.sandbox-drivers ol { margin: 0; padding-left: 1.1rem; }
+.sandbox-drivers em { opacity: 0.7; }
+.sandbox-actions { display: flex; gap: 0.5rem; margin-top: 0.85rem; }
+.sandbox-deep-status { font-size: 0.78rem; opacity: 0.8; margin-top: 0.4rem; }

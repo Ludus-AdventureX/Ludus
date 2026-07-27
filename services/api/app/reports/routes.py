@@ -17,6 +17,7 @@ from pydantic import Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analyses.models import ResearchPacket
 from app.analyses.synthesis import (
     ExportNotAllowed,
     ReportPublicationBlocked,
@@ -25,10 +26,11 @@ from app.analyses.synthesis import (
 )
 from app.contracts.schemas import CanonicalModel
 from app.db import get_session
-from app.models import DecisionCase
+from app.models import AnalysisRun, DecisionCase
 from app.reports.models import ExportArtifact, ReportArtifact
 from app.security.csrf import require_csrf
 from app.security.envelope import ApiFailure
+from app.simulations.factor_sandbox import factors_from_packets, simulate
 from app.tenancy.context import WorkspaceContext, require_workspace_context
 from app.types import OriginMode
 
@@ -37,6 +39,13 @@ router = APIRouter(tags=["reports"])
 
 class ExportCreateRequest(CanonicalModel):
     type: Literal["html", "pdf"]
+
+
+class SandboxPreviewRequest(CanonicalModel):
+    # Layer-1 what-if inputs: user-edited factor strengths in [0,1] keyed by
+    # factor id. Empty = baseline. Anchors only; the factor graph itself is
+    # server-derived from the case's latest analysis (never client-supplied).
+    node_overrides: dict[str, float] = Field(default_factory=dict)
 
 
 class ExportRetryRequest(CanonicalModel):
@@ -316,3 +325,87 @@ async def retry_export_artifact(
     await db.commit()
     refreshed = await _export_for_workspace(db, context, export_artifact_id)
     return _envelope(_export_data(refreshed))
+
+async def _latest_run_packets(
+    db: AsyncSession, context: WorkspaceContext, decision_case_id: UUID
+) -> list[dict[str, Any]]:
+    """Research packets from the case's most recent analysis run (any status).
+
+    The sandbox is a what-if calculator, so it seeds from whatever factors the
+    latest run produced - a blocked run's factors are just as steerable.
+    """
+
+    run_id = await db.scalar(
+        select(AnalysisRun.analysis_run_id)
+        .where(
+            AnalysisRun.workspace_id == context.workspace_id,
+            AnalysisRun.decision_case_id == decision_case_id,
+        )
+        .order_by(AnalysisRun.created_at.desc())
+        .limit(1)
+    )
+    if run_id is None:
+        return []
+    rows = (
+        await db.execute(
+            select(ResearchPacket)
+            .where(
+                ResearchPacket.workspace_id == context.workspace_id,
+                ResearchPacket.analysis_run_id == run_id,
+            )
+            .order_by(ResearchPacket.created_at, ResearchPacket.id)
+        )
+    ).scalars()
+    return [
+        {
+            "factor": p.factor,
+            "conclusion": p.conclusion,
+            "direction": p.direction,
+            "claim_support_score": p.claim_support_score,
+        }
+        for p in rows
+    ]
+
+
+@router.get("/cases/{decisionCaseId}/sandbox")
+async def get_factor_sandbox_baseline(
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(require_workspace_context),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Baseline what-if state: the case's factors at their analysed strength."""
+
+    await _case_exists(db, context, decision_case_id)
+    packets = await _latest_run_packets(db, context, decision_case_id)
+    factors = factors_from_packets(packets)
+    if not factors:
+        return _envelope({"available": False, "factors": [], "topDrivers": []})
+    result = simulate(factors)
+    result["available"] = True
+    return _envelope(result)
+
+
+@router.post("/cases/{decisionCaseId}/sandbox/preview")
+async def factor_sandbox_preview(
+    body: SandboxPreviewRequest,
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(require_workspace_context),
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_csrf),
+) -> dict[str, Any]:
+    """Layer-1 deterministic re-propagation under user factor overrides.
+
+    Pure compute over server-derived factors - no persistence, instantly
+    reproducible. Deep re-analysis (Layer 3) is a separate analysis run the
+    client launches; this endpoint never fabricates a live model verdict.
+    """
+
+    await _case_exists(db, context, decision_case_id)
+    packets = await _latest_run_packets(db, context, decision_case_id)
+    factors = factors_from_packets(packets)
+    if not factors:
+        return _envelope({"available": False, "factors": [], "topDrivers": []})
+    result = simulate(factors, body.node_overrides)
+    result["available"] = True
+    return _envelope(result)
+
