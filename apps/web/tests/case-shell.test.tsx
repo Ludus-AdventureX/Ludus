@@ -149,7 +149,7 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
     expect(container.textContent).not.toMatch(/\d+\s*%/);
 
     await user.click(within(spine).getByRole("button", { name: /决定/ }));
-    expect(container.querySelector('[data-phase-slot="decision-signoff"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-signoff-panel]')).toBeInTheDocument();
   });
 
   test("renders the question-first empty state without a template card wall", async () => {

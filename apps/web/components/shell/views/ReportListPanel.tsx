@@ -24,6 +24,10 @@ export type ReportListPanelProps = {
   decisionCaseId?: string;
 };
 
+function itemId(item: ReportListItem): string {
+  return String((item as { id?: string; reportId?: string }).id ?? item.reportId ?? "");
+}
+
 export function ReportListPanel({ workspaceId = null, decisionCaseId }: ReportListPanelProps) {
   const [state, setState] = useState<PanelState>({ phase: "loading" });
   const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
@@ -82,11 +86,11 @@ export function ReportListPanel({ workspaceId = null, decisionCaseId }: ReportLi
       {state.phase === "ready" && (
         <ul className="report-items" aria-label="报告列表">
           {state.items.map((item) => (
-            <li key={item.reportId}>
-              <button type="button" className="secondary-action" onClick={() => void open(item.reportId)}>
-                {String(item.title ?? item.reportId)}（{String(item.status)}）
+            <li key={itemId(item)}>
+              <button type="button" className="secondary-action" onClick={() => void open(itemId(item))}>
+                {String(item.title ?? itemId(item))}（{String(item.status)}）
               </button>
-              {detailId === item.reportId && (
+              {detailId === itemId(item) && (
                 <pre className="report-detail">
                   {detail ? JSON.stringify(detail, null, 2).slice(0, 4000) : "读取中…"}
                 </pre>

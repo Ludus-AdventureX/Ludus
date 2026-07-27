@@ -34,7 +34,7 @@ export function CaseViewRouter({
     case "sandbox":
       return <SandboxView workspaceId={tenantWorkspaceId} decisionCaseId={decisionCaseId} />;
     case "decision":
-      return <DecisionView />;
+      return <DecisionView workspaceId={tenantWorkspaceId} decisionCaseId={decisionCaseId} />;
     case "workspace":
     default:
       return <WorkspaceView decisionCaseId={decisionCaseId} workspaceId={tenantWorkspaceId} />;

@@ -1,10 +1,16 @@
-import { PhaseSlot } from "@/components/shell/PhaseSlot";
+import { SignoffPanel } from "@/components/shell/views/SignoffPanel";
 
-// Look V7 `#view-decision` static layout frame (Phase 0 skeleton).
-// The signoff flow and append-only DecisionRecord UI belong to Task 14W;
-// this frame reserves the slots and never renders a fake decision.
+// Look V7 `#view-decision` layout frame. The decision-signoff slot is now
+// FILLED by SignoffPanel (ready-report gated create -> sign -> DecisionRecord;
+// replace-phase-slot-node per the B2 precedent); the record sheet below stays
+// honest until a real signed decision exists.
 
-export function DecisionView() {
+export type DecisionViewProps = {
+  workspaceId?: string | null;
+  decisionCaseId?: string;
+};
+
+export function DecisionView({ workspaceId = null, decisionCaseId }: DecisionViewProps = {}) {
   return (
     <section className="view is-active" id="view-decision" data-view-panel="decision" aria-labelledby="decision-view-title">
       <header className="view-intro decision-intro">
@@ -15,7 +21,10 @@ export function DecisionView() {
             <h1 id="decision-view-title">还没有可以冻结的判断</h1>
           </div>
           <div className="intro-actions">
-            <PhaseSlot name="decision-signoff" label="签署入口" note="Task 14W Decision signoff（确认条件、异议和复盘日期）将挂载于此。" />
+            <SignoffPanel
+              {...(workspaceId ? { workspaceId } : {})}
+              {...(decisionCaseId ? { decisionCaseId } : {})}
+            />
           </div>
         </div>
       </header>
