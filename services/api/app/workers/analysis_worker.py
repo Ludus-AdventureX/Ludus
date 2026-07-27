@@ -255,6 +255,21 @@ class AnalysisWorker:
         run_id = run.analysis_run_id
         is_full = FormalAnalysisLevel(run.analysis_level) == FormalAnalysisLevel.FULL
         stage_inputs: dict[str, Any] = {"analysisRunId": str(run_id)}
+        # Feed the CONFIRMED charter to every stage: without it the model
+        # analyses a phantom question (live-trace finding: planning reported
+        # 'decision question not provided' while runs still went READY).
+        charter = await self._session.get(AnalysisCharter, run.charter_id)
+        charter_context: dict[str, Any] | None = None
+        if charter is not None:
+            charter_context = {
+                "decisionQuestion": charter.decision_question,
+                "analysisLevel": str(run.analysis_level),
+                "goals": list(charter.goals or []),
+                "constraints": list(charter.constraints or []),
+                "optionIds": [str(o) for o in (charter.option_ids or [])],
+                "preferenceWeights": dict(charter.preference_weights or {}),
+            }
+            stage_inputs["charter"] = charter_context
         # In-process stage output capture for the READY report hook (stage_results
         # on the run persists hashes only, not the output bodies).
         stage_outputs: dict[str, Any] = {}
@@ -410,6 +425,10 @@ class AnalysisWorker:
                     digest=_extract_digest(result.output),
                 )
                 stage_inputs = {"previousStage": stage.value, **dict(result.output)}
+                if charter_context is not None:
+                    # The charter must survive stage handoffs - each stage
+                    # otherwise loses the confirmed question it is analysing.
+                    stage_inputs["charter"] = charter_context
         except CooperativeStop:
             # Canonical cancelled terminal state was already written by the
             # cancel command; keep persisted events/artifacts, publish nothing.
