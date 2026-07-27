@@ -58,6 +58,7 @@ from app.analyses.quality_gate import audit_full_run_lens_set
 from app.analyses.repository import AnalysisRuntimeRepository
 from app.models import AnalysisRun
 from app.types import AnalysisRunStatus, FormalAnalysisLevel, OriginMode
+from app.workers.evidence_funnel import apply_evidence_funnel
 
 # Fixed lens-stage schedule for full runs (producer role -> lens types in
 # canonical execution order inside each owning stage).
@@ -311,6 +312,22 @@ class AnalysisWorker:
                 # Boundary check immediately after the external call returns:
                 # a cancellation observed here stops before any new persistence.
                 await self._check_cancelled(run)
+                if stage == AnalysisRunStatus.RETRIEVING and result.packets:
+                    # Information funnel: deterministic TDD checks + L1-L6
+                    # grading BEFORE persistence. Survivors carry minted,
+                    # human-auditable evidence ids; the audit (discards,
+                    # tier mix, warnings) travels with the stage output into
+                    # the digest/event stream and the report.
+                    funnel = apply_evidence_funnel(result.packets, stage=stage.value)
+                    merged_output = dict(result.output)
+                    merged_output["evidenceFunnel"] = funnel.audit
+                    result = StageResult(
+                        output=merged_output,
+                        packets=tuple(funnel.admitted),
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
                 stage_outputs[stage.value] = dict(result.output)
 
                 for packet in result.packets:
@@ -574,8 +591,16 @@ _STAGE_ASKS: Mapping[str, str] = {
         "name the single assumption that, if wrong, flips the recommendation."
     ),
     "retrieving": (
-        "State what evidence exists vs. what is missing. Every keyFinding names "
-        "a concrete fact or a concrete evidence gap - never 'more research needed'."
+        "Produce the FACT BASE. packets MUST hold 3-6 fact objects, each "
+        '{"factor": short label, "conclusion": one specific falsifiable fact '
+        "(with numbers/dates where possible), \"direction\": supporting|"
+        "opposing|neutral relative to proceeding, \"claimSupportScore\": 0-1, "
+        '"sources": [{"name": who says this, "tier": L1-L6}]}. '
+        "Tier ladder: L1 primary/official filings, L2 regulator or audited "
+        "data, L3 reputable research, L4 quality press, L5 secondary "
+        "commentary, L6 unsourced/your own inference. At least ONE packet "
+        "MUST be opposing - a fact base with no adversarial fact is "
+        "incomplete. Never 'more research needed'."
     ),
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "

@@ -83,6 +83,15 @@ def _deterministic_quality_gate(anchor: datetime | None) -> dict[str, Any]:
     return gate
 
 
+def _funnel_audit(stage_outputs: Mapping[str, Any]) -> Mapping[str, Any]:
+    output = stage_outputs.get(AnalysisRunStatus.RETRIEVING.value)
+    if isinstance(output, Mapping):
+        audit = output.get("evidenceFunnel")
+        if isinstance(audit, Mapping):
+            return audit
+    return {}
+
+
 def build_focused_document(
     *,
     charter: Any,
@@ -205,10 +214,15 @@ def build_focused_document(
             "quality": _quality_block(),
         },
         "evidenceReview": {
-            "evidenceIds": [],
+            # The graded, funnel-admitted evidence set: ids carry tier + source
+            # (ev-retrieving-NNN [L2] name), warnings surface the funnel's
+            # honest quality signals (low-tier share, zero-opposing sets).
+            "evidenceIds": [str(e) for e in _funnel_audit(stage_outputs).get("evidenceIds", [])],
             "conflictGroupIds": [],
             "freshnessWarnings": [],
-            "reconciliationFindings": [],
+            "reconciliationFindings": [
+                str(w) for w in _funnel_audit(stage_outputs).get("warnings", [])
+            ][:5],
         },
         "counterArguments": counter_arguments,
         "residualUncertainty": residual_uncertainty,

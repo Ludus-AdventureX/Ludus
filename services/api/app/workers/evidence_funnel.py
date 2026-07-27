@@ -1,0 +1,192 @@
+"""Deterministic evidence funnel for the retrieving stage (information funnel).
+
+Compiled from the grey-goo v6 retrieval discipline (v6-analysis-agent §1 TDD
+Review + rag-pool L1-L6 source grading): every model-emitted fact passes three
+deterministic checks BEFORE persistence, so garbage never becomes a
+ResearchPacket and the report can cite a graded, auditable evidence set.
+
+  Check 1 - relevance: a fact must carry a non-trivial, specific conclusion
+            (filler like "more research needed" is discarded, not persisted);
+  Check 2 - direction: supporting/opposing/neutral is normalized, and a set
+            with ZERO opposing facts raises an honest warning (never invented);
+  Check 3 - source grade: every fact needs a named source with an L1-L6 tier;
+            missing/unknown sources sink to L6, and an L5+L6 share above 30%
+            raises a poisoning/quality warning.
+
+The funnel is fail-closed per fact (bad facts are dropped with a logged
+reason) and fail-open per run (warnings degrade trust, they do not kill the
+stage - the quality gate stays the final judge).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import Any
+
+_VALID_TIERS = {"L1", "L2", "L3", "L4", "L5", "L6"}
+_LOW_TIERS = {"L5", "L6"}
+_LOW_TIER_MAX_SHARE = 0.30
+
+# Filler phrases that mark a "fact" as non-specific (relevance check).
+_FILLER_MARKERS = (
+    "more research needed",
+    "further research",
+    "analysis complete",
+    "无法确定",
+    "需要更多研究",
+    "有待进一步",
+)
+
+_DIRECTION_ALIASES: Mapping[str, str] = {
+    "supporting": "supporting",
+    "support": "supporting",
+    "supports": "supporting",
+    "opposing": "opposing",
+    "oppose": "opposing",
+    "opposes": "opposing",
+    "against": "opposing",
+    "neutral": "neutral",
+    "mixed": "neutral",
+}
+
+
+@dataclass
+class FunnelResult:
+    """Admitted packets (persistence-ready) + the auditable funnel record."""
+
+    admitted: list[dict[str, Any]] = field(default_factory=list)
+    audit: dict[str, Any] = field(default_factory=dict)
+
+
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _normalize_direction(value: Any) -> str | None:
+    return _DIRECTION_ALIASES.get(_text(value).lower()) or None
+
+
+def _normalize_tier(value: Any) -> str:
+    tier = _text(value).upper()
+    return tier if tier in _VALID_TIERS else "L6"
+
+
+def _sources_of(packet: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Normalized [{name, tier}] from a raw packet; unnamed sources drop."""
+
+    raw = packet.get("sources")
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        return []
+    sources = []
+    for entry in raw:
+        if isinstance(entry, Mapping):
+            name = _text(entry.get("name") or entry.get("source"))
+            tier = _normalize_tier(entry.get("tier") or entry.get("grade"))
+        else:
+            name = _text(entry)
+            tier = "L6"
+        if name:
+            sources.append({"name": name[:120], "tier": tier})
+    return sources[:5]
+
+
+def _relevance_failure(packet: Mapping[str, Any]) -> str | None:
+    conclusion = _text(packet.get("conclusion"))
+    if len(conclusion) < 15:
+        return "conclusion too thin to be a checkable fact"
+    lowered = conclusion.lower()
+    for marker in _FILLER_MARKERS:
+        if marker in lowered:
+            return f"filler phrase ('{marker}') - not a fact"
+    return None
+
+
+def apply_evidence_funnel(
+    packets: Sequence[Mapping[str, Any]],
+    *,
+    stage: str = "retrieving",
+) -> FunnelResult:
+    """Run the three-check funnel; mint graded evidence ids for survivors.
+
+    Admitted packets carry ``evidence_ids`` of the form ``ev-{stage}-{seq}
+    [{tier}] {source}`` so the id itself is a human-auditable provenance
+    statement (id + grade + source name travel together into the report).
+    """
+
+    admitted: list[dict[str, Any]] = []
+    discards: list[dict[str, str]] = []
+    warnings: list[str] = []
+    tier_counts: dict[str, int] = {}
+    opposing_evidence_ids: list[str] = []
+    all_evidence_ids: list[str] = []
+    seq = 0
+
+    for packet in packets:
+        if not isinstance(packet, Mapping):
+            discards.append({"factor": "?", "reason": "not an object", "check": "relevance"})
+            continue
+        factor = _text(packet.get("factor")) or "unnamed factor"
+
+        reason = _relevance_failure(packet)
+        if reason is not None:
+            discards.append({"factor": factor[:80], "reason": reason, "check": "relevance"})
+            continue
+
+        direction = _normalize_direction(packet.get("direction"))
+        if direction is None:
+            # An unlabeled direction defaults to neutral but is flagged, per
+            # the TDD spec (ambiguity must stay visible, not be smoothed over).
+            direction = "neutral"
+            warnings.append(f"'{factor[:60]}' had no direction label; recorded as neutral")
+
+        sources = _sources_of(packet)
+        if not sources:
+            sources = [{"name": "model-internal reasoning (no external source)", "tier": "L6"}]
+
+        evidence_ids = []
+        for source in sources:
+            seq += 1
+            evidence_id = f"ev-{stage}-{seq:03d} [{source['tier']}] {source['name']}"
+            evidence_ids.append(evidence_id)
+            tier_counts[source["tier"]] = tier_counts.get(source["tier"], 0) + 1
+        all_evidence_ids.extend(evidence_ids)
+        if direction == "opposing":
+            opposing_evidence_ids.extend(evidence_ids)
+
+        clean = dict(packet)
+        clean["direction"] = direction
+        clean["evidence_ids"] = evidence_ids
+        clean.pop("sources", None)
+        admitted.append(clean)
+
+    total_sources = sum(tier_counts.values())
+    low_share = (
+        sum(tier_counts.get(t, 0) for t in _LOW_TIERS) / total_sources
+        if total_sources
+        else 1.0
+    )
+    if admitted and low_share > _LOW_TIER_MAX_SHARE:
+        warnings.append(
+            f"low-trust sources (L5/L6) make up {low_share:.0%} of the evidence set "
+            f"(discipline cap {_LOW_TIER_MAX_SHARE:.0%}) - conclusions lean on weak ground"
+        )
+    opposing_count = len([p for p in admitted if p.get("direction") == "opposing"])
+    if admitted and opposing_count == 0:
+        warnings.append(
+            "zero opposing facts survived the funnel - the evidence set may share "
+            "one narrative; treat convergence as unverified"
+        )
+
+    audit = {
+        "stage": stage,
+        "admitted": len(admitted),
+        "discarded": discards,
+        "tierCounts": tier_counts,
+        "lowTierShare": round(low_share, 3) if total_sources else None,
+        "opposingCount": opposing_count,
+        "warnings": warnings,
+        "evidenceIds": all_evidence_ids[:20],
+        "opposingEvidenceIds": opposing_evidence_ids[:10],
+    }
+    return FunnelResult(admitted=admitted, audit=audit)
