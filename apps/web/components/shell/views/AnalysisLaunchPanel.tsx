@@ -172,21 +172,24 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         </span>
       </button>
 
-      <div role="status" aria-live="polite" className="analysis-launch-status">
-        {state.phase === "idle" && <p>确认后将创建分析章程并交给后端工作器逐阶段推进；系统不伪造进度。</p>}
-        {state.phase === "launching" && <p>正在{launchStepLabels[state.step ?? "csrf"]}…</p>}
-        {state.phase === "analyzing" && (
-          <p>
-            Run {state.runId?.slice(0, 8)} — {statusLabel(state.status)}（{percent}%）
-          </p>
-        )}
-        {state.phase === "done" && (
-          <p data-analysis-terminal={state.status}>
-            {statusLabel(state.status)}（Run {state.runId?.slice(0, 8)}，进度 {percent}%）
-          </p>
-        )}
-        {state.phase === "error" && <p>{state.error}</p>}
-      </div>
+      {state.phase === "idle" ? (
+        <p className="analysis-launch-status">确认后将创建分析章程并交给后端工作器逐阶段推进；系统不伪造进度。</p>
+      ) : (
+        <div role="status" aria-live="polite" className="analysis-launch-status">
+          {state.phase === "launching" && <p>正在{launchStepLabels[state.step ?? "csrf"]}…</p>}
+          {state.phase === "analyzing" && (
+            <p>
+              Run {state.runId?.slice(0, 8)} — {statusLabel(state.status)}（{percent}%）
+            </p>
+          )}
+          {state.phase === "done" && (
+            <p data-analysis-terminal={state.status}>
+              {statusLabel(state.status)}（Run {state.runId?.slice(0, 8)}，进度 {percent}%）
+            </p>
+          )}
+          {state.phase === "error" && <p>{state.error}</p>}
+        </div>
+      )}
     </div>
   );
 }

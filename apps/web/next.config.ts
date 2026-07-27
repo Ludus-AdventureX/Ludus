@@ -7,6 +7,12 @@ const apiProxyTarget = process.env.API_PROXY_TARGET ?? process.env.API_PROXY_ORI
 
 const nextConfig: NextConfig = {
   output: process.env.NEXT_OUTPUT_STANDALONE === "true" ? "standalone" : undefined,
+  // Live-model routes (case messages, charter runs) legitimately take longer
+  // than the ~30s default proxy timeout; a hang-up here surfaced as a bare
+  // HTTP 500 in the composer (QC finding: ECONNRESET in the web proxy log).
+  experimental: {
+    proxyTimeout: 180_000,
+  },
   // The browser only ever talks to same-origin /api. When the FastAPI backend
   // runs on another origin, set API_PROXY_TARGET (compose deploy) or
   // API_PROXY_ORIGIN (local dev) and Next.js proxies /api/* to it. Both are

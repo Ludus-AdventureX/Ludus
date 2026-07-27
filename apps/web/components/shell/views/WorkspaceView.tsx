@@ -3,7 +3,7 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { DecisionHealthBar } from "@/components/shell/DecisionHealthBar";
-import { PhaseSlot } from "@/components/shell/PhaseSlot";
+import { AnalysisLaunchPanel } from "@/components/shell/views/AnalysisLaunchPanel";
 import {
   CaseApiError,
   confirmCandidate,
@@ -182,7 +182,10 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
             </p>
           </div>
           <div className="intro-actions">
-            <PhaseSlot name="analysis-charter-form" label="分析委托入口" note="AnalysisCharterForm 将挂载于此；quick/focused/full 深度选择在 Charter Phase 接入。" />
+            <AnalysisLaunchPanel
+              {...(workspaceId ? { workspaceId } : {})}
+              decisionCaseId={decisionCaseId}
+            />
           </div>
         </div>
       </header>
