@@ -308,6 +308,11 @@ async def create_signoff_request(
         nonce_hash=_secret_hash(nonce),
         nonce_issued_at=now,
         expires_at=now + timedelta(minutes=15),
+        # Pin created_at to the SAME clock as nonce_issued_at: the DB-side
+        # default lands a few ms AFTER the python `now`, which trips the
+        # schema invariant "nonceIssuedAt cannot precede createdAt" on every
+        # create (QC finding: signoff create 500 in the deployed stack).
+        created_at=now,
     )
     db.add(request)
     await db.flush()
