@@ -130,8 +130,18 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     try {
       const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, {
         level,
-        // R2: an adopted clarifier rewrite becomes the charter's question.
+        // R2: an adopted clarifier rewrite becomes the charter's question,
+        // and the clarifier verdicts are archived as charter constraints so
+        // the run (and the provenance chain) remembers WHY it was reframed.
         questionOverride: adopted && clarifier?.refinedQuestion ? clarifier.refinedQuestion : undefined,
+        extraAssumptions:
+          adopted && clarifier?.available
+            ? [
+                `问题质检存档：${clarifier.pseudoDecision?.verdict ? "疑似伪决策" : "真决策"}；` +
+                  `${clarifier.falseDilemma?.verdict ? `假两难（第三选项：${clarifier.falseDilemma.thirdOption}）` : "选项框架成立"}；` +
+                  `可逆性 ${clarifier.reversibility?.type ?? "type1"}。原问题：${clarifier.originalQuestion ?? ""}`,
+              ]
+            : undefined,
         onStep: (step) => setState({ phase: "launching", step }),
       });
       setState({

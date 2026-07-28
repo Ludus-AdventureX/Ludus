@@ -5,9 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import {
   calibrationOf,
   loadDecisionReview,
+  loadWorkspaceCalibration,
   saveVerdict,
+  submitFormalReview,
   type DecisionReview,
   type IndicatorVerdict,
+  type WorkspaceCalibration,
 } from "@/lib/shell/retrospective";
 
 // Retrospective loop (g5): a signed decision froze its own falsifiable
@@ -32,6 +35,9 @@ const VERDICT_LABELS: Record<IndicatorVerdict, string> = {
 export function RetrospectivePanel({ workspaceId = null, decisionCaseId, refreshKey = 0 }: RetrospectivePanelProps) {
   const [review, setReview] = useState<DecisionReview | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [workspaceCal, setWorkspaceCal] = useState<WorkspaceCalibration | null>(null);
+  const [formalNotice, setFormalNotice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     if (!workspaceId || !decisionCaseId) return;
@@ -42,6 +48,8 @@ export function RetrospectivePanel({ workspaceId = null, decisionCaseId, refresh
     } finally {
       setLoaded(true);
     }
+    // Cross-case calibration line (persisted formal reviews, whole workspace).
+    setWorkspaceCal(await loadWorkspaceCalibration(workspaceId));
   }, [workspaceId, decisionCaseId]);
 
   useEffect(() => {
@@ -90,6 +98,34 @@ export function RetrospectivePanel({ workspaceId = null, decisionCaseId, refresh
             <b>{Math.round(calibration.accuracy * 100)}%</b>
             （如期 {calibration.onTrack} · 偏离 {calibration.offTrack} · 不明 {calibration.unclear}）
           </p>
+        )}
+        {workspaceCal && workspaceCal.totalReviews > 0 && (
+          <p data-retro-workspace-calibration>
+            跨案件校准线：{workspaceCal.totalReviews} 次正式复盘 · 如期率{" "}
+            <b>{workspaceCal.onTrackRate != null ? Math.round(workspaceCal.onTrackRate * 100) : 0}%</b>
+            （持久化存档，跨设备累计）
+          </p>
+        )}
+        {review.indicators.length > 0 && (
+          <div className="retro-formal-submit">
+            <button
+              type="button"
+              className="secondary-action small"
+              disabled={submitting}
+              onClick={() => {
+                setSubmitting(true);
+                setFormalNotice("");
+                void submitFormalReview(workspaceId, decisionCaseId, review, "").then((result) => {
+                  setFormalNotice(result.message);
+                  setSubmitting(false);
+                  if (result.ok) void loadWorkspaceCalibration(workspaceId).then(setWorkspaceCal);
+                });
+              }}
+            >
+              <span>{submitting ? "存档中…" : "提交正式复盘（存档到后端，计入校准线）"}</span>
+            </button>
+            {formalNotice && <p role="status">{formalNotice}</p>}
+          </div>
         )}
       </div>
 

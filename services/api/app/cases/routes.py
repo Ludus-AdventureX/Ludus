@@ -571,3 +571,34 @@ async def workspace_portfolio(
         )
     return {"ok": True, "data": {"items": items, "today": today}}
 
+@router.get("/calibration")
+async def workspace_calibration(
+    context: WorkspaceContext = Depends(require_workspace_context),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Cross-case calibration line (R3): how the workspace's FORMAL
+    retrospectives actually landed. Aggregates decision_reviews.outcome -
+    self-reported but persisted and append-only, so the line survives
+    devices and cases. Zero reviews -> honest zeros, never a fabricated rate."""
+
+    rows = (
+        await db.execute(
+            _select(_DecisionReview.outcome)
+            .where(_DecisionReview.workspace_id == context.workspace_id)
+        )
+    ).scalars().all()
+    outcomes: dict[str, int] = {}
+    for outcome in rows:
+        key = str(outcome)
+        outcomes[key] = outcomes.get(key, 0) + 1
+    total = len(rows)
+    on_track = outcomes.get("on_track", 0)
+    return {
+        "ok": True,
+        "data": {
+            "totalReviews": total,
+            "outcomes": outcomes,
+            "onTrackRate": round(on_track / total, 3) if total else None,
+        },
+    }
+
