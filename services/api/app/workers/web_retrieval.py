@@ -49,6 +49,14 @@ _DOMAIN_TIERS: tuple[tuple[str, str], ...] = (
     ("wsj.com", "L4"), ("economist.com", "L4"), ("nikkei.com", "L4"),
     ("caixin.com", "L4"), ("36kr.com", "L5"), ("techcrunch.com", "L5"),
     ("medium.com", "L5"), ("substack.com", "L5"), ("zhihu.com", "L5"),
+    # zh-language sources (the bilingual query pass surfaces these; without
+    # explicit grading they all sink to L6 and the depth pass never fires).
+    # (gov.cn courts already match the ".gov" rule above -> L2.)
+    ("clic.org.hk", "L3"), ("chinacourt.org", "L3"),
+    ("pkulaw.com", "L3"), ("21jingji.com", "L4"), ("yicai.com", "L4"),
+    ("stcn.com", "L4"), ("cls.cn", "L4"), ("jiemian.com", "L4"),
+    ("sina.com.cn", "L5"), ("qq.com", "L5"), ("163.com", "L5"),
+    ("sohu.com", "L5"), ("baidu.com", "L5"),
 )
 
 
