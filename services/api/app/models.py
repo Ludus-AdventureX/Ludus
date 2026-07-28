@@ -213,6 +213,42 @@ class WorkspaceMembership(Base):
     updated_at: Mapped[datetime] = updated_at_column()
 
 
+class WorkspaceInvite(Base):
+    """Invite-code grant for multi-guest collaboration.
+
+    The plaintext token appears exactly once (create response) and only its
+    sha256 lands here; redemption is bounded by expiry, max_uses and
+    revocation, and every failure mode collapses into the same uniform 404
+    (anti-enumeration, same discipline as the case surface).
+    """
+
+    __tablename__ = "workspace_invites"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_workspace_invites_token_hash"),
+        Index("ix_workspace_invites_workspace", "workspace_id", "revoked_at"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    granted_capabilities: Mapped[list[WorkspaceCapability]] = mapped_column(
+        ARRAY(WORKSPACE_CAPABILITY_ENUM),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::workspace_capability[]"),
+    )
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = created_at_column()
+
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
     __table_args__ = (

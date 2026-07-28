@@ -52,3 +52,8 @@ workspace_router.include_router(simulations_router)
 # resolution the sandbox workspace waits on.
 workspace_router.include_router(graph_reads_router)
 workspace_router.include_router(simulation_case_anchor_router)
+# Multi-guest collaboration lane: OWNER-only invite create/list/revoke.
+# (Redemption lives on the auth router - it must work before membership.)
+from app.tenancy.invites import router as invites_router  # noqa: E402
+
+workspace_router.include_router(invites_router)
