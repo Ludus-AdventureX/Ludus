@@ -535,7 +535,7 @@ class AnalysisWorker:
                         DossierEntry.decision_case_id == run.decision_case_id,
                         DossierEntry.status == EntryStatus.CONFIRMED,
                     )
-                    .order_by(DossierEntry.created_at.desc())
+                    .order_by(DossierEntry.version.desc(), DossierEntry.id)
                     .limit(8)
                 )
             ).all()
