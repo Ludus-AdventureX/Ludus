@@ -103,6 +103,7 @@ def test_core_table_set_and_workspace_scope() -> None:
         "users",
         "workspaces",
         "workspace_memberships",
+        "workspace_invites",
         "user_sessions",
         "decision_subjects",
         "initiatives",

@@ -98,11 +98,17 @@ def test_membership_session_and_candidate_contracts_are_single_source() -> None:
 
 def test_tenant_unique_constraints_include_workspace() -> None:
     global_tables = {"users", "workspaces", "user_sessions"}
+    # workspace_invites.token_hash is deliberately GLOBALLY unique: redemption
+    # happens before any workspace context exists (the token IS the lookup
+    # key), and a cross-tenant hash collision must be impossible by schema.
+    documented_global_uniques = {("workspace_invites", "uq_workspace_invites_token_hash")}
     for table_name, table in Base.metadata.tables.items():
         if table_name in global_tables:
             continue
         for constraint in table.constraints:
             if isinstance(constraint, UniqueConstraint):
+                if (table_name, constraint.name) in documented_global_uniques:
+                    continue
                 assert "workspace_id" in {column.name for column in constraint.columns}
 
 

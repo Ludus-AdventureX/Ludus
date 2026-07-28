@@ -438,6 +438,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
         "a7c3e9f1b5d8_add_dossier_version_snapshots.py",
         "b2c7e9d4a1f6_add_decision_maker_profiles_and_idempotency_records.py",
+        "b3c5d7e9f1a2_add_workspace_invites.py",
         "b6e8f3a1d7c2_add_analysis_outputs.py",
         "c4a1f0b2d9e7_add_login_rate_buckets.py",
         "c8d4e6f0a1b2_add_decision_records_reviews.py",
@@ -466,8 +467,11 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
     assert revisions["c8d4e6f0a1b2"] == "a7c3e9f1b5d8", (
         "decision records migration must land after Task 4/5 dossier snapshots"
     )
+    assert revisions["b3c5d7e9f1a2"] == "c8d4e6f0a1b2", (
+        "workspace invites migration must chain after decision records"
+    )
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"c8d4e6f0a1b2"}, f"unexpected integrated Alembic heads: {heads}"
+    assert heads == {"b3c5d7e9f1a2"}, f"unexpected integrated Alembic heads: {heads}"
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:
