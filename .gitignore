@@ -48,3 +48,5 @@ Thumbs.db
 # External validation slice
 # ../decision-lab-G0 is outside this repository and cannot be ignored here.
 # Never copy validation-only artifacts into this repository.
+
+backups/
