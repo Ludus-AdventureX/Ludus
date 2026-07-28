@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   DecisionLoopError,
+  getCaseAnalysisSeed,
   launchAnalysisForCase,
   watchRunUntilTerminal,
   type AnalysisLevel,
@@ -11,6 +12,7 @@ import {
   type RunSnapshot,
   type RunTraceEvent,
 } from "@/lib/shell/decisionLoop";
+import { clarifyCaseQuestion, type ClarifierCard } from "@/lib/shell/clarifier";
 
 // Fills the reserved `analysis-progress` PhaseSlot with the REAL deep-analysis
 // launch + polling line (second half of the core decision loop). Honest state
@@ -103,6 +105,10 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
   const [level, setLevel] = useState<AnalysisLevel>("focused");
   const [trace, setTrace] = useState<TraceEntry[]>([]);
   const [findings, setFindings] = useState<string[]>([]);
+  // R2 question clarifier: advisory card + adoption toggle.
+  const [clarifier, setClarifier] = useState<ClarifierCard | null>(null);
+  const [adopted, setAdopted] = useState(false);
+  const [clarifying, setClarifying] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   // Synchronous re-entrancy guard: state.phase updates are async, so a fast
   // double click could otherwise start two polling loops (review finding P1).
@@ -124,6 +130,8 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     try {
       const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, {
         level,
+        // R2: an adopted clarifier rewrite becomes the charter's question.
+        questionOverride: adopted && clarifier?.refinedQuestion ? clarifier.refinedQuestion : undefined,
         onStep: (step) => setState({ phase: "launching", step }),
       });
       setState({
@@ -172,7 +180,22 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     } finally {
       busyRef.current = false;
     }
-  }, [decisionCaseId, level, workspaceId]);
+  }, [adopted, clarifier, decisionCaseId, level, workspaceId]);
+
+  const runClarifier = useCallback(async () => {
+    if (!workspaceId || !decisionCaseId || clarifying) return;
+    setClarifying(true);
+    setAdopted(false);
+    try {
+      const seed = await getCaseAnalysisSeed(workspaceId, decisionCaseId);
+      const card = await clarifyCaseQuestion(workspaceId, decisionCaseId, seed.decisionQuestion);
+      setClarifier(card);
+    } catch {
+      setClarifier({ available: false });
+    } finally {
+      setClarifying(false);
+    }
+  }, [workspaceId, decisionCaseId, clarifying]);
 
   if (!workspaceId || !decisionCaseId) {
     // Same honest gap-state discipline as EvidenceDrawerTrigger: without the
@@ -189,6 +212,49 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
 
   return (
     <div className="analysis-launch" data-analysis-launch="ready">
+      {/* R2: question quality check BEFORE spending an analysis run. */}
+      <div className="clarifier-block" data-clarifier-block>
+        <button
+          type="button"
+          className="secondary-action small"
+          disabled={busy || clarifying}
+          onClick={() => void runClarifier()}
+        >
+          <span>{clarifying ? "质检中…" : "先做问题质检（问对问题再分析）"}</span>
+        </button>
+        {clarifier && !clarifier.available && (
+          <p className="phase-slot-note">问题质检暂不可用——可直接发起分析。</p>
+        )}
+        {clarifier?.available && (
+          <div className="clarifier-card" data-clarifier-card role="note">
+            <p data-clarifier-pseudo={clarifier.pseudoDecision?.verdict ?? false}>
+              <b>{clarifier.pseudoDecision?.verdict ? "⚠ 疑似伪决策" : "✓ 是真决策"}</b>
+              {clarifier.pseudoDecision?.reason && `：${clarifier.pseudoDecision.reason}`}
+            </p>
+            <p data-clarifier-dilemma={clarifier.falseDilemma?.verdict ?? false}>
+              <b>{clarifier.falseDilemma?.verdict ? "⚠ 疑似假两难" : "✓ 选项框架成立"}</b>
+              {clarifier.falseDilemma?.thirdOption && `：第三条路——${clarifier.falseDilemma.thirdOption}`}
+            </p>
+            <p>
+              <b>{clarifier.reversibility?.type === "type2" ? "可逆决定（Type 2）" : "难逆决定（Type 1）"}</b>
+              {clarifier.reversibility?.advice && `：${clarifier.reversibility.advice}`}
+            </p>
+            {clarifier.refinedQuestion &&
+              clarifier.refinedQuestion !== clarifier.originalQuestion && (
+                <label className="clarifier-adopt">
+                  <input
+                    type="checkbox"
+                    checked={adopted}
+                    onChange={(e) => setAdopted(e.target.checked)}
+                  />
+                  <span>
+                    采纳改写后的问题发起分析：「{clarifier.refinedQuestion}」
+                  </span>
+                </label>
+              )}
+          </div>
+        )}
+      </div>
       <fieldset className="analysis-level" disabled={busy}>
         <legend>分析深度</legend>
         <label>

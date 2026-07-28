@@ -26,7 +26,11 @@ from typing import Any
 
 from app.workers.web_retrieval import grade_domain
 
-_VALID_TIERS = {"L1", "L2", "L3", "L4", "L5", "L6"}
+_VALID_TIERS = {"L0", "L1", "L2", "L3", "L4", "L5", "L6"}
+# L0 = the decision-maker's own first-party input (dossier facts). It is
+# honest but externally UNVERIFIED - counted separately, never punished as
+# low-trust (punishing a founder for knowing their own cash position would be
+# absurd) and never inflating external-source quality either.
 _LOW_TIERS = {"L5", "L6"}
 _LOW_TIER_MAX_SHARE = 0.30
 
@@ -175,13 +179,17 @@ def apply_evidence_funnel(
         clean.pop("sources", None)
         admitted.append(clean)
 
-    total_sources = sum(tier_counts.values())
+    # L0 first-party facts stay OUT of the trust ratio entirely: they are the
+    # decision-maker's own inputs, not external sources to be graded.
+    first_party_count = tier_counts.get("L0", 0)
+    external_sources = sum(count for tier, count in tier_counts.items() if tier != "L0")
+    total_sources = external_sources
     low_share = (
         sum(tier_counts.get(t, 0) for t in _LOW_TIERS) / total_sources
         if total_sources
         else 1.0
     )
-    if admitted and low_share > _LOW_TIER_MAX_SHARE:
+    if admitted and total_sources and low_share > _LOW_TIER_MAX_SHARE:
         warnings.append(
             f"low-trust sources (L5/L6) make up {low_share:.0%} of the evidence set "
             f"(discipline cap {_LOW_TIER_MAX_SHARE:.0%}) - conclusions lean on weak ground"
@@ -199,6 +207,7 @@ def apply_evidence_funnel(
         "discarded": discards,
         "tierCounts": tier_counts,
         "lowTierShare": round(low_share, 3) if total_sources else None,
+        "firstPartyCount": first_party_count,
         "opposingCount": opposing_count,
         "warnings": warnings,
         "evidenceIds": all_evidence_ids[:20],

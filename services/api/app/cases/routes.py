@@ -337,3 +337,61 @@ async def read_case_version(
         createdAt=row.created_at,
     )
     return _envelope(data.model_dump(by_alias=True, mode="json"))
+
+# --- question clarifier (R2: ask the right question first) --------------------
+
+from app.agents.model_provider import ModelProvider, build_model_provider_from_env  # noqa: E402
+from app.cases.clarifier import clarify_question  # noqa: E402
+from app.contracts.schemas import CanonicalModel as _CanonicalModel  # noqa: E402
+
+
+def get_clarifier_provider() -> ModelProvider:
+    """Provider seam (overridable in QA assemblies)."""
+
+    return build_model_provider_from_env()
+
+
+class QuestionClarifierRequest(_CanonicalModel):
+    question: str
+    goals: list[str] = []
+    constraints: list[str] = []
+
+
+@router.post(
+    "/cases/{decisionCaseId}/question-clarifier",
+    dependencies=[Depends(require_csrf)],
+)
+async def clarify_case_question(
+    body: QuestionClarifierRequest,
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(require_workspace_context),
+    db: AsyncSession = Depends(get_session),
+    provider: ModelProvider = Depends(get_clarifier_provider),
+) -> dict[str, Any]:
+    """Advisory question-quality card: pseudo-decision / false dilemma /
+    reversibility + a decidable rewrite. Creates NOTHING - adoption happens
+    client-side when the student launches with the refined question."""
+
+    service = DossierService(db, workspace_id=context.workspace_id)
+    case = await service.repository.get_case(context.workspace_id, decision_case_id)
+    if case is None:
+        raise workspace_not_found()
+    question = body.question.strip()
+    if len(question) < 5:
+        raise ApiFailure(
+            "CLARIFIER_QUESTION_TOO_SHORT",
+            "The decision question is too short to clarify.",
+            http_status=422,
+        )
+    try:
+        card = await clarify_question(
+            provider,
+            question=question,
+            goals=[g for g in body.goals if g.strip()],
+            constraints=[c for c in body.constraints if c.strip()],
+        )
+    except Exception:
+        # Honest degradation: no card is better than a fabricated one.
+        return {"ok": True, "data": {"available": False}}
+    return {"ok": True, "data": {"available": True, **card}}
+

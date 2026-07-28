@@ -324,6 +324,15 @@ class AnalysisWorker:
                             **stage_inputs,
                             "webEvidence": sources_as_stage_input(web_sources),
                         }
+                    # First-party leg (R2): the decision-maker's CONFIRMED
+                    # dossier facts enter retrieving as L0 evidence - honest
+                    # but externally unverified, and clearly labeled so.
+                    first_party = await self._load_first_party_facts(run)
+                    if first_party:
+                        stage_inputs = {
+                            **stage_inputs,
+                            "firstPartyEvidence": first_party,
+                        }
                 result = await executor(run, stage, stage_inputs)
                 # Boundary check immediately after the external call returns:
                 # a cancellation observed here stops before any new persistence.
@@ -504,6 +513,46 @@ class AnalysisWorker:
         assert refreshed is not None
         return refreshed
 
+    async def _load_first_party_facts(self, run: AnalysisRun) -> list[dict[str, str]]:
+        """The decision-maker's CONFIRMED dossier facts for this case (L0 leg).
+
+        Best-effort and bounded: a read failure never blocks the run - the
+        analysis simply proceeds without first-party input, which is exactly
+        the pre-R2 behaviour.
+        """
+
+        from sqlalchemy import select as _select
+
+        from app.models import DossierEntry
+        from app.types import EntryStatus
+
+        try:
+            rows = (
+                await self._session.execute(
+                    _select(DossierEntry.content, DossierEntry.statement_type)
+                    .where(
+                        DossierEntry.workspace_id == run.workspace_id,
+                        DossierEntry.decision_case_id == run.decision_case_id,
+                        DossierEntry.status == EntryStatus.CONFIRMED,
+                    )
+                    .order_by(DossierEntry.created_at.desc())
+                    .limit(8)
+                )
+            ).all()
+        except Exception:
+            logging.getLogger(__name__).exception("first-party dossier read failed; continuing without")
+            return []
+        return [
+            {
+                "fact": str(content)[:400],
+                "kind": str(getattr(statement_type, "value", statement_type)),
+                "source": "decision-maker dossier (CONFIRMED entry)",
+                "tier": "L0",
+            }
+            for content, statement_type in rows
+            if str(content).strip()
+        ]
+
     async def _enrich_role(
         self,
         run: AnalysisRun,
@@ -682,7 +731,11 @@ _STAGE_ASKS: Mapping[str, str] = {
     "retrieving": (
         "Produce the FACT BASE. inputs.webEvidence (when present) holds REAL "
         "retrieved sources with url + deterministic tier - ground your facts "
-        "in them. packets MUST hold 3-6 fact objects, each "
+        "in them. inputs.firstPartyEvidence (when present) holds the "
+        "decision-maker's OWN confirmed facts: turn each relevant one into a "
+        'packet with "sources": [{"name": "decision-maker dossier", "tier": '
+        '"L0"}] (no url) - never upgrade first-party claims to an external '
+        "tier. packets MUST hold 3-6 fact objects, each "
         '{"factor": short label, "conclusion": one specific falsifiable fact '
         "(with numbers/dates where possible), \"direction\": supporting|"
         "opposing|neutral relative to proceeding, \"claimSupportScore\": 0-1, "

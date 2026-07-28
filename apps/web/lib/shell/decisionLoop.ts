@@ -277,6 +277,8 @@ export async function launchAnalysisForCase(
     level?: AnalysisLevel;
     /** Layer-3: sandbox what-if assumptions injected as charter constraints. */
     extraAssumptions?: string[];
+    /** R2: clarifier-adopted rewrite replaces the seed decision question. */
+    questionOverride?: string;
   } = {},
 ): Promise<LaunchedAnalysis> {
   const fetchImpl = options.fetchImpl ?? defaultFetch();
@@ -285,6 +287,8 @@ export async function launchAnalysisForCase(
   const csrfToken = await fetchCsrfToken(fetchImpl);
   options.onStep?.("seed");
   const seed = await getCaseAnalysisSeed(workspaceId, decisionCaseId, fetchImpl);
+  const question = options.questionOverride?.trim();
+  if (question) seed.decisionQuestion = question;
   options.onStep?.("charter");
   const { charterId } = await createCharter(
     workspaceId, decisionCaseId, seed, csrfToken, fetchImpl, level,

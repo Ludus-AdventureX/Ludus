@@ -948,3 +948,11 @@ body.empty-case .source-mode.is-empty i {
 .report-evidence-links ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; }
 .report-evidence-links a { word-break: break-all; text-decoration: underline; }
 .evidence-tier-badge { display: inline-block; min-width: 2em; margin-right: 0.4rem; padding: 0.02rem 0.35rem; border-radius: 6px; border: 1px solid var(--hairline, #2a2a35); font-size: 0.68rem; text-align: center; }
+
+/* R2: question clarifier card + L0 badge tone */
+.clarifier-block { margin-bottom: 0.7rem; }
+.clarifier-card { margin-top: 0.5rem; padding: 0.6rem 0.8rem; border: 1px dashed var(--hairline, #2a2a35); border-radius: 10px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.clarifier-card p { margin: 0; }
+.clarifier-card [data-clarifier-pseudo="true"] b, .clarifier-card [data-clarifier-dilemma="true"] b { color: #e0a85a; }
+.clarifier-adopt { display: flex; gap: 0.4rem; align-items: flex-start; margin-top: 0.3rem; }
+[data-evidence-tier="L0"] .evidence-tier-badge { border-style: dashed; opacity: 0.9; }
