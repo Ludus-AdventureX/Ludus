@@ -137,6 +137,7 @@ export function buildCharterBody(
   decisionSubjectId: string,
   decisionQuestion: string,
   level: AnalysisLevel = "focused",
+  extraAssumptions: string[] = [],
 ) {
   return {
     decisionSubjectId,
@@ -147,7 +148,16 @@ export function buildCharterBody(
     dossierSnapshotVersion: 1,
     dossierSnapshotHash: `sha256:${randomHex(32)}`,
     goals: [{ id: "g1", text: "看清这项取舍的关键前提" }],
-    constraints: [{ id: "c1", text: "以现有资源与时间窗口为边界" }],
+    constraints: [
+      { id: "c1", text: "以现有资源与时间窗口为边界" },
+      // Layer-3 injection: sandbox what-if assumptions become REAL charter
+      // constraints, so the new run genuinely reasons under them (the worker
+      // feeds the confirmed charter to every stage).
+      ...extraAssumptions.slice(0, 5).map((text, index) => ({
+        id: `c-sandbox-${index + 1}`,
+        text: text.slice(0, 300),
+      })),
+    ],
     optionIds: ["opt_a", "opt_b"],
     preferenceWeights: { risk: 0.5, speed: 0.5 },
     requiredStrategicLensTypes: level === "full" ? [...FULL_LENS_TYPES] : ([] as string[]),
@@ -165,6 +175,7 @@ export async function createCharter(
   csrfToken: string,
   fetchImpl: FetchLike = defaultFetch(),
   level: AnalysisLevel = "focused",
+  extraAssumptions: string[] = [],
 ): Promise<{ charterId: string }> {
   const envelope = await requestJson(
     fetchImpl,
@@ -172,7 +183,7 @@ export async function createCharter(
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
-      body: JSON.stringify(buildCharterBody(seed.decisionSubjectId, seed.decisionQuestion, level)),
+      body: JSON.stringify(buildCharterBody(seed.decisionSubjectId, seed.decisionQuestion, level, extraAssumptions)),
     },
   );
   const charterId = (envelope.data as { charterId?: string } | undefined)?.charterId;
@@ -260,7 +271,13 @@ export type LaunchedAnalysis = {
 export async function launchAnalysisForCase(
   workspaceId: string,
   decisionCaseId: string,
-  options: { fetchImpl?: FetchLike; onStep?: (step: LaunchStep) => void; level?: AnalysisLevel } = {},
+  options: {
+    fetchImpl?: FetchLike;
+    onStep?: (step: LaunchStep) => void;
+    level?: AnalysisLevel;
+    /** Layer-3: sandbox what-if assumptions injected as charter constraints. */
+    extraAssumptions?: string[];
+  } = {},
 ): Promise<LaunchedAnalysis> {
   const fetchImpl = options.fetchImpl ?? defaultFetch();
   const level = options.level ?? "focused";
@@ -269,7 +286,10 @@ export async function launchAnalysisForCase(
   options.onStep?.("seed");
   const seed = await getCaseAnalysisSeed(workspaceId, decisionCaseId, fetchImpl);
   options.onStep?.("charter");
-  const { charterId } = await createCharter(workspaceId, decisionCaseId, seed, csrfToken, fetchImpl, level);
+  const { charterId } = await createCharter(
+    workspaceId, decisionCaseId, seed, csrfToken, fetchImpl, level,
+    options.extraAssumptions ?? [],
+  );
   options.onStep?.("confirm");
   await confirmCharter(workspaceId, charterId, csrfToken, fetchImpl);
   options.onStep?.("run");

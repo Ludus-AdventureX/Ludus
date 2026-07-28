@@ -59,6 +59,7 @@ from app.analyses.repository import AnalysisRuntimeRepository
 from app.models import AnalysisRun
 from app.types import AnalysisRunStatus, FormalAnalysisLevel, OriginMode
 from app.workers.evidence_funnel import apply_evidence_funnel
+from app.workers.web_retrieval import search_web, sources_as_stage_input
 
 # Fixed lens-stage schedule for full runs (producer role -> lens types in
 # canonical execution order inside each owning stage).
@@ -308,6 +309,20 @@ class AnalysisWorker:
 
                 # External-call boundary check before the main role execution.
                 await self._check_cancelled(run)
+                if stage == AnalysisRunStatus.RETRIEVING and charter is not None:
+                    # The external leg: bounded real web retrieval (Exa) with
+                    # deterministic domain grading. Fail-open - an empty result
+                    # leaves the model on internal knowledge, which the funnel
+                    # then honestly sinks to L6.
+                    web_sources = await search_web(
+                        charter.decision_question,
+                        [str(o) for o in (charter.option_ids or [])],
+                    )
+                    if web_sources:
+                        stage_inputs = {
+                            **stage_inputs,
+                            "webEvidence": sources_as_stage_input(web_sources),
+                        }
                 result = await executor(run, stage, stage_inputs)
                 # Boundary check immediately after the external call returns:
                 # a cancellation observed here stops before any new persistence.
@@ -375,8 +390,12 @@ class AnalysisWorker:
                 if stage == AnalysisRunStatus.VALIDATING:
                     # Validation validates and blocks ONLY: no artifact writes,
                     # no synthesis, no repair of missing artifacts here.
-                    passed = bool(result.quality_gate_passed)
-                    audit_findings: list[dict[str, Any]] = []
+                    # Grey-goo multiplicative gate: model verdict is necessary
+                    # but not sufficient - the deterministic gate scores the
+                    # evidence/adversarial institutions from real artifacts.
+                    gate = _deterministic_gate(stage_outputs, result.validator_findings)
+                    passed = bool(result.quality_gate_passed) and bool(gate["passed"])
+                    audit_findings: list[dict[str, Any]] = [dict(gate)]
                     if is_full:
                         # MOUNT-02 Addendum A1 §A1-⑥ audit binding: the persisted
                         # lens-id list travels AS-IS — exact-equality (and any
@@ -648,16 +667,18 @@ _STAGE_ASKS: Mapping[str, str] = {
         "name the single assumption that, if wrong, flips the recommendation."
     ),
     "retrieving": (
-        "Produce the FACT BASE. packets MUST hold 3-6 fact objects, each "
+        "Produce the FACT BASE. inputs.webEvidence (when present) holds REAL "
+        "retrieved sources with url + deterministic tier - ground your facts "
+        "in them. packets MUST hold 3-6 fact objects, each "
         '{"factor": short label, "conclusion": one specific falsifiable fact '
         "(with numbers/dates where possible), \"direction\": supporting|"
         "opposing|neutral relative to proceeding, \"claimSupportScore\": 0-1, "
-        '"sources": [{"name": who says this, "tier": L1-L6}]}. '
-        "Tier ladder: L1 primary/official filings, L2 regulator or audited "
-        "data, L3 reputable research, L4 quality press, L5 secondary "
-        "commentary, L6 unsourced/your own inference. At least ONE packet "
-        "MUST be opposing - a fact base with no adversarial fact is "
-        "incomplete. Never 'more research needed'."
+        '"sources": [{"name": who says this, "url": the EXACT webEvidence url '
+        "used (copy verbatim; omit url ONLY for model-internal knowledge), "
+        '"tier": L1-L6}]}. '
+        "NEVER invent a url. Facts without a webEvidence url are treated as "
+        "unverified (L6). At least ONE packet MUST be opposing - a fact base "
+        "with no adversarial fact is incomplete. Never 'more research needed'."
     ),
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
@@ -682,6 +703,61 @@ _STAGE_ASKS: Mapping[str, str] = {
 }
 
 _DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
+
+
+def _deterministic_gate(
+    stage_outputs: Mapping[str, Any],
+    validator_findings: tuple[Mapping[str, Any], ...],
+) -> dict[str, Any]:
+    """Grey-goo multiplicative gate: the model's verdict is necessary but no
+    longer sufficient. Four dimensions are scored from ARTIFACTS the pipeline
+    actually produced (funnel audit, adversarial digests, validator findings);
+    a dimension whose institution did not run is skipped (fail-open for
+    fixture paths), so the gate bites exactly when the evidence institution
+    was exercised. Multiplication punishes the weakest link.
+    """
+
+    dims: dict[str, float] = {}
+
+    retrieving = stage_outputs.get(AnalysisRunStatus.RETRIEVING.value)
+    audit = retrieving.get("evidenceFunnel") if isinstance(retrieving, Mapping) else None
+    if isinstance(audit, Mapping):
+        admitted = int(audit.get("admitted") or 0)
+        opposing = int(audit.get("opposingCount") or 0)
+        low_share = audit.get("lowTierShare")
+        d1 = 1.0 if admitted >= 2 else (0.6 if admitted == 1 else 0.2)
+        if opposing == 0:
+            d1 *= 0.7  # one-narrative evidence set
+        if isinstance(low_share, (int, float)) and low_share > 0.5:
+            d1 *= 0.7  # majority low-trust sources
+        dims["evidence"] = round(d1, 3)
+
+    criticizing = stage_outputs.get(AnalysisRunStatus.CRITICIZING.value)
+    if isinstance(criticizing, Mapping):
+        has_objection = bool(
+            str(criticizing.get("strongestObjection") or "").strip()
+            or (isinstance(criticizing.get("digest"), Mapping)
+                and criticizing["digest"].get("keyFindings"))
+        )
+        d2 = 1.0 if has_objection else 0.7
+        anchor = stage_outputs.get("safety_anchor")
+        if isinstance(anchor, Mapping) and isinstance(anchor.get("digest"), Mapping):
+            d2 = min(1.0, d2 + 0.0)  # anchor ran: keep score, absence is not punished twice
+        dims["adversarial"] = round(d2, 3)
+
+    dims["consistency"] = 1.0 if not validator_findings else 0.8
+
+    score = 1.0
+    for value in dims.values():
+        score *= value
+    passed = score >= 0.5
+    return {
+        "code": "deterministic_gate",
+        "source": "multiplicative_gate",
+        "passed": passed,
+        "score": round(score, 3),
+        "dims": dims,
+    }
 
 # Independent-role asks (grey-goo v6 safety-anchor / chief-of-staff). Selected
 # via inputs["roleOverride"] so the same executor serves an extra pass without
@@ -783,6 +859,11 @@ def build_role_executors_from_model_provider(
                 "complete' or restate the inputs; every claim must be one a "
                 "reader could falsify. Write digest text in the user's "
                 "language (Chinese question -> Chinese digest). "
+                "SELF-ANCHOR (mandatory): before finalizing, verify your "
+                "digest.headline against ONE concrete fact from the inputs "
+                "(webEvidence or a prior stage's finding). If no fact supports "
+                "it or a fact conflicts, lower claimSupportScore and add the "
+                "conflict to digest.openQuestions - never smooth it over. "
                 "Do not include hidden reasoning."
             ),
             messages=(

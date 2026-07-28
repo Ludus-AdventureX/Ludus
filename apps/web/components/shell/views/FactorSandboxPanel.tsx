@@ -91,12 +91,28 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
     if (!workspaceId || !decisionCaseId) return;
     setDeepStatus("正在发起深度重分析…");
     try {
-      const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, { level: "focused" });
-      setDeepStatus(`已发起新的分析 run（${launched.analysisRunId.slice(0, 8)}）——到 E 证据区查看实时进度。`);
+      // Layer 3: the user's what-if assumptions travel into the new charter
+      // as REAL constraints, so the fresh run genuinely reasons under them.
+      const assumptions = (state?.factors ?? [])
+        .filter((f) => overrides[f.id] != null && overrides[f.id] !== f.baseline)
+        .map((f) =>
+          overrides[f.id] === 0
+            ? `沙盘假设：忽略因子「${f.label}」（用户判定其不成立）`
+            : `沙盘假设：因子「${f.label}」的强度按 ${Math.round((overrides[f.id] ?? 0) * 100)}% 考虑（原 ${Math.round(f.baseline * 100)}%）`,
+        );
+      const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, {
+        level: "focused",
+        extraAssumptions: assumptions,
+      });
+      setDeepStatus(
+        assumptions.length > 0
+          ? `已带着 ${assumptions.length} 条沙盘假设发起新 run（${launched.analysisRunId.slice(0, 8)}）——到 E 证据区看实时进度。`
+          : `已发起新的分析 run（${launched.analysisRunId.slice(0, 8)}）——到 E 证据区查看实时进度。`,
+      );
     } catch {
       setDeepStatus("发起深度重分析失败，请到 E 证据区手动发起。");
     }
-  }, [workspaceId, decisionCaseId]);
+  }, [workspaceId, decisionCaseId, state, overrides]);
 
   if (!workspaceId || !decisionCaseId) return null;
   if (loadedRef.current && state && !state.available) {

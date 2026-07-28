@@ -24,6 +24,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.workers.web_retrieval import grade_domain
+
 _VALID_TIERS = {"L1", "L2", "L3", "L4", "L5", "L6"}
 _LOW_TIERS = {"L5", "L6"}
 _LOW_TIER_MAX_SHARE = 0.30
@@ -73,7 +75,12 @@ def _normalize_tier(value: Any) -> str:
 
 
 def _sources_of(packet: Mapping[str, Any]) -> list[dict[str, str]]:
-    """Normalized [{name, tier}] from a raw packet; unnamed sources drop."""
+    """Normalized [{name, tier, url}] from a raw packet; unnamed sources drop.
+
+    When a source carries a REAL url, its tier is re-graded deterministically
+    from the domain - the model's claimed tier never outranks the checkable
+    property of the source itself.
+    """
 
     raw = packet.get("sources")
     if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
@@ -81,13 +88,20 @@ def _sources_of(packet: Mapping[str, Any]) -> list[dict[str, str]]:
     sources = []
     for entry in raw:
         if isinstance(entry, Mapping):
-            name = _text(entry.get("name") or entry.get("source"))
-            tier = _normalize_tier(entry.get("tier") or entry.get("grade"))
+            name = _text(entry.get("name") or entry.get("source") or entry.get("domain"))
+            url = _text(entry.get("url"))
+            if url:
+                tier = grade_domain(url)
+                if not name:
+                    name = url.split("//", 1)[-1].split("/", 1)[0]
+            else:
+                tier = _normalize_tier(entry.get("tier") or entry.get("grade"))
         else:
             name = _text(entry)
+            url = ""
             tier = "L6"
         if name:
-            sources.append({"name": name[:120], "tier": tier})
+            sources.append({"name": name[:120], "tier": tier, "url": url[:400]})
     return sources[:5]
 
 
@@ -142,12 +156,13 @@ def apply_evidence_funnel(
 
         sources = _sources_of(packet)
         if not sources:
-            sources = [{"name": "model-internal reasoning (no external source)", "tier": "L6"}]
+            sources = [{"name": "model-internal reasoning (no external source)", "tier": "L6", "url": ""}]
 
         evidence_ids = []
         for source in sources:
             seq += 1
-            evidence_id = f"ev-{stage}-{seq:03d} [{source['tier']}] {source['name']}"
+            locator = source["url"] or source["name"]
+            evidence_id = f"ev-{stage}-{seq:03d} [{source['tier']}] {locator}"
             evidence_ids.append(evidence_id)
             tier_counts[source["tier"]] = tier_counts.get(source["tier"], 0) + 1
         all_evidence_ids.extend(evidence_ids)
