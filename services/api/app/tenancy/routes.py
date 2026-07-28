@@ -57,3 +57,7 @@ workspace_router.include_router(simulation_case_anchor_router)
 from app.tenancy.invites import router as invites_router  # noqa: E402
 
 workspace_router.include_router(invites_router)
+# Data rights (interlude B): OWNER export + confirmed purge.
+from app.tenancy.data_rights import router as data_rights_router  # noqa: E402
+
+workspace_router.include_router(data_rights_router)
