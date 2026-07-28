@@ -346,6 +346,9 @@ export type RunDigest = {
   keyFindings?: string[];
   risks?: string[];
   openQuestions?: string[];
+  /** Which brain spoke (R1: heterogeneous adversary support). */
+  model?: string;
+  cognitiveSource?: "heterogeneous" | "primary";
 };
 
 /** A trace observation surfaced to the UI from the run's SSE event stream. */

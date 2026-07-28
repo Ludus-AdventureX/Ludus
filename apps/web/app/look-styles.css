@@ -940,3 +940,11 @@ body.empty-case .source-mode.is-empty i {
 .sandbox-edge-arrow { margin: 0 0.35rem; opacity: 0.75; }
 .sandbox-influences li[data-influence-polarity="-"] .sandbox-edge-arrow { color: #e08585; }
 .sandbox-influences li[data-influence-polarity="+"] .sandbox-edge-arrow { color: #7fc98f; }
+
+/* R1: heterogeneous brain badge + clickable evidence */
+.trace-model-badge { margin-left: 0.4rem; padding: 0.05rem 0.45rem; border: 1px solid var(--hairline, #2a2a35); border-radius: 999px; font-size: 0.68rem; opacity: 0.85; }
+.report-evidence-links { margin: 0.5rem 0; }
+.report-evidence-links h4 { margin: 0 0 0.3rem; font-size: 0.78rem; }
+.report-evidence-links ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; }
+.report-evidence-links a { word-break: break-all; text-decoration: underline; }
+.evidence-tier-badge { display: inline-block; min-width: 2em; margin-right: 0.4rem; padding: 0.02rem 0.35rem; border-radius: 6px; border: 1px solid var(--hairline, #2a2a35); font-size: 0.68rem; text-align: center; }

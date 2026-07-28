@@ -474,3 +474,32 @@ def build_model_provider_from_env(
         in ("1", "true", "yes"),
         transport=transport,
     )
+
+
+def build_secondary_model_provider_from_env(
+    env: Mapping[str, str] | None = None,
+    *,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> ModelProvider | None:
+    """Optional HETEROGENEOUS second brain for the adversarial stages.
+
+    Configured via ``MODEL_B_BASE_URL`` / ``MODEL_B_API_KEY`` / ``MODEL_B_NAME``
+    (any OpenAI-compatible endpoint - Kimi/GLM/Qwen all qualify, so the same
+    client binds them). ALL three must be present; anything less returns None
+    and the caller falls back to the primary model - the thinking trace then
+    honestly labels the opposition as same-model. Never fabricates a provider.
+    """
+
+    source = env if env is not None else os.environ
+    keys = ("MODEL_B_BASE_URL", "MODEL_B_API_KEY", "MODEL_B_NAME")
+    if not all(source.get(key, "").strip() for key in keys):
+        return None
+    return DeepSeekModelProvider(
+        base_url=source["MODEL_B_BASE_URL"],
+        api_key=source["MODEL_B_API_KEY"],
+        default_model=source["MODEL_B_NAME"],
+        timeout_seconds=float(source.get("MODEL_B_TIMEOUT_SECONDS", source.get("MODEL_TIMEOUT_SECONDS", "90"))),
+        thinking_enabled=False,  # adversary answers, it does not hide reasoning
+        name="secondary",
+        transport=transport,
+    )

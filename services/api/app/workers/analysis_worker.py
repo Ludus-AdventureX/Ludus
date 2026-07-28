@@ -44,6 +44,7 @@ from app.agents.model_provider import (
     ModelMessage,
     ModelProvider,
     build_model_provider_from_env,
+    build_secondary_model_provider_from_env,
     complete_structured_checked,
 )
 
@@ -874,7 +875,7 @@ def _extract_digest(output: Mapping[str, Any]) -> dict[str, Any] | None:
         headline = output.get("summary") or output.get("decision") or output.get("value")
         if not isinstance(headline, str) or not headline.strip():
             return None
-        return {"headline": headline.strip()[:300]}
+        return _tag_digest_model({"headline": headline.strip()[:300]}, output)
     digest: dict[str, Any] = {}
     headline = raw.get("headline") or raw.get("summary")
     if isinstance(headline, str) and headline.strip():
@@ -885,34 +886,70 @@ def _extract_digest(output: Mapping[str, Any]) -> dict[str, Any] | None:
             clean = [str(v).strip()[:300] for v in values if str(v).strip()][:5]
             if clean:
                 digest[key] = clean
-    return digest or None
+    return _tag_digest_model(digest, output) if digest else None
+
+
+def _tag_digest_model(digest: dict[str, Any], output: Mapping[str, Any]) -> dict[str, Any]:
+    """Stamp which brain spoke (and whether it is a heterogeneous adversary)."""
+
+    model_id = output.get("modelId")
+    if isinstance(model_id, str) and model_id.strip():
+        digest["model"] = model_id.strip()[:80]
+        source = output.get("cognitiveSource")
+        if isinstance(source, str) and source in ("heterogeneous", "primary"):
+            digest["cognitiveSource"] = source
+    return digest
 
 
 def build_role_executors_from_model_provider(
     provider: ModelProvider,
     *,
     request_model: str | None = None,
+    adversary_provider: ModelProvider | None = None,
+    adversary_request_model: str | None = None,
 ) -> RoleExecutors:
     """Wire live/fixture ModelProvider calls into the durable worker.
 
     The worker receives only the schema-checked StageResult envelope; provider
     protocol details (including any DeepSeek ``reasoning_content``) are stripped
     inside the provider adapter and never persisted by this layer.
+
+    When ``adversary_provider`` is set (MODEL_B_*), the ADVERSARIAL surfaces -
+    criticizing, validating and the safety-anchor pass - run on that
+    heterogeneous second brain: different training data, different biases,
+    a genuinely independent second opinion. Without it every stage stays on
+    the primary model and the trace labels the opposition as same-model.
     """
 
     model_id = _provider_request_model(provider, request_model)
+    adversary_id = (
+        _provider_request_model(adversary_provider, adversary_request_model)
+        if adversary_provider is not None
+        else None
+    )
+
+    # Stages whose whole job is to attack or veto the house view.
+    _ADVERSARIAL_STAGES = {AnalysisRunStatus.CRITICIZING.value, AnalysisRunStatus.VALIDATING.value}
 
     async def execute(
         run: AnalysisRun, stage: AnalysisRunStatus, inputs: Mapping[str, Any]
     ) -> StageResult:
         role_override = inputs.get("roleOverride") if isinstance(inputs, Mapping) else None
+        substage = inputs.get("substage") if isinstance(inputs, Mapping) else None
+        is_adversarial = (
+            stage.value in _ADVERSARIAL_STAGES
+            or str(role_override) == "safety_anchor"
+            or str(substage) == "safety_anchor"
+        )
+        active_provider = adversary_provider if (is_adversarial and adversary_provider) else provider
+        active_model = adversary_id if (is_adversarial and adversary_provider) else model_id
         stage_ask = (
             _ROLE_ASKS.get(str(role_override))
             if role_override
             else _STAGE_ASKS.get(stage.value)
         ) or "Advance the analysis with concrete findings."
         completion = await complete_structured_checked(
-            provider,
+            active_provider,
             system=(
                 "You are a Ludus analysis stage executor. Return ONLY a JSON "
                 "object with EXACTLY these keys and value types: "
@@ -958,12 +995,22 @@ def build_role_executors_from_model_provider(
                 ),
             ),
             schema=_STAGE_RESULT_SCHEMA,
-            request_model=model_id,
+            request_model=active_model,
         )
         content = completion.content
         output = content.get("output") or {}
         if not isinstance(output, Mapping):
             output = {"value": output}
+        # Which brain produced this stage: rides the output (free-form dict)
+        # into the digest/event stream so the trace can show a genuine second
+        # opinion - or honestly label same-model opposition.
+        output = {
+            **output,
+            "modelId": completion.response_model or active_model,
+            "cognitiveSource": (
+                "heterogeneous" if (is_adversarial and adversary_provider) else "primary"
+            ),
+        }
         # The retrieving ask requests top-level "influences"; models place it
         # either beside "output" or inside it. Accept both - otherwise the
         # parser silently drops the causal edges before admission ever runs.
@@ -1008,4 +1055,17 @@ def build_role_executors_from_env() -> tuple[RoleExecutors, OriginMode]:
 
     provider = build_model_provider_from_env()
     origin_mode = OriginMode.FIXTURE if provider.name == "fixture" else OriginMode.LIVE
-    return build_role_executors_from_model_provider(provider), origin_mode
+    # Heterogeneous adversary (MODEL_B_*): only meaningful for live execution;
+    # fixture runs stay fully deterministic on one provider.
+    adversary = (
+        build_secondary_model_provider_from_env() if origin_mode == OriginMode.LIVE else None
+    )
+    if adversary is not None:
+        logging.getLogger(__name__).info(
+            "adversarial stages bound to heterogeneous second brain: %s",
+            getattr(adversary, "default_model", "secondary"),
+        )
+    return (
+        build_role_executors_from_model_provider(provider, adversary_provider=adversary),
+        origin_mode,
+    )

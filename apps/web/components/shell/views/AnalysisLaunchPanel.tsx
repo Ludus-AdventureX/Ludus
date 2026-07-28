@@ -45,7 +45,7 @@ function statusLabel(status?: string): string {
 
 type PanelPhase = "idle" | "launching" | "analyzing" | "done" | "error";
 
-type TraceEntry = { stage: string; headline: string; details: string[] };
+type TraceEntry = { stage: string; headline: string; details: string[]; model?: string };
 
 type PanelState = {
   phase: PanelPhase;
@@ -75,7 +75,14 @@ function traceEntryFrom(trace: RunTraceEvent): TraceEntry | null {
   ].slice(0, 4);
   const headline = trace.digest.headline ?? details[0] ?? "";
   if (!headline) return null;
-  return { stage: trace.stage ?? "", headline, details };
+  // R1: show WHICH brain spoke - a heterogeneous adversary is a genuinely
+  // independent second opinion; same-model opposition is labeled honestly.
+  const model = trace.digest.model
+    ? trace.digest.cognitiveSource === "heterogeneous"
+      ? `${trace.digest.model} · 异构第二脑`
+      : trace.digest.model
+    : "";
+  return { stage: trace.stage ?? "", headline, details, model };
 }
 
 function findingText(finding: Record<string, unknown>): string {
@@ -243,7 +250,13 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         <ol className="analysis-trace" data-analysis-trace aria-label="分析思考轨迹">
           {trace.map((entry) => (
             <li key={entry.stage} data-trace-stage={entry.stage}>
-              <b>{stageTraceLabels[entry.stage] ?? entry.stage}</b>：{entry.headline}
+              <b>{stageTraceLabels[entry.stage] ?? entry.stage}</b>
+              {entry.model && (
+                <span className="trace-model-badge" data-trace-model={entry.model}>
+                  {entry.model}
+                </span>
+              )}
+              ：{entry.headline}
               {entry.details.length > 0 && (
                 <ul>
                   {entry.details.map((detail) => (

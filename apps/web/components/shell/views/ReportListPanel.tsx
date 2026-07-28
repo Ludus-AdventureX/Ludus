@@ -8,10 +8,12 @@ import {
   listCaseReports,
   type ReportListItem,
 } from "@/lib/shell/caseActions";
+import { downloadReportMarkdown, parseEvidenceId } from "@/lib/shell/reportExport";
 
 // Real report reads for the report workspace: lists the case's canonical
 // ReportArtifacts and loads one on demand. Honest empty state when no report
-// has passed the quality gate yet; nothing is fabricated.
+// has passed the quality gate yet; nothing is fabricated. Evidence ids carry
+// REAL retrieval URLs, so they render as clickable links (R1-3).
 
 type PanelState =
   | { phase: "loading" }
@@ -26,6 +28,13 @@ export type ReportListPanelProps = {
 
 function itemId(item: ReportListItem): string {
   return String((item as { id?: string; reportId?: string }).id ?? item.reportId ?? "");
+}
+
+function evidenceIdsOf(detail: Record<string, unknown> | null): string[] {
+  const content = (detail?.structuredContent ?? null) as Record<string, unknown> | null;
+  const review = (content?.evidenceReview ?? null) as Record<string, unknown> | null;
+  const ids = review?.evidenceIds;
+  return Array.isArray(ids) ? ids.map((v) => String(v)) : [];
 }
 
 export function ReportListPanel({ workspaceId = null, decisionCaseId }: ReportListPanelProps) {
@@ -91,9 +100,42 @@ export function ReportListPanel({ workspaceId = null, decisionCaseId }: ReportLi
                 {String(item.title ?? itemId(item))}（{String(item.status)}）
               </button>
               {detailId === itemId(item) && (
-                <pre className="report-detail">
-                  {detail ? JSON.stringify(detail, null, 2).slice(0, 4000) : "读取中…"}
-                </pre>
+                <div className="report-detail-block">
+                  {detail && evidenceIdsOf(detail).length > 0 && (
+                    <div className="report-evidence-links" data-report-evidence-links>
+                      <h4>证据清单（真实来源，可点击核查）</h4>
+                      <ul>
+                        {evidenceIdsOf(detail).map((raw) => {
+                          const parts = parseEvidenceId(raw);
+                          return (
+                            <li key={parts.label} data-evidence-tier={parts.tier ?? "unknown"}>
+                              <span className="evidence-tier-badge">{parts.tier ?? "?"}</span>
+                              {parts.url ? (
+                                <a href={parts.url} target="_blank" rel="noopener noreferrer">
+                                  {parts.url}
+                                </a>
+                              ) : (
+                                <span>{parts.label}</span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                  {detail && !("error" in (detail ?? {})) && (
+                    <button
+                      type="button"
+                      className="secondary-action small"
+                      onClick={() => downloadReportMarkdown(detail)}
+                    >
+                      <span>导出 Markdown（含内容指纹）</span>
+                    </button>
+                  )}
+                  <pre className="report-detail">
+                    {detail ? JSON.stringify(detail, null, 2).slice(0, 4000) : "读取中…"}
+                  </pre>
+                </div>
               )}
             </li>
           ))}
