@@ -178,6 +178,25 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
         ))}
       </ol>
 
+      {state.influences.length > 0 && (
+        <div className="sandbox-influences">
+          <h4>因子间因果链（来自分析检索，确定性收编——非编造）</h4>
+          <ul>
+            {state.influences.map((edge) => (
+              <li key={`${edge.from}-${edge.to}`} data-influence-polarity={edge.polarity}>
+                <b>{edge.fromLabel}</b>
+                <span className="sandbox-edge-arrow">{edge.polarity === "-" ? "→（抑制）" : "→（助推）"}</span>
+                <b>{edge.toLabel}</b>
+                {edge.note && <em>：{edge.note}</em>}
+              </li>
+            ))}
+          </ul>
+          <p className="phase-slot-note">
+            拖动上游因子时，偏离会沿因果链传导到下游因子（多级传播，有界迭代）。
+          </p>
+        </div>
+      )}
+
       {state.topDrivers.length > 0 && (
         <div className="sandbox-drivers">
           <h4>最敏感的驱动因子（改动它们最能翻转结论）</h4>

@@ -30,9 +30,20 @@ export type SandboxFactor = {
   label: string;
   weight: number;
   value: number;
+  /** Post-ripple strength (differs from value when influence edges fire). */
+  effectiveValue?: number;
   baseline: number;
   direction: string;
   source: string;
+};
+
+export type SandboxInfluence = {
+  from: string;
+  fromLabel: string;
+  to: string;
+  toLabel: string;
+  polarity: "+" | "-";
+  note: string;
 };
 
 export type SandboxDriver = {
@@ -48,6 +59,8 @@ export type SandboxState = {
   outcomeScore: number;
   verdict: "proceed" | "hold";
   factors: SandboxFactor[];
+  /** Factor->factor causal edges admitted from the retrieving stage. */
+  influences: SandboxInfluence[];
   topDrivers: SandboxDriver[];
   flipThreshold: number;
   engine: string;
@@ -60,6 +73,7 @@ function normalize(data: Record<string, unknown> | null): SandboxState {
       outcomeScore: 0.5,
       verdict: "hold",
       factors: [],
+      influences: [],
       topDrivers: [],
       flipThreshold: 0.5,
       engine: "",
@@ -70,6 +84,7 @@ function normalize(data: Record<string, unknown> | null): SandboxState {
     outcomeScore: Number(data.outcomeScore ?? 0.5),
     verdict: (data.verdict as "proceed" | "hold") ?? "hold",
     factors: (data.factors as SandboxFactor[]) ?? [],
+    influences: (data.influences as SandboxInfluence[]) ?? [],
     topDrivers: (data.topDrivers as SandboxDriver[]) ?? [],
     flipThreshold: Number(data.flipThreshold ?? 0.5),
     engine: String(data.engine ?? ""),

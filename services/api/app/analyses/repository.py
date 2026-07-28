@@ -570,6 +570,7 @@ class AnalysisRuntimeRepository:
         output: Any,
         progress: float,
         digest: Mapping[str, Any] | None = None,
+        influences: list[Mapping[str, Any]] | None = None,
     ) -> None:
         run = await self._lock_run(workspace_id, analysis_run_id)
         results = dict(run.stage_results)
@@ -584,6 +585,11 @@ class AnalysisRuntimeRepository:
         payload: dict[str, Any] = {"stage": stage.value, "outputHash": entry["outputHash"]}
         if digest:
             payload["digest"] = dict(digest)
+        if influences:
+            # Factor->factor edges ride the persisted event (whitelisted type)
+            # so the sandbox can rebuild the propagation graph without a new
+            # table - append-only and replayable like the digest.
+            payload["influences"] = [dict(edge) for edge in influences]
         await self.append_event(
             run,
             category="agent.status",

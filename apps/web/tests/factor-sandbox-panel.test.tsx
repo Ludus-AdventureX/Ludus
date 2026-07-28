@@ -28,10 +28,13 @@ const BASELINE = {
   outcomeScore: 0.72,
   verdict: "proceed",
   flipThreshold: 0.5,
-  engine: "report-factor-sandbox/1.0 (deterministic)",
+  engine: "report-factor-sandbox/2.0 (deterministic, multi-level)",
   factors: [
     { id: "f01", label: "channel demand", weight: 0.8, value: 0.8, baseline: 0.8, direction: "supporting", source: "buyer committed 40%" },
     { id: "f02", label: "clone risk", weight: -0.6, value: 0.6, baseline: 0.6, direction: "opposing", source: "competitor can clone" },
+  ],
+  influences: [
+    { from: "f01", fromLabel: "channel demand", to: "f02", toLabel: "clone risk", polarity: "-", note: "committed volume shrinks the clone window" },
   ],
   topDrivers: [
     { nodeId: "f01", label: "channel demand", scoreDelta: 0.3, direction: "supporting", flipValue: 0.4 },
@@ -70,6 +73,10 @@ describe("FactorSandboxPanel", () => {
     render(createElement(FactorSandboxPanel, { workspaceId: WS, decisionCaseId: CASE }));
     await waitFor(() => expect(document.querySelector("[data-factor-sandbox='proceed']")).toBeInTheDocument());
     expect(screen.getAllByText("channel demand").length).toBeGreaterThan(0);
+
+    // The factor->factor causal chain renders with its polarity (multi-level).
+    expect(document.querySelector("[data-influence-polarity='-']")).toBeInTheDocument();
+    expect(screen.getByText(/抑制/)).toBeInTheDocument();
 
     const slider = screen.getAllByLabelText(/因子强度/)[0] as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "0.1" } });

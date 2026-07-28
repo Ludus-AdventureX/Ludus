@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID, uuid5, NAMESPACE_URL
@@ -336,6 +336,13 @@ class AnalysisWorker:
                     funnel = apply_evidence_funnel(result.packets, stage=stage.value)
                     merged_output = dict(result.output)
                     merged_output["evidenceFunnel"] = funnel.audit
+                    # Factor->factor influence edges: deterministic admission
+                    # only - both endpoints must be labels of ADMITTED packets
+                    # (no self-loops, no duplicates, bounded). The model may
+                    # propose; it cannot fabricate graph structure.
+                    merged_output["factorInfluences"] = _admit_influences(
+                        merged_output.pop("influences", None), funnel.admitted
+                    )
                     result = StageResult(
                         output=merged_output,
                         packets=tuple(funnel.admitted),
@@ -475,6 +482,11 @@ class AnalysisWorker:
                     output=dict(result.output),
                     progress=_PROGRESS_AT_STAGE[stage],
                     digest=_extract_digest(result.output),
+                    influences=(
+                        list(result.output.get("factorInfluences") or [])
+                        if stage == AnalysisRunStatus.RETRIEVING
+                        else None
+                    ),
                 )
                 stage_inputs = {"previousStage": stage.value, **dict(result.output)}
                 if charter_context is not None:
@@ -678,7 +690,12 @@ _STAGE_ASKS: Mapping[str, str] = {
         '"tier": L1-L6}]}. '
         "NEVER invent a url. Facts without a webEvidence url are treated as "
         "unverified (L6). At least ONE packet MUST be opposing - a fact base "
-        "with no adversarial fact is incomplete. Never 'more research needed'."
+        "with no adversarial fact is incomplete. Never 'more research needed'. "
+        'Optionally add top-level "influences": up to 6 edges {"from": factor '
+        'label, "to": factor label, "polarity": "+"|"-", "evidenceNote": which '
+        "retrieved fact supports the causal link}. ONLY between factors you "
+        "produced above and ONLY when a fact supports the link - never invent "
+        "correlations."
     ),
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
@@ -703,6 +720,54 @@ _STAGE_ASKS: Mapping[str, str] = {
 }
 
 _DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
+
+_MAX_INFLUENCE_EDGES = 6
+
+
+def _admit_influences(
+    raw: Any, admitted_packets: Sequence[Mapping[str, Any]]
+) -> list[dict[str, str]]:
+    """Deterministic admission of model-proposed factor->factor edges.
+
+    Both endpoints must be factor labels of ADMITTED packets (case-insensitive
+    exact match); self-loops and duplicates drop; bounded count. This is the
+    "confirmed before it enters the propagation graph" step - structure the
+    model merely proposed never reaches the sandbox unchecked.
+    """
+
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        return []
+    labels: dict[str, str] = {}
+    for packet in admitted_packets:
+        if isinstance(packet, Mapping):
+            label = str(packet.get("factor") or "").strip()
+            if label:
+                labels[label.lower()] = label
+    edges: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for entry in raw:
+        if not isinstance(entry, Mapping):
+            continue
+        source = labels.get(str(entry.get("from") or "").strip().lower())
+        target = labels.get(str(entry.get("to") or "").strip().lower())
+        if not source or not target or source.lower() == target.lower():
+            continue
+        key = (source.lower(), target.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        polarity = str(entry.get("polarity") or "+").strip().lower()
+        edges.append(
+            {
+                "from": source,
+                "to": target,
+                "polarity": "-" if polarity in {"-", "negative", "opposing", "inverse"} else "+",
+                "evidenceNote": str(entry.get("evidenceNote") or entry.get("note") or "")[:160],
+            }
+        )
+        if len(edges) >= _MAX_INFLUENCE_EDGES:
+            break
+    return edges
 
 
 def _deterministic_gate(

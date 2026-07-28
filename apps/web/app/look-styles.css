@@ -932,3 +932,11 @@ body.empty-case .source-mode.is-empty i {
 .invite-list button { font-size: 0.7rem; background: none; border: 1px solid var(--hairline,#2a2a35); border-radius: 6px; cursor: pointer; }
 .join-page { min-height: 70vh; display: grid; place-items: center; text-align: center; padding: 2rem; }
 .join-page h1 { margin: 0.4rem 0; }
+
+/* Factor sandbox: multi-level causal chain (/2.0) */
+.sandbox-influences { margin-top: 0.8rem; padding: 0.6rem 0.8rem; border: 1px dashed var(--hairline, #2a2a35); border-radius: 10px; }
+.sandbox-influences h4 { margin: 0 0 0.4rem; font-size: 0.78rem; }
+.sandbox-influences ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.76rem; }
+.sandbox-edge-arrow { margin: 0 0.35rem; opacity: 0.75; }
+.sandbox-influences li[data-influence-polarity="-"] .sandbox-edge-arrow { color: #e08585; }
+.sandbox-influences li[data-influence-polarity="+"] .sandbox-edge-arrow { color: #7fc98f; }

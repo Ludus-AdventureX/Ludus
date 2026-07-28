@@ -1,4 +1,4 @@
-﻿
+
 """Report and export read surface.
 
 ReportArtifact rows are produced by the internal report publisher only; this
@@ -17,7 +17,7 @@ from pydantic import Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analyses.models import ResearchPacket
+from app.analyses.models import AnalysisEvent, ResearchPacket
 from app.analyses.synthesis import (
     ExportNotAllowed,
     ReportPublicationBlocked,
@@ -30,7 +30,7 @@ from app.models import AnalysisRun, DecisionCase
 from app.reports.models import ExportArtifact, ReportArtifact
 from app.security.csrf import require_csrf
 from app.security.envelope import ApiFailure
-from app.simulations.factor_sandbox import factors_from_packets, simulate
+from app.simulations.factor_sandbox import edges_from_influences, factors_from_packets, simulate
 from app.tenancy.context import WorkspaceContext, require_workspace_context
 from app.types import OriginMode
 
@@ -328,11 +328,13 @@ async def retry_export_artifact(
 
 async def _latest_run_packets(
     db: AsyncSession, context: WorkspaceContext, decision_case_id: UUID
-) -> list[dict[str, Any]]:
-    """Research packets from the case's most recent analysis run (any status).
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """(packets, influences) from the case's most recent analysis run.
 
     The sandbox is a what-if calculator, so it seeds from whatever factors the
-    latest run produced - a blocked run's factors are just as steerable.
+    latest run produced - a blocked run's factors are just as steerable. The
+    factor->factor influence edges ride the retrieving stage-completed event
+    (deterministically admitted by the worker, never fabricated here).
     """
 
     run_id = await db.scalar(
@@ -345,7 +347,7 @@ async def _latest_run_packets(
         .limit(1)
     )
     if run_id is None:
-        return []
+        return [], []
     rows = (
         await db.execute(
             select(ResearchPacket)
@@ -356,7 +358,7 @@ async def _latest_run_packets(
             .order_by(ResearchPacket.created_at, ResearchPacket.id)
         )
     ).scalars()
-    return [
+    packets = [
         {
             "factor": p.factor,
             "conclusion": p.conclusion,
@@ -365,6 +367,25 @@ async def _latest_run_packets(
         }
         for p in rows
     ]
+    influences: list[dict[str, Any]] = []
+    event_payloads = (
+        await db.execute(
+            select(AnalysisEvent.payload)
+            .where(
+                AnalysisEvent.workspace_id == context.workspace_id,
+                AnalysisEvent.analysis_run_id == run_id,
+                AnalysisEvent.type == "analysis.stage.completed",
+            )
+            .order_by(AnalysisEvent.sequence.desc())
+        )
+    ).scalars()
+    for payload in event_payloads:
+        if isinstance(payload, dict) and payload.get("stage") == "retrieving":
+            raw = payload.get("influences")
+            if isinstance(raw, list):
+                influences = [e for e in raw if isinstance(e, dict)]
+            break
+    return packets, influences
 
 
 @router.get("/cases/{decisionCaseId}/sandbox")
@@ -376,11 +397,11 @@ async def get_factor_sandbox_baseline(
     """Baseline what-if state: the case's factors at their analysed strength."""
 
     await _case_exists(db, context, decision_case_id)
-    packets = await _latest_run_packets(db, context, decision_case_id)
+    packets, influences = await _latest_run_packets(db, context, decision_case_id)
     factors = factors_from_packets(packets)
     if not factors:
         return _envelope({"available": False, "factors": [], "topDrivers": []})
-    result = simulate(factors)
+    result = simulate(factors, edges=edges_from_influences(influences, factors))
     result["available"] = True
     return _envelope(result)
 
@@ -401,11 +422,11 @@ async def factor_sandbox_preview(
     """
 
     await _case_exists(db, context, decision_case_id)
-    packets = await _latest_run_packets(db, context, decision_case_id)
+    packets, influences = await _latest_run_packets(db, context, decision_case_id)
     factors = factors_from_packets(packets)
     if not factors:
         return _envelope({"available": False, "factors": [], "topDrivers": []})
-    result = simulate(factors, body.node_overrides)
+    result = simulate(factors, body.node_overrides, edges=edges_from_influences(influences, factors))
     result["available"] = True
     return _envelope(result)
 
