@@ -14,10 +14,10 @@ CONTRACT_CHANGE_REQUEST); this module must not import ``app.main``.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import StringConstraints
+from pydantic import SecretStr, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,10 +29,11 @@ from app.auth.sessions import create_user_session, revoke_user_session, utc_now
 from app.auth.tokens import TokenDecodeError, decode_session_token, encode_session_token
 from app.contracts.schemas import CanonicalModel, NonEmptyText
 from app.db import get_session
-from app.models import User, UserSession, Workspace, WorkspaceMembership
+from app.models import User, UserSession, Workspace, WorkspaceInvite, WorkspaceMembership
 from app.security.csrf import issue_csrf_token, require_csrf
 from app.security.envelope import ApiFailure
 from app.security.rate_limits import LoginRateLimiter
+from app.tenancy.invites import token_hash_of as invite_token_hash
 from app.tenancy.context import project_capabilities
 from app.types import (
     UserStatus,
@@ -351,4 +352,107 @@ async def read_session(
     db: AsyncSession = Depends(get_session),
 ) -> AuthSessionEnvelope:
     return await _session_envelope(db, principal.user, principal.session)
+
+# --- invite redemption (multi-guest collaboration lane) -----------------------
+
+class InviteRedeemRequest(CanonicalModel):
+    token: SecretStr
+
+
+def _invite_not_found() -> ApiFailure:
+    # Anti-enumeration: unknown/expired/revoked/exhausted tokens are
+    # indistinguishable - one code, one message, one status (case-surface
+    # discipline). Never log the submitted token.
+    return ApiFailure(
+        "INVITE_NOT_FOUND",
+        "The invite is invalid or no longer available.",
+        http_status=404,
+    )
+
+
+@router.post("/invites/redeem", dependencies=[Depends(require_csrf)])
+async def redeem_invite(
+    body: InviteRedeemRequest,
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(require_authenticated_principal),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Redeem an invite token into an ACTIVE MEMBER membership.
+
+    Fail-closed metering (login limiter, IP-scoped) runs before any lookup;
+    the invite row is locked FOR UPDATE so concurrent redemptions count
+    used_count atomically; re-redemption by an existing member is idempotent
+    and consumes no use.
+    """
+
+    client_ip = request.client.host if request.client else "unknown"
+    limiter = LoginRateLimiter()
+    await limiter.check_login_attempt(
+        db, client_ip=client_ip, email=f"invite-redeem:{client_ip}"
+    )
+
+    token = body.token.get_secret_value().strip()
+    if not token or len(token) > 128:
+        raise _invite_not_found()
+
+    now = utc_now()
+    invite = await db.scalar(
+        select(WorkspaceInvite)
+        .where(WorkspaceInvite.token_hash == invite_token_hash(token))
+        .with_for_update()
+    )
+    if (
+        invite is None
+        or invite.revoked_at is not None
+        or invite.expires_at <= now
+        or invite.used_count >= invite.max_uses
+    ):
+        raise _invite_not_found()
+
+    workspace = await db.scalar(
+        select(Workspace).where(
+            Workspace.id == invite.workspace_id,
+            Workspace.status == WorkspaceStatus.ACTIVE,
+        )
+    )
+    if workspace is None:
+        raise _invite_not_found()
+
+    existing = await db.scalar(
+        select(WorkspaceMembership).where(
+            WorkspaceMembership.workspace_id == invite.workspace_id,
+            WorkspaceMembership.user_id == principal.user.id,
+        )
+    )
+    if existing is not None:
+        if existing.status != WorkspaceMembershipStatus.ACTIVE:
+            # A suspended/revoked member cannot re-enter through an invite.
+            raise _invite_not_found()
+        await db.commit()  # release the row lock; nothing consumed
+        return {
+            "ok": True,
+            "data": {
+                "workspaceId": str(invite.workspace_id),
+                "membership": "existing",
+                "capabilities": [c.value for c in existing.capabilities],
+            },
+        }
+
+    membership = WorkspaceMembership(
+        workspace_id=invite.workspace_id,
+        user_id=principal.user.id,
+        role=WorkspaceRole.MEMBER,
+        capabilities=list(invite.granted_capabilities),
+    )
+    db.add(membership)
+    invite.used_count += 1
+    await db.commit()
+    return {
+        "ok": True,
+        "data": {
+            "workspaceId": str(invite.workspace_id),
+            "membership": "created",
+            "capabilities": [c.value for c in invite.granted_capabilities],
+        },
+    }
 
