@@ -691,11 +691,12 @@ _STAGE_ASKS: Mapping[str, str] = {
         "NEVER invent a url. Facts without a webEvidence url are treated as "
         "unverified (L6). At least ONE packet MUST be opposing - a fact base "
         "with no adversarial fact is incomplete. Never 'more research needed'. "
-        'Optionally add top-level "influences": up to 6 edges {"from": factor '
+        'You MUST also emit top-level "influences": 1-4 edges {"from": factor '
         'label, "to": factor label, "polarity": "+"|"-", "evidenceNote": which '
-        "retrieved fact supports the causal link}. ONLY between factors you "
-        "produced above and ONLY when a fact supports the link - never invent "
-        "correlations."
+        "retrieved fact supports the causal link}. Real decision factors are "
+        "rarely independent - map how they push or dampen each other. Use "
+        "ONLY the exact factor labels you produced above; emit [] ONLY if the "
+        "factors are genuinely independent. Never invent correlations."
     ),
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
@@ -736,6 +737,8 @@ def _admit_influences(
     """
 
     if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        if raw is not None:
+            logging.getLogger(__name__).info("influences: non-list payload dropped (%s)", type(raw).__name__)
         return []
     labels: dict[str, str] = {}
     for packet in admitted_packets:
@@ -744,6 +747,7 @@ def _admit_influences(
             if label:
                 labels[label.lower()] = label
     edges: list[dict[str, str]] = []
+    dropped = 0
     seen: set[tuple[str, str]] = set()
     for entry in raw:
         if not isinstance(entry, Mapping):
@@ -751,6 +755,7 @@ def _admit_influences(
         source = labels.get(str(entry.get("from") or "").strip().lower())
         target = labels.get(str(entry.get("to") or "").strip().lower())
         if not source or not target or source.lower() == target.lower():
+            dropped += 1
             continue
         key = (source.lower(), target.lower())
         if key in seen:
@@ -767,6 +772,10 @@ def _admit_influences(
         )
         if len(edges) >= _MAX_INFLUENCE_EDGES:
             break
+    if dropped:
+        logging.getLogger(__name__).info(
+            "influences: %d edge(s) dropped by admission (labels=%s)", dropped, sorted(labels.values())
+        )
     return edges
 
 
@@ -955,6 +964,16 @@ def build_role_executors_from_model_provider(
         output = content.get("output") or {}
         if not isinstance(output, Mapping):
             output = {"value": output}
+        # The retrieving ask requests top-level "influences"; models place it
+        # either beside "output" or inside it. Accept both - otherwise the
+        # parser silently drops the causal edges before admission ever runs.
+        raw_influences = content.get("influences")
+        if (
+            isinstance(raw_influences, Sequence)
+            and not isinstance(raw_influences, (str, bytes))
+            and "influences" not in output
+        ):
+            output = {**output, "influences": list(raw_influences)}
         packets = tuple(
             item for item in content.get("packets", ()) if isinstance(item, Mapping)
         )
