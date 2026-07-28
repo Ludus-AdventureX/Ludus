@@ -5,6 +5,7 @@ import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { CaseViewRouter } from "@/components/shell/CaseViewRouter";
 import { DecisionSpine } from "@/components/shell/DecisionSpine";
+import { InvitePanel } from "@/components/shell/InvitePanel";
 import { ProjectDrawer } from "@/components/shell/ProjectDrawer";
 import { defaultWorkspaceId, isCaseWorkspaceId, type CaseWorkspaceId } from "@/lib/shell/workspaces";
 
@@ -90,6 +91,7 @@ export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShel
           </button>
         </div>
         <div className="masthead-actions">
+          <InvitePanel workspaceId={tenantWorkspaceId} />
           <span className="source-mode is-empty"><i /> <span>档案未接入</span></span>
           <button
             className="mobile-case-trigger"
