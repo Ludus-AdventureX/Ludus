@@ -391,7 +391,11 @@ async def clarify_case_question(
             constraints=[c for c in body.constraints if c.strip()],
         )
     except Exception:
-        # Honest degradation: no card is better than a fabricated one.
+        # Honest degradation: no card is better than a fabricated one - but
+        # the failure must be visible to operators (it was silent once).
+        import logging as _logging
+
+        _logging.getLogger(__name__).exception("question clarifier failed; degrading honestly")
         return {"ok": True, "data": {"available": False}}
     return {"ok": True, "data": {"available": True, **card}}
 

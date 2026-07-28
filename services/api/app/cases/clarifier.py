@@ -29,25 +29,34 @@ CLARIFIER_SCHEMA: dict[str, Any] = {
     "type": "object",
     "required": ["pseudoDecision", "falseDilemma", "reversibility", "refinedQuestion"],
     "properties": {
+        # Text fields tolerate null/omission - a verdict without prose is
+        # honest and normalize_clarifier_output bounds everything anyway.
+        # Only the verdicts themselves are hard-required.
         "pseudoDecision": {
             "type": "object",
-            "required": ["verdict", "reason"],
-            "properties": {"verdict": {"type": "boolean"}, "reason": {"type": "string"}},
+            "required": ["verdict"],
+            "properties": {
+                "verdict": {"type": "boolean"},
+                "reason": {"type": ["string", "null"]},
+            },
         },
         "falseDilemma": {
             "type": "object",
-            "required": ["verdict", "thirdOption"],
-            "properties": {"verdict": {"type": "boolean"}, "thirdOption": {"type": "string"}},
+            "required": ["verdict"],
+            "properties": {
+                "verdict": {"type": "boolean"},
+                "thirdOption": {"type": ["string", "null"]},
+            },
         },
         "reversibility": {
             "type": "object",
-            "required": ["type", "advice"],
+            "required": ["type"],
             "properties": {
                 "type": {"type": "string", "enum": ["type1", "type2"]},
-                "advice": {"type": "string"},
+                "advice": {"type": ["string", "null"]},
             },
         },
-        "refinedQuestion": {"type": "string"},
+        "refinedQuestion": {"type": ["string", "null"]},
     },
 }
 

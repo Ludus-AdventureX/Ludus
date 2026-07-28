@@ -50,3 +50,4 @@ Thumbs.db
 # Never copy validation-only artifacts into this repository.
 
 backups/
+.browser-shots/
