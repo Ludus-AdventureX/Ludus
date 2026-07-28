@@ -4,6 +4,7 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } fr
 
 import { DecisionHealthBar } from "@/components/shell/DecisionHealthBar";
 import { AnalysisLaunchPanel } from "@/components/shell/views/AnalysisLaunchPanel";
+import { PortfolioPanel } from "@/components/shell/views/PortfolioPanel";
 import {
   CaseApiError,
   confirmCandidate,
@@ -182,6 +183,7 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
             </p>
           </div>
           <div className="intro-actions">
+            <PortfolioPanel {...(workspaceId ? { workspaceId } : {})} />
             <AnalysisLaunchPanel
               {...(workspaceId ? { workspaceId } : {})}
               decisionCaseId={decisionCaseId}

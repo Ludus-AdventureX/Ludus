@@ -442,6 +442,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "b6e8f3a1d7c2_add_analysis_outputs.py",
         "c4a1f0b2d9e7_add_login_rate_buckets.py",
         "c8d4e6f0a1b2_add_decision_records_reviews.py",
+        "d4e6f8a0b2c4_add_mentor_and_decision_reviews.py",
         "d7e2a91c5b48_add_strategic_lens_artifacts.py",
         "e7f3a2c9d5b1_add_evidence_ledger.py",
         "f850d361ee42_harden_canonical_contract_invariants.py",
@@ -470,8 +471,11 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
     assert revisions["b3c5d7e9f1a2"] == "c8d4e6f0a1b2", (
         "workspace invites migration must chain after decision records"
     )
+    assert revisions["d4e6f8a0b2c4"] == "b3c5d7e9f1a2", (
+        "mentor reviews migration must chain after workspace invites"
+    )
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"b3c5d7e9f1a2"}, f"unexpected integrated Alembic heads: {heads}"
+    assert heads == {"d4e6f8a0b2c4"}, f"unexpected integrated Alembic heads: {heads}"
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:

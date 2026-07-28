@@ -249,6 +249,32 @@ class WorkspaceInvite(Base):
     created_at: Mapped[datetime] = created_at_column()
 
 
+class MentorReview(Base):
+    """Structured mentor feedback on a student's decision case (R3).
+
+    The mentor sees the full thinking chain (trace/report/signoff/calibration)
+    and answers three things: how good was the THINKING (1-5), what blind spot
+    remains, and what single next step they suggest. Append-only.
+    """
+
+    __tablename__ = "mentor_reviews"
+    __table_args__ = (
+        Index("ix_mentor_reviews_workspace_case", "workspace_id", "decision_case_id"),
+        CheckConstraint("quality_score >= 1 AND quality_score <= 5", name="ck_mentor_reviews_score_range"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    author_user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    quality_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    blind_spots: Mapped[str] = mapped_column(Text, nullable=False)
+    next_step: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
     __table_args__ = (

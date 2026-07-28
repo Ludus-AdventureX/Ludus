@@ -395,3 +395,175 @@ async def clarify_case_question(
         return {"ok": True, "data": {"available": False}}
     return {"ok": True, "data": {"available": True, **card}}
 
+# --- mentor reviews + portfolio wall (R3 incubator lane) ----------------------
+
+from pydantic import Field as _Field  # noqa: E402
+from sqlalchemy import select as _select  # noqa: E402
+
+from app.models import AnalysisRun as _AnalysisRun  # noqa: E402
+from app.models import DecisionCase as _DecisionCase  # noqa: E402
+from app.models import DecisionRecord as _DecisionRecord  # noqa: E402
+from app.models import DecisionReview as _DecisionReview  # noqa: E402
+from app.models import MentorReview as _MentorReview  # noqa: E402
+from app.tenancy.context import require_capability as _require_capability  # noqa: E402
+from app.types import WorkspaceCapability as _Capability  # noqa: E402
+
+
+class MentorReviewCreateRequest(_CanonicalModel):
+    quality_score: int = _Field(ge=1, le=5)
+    blind_spots: str
+    next_step: str
+
+
+def _mentor_review_data(review: _MentorReview) -> dict[str, Any]:
+    return {
+        "mentorReviewId": str(review.id),
+        "decisionCaseId": str(review.decision_case_id),
+        "qualityScore": review.quality_score,
+        "blindSpots": review.blind_spots,
+        "nextStep": review.next_step,
+        "createdAt": review.created_at.isoformat() if review.created_at else None,
+    }
+
+
+@router.post(
+    "/cases/{decisionCaseId}/mentor-reviews",
+    status_code=201,
+    dependencies=[Depends(require_csrf)],
+)
+async def create_mentor_review(
+    body: MentorReviewCreateRequest,
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(_require_capability(_Capability.REVIEW)),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Structured mentor feedback: thinking quality 1-5 + blind spot + one
+    next step. REVIEW capability writes (the mentor invite preset); students
+    read. Append-only."""
+
+    service = DossierService(db, workspace_id=context.workspace_id)
+    case = await service.repository.get_case(context.workspace_id, decision_case_id)
+    if case is None:
+        raise workspace_not_found()
+    if not body.blind_spots.strip() or not body.next_step.strip():
+        raise ApiFailure(
+            "MENTOR_REVIEW_EMPTY_FIELDS",
+            "blindSpots and nextStep must be non-empty.",
+            http_status=422,
+        )
+    review = _MentorReview(
+        workspace_id=context.workspace_id,
+        decision_case_id=decision_case_id,
+        author_user_id=context.user_id,
+        quality_score=body.quality_score,
+        blind_spots=body.blind_spots.strip()[:2000],
+        next_step=body.next_step.strip()[:2000],
+    )
+    db.add(review)
+    await db.commit()
+    await db.refresh(review)
+    return {"ok": True, "data": _mentor_review_data(review)}
+
+
+@router.get("/cases/{decisionCaseId}/mentor-reviews")
+async def list_mentor_reviews(
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(require_workspace_context),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    service = DossierService(db, workspace_id=context.workspace_id)
+    case = await service.repository.get_case(context.workspace_id, decision_case_id)
+    if case is None:
+        raise workspace_not_found()
+    rows = (
+        await db.execute(
+            _select(_MentorReview)
+            .where(
+                _MentorReview.workspace_id == context.workspace_id,
+                _MentorReview.decision_case_id == decision_case_id,
+            )
+            .order_by(_MentorReview.created_at.desc())
+            .limit(20)
+        )
+    ).scalars()
+    return {"ok": True, "data": {"items": [_mentor_review_data(r) for r in rows]}}
+
+
+@router.get("/portfolio")
+async def workspace_portfolio(
+    context: WorkspaceContext = Depends(require_workspace_context),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """One-screen status wall: every case x latest run status x signed
+    decision x review due date. Pure projection - nothing fabricated; a case
+    with no runs simply shows none."""
+
+    from datetime import date as _date
+
+    cases = (
+        await db.execute(
+            _select(_DecisionCase)
+            .where(_DecisionCase.workspace_id == context.workspace_id)
+            .order_by(_DecisionCase.created_at.desc())
+            .limit(100)
+        )
+    ).scalars().all()
+
+    items: list[dict[str, Any]] = []
+    today = _date.today().isoformat()
+    for case in cases:
+        run_row = (
+            await db.execute(
+                _select(_AnalysisRun.status, _AnalysisRun.progress)
+                .where(
+                    _AnalysisRun.workspace_id == context.workspace_id,
+                    _AnalysisRun.decision_case_id == case.decision_case_id,
+                )
+                .order_by(_AnalysisRun.created_at.desc())
+                .limit(1)
+            )
+        ).first()
+        record_row = (
+            await db.execute(
+                _select(_DecisionRecord.id, _DecisionRecord.review_date)
+                .where(
+                    _DecisionRecord.workspace_id == context.workspace_id,
+                    _DecisionRecord.decision_case_id == case.decision_case_id,
+                )
+                .order_by(_DecisionRecord.created_at.desc())
+                .limit(1)
+            )
+        ).first()
+        reviewed = False
+        if record_row is not None:
+            reviewed = (
+                await db.scalar(
+                    _select(_DecisionReview.id)
+                    .where(
+                        _DecisionReview.workspace_id == context.workspace_id,
+                        _DecisionReview.decision_record_id == record_row[0],
+                    )
+                    .limit(1)
+                )
+            ) is not None
+        review_date = record_row[1] if record_row is not None else None
+        items.append(
+            {
+                "decisionCaseId": str(case.decision_case_id),
+                "title": getattr(case, "title", None) or "",
+                "latestRunStatus": (
+                    getattr(run_row[0], "value", run_row[0]) if run_row is not None else None
+                ),
+                "hasSignedDecision": record_row is not None,
+                "reviewDate": review_date,
+                "reviewDue": bool(
+                    record_row is not None
+                    and not reviewed
+                    and review_date is not None
+                    and str(review_date) <= today
+                ),
+                "reviewed": reviewed,
+            }
+        )
+    return {"ok": True, "data": {"items": items, "today": today}}
+

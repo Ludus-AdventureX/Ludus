@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SignoffPanel } from "@/components/shell/views/SignoffPanel";
 import { ProvenancePanel } from "@/components/shell/views/ProvenancePanel";
 import { RetrospectivePanel } from "@/components/shell/views/RetrospectivePanel";
+import { MentorReviewPanel } from "@/components/shell/views/MentorReviewPanel";
 
 // Look V7 `#view-decision` layout frame. The decision-signoff slot is FILLED
 // by SignoffPanel; once a decision is signed, ProvenancePanel renders the
@@ -43,6 +44,10 @@ export function DecisionView({ workspaceId = null, decisionCaseId }: DecisionVie
         refreshKey={signedAt}
       />
 
+      <MentorReviewPanel
+        {...(workspaceId ? { workspaceId } : {})}
+        {...(decisionCaseId ? { decisionCaseId } : {})}
+      />
       <RetrospectivePanel
         {...(workspaceId ? { workspaceId } : {})}
         {...(decisionCaseId ? { decisionCaseId } : {})}

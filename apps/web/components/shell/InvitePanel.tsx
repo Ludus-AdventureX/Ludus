@@ -24,6 +24,7 @@ export function InvitePanel({ workspaceId = null }: InvitePanelProps) {
   const [invites, setInvites] = useState<InviteView[] | null>(null);
   const [fresh, setFresh] = useState<InviteView | null>(null);
   const [grantSign, setGrantSign] = useState(false);
+  const [mentorPreset, setMentorPreset] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -53,7 +54,7 @@ export function InvitePanel({ workspaceId = null }: InvitePanelProps) {
     setError("");
     setCopied(false);
     try {
-      const invite = await createInvite(workspaceId, { grantSign });
+      const invite = await createInvite(workspaceId, { grantSign, mentorPreset });
       setFresh(invite);
       await refresh();
     } catch (err) {
@@ -95,7 +96,16 @@ export function InvitePanel({ workspaceId = null }: InvitePanelProps) {
           <label className="invite-sign-toggle">
             <input
               type="checkbox"
+              checked={mentorPreset}
+              onChange={(e) => setMentorPreset(e.target.checked)}
+            />
+            <span>邀请为导师（仅评审权：可看全部思考链并写点评，不能改档案）</span>
+          </label>
+          <label className="invite-sign-toggle">
+            <input
+              type="checkbox"
               checked={grantSign}
+              disabled={mentorPreset}
               onChange={(e) => setGrantSign(e.target.checked)}
             />
             <span className="invite-sign-warn">

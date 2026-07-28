@@ -68,13 +68,17 @@ export type InviteView = {
 
 export async function createInvite(
   workspaceId: string,
-  options: { grantSign?: boolean } = {},
+  options: { grantSign?: boolean; mentorPreset?: boolean } = {},
   fetchImpl: FetchLike = defaultFetch(),
 ): Promise<InviteView> {
   const token = await csrfToken(fetchImpl);
-  const capabilities = options.grantSign
-    ? ["contribute", "review", "sign"]
-    : ["contribute", "review"];
+  // Mentor preset: review-only (sees the full thinking chain, writes mentor
+  // reviews, cannot contribute dossier facts). Otherwise collaborator preset.
+  const capabilities = options.mentorPreset
+    ? ["review"]
+    : options.grantSign
+      ? ["contribute", "review", "sign"]
+      : ["contribute", "review"];
   const envelope = await requestJson(
     fetchImpl,
     `/api/workspaces/${encodeURIComponent(workspaceId)}/invites`,

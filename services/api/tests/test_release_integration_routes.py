@@ -77,6 +77,11 @@ async def test_worker_live_provider_executor_seam_uses_stage_result_schema() -> 
         AnalysisRunStatus.VALIDATING,
         {"analysisRunId": "00000000-0000-0000-0000-000000000001"},
     )
-    assert result.output == {"validated": True}
+    # R1 seam evolution: the executor stamps WHICH brain produced the stage
+    # (modelId + cognitiveSource) so the thinking trace can label a
+    # heterogeneous adversary - the business payload stays untouched.
+    assert result.output["validated"] is True
+    assert result.output["cognitiveSource"] in ("primary", "heterogeneous")
+    assert "modelId" in result.output
     assert result.quality_gate_passed is True
     assert result.validator_findings == ({"code": "ok"},)

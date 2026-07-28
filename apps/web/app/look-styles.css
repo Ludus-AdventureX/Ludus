@@ -956,3 +956,18 @@ body.empty-case .source-mode.is-empty i {
 .clarifier-card [data-clarifier-pseudo="true"] b, .clarifier-card [data-clarifier-dilemma="true"] b { color: #e0a85a; }
 .clarifier-adopt { display: flex; gap: 0.4rem; align-items: flex-start; margin-top: 0.3rem; }
 [data-evidence-tier="L0"] .evidence-tier-badge { border-style: dashed; opacity: 0.9; }
+
+/* R3: mentor reviews + portfolio wall */
+.mentor-review-panel, .portfolio-wall { margin-top: 0.9rem; padding: 0.7rem 0.9rem; border: 1px solid var(--hairline, #2a2a35); border-radius: 12px; }
+.mentor-review-panel h3, .portfolio-wall h3 { margin: 0 0 0.5rem; font-size: 0.85rem; }
+.mentor-review-list { list-style: none; margin: 0 0 0.6rem; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.78rem; }
+.mentor-review-list p { margin: 0.15rem 0; }
+.mentor-review-form { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.76rem; }
+.mentor-review-form input, .mentor-review-form textarea { width: 100%; }
+.portfolio-wall ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.78rem; }
+.portfolio-wall li { display: flex; align-items: center; gap: 0.5rem; }
+.portfolio-lane-badge { padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid var(--hairline, #2a2a35); font-size: 0.7rem; white-space: nowrap; }
+li[data-portfolio-lane="due"] .portfolio-lane-badge { color: #e0a85a; border-color: #e0a85a; }
+li[data-portfolio-lane="blocked"] .portfolio-lane-badge { color: #e08585; }
+li[data-portfolio-lane="ready"] .portfolio-lane-badge { color: #7fc98f; }
+.portfolio-review-date { opacity: 0.75; font-size: 0.72rem; }
