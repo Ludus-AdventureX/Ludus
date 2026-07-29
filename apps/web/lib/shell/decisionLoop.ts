@@ -135,12 +135,14 @@ export type AnalysisLevel = "focused" | "full";
 /**
  * Charter body proven live against the deployed stack.
  *
- * The four snapshot fields (caseVersion / caseSnapshotHash /
- * dossierSnapshotVersion / dossierSnapshotHash) are deliberately NOT sent: the
- * server freezes them from the database. This client used to send
+ * Five provenance fields are deliberately NOT sent, because the server owns
+ * them: caseVersion / caseSnapshotHash / dossierSnapshotVersion /
+ * dossierSnapshotHash are frozen from the database, and methodContentHash is
+ * resolved from the published method catalog. This client used to send
  * `sha256:` + 32 random bytes for each, which made the audit chain
  * shape-correct and meaning-free - two runs over the same case content never
- * matched, and two runs over different content looked equally unrelated.
+ * matched, and two runs over different content looked equally unrelated. Only
+ * the method identity (id + version) is a genuine client choice.
  */
 export function buildCharterBody(
   decisionSubjectId: string,
@@ -168,7 +170,6 @@ export function buildCharterBody(
     requiredStrategicLensTypes: level === "full" ? [...FULL_LENS_TYPES] : ([] as string[]),
     methodId: "hardtech-market-direction",
     methodVersion: "1.1.0",
-    methodContentHash: `sha256:${randomHex(32)}`,
     formalAnalysisAllowed: true,
   };
 }

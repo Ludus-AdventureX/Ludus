@@ -49,6 +49,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
+from app.methods.catalog import (
+    MethodBinding,
+    MethodBindingUnavailable,
+    resolve_method_binding,
+)
 from app.models import AnalysisRun
 from app.security.csrf import require_csrf
 from app.security.envelope import ApiFailure
@@ -481,18 +486,22 @@ async def post_run_cancel(
 # missing ids collapse into the uniform CASE_NOT_FOUND 404 (anti-enumeration).
 # ---------------------------------------------------------------------------
 
-# Required from the caller. The four snapshot fields (caseVersion,
-# caseSnapshotHash, dossierSnapshotVersion, dossierSnapshotHash) are NOT here:
-# they are frozen by the server from the database. The shipped web client used
-# to send `sha256:` + random bytes for each, which made the audit chain
-# shape-correct and meaning-free. Callers may still send them; the values are
-# ignored and the response returns the real ones.
+# Required from the caller. NOT here, because the server owns them:
+#   - the four snapshot fields (caseVersion, caseSnapshotHash,
+#     dossierSnapshotVersion, dossierSnapshotHash) are frozen from the database;
+#   - methodContentHash is resolved from the published method catalog.
+# The shipped web client used to send `sha256:` + random bytes for each, which
+# made the audit chain shape-correct and meaning-free. Callers may still send
+# them; the values are ignored and the response returns the real ones.
 _CHARTER_CREATE_REQUIRED = (
     "decisionSubjectId",
     "analysisLevel",
     "decisionQuestion",
 )
 
+# methodContentHash is deliberately absent: it is not an editable field but a
+# consequence of (methodId, methodVersion), and it is recomputed by
+# _apply_method_binding whenever either of those changes.
 _CHARTER_EDIT_MAP = {
     "decisionQuestion": "decision_question",
     "goals": "goals",
@@ -505,7 +514,6 @@ _CHARTER_EDIT_MAP = {
     "formalAnalysisAllowed": "formal_analysis_allowed",
     "methodId": "method_id",
     "methodVersion": "method_version",
-    "methodContentHash": "method_content_hash",
 }
 
 
@@ -537,6 +545,55 @@ def _lens_not_found() -> ApiFailure:
         "Decision case, analysis run, or artifact not found.",
         http_status=404,
     )
+
+
+def _method_binding(method_id: Any, method_version: Any) -> MethodBinding:
+    """Resolve the authoritative method binding, never trusting the caller.
+
+    A caller-supplied methodContentHash proves nothing about which method bytes
+    ran, so the hash is always recomputed from the published catalog. An unknown
+    method the caller *asked* for is the caller's error (422); a catalog the
+    server cannot read at all is the server's (500, retryable) — the two must not
+    be conflated, because only one of them is the operator's cue to check the
+    deployment.
+    """
+
+    try:
+        return resolve_method_binding(
+            str(method_id) if method_id is not None else None,
+            str(method_version) if method_version is not None else None,
+        )
+    except MethodBindingUnavailable as exc:
+        if method_id is not None or method_version is not None:
+            raise _validation_failed(
+                "The requested method is not available in the published catalog.",
+                # Echo only what the caller sent: never the catalog path.
+                details={
+                    "methodId": str(method_id) if method_id is not None else None,
+                    "methodVersion": (
+                        str(method_version) if method_version is not None else None
+                    ),
+                },
+            ) from exc
+        raise ApiFailure(
+            "METHOD_CATALOG_UNAVAILABLE",
+            "The published method catalog is unavailable.",
+            http_status=500,
+            retryable=True,
+        ) from exc
+
+
+def _apply_method_binding(values: dict[str, Any]) -> None:
+    """Stamp the resolved (id, version, contentHash) triple onto column values.
+
+    Called for every charter write path so a charter can never carry a method
+    hash that disagrees with its method id/version.
+    """
+
+    binding = _method_binding(values.get("method_id"), values.get("method_version"))
+    values["method_id"] = binding.method_id
+    values["method_version"] = binding.method_version
+    values["method_content_hash"] = binding.content_hash
 
 
 def _origin_mode_values(modes: Any) -> list[str]:
@@ -740,12 +797,13 @@ async def create_analysis_charter(
         for wire, column in (
             ("methodId", "method_id"),
             ("methodVersion", "method_version"),
-            ("methodContentHash", "method_content_hash"),
         ):
             if body.get(wire) is not None:
                 values[column] = str(body[wire])
     except (ValueError, TypeError) as exc:
         raise _validation_failed(f"Charter draft field is malformed: {exc}") from exc
+    # Bind the method from the catalog (ignores any caller methodContentHash).
+    _apply_method_binding(values)
 
     repo = AnalysisRuntimeRepository(db)
     try:
@@ -779,6 +837,16 @@ async def patch_analysis_charter(
     if not changes:
         raise _validation_failed("No editable charter fields were supplied.")
     repo = AnalysisRuntimeRepository(db)
+    if "method_id" in changes or "method_version" in changes:
+        # Re-bind against the catalog. The edit may name only one half of the
+        # pair, so the other half comes from the stored charter; either way the
+        # hash is recomputed rather than carried over from the previous method.
+        current = await repo.get_charter(context.workspace_id, charter_id)
+        if current is None:
+            raise case_not_found()
+        changes.setdefault("method_id", current.method_id)
+        changes.setdefault("method_version", current.method_version)
+        _apply_method_binding(changes)
     try:
         charter = await repo.update_draft_charter(
             context.workspace_id, charter_id, **changes
@@ -837,6 +905,14 @@ async def create_charter_replacement(
             "dossier_snapshot_hash": snapshot.dossier_snapshot_hash,
         }
     )
+    # An amendment that switches method must re-bind; one that does not inherits
+    # the original's binding, which the server already froze authoritatively.
+    # Re-resolving unconditionally would let a later catalog change block a
+    # legitimate amendment to an already-analysed charter.
+    if "method_id" in changes or "method_version" in changes:
+        changes.setdefault("method_id", original.method_id)
+        changes.setdefault("method_version", original.method_version)
+        _apply_method_binding(changes)
     try:
         charter = await repo.create_replacement_draft(
             context.workspace_id, charter_id, changes=changes

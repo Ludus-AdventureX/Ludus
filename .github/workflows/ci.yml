@@ -122,6 +122,6 @@ jobs:
 
       - name: Production image builds
         run: |
-          docker build -f services/api/Dockerfile services/api
+          docker build -f services/api/Dockerfile .
           docker build -f apps/web/Dockerfile .
 

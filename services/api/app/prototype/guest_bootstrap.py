@@ -29,6 +29,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.methods.catalog import resolve_method_binding
 from app.models import (
     AnalysisRun,
     CausalGraph,
@@ -217,7 +218,11 @@ async def bootstrap_guest_demo(
     report_artifact_id = _stable_id(user_id, "report-artifact")
     lens_artifact_id = _stable_id(user_id, "lens-artifact:scenario-planning")
     scenario_id = _stable_id(user_id, "scenario")
-    method = {"methodId": "hardtech-market-direction", "methodVersion": "1.1.0"}
+    # The demo run claims to have been produced by the published method, so its
+    # binding is resolved from the catalog like every other charter's. Hashing
+    # the {methodId, methodVersion} dict instead (what this used to do) produced
+    # a value that matched no method bytes anywhere.
+    method = resolve_method_binding()
 
     # 1. Case anchor (subject -> case).
     if await db.get(DecisionSubject, subject_id) is None:
@@ -272,9 +277,9 @@ async def bootstrap_guest_demo(
                 case_snapshot_hash=_content_hash({"case": str(ids.case_id)}),
                 dossier_snapshot_version=1,
                 dossier_snapshot_hash=_content_hash({"dossier": str(subject_id)}),
-                method_id=method["methodId"],
-                method_version=method["methodVersion"],
-                method_content_hash=_content_hash(method),
+                method_id=method.method_id,
+                method_version=method.method_version,
+                method_content_hash=method.content_hash,
                 idempotency_key=f"guest-alpha-bootstrap-{user_id}",
                 strategic_lens_artifact_ids=[str(lens_artifact_id)],
                 started_at=_BOOTSTRAP_INSTANT,
@@ -302,9 +307,9 @@ async def bootstrap_guest_demo(
                 lens_type=StrategicLensType.SCENARIO_PLANNING,
                 producer_role=LensProducerRole.SYNTHESIS,
                 status=StrategicLensArtifactStatus.READY,
-                method_id=method["methodId"],
-                method_version=method["methodVersion"],
-                method_content_hash=_content_hash(method),
+                method_id=method.method_id,
+                method_version=method.method_version,
+                method_content_hash=method.content_hash,
                 prompt_version="1",
                 schema_version="1",
                 origin_modes=[OriginMode.FIXTURE],
