@@ -212,7 +212,20 @@ describe("buildCharterBody", () => {
     expect(body.analysisLevel).toBe("focused");
     expect(body.requiredStrategicLensTypes).toEqual([]);
     expect(body.formalAnalysisAllowed).toBe(true);
-    expect(body.caseSnapshotHash).toMatch(/^sha256:[0-9a-f]{64}$/);
-    expect(body.dossierSnapshotHash).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
+  test("never fabricates the frozen snapshot fields (CCR-20260729-SNAPSHOT-01)", () => {
+    // These used to be `sha256:` + 32 random bytes, which made the audit chain
+    // shape-correct and meaning-free. The server now freezes them from the
+    // database, so the client must not send a value at all.
+    const body = buildCharterBody("sub-9", "问题？") as Record<string, unknown>;
+    for (const field of [
+      "caseVersion",
+      "caseSnapshotHash",
+      "dossierSnapshotVersion",
+      "dossierSnapshotHash",
+    ]) {
+      expect(body).not.toHaveProperty(field);
+    }
   });
 });

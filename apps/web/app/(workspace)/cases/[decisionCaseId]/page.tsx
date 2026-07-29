@@ -12,7 +12,13 @@ export const metadata: Metadata = {
   title: "决策项目 · Ludus"
 };
 
-export const runtime = "edge";
+// NOTE: no `export const runtime = "edge"` here. It was declared and it broke the
+// page in production: `next build && next start` (and the standalone output the
+// compose deploy runs) answered 500 with `Could not find the module ... in the
+// React Server Consumer Manifest` for every case URL, because this route's
+// client components are bundled for the Node server while the edge declaration
+// asks for the edge manifest. Dev mode hid it. The deployment target is a Node
+// container, so the honest runtime is the default one.
 
 const EMPTY_CASE_SEGMENT = "new";
 
