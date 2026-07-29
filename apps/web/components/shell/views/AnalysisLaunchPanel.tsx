@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   DecisionLoopError,
+  cancelRun,
   getCaseAnalysisSeed,
   launchAnalysisForCase,
   watchRunUntilTerminal,
@@ -12,6 +13,11 @@ import {
   type RunSnapshot,
   type RunTraceEvent,
 } from "@/lib/shell/decisionLoop";
+import {
+  AnalysisProgress,
+  traceEntryFrom,
+  type TraceEntry,
+} from "@/components/shell/views/AnalysisProgress";
 import { clarifyCaseQuestion, type ClarifierCard } from "@/lib/shell/clarifier";
 
 // Fills the reserved `analysis-progress` PhaseSlot with the REAL deep-analysis
@@ -47,8 +53,6 @@ function statusLabel(status?: string): string {
 
 type PanelPhase = "idle" | "launching" | "analyzing" | "done" | "error";
 
-type TraceEntry = { stage: string; headline: string; details: string[]; model?: string };
-
 type PanelState = {
   phase: PanelPhase;
   step?: LaunchStep;
@@ -58,33 +62,27 @@ type PanelState = {
   error?: string;
 };
 
-const stageTraceLabels: Record<string, string> = {
-  planning: "规划",
-  retrieving: "检索",
-  analyzing: "分析",
-  criticizing: "反方",
-  synthesizing: "综合",
-  validating: "验证",
-  safety_anchor: "安全锚（盲区）",
-  chief_of_staff: "参谋长（行动）",
-};
-
-function traceEntryFrom(trace: RunTraceEvent): TraceEntry | null {
-  if (!trace.digest) return null;
-  const details = [
-    ...(trace.digest.keyFindings ?? []),
-    ...(trace.digest.risks ?? []).map((risk) => `风险：${risk}`),
-  ].slice(0, 4);
-  const headline = trace.digest.headline ?? details[0] ?? "";
-  if (!headline) return null;
-  // R1: show WHICH brain spoke - a heterogeneous adversary is a genuinely
-  // independent second opinion; same-model opposition is labeled honestly.
-  const model = trace.digest.model
-    ? trace.digest.cognitiveSource === "heterogeneous"
-      ? `${trace.digest.model} · 异构第二脑`
-      : trace.digest.model
-    : "";
-  return { stage: trace.stage ?? "", headline, details, model };
+/** Actionable text per failure class; the technical code rides the title only. */
+function errorMessage(error: unknown): string {
+  if (!(error instanceof DecisionLoopError)) {
+    return "发起分析失败，请稍后重试。";
+  }
+  if (error.code === "NETWORK_ERROR" || error.status === 0) {
+    return "无法连接后端服务。本地开发需要 API 进程在运行（默认 127.0.0.1:8000）。";
+  }
+  if (error.code === "RUN_POLL_TIMEOUT") {
+    return "分析长时间没有推进。请确认分析工作器进程是否在运行，然后重试或取消本次分析。";
+  }
+  if (error.status === 401 || error.status === 403) {
+    return `会话或权限校验未通过：${error.message}`;
+  }
+  if (error.status === 404) {
+    return "找不到对应的案件或工作区（也可能是无权访问）。请从项目入口重新打开本案件。";
+  }
+  if (error.status >= 500) {
+    return "后端处理本次请求时出错。请稍后重试；若持续失败请查看 API 日志。";
+  }
+  return error.message;
 }
 
 function findingText(finding: Record<string, unknown>): string {
@@ -109,6 +107,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
   const [clarifier, setClarifier] = useState<ClarifierCard | null>(null);
   const [adopted, setAdopted] = useState(false);
   const [clarifying, setClarifying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   // Synchronous re-entrancy guard: state.phase updates are async, so a fast
   // double click could otherwise start two polling loops (review finding P1).
@@ -184,13 +183,28 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         setState((prev) => ({
           ...prev,
           phase: "error",
-          error: error instanceof DecisionLoopError ? error.message : "发起分析失败，请稍后重试。",
+          error: errorMessage(error),
         }));
       }
     } finally {
       busyRef.current = false;
+      setCancelling(false);
     }
   }, [adopted, clarifier, decisionCaseId, level, workspaceId]);
+
+  /** Escape hatch for a run the worker never picked up. */
+  const cancel = useCallback(async () => {
+    if (!workspaceId || !state.runId || cancelling) return;
+    setCancelling(true);
+    try {
+      await cancelRun(workspaceId, state.runId);
+      // The watcher's own status re-read observes `cancelled` and finishes; no
+      // local status is invented here.
+    } catch (error) {
+      setState((prev) => ({ ...prev, error: errorMessage(error) }));
+      setCancelling(false);
+    }
+  }, [workspaceId, state.runId, cancelling]);
 
   const runClarifier = useCallback(async () => {
     if (!workspaceId || !decisionCaseId || clarifying) return;
@@ -217,7 +231,6 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     );
   }
 
-  const percent = Math.round((state.progress ?? 0) * 100);
   const busy = state.phase === "launching" || state.phase === "analyzing";
 
   return (
@@ -308,41 +321,20 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
       ) : (
         <div role="status" aria-live="polite" className="analysis-launch-status">
           {state.phase === "launching" && <p>正在{launchStepLabels[state.step ?? "csrf"]}…</p>}
-          {state.phase === "analyzing" && (
-            <p>
-              Run {state.runId?.slice(0, 8)} — {statusLabel(state.status)}（{percent}%）
-            </p>
-          )}
-          {state.phase === "done" && (
-            <p data-analysis-terminal={state.status}>
-              {statusLabel(state.status)}（Run {state.runId?.slice(0, 8)}，进度 {percent}%）
-            </p>
+          {(state.phase === "analyzing" || state.phase === "done") && (
+            <div data-analysis-terminal={state.phase === "done" ? state.status : undefined}>
+              <AnalysisProgress
+                status={state.status ?? "queued"}
+                progress={state.progress ?? 0}
+                statusLabel={statusLabel(state.status)}
+                trace={trace}
+                {...(state.runId ? { runId: state.runId } : {})}
+                {...(state.phase === "analyzing" ? { onCancel: () => void cancel(), cancelling } : {})}
+              />
+            </div>
           )}
           {state.phase === "error" && <p>{state.error}</p>}
         </div>
-      )}
-
-      {trace.length > 0 && (
-        <ol className="analysis-trace" data-analysis-trace aria-label="分析思考轨迹">
-          {trace.map((entry) => (
-            <li key={entry.stage} data-trace-stage={entry.stage}>
-              <b>{stageTraceLabels[entry.stage] ?? entry.stage}</b>
-              {entry.model && (
-                <span className="trace-model-badge" data-trace-model={entry.model}>
-                  {entry.model}
-                </span>
-              )}
-              ：{entry.headline}
-              {entry.details.length > 0 && (
-                <ul>
-                  {entry.details.map((detail) => (
-                    <li key={detail}>{detail}</li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ol>
       )}
 
       {state.phase === "done" && state.status === "blocked" && (

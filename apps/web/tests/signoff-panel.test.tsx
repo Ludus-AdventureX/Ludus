@@ -37,7 +37,7 @@ const readyReportDetail = {
 };
 
 function stubFetchScript(script: Array<[RegExp, () => Response]>) {
-  let unmatched: string[] = [];
+  const unmatched: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {

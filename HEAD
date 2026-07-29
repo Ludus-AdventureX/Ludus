@@ -1,117 +1,76 @@
-# Work Log: analysis run visibility (P0-A / P0-B / P0-C / P1-D / P1)
+# Work Log: analysis progress UI (Wave 2)
 
-- Status: completed (implementation); ready_for_qa=YES. 2026-07-29 (Asia/Shanghai).
-- Role: runtime/worker owner, single session.
-- Branch: `codex/analysis-run-visibility`; worktree
-  `decision-lab-worktrees/analysis-run-visibility` per section 20.
-- Base: local `main` db38e16 (= 28cff76 + the docs-only governance-clause
-  commit). Worktree `AGENTS.md` byte-matches canonical (`d9f1f79`), section 20
-  check PASS.
-- Goal: make a running analysis observable and make the key-free path work.
+- Status: implementation complete; browser verification BLOCKED on approval.
+  2026-07-29 (Asia/Shanghai).
+- Role: web owner, single session.
+- Branch: `codex/analysis-progress-ui`; worktree
+  `decision-lab-worktrees/analysis-progress-ui` per section 20.
+- Base: `codex/analysis-run-visibility` @ caee4fe (the backend visibility fix is
+  this lane's fixed parent revision, because a progress bar cannot be verified
+  against a backend that publishes nothing mid-run). Worktree `AGENTS.md`
+  byte-matches canonical (`d9f1f79`) — section 20 check PASS.
+- Goal: answer "where is my analysis right now?" on screen.
 
-## Findings this work item is fixing (all reproduced live, not inferred)
+## Delivered
 
-- P0-A: the worker advanced an entire run inside ONE transaction (run.py owned
-  the session and committed once after `run_once`). Live evidence: a run that
-  had already spent 5 minutes and six DeepSeek calls still read
-  `queued / progress 0 / started_at NULL` from the API, with a matching
-  `idle in transaction 00:05:07` backend. Consequence: no status, progress,
-  heartbeat or SSE event is visible while the analysis runs; a crash rolls the
-  whole run back; `recover_stale_runs` can never see the heartbeat.
-- P0-B: `FIXTURE_MODE=true` cannot run an analysis at all.
-  `FixtureModelProvider.responses` is empty by default and the worker passes no
-  `fixture_key`, so every stage resolved to `{}` -> `EmptyModelContentError` ->
-  the run was parked `needs_attention` within ~3s. This contradicts the
-  key-free promise in compose.prototype.yaml and section 8.
-- P1: `needs_attention` is not in the backend terminal set, so the SSE stream
-  of a parked run never closes (browser EventSource hangs; 50ms DB poll loop).
-- P0-C (found while testing the fixture path): the READY report hook wrote the
-  evidence funnel's warning STRINGS into `EvidenceReview.reconciliationFindings`,
-  which is typed `list[dict]`. Validation failed inside a try/except that only
-  logged, so any run whose evidence set carried a warning (majority low-trust
-  sources, or zero opposing facts) reached `ready` with NO report at all. The
-  earlier live run happened to have real Exa sources and no warning, which is
-  why this never surfaced.
-- P1-D: `AnalysisRun.origin_modes` was never written. Every run reported
-  `originModes: []`, so nothing could distinguish a live analysis from a fixture
-  one - AGENTS.md section 8 forbids hiding the fixture/cached/live marker.
-- P1-E (NOT fixed here, reported): `packages/contracts/openapi.json` holds 56
-  operations while the app now serves 69. Eleven paths (invites, invites/redeem,
-  invites revoke, calibration, mentor-reviews, question-clarifier, sandbox,
-  sandbox/preview, export, portfolio, purge) never had contracts regenerated,
-  so the web app cannot type them from the generated package. This predates
-  this branch and belongs to the contract/integration lane (CCR + regeneration).
+- `AnalysisProgress.tsx` (new): six-stage indicator (规划/检索/分析/反方/综合/验证)
+  + an accessible progress bar driven by the run's OWN persisted progress, with
+  each stage's digest hanging on its own stage row instead of a flat list.
+  Independent passes (safety anchor / chief of staff) render outside the six
+  stages so they are never mistaken for pipeline stages.
+- Queued honesty: progress stays at 0 while queued (nothing creeps forward);
+  after 30s a warning appears, after 180s it escalates and says the worker is
+  probably not running; both offer an explicit cancel.
+- `cancelRun()` client for the shipped idempotent cancel endpoint.
+- Layered error text: network / 401-403 / 404 / 5xx / poll-timeout each get an
+  actionable Chinese sentence instead of a raw code.
+- Styles consume existing semantic tokens (`--analysis`, `--danger`, `--ink-3`,
+  `--surface-wash`); no theme hex in JSX, no gradient/glow, and stage state is
+  carried by text + `data-stage-state` so colour is never the only signal.
+- Fixed the pre-existing `prefer-const` lint error in `tests/signoff-panel.test.tsx`
+  that made `pnpm lint` fail on main (disclosed scope exception: one line, in the
+  same web test surface, required for the lint gate to be meaningful).
 
-## Scope
+## Verification
 
-- Stage boundaries become commit boundaries (claim, stage entry, packets,
-  each lens, enrichment, stage completion, terminal transition, report).
-- Precise parking: park the run the worker actually claimed instead of
-  re-claiming the queue head.
-- Deterministic fixture stage responses so the key-free path reaches `ready`.
-- SSE closes on `needs_attention` as well.
-- Structured funnel quality findings so a warning degrades the report's stated
-  confidence instead of deleting the report.
-- `originModes` recorded on the run (idempotent, additive).
+- `pnpm --dir apps/web test`: 149 passed (baseline 139 + 10 new), 0 failed.
+- New battery `tests/analysis-progress.test.tsx`: 10 tests — stage-state
+  derivation for active/done/pending/stopped, aria-valuenow from real progress,
+  digest bound to its stage, enrichment outside the six stages, queued 0%,
+  30s warning, 180s escalation, cancel wiring, blocked toning.
+- `pnpm --dir apps/web typecheck`: clean. `pnpm --dir apps/web lint`: 0 errors
+  (6 warnings, same as baseline). `pnpm --dir apps/web build`: success.
+- Backend/API untouched by this lane.
 
-## Changed files
+## Browser verification: not done, and why
 
-- services/api/app/workers/analysis_worker.py (checkpoints, claimed run,
-  origin-mode stamp, fixture fallback wiring)
-- services/api/app/workers/run.py (precise parking, transaction ownership doc)
-- services/api/app/workers/fixture_stages.py (NEW, deterministic stage payloads)
-- services/api/app/workers/report_builder.py (structured quality findings)
-- services/api/app/agents/model_provider.py (FixtureModelProvider.fallback)
-- services/api/app/analyses/repository.py (record_origin_mode)
-- services/api/app/analyses/routes.py (SSE stream-closing set)
-- services/api/app/analyses/tests/test_run_visibility_and_fixture_path.py (NEW)
-- services/api/app/analyses/tests/test_analysis_sse_and_commands.py (+1 test)
+Running the real UI in this worktree needs `node_modules`, which this lane does
+not have. Reusing the main tree's modules through a junction was tried and must
+NOT be used: Next.js resolves modules through the link to
+`../../../../decision-lab-mainline-integration/node_modules/...`, which escapes
+the project root, and the React Server Components manifest then fails with
+`Could not find the module ...` — a 500 on the case page in BOTH `next dev` and
+`next build && next start`.
 
-No migration, no schema change, no route/DTO/event/error-code change.
+That junction artefact briefly looked like a product defect in the case page's
+`export const runtime = "edge"`. It is not: the same page is identical on main,
+and the failure disappears with the junction removed from the equation. Nothing
+is wrong with the case route. Recording this explicitly so the false lead is not
+inherited.
 
-## Verification (all run against this tree)
-
-- Owner suite `app/analyses/tests`: 210 passed (baseline 204 + 6 new), 0 failed.
-- Canonical suite `services/api/tests` (pytest testpaths): 574 passed, 0 failed
-  - identical to the recorded 574 baseline, zero regression.
-- Contract neutrality: this tree's FastAPI app and the main tree's app produce
-  IDENTICAL OpenAPI (69 ops both sides, no added/removed operation, no schema
-  delta) -> CONTRACT_NEUTRAL. `generate_contracts.ps1 -Check` exported the
-  canonical OpenAPI successfully but could not finish the TypeScript half in
-  this worktree (openapi-typescript needs node_modules, which needs approval to
-  install); the OpenAPI comparison above covers the drift question for this
-  change. NOTE: the script also created a worktree-local `.venv` (uv, 83
-  packages, gitignored) and `.contract-check/`.
-- ruff `app` clean; compileall `app` clean.
-- LIVE end-to-end (DeepSeek deepseek-v4-pro, real HTTP, guest -> case ->
-  charter -> confirm -> run): read from OUTSIDE the worker's transaction while
-  the run was still executing, the API/DB showed
-  `criticizing 0.43 {live}` -> `synthesizing 0.57 {live}` -> `ready 1.0 {live}`.
-  Before this change the same run read `queued / progress 0 / originModes []`
-  for its entire multi-minute duration. 105 events, 5 research packets, 1
-  persisted report.
-- P0-C proven on that same live run: Exa timed out, so every source graded L6
-  and the funnel raised the 100%-low-trust warning; the report persisted anyway
-  and carries the warning as a structured `evidence_quality` finding. The
-  previous live run (real Exa sources, no warning) has 0 such findings, which is
-  exactly why the defect stayed hidden.
-- P0-B proven live: with `MODEL_PROVIDER=fixture` the worker drained a backlog
-  of queued runs to `ready` at ~0.2s each. Before this change every one of them
-  was parked `needs_attention` within ~3s.
-- Known environment side effects: the dev database `decision_lab` now holds
-  test-created runs in intermediate states (the owner suite ran against the dev
-  container rather than a disposable PG16 project, so full-gate QA should re-run
-  on a run-scoped container per section 14).
+Installing dependencies requires product-owner approval (section 18), so the
+browser pass (screenshots of the stage indicator advancing during a live run) is
+pending that approval. The junctions were removed with
+`[System.IO.Directory]::Delete(path, false)` — never `Remove-Item -Recurse`,
+which follows a junction and would delete the main tree's real dependencies —
+and the main tree's `node_modules` were verified intact afterwards.
 
 ## Not done / handed on
 
-- P1-E contract drift (56 vs 69 operations) - contract/integration lane.
-- `recover_stale_runs` is still not called anywhere; it only becomes meaningful
-  now that heartbeats are visible, and it was outside this work item's scope.
-- Frontend progress bar / stage indicator / queued timeout (the next wave) now
-  has real per-stage data to render.
-- Full-run fixture path still blocks at the five-lens audit: no lens payloads
-  are synthesized. That is an honest verdict, not a crash, and focused is the
-  documented key-free scope.
+- Browser/e2e evidence for the progress indicator (needs the dependency
+  approval above); the Playwright golden-path spec is Wave 3.
+- ETA estimation per stage and SSE auto-reconnect remain on the optimisation
+  list; the safety poll already prevents a stranded UI.
+- `needs_attention` recovery UI (three canonical resolutions) is Wave 4.
 
 - Secret policy: do not record credentials here.

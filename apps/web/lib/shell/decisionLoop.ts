@@ -239,6 +239,29 @@ export type RunSnapshot = {
   lastResumableStage: string | null;
 };
 
+/**
+ * POST /analyses/{runId}/cancel - idempotent cooperative cancellation.
+ *
+ * Offered when a run sits in `queued` for too long, which in practice means the
+ * analysis worker is not running: without an exit the user's only option was to
+ * stare at a frozen panel.
+ */
+export async function cancelRun(
+  workspaceId: string,
+  analysisRunId: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<void> {
+  const csrfToken = await fetchCsrfToken(fetchImpl);
+  await requestJson(
+    fetchImpl,
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/analyses/${encodeURIComponent(analysisRunId)}/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+    },
+  );
+}
+
 export async function getRunStatus(
   workspaceId: string,
   analysisRunId: string,

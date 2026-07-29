@@ -943,6 +943,41 @@ body.empty-case .source-mode.is-empty i {
 
 /* R1: heterogeneous brain badge + clickable evidence */
 .trace-model-badge { margin-left: 0.4rem; padding: 0.05rem 0.45rem; border: 1px solid var(--hairline, #2a2a35); border-radius: 999px; font-size: 0.68rem; opacity: 0.85; }
+
+/* Run progress: six-stage indicator + the run's own progress bar.
+   Quiet by design - no gradient, no glow, no motion that implies work the
+   backend has not reported. Stage state is carried by text and data-stage-state
+   as well as tone, so colour is never the only signal. */
+.analysis-progress { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.35rem; }
+.analysis-progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.78rem; }
+.analysis-progress-head b { font-variant-numeric: tabular-nums; }
+.analysis-progress-bar { position: relative; height: 4px; border-radius: 999px; background: var(--surface-wash, #e4e3de); overflow: hidden; }
+.analysis-progress-bar > i { display: block; height: 100%; background: var(--analysis, #53656b); transition: width 240ms ease; }
+.analysis-progress[data-analysis-progress="blocked"] .analysis-progress-bar > i,
+.analysis-progress[data-analysis-progress="needs_attention"] .analysis-progress-bar > i { background: var(--danger, #8c4f4d); }
+.analysis-progress[data-analysis-progress="cancelled"] .analysis-progress-bar > i { background: var(--ink-3, #7b817d); }
+
+.analysis-queued-warning { margin: 0; padding: 0.45rem 0.6rem; border: 1px dashed var(--hairline, #2a2a35); border-radius: 8px; font-size: 0.75rem; }
+.analysis-queued-warning[data-analysis-queued="alarm"] { border-style: solid; border-color: var(--danger, #8c4f4d); }
+
+.analysis-stepper { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.78rem; }
+.analysis-stepper > li { padding-left: 0.1rem; }
+.analysis-stepper .stepper-line { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.analysis-stepper .stepper-line small { opacity: 0.7; font-size: 0.7rem; }
+.analysis-stepper .stepper-dot { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 0.35rem; border-radius: 999px; border: 1px solid var(--analysis, #53656b); }
+.analysis-stepper .stepper-dot.is-done { background: var(--analysis, #53656b); }
+.analysis-stepper .stepper-dot.is-active { background: var(--analysis-wash, #dce4e5); box-shadow: 0 0 0 2px var(--analysis-wash, #dce4e5); }
+.analysis-stepper .stepper-dot.is-pending { border-color: var(--ink-3, #7b817d); }
+.analysis-stepper .stepper-dot.is-stopped { border-color: var(--ink-3, #7b817d); border-style: dashed; }
+.analysis-stepper > li[data-stage-state="pending"] b,
+.analysis-stepper > li[data-stage-state="stopped"] b { opacity: 0.6; font-weight: 500; }
+.analysis-stepper .stepper-digest { margin: 0.15rem 0 0 1.1rem; }
+.analysis-stepper .stepper-digest p { margin: 0; }
+.analysis-stepper .stepper-digest ul { margin: 0.15rem 0 0; padding-left: 1rem; font-size: 0.73rem; opacity: 0.85; }
+
+.analysis-enrichment { list-style: none; margin: 0.2rem 0 0; padding: 0.45rem 0.6rem; border-left: 2px solid var(--hairline, #2a2a35); display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.76rem; }
+.analysis-enrichment ul { margin: 0.15rem 0 0; padding-left: 1rem; font-size: 0.73rem; opacity: 0.85; }
+
 .report-evidence-links { margin: 0.5rem 0; }
 .report-evidence-links h4 { margin: 0 0 0.3rem; font-size: 0.78rem; }
 .report-evidence-links ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; }
