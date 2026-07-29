@@ -132,7 +132,16 @@ export const FULL_LENS_TYPES = [
 
 export type AnalysisLevel = "focused" | "full";
 
-/** Charter body proven live against the deployed stack. */
+/**
+ * Charter body proven live against the deployed stack.
+ *
+ * The four snapshot fields (caseVersion / caseSnapshotHash /
+ * dossierSnapshotVersion / dossierSnapshotHash) are deliberately NOT sent: the
+ * server freezes them from the database. This client used to send
+ * `sha256:` + 32 random bytes for each, which made the audit chain
+ * shape-correct and meaning-free - two runs over the same case content never
+ * matched, and two runs over different content looked equally unrelated.
+ */
 export function buildCharterBody(
   decisionSubjectId: string,
   decisionQuestion: string,
@@ -141,12 +150,8 @@ export function buildCharterBody(
 ) {
   return {
     decisionSubjectId,
-    caseVersion: 1,
-    caseSnapshotHash: `sha256:${randomHex(32)}`,
     analysisLevel: level,
     decisionQuestion,
-    dossierSnapshotVersion: 1,
-    dossierSnapshotHash: `sha256:${randomHex(32)}`,
     goals: [{ id: "g1", text: "看清这项取舍的关键前提" }],
     constraints: [
       { id: "c1", text: "以现有资源与时间窗口为边界" },

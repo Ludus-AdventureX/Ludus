@@ -19,8 +19,14 @@ const browserChannel = process.env.E2E_BROWSER_CHANNEL;
 export default defineConfig({
   testDir: "./e2e",
   testMatch: /.*\.spec\.ts/,
-  timeout: 90_000,
+  // The analysis golden path drives a real multi-stage run end to end.
+  timeout: 180_000,
   expect: { timeout: 15_000 },
+  // The analysis worker has no HTTP port, so it cannot be a `webServer` entry;
+  // it is spawned in globalSetup and killed in teardown. Without it a run stays
+  // `queued` forever - the exact failure this suite now guards.
+  globalSetup: "./e2e/analysis-worker-process.ts",
+  globalTeardown: "./e2e/analysis-worker-teardown.ts",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

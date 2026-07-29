@@ -44,6 +44,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Path, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,6 +72,7 @@ from .repository import (
     normalized_request_hash,
 )
 from .run_policy import AnalysisRunRateLimiter
+from .snapshots import CaseSnapshotUnavailable, freeze_case_snapshot
 from .state_machine import TERMINAL_STATUSES, InvalidCharter, InvalidTransition
 
 router = APIRouter(prefix="/api/workspaces/{workspaceId}")
@@ -479,14 +481,16 @@ async def post_run_cancel(
 # missing ids collapse into the uniform CASE_NOT_FOUND 404 (anti-enumeration).
 # ---------------------------------------------------------------------------
 
+# Required from the caller. The four snapshot fields (caseVersion,
+# caseSnapshotHash, dossierSnapshotVersion, dossierSnapshotHash) are NOT here:
+# they are frozen by the server from the database. The shipped web client used
+# to send `sha256:` + random bytes for each, which made the audit chain
+# shape-correct and meaning-free. Callers may still send them; the values are
+# ignored and the response returns the real ones.
 _CHARTER_CREATE_REQUIRED = (
     "decisionSubjectId",
-    "caseVersion",
-    "caseSnapshotHash",
     "analysisLevel",
     "decisionQuestion",
-    "dossierSnapshotVersion",
-    "dossierSnapshotHash",
 )
 
 _CHARTER_EDIT_MAP = {
@@ -502,10 +506,6 @@ _CHARTER_EDIT_MAP = {
     "methodId": "method_id",
     "methodVersion": "method_version",
     "methodContentHash": "method_content_hash",
-    "caseVersion": "case_version",
-    "caseSnapshotHash": "case_snapshot_hash",
-    "dossierSnapshotVersion": "dossier_snapshot_version",
-    "dossierSnapshotHash": "dossier_snapshot_hash",
 }
 
 
@@ -705,17 +705,25 @@ async def create_analysis_charter(
             "Charter draft is missing required fields.",
             details={"missingFields": missing},
         )
+    # Freeze what is ACTUALLY being analysed, from the database. A charter whose
+    # snapshot hash came from the caller proves nothing about the input.
+    try:
+        snapshot = await freeze_case_snapshot(
+            db, workspace_id=context.workspace_id, decision_case_id=decision_case_id
+        )
+    except CaseSnapshotUnavailable as exc:
+        raise case_not_found() from exc
     try:
         values: dict[str, Any] = {
             "workspace_id": context.workspace_id,
             "decision_subject_id": UUID(str(body["decisionSubjectId"])),
             "decision_case_id": decision_case_id,
-            "case_version": int(body["caseVersion"]),
-            "case_snapshot_hash": str(body["caseSnapshotHash"]),
+            "case_version": snapshot.case_version,
+            "case_snapshot_hash": snapshot.case_snapshot_hash,
             "analysis_level": FormalAnalysisLevel(body["analysisLevel"]),
             "decision_question": str(body["decisionQuestion"]),
-            "dossier_snapshot_version": int(body["dossierSnapshotVersion"]),
-            "dossier_snapshot_hash": str(body["dossierSnapshotHash"]),
+            "dossier_snapshot_version": snapshot.dossier_snapshot_version,
+            "dossier_snapshot_hash": snapshot.dossier_snapshot_hash,
             "goals": list(body.get("goals", [])),
             "constraints": list(body.get("constraints", [])),
             "option_ids": [str(option) for option in body.get("optionIds", [])],
@@ -801,6 +809,34 @@ async def create_charter_replacement(
     except (ValueError, TypeError) as exc:
         raise _validation_failed(f"Replacement field is malformed: {exc}") from exc
     repo = AnalysisRuntimeRepository(db)
+    # An amendment exists BECAUSE the frozen input changed, so the replacement
+    # must carry a freshly frozen snapshot rather than inherit the superseded
+    # charter's one - otherwise the new run would claim to have analysed the old
+    # case content.
+    original = await db.scalar(
+        select(AnalysisCharter).where(
+            AnalysisCharter.workspace_id == context.workspace_id,
+            AnalysisCharter.id == charter_id,
+        )
+    )
+    if original is None:
+        raise case_not_found()
+    try:
+        snapshot = await freeze_case_snapshot(
+            db,
+            workspace_id=context.workspace_id,
+            decision_case_id=original.decision_case_id,
+        )
+    except CaseSnapshotUnavailable as exc:
+        raise case_not_found() from exc
+    changes.update(
+        {
+            "case_version": snapshot.case_version,
+            "case_snapshot_hash": snapshot.case_snapshot_hash,
+            "dossier_snapshot_version": snapshot.dossier_snapshot_version,
+            "dossier_snapshot_hash": snapshot.dossier_snapshot_hash,
+        }
+    )
     try:
         charter = await repo.create_replacement_draft(
             context.workspace_id, charter_id, changes=changes

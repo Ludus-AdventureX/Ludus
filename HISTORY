@@ -3883,3 +3883,96 @@ and the main tree's `node_modules` were verified intact afterwards.
 - `needs_attention` recovery UI (three canonical resolutions) is Wave 4.
 
 - Secret policy: do not record credentials here.
+
+## Archived work 2026-07-29 (Asia/Shanghai) - prior lane HEAD: alpha-gate hardening (branch codex/alpha-gate-hardening @ 44b1177), replaced by the remaining-fixes lane on this branch.
+
+# Work Log: alpha-gate hardening (the three blockers for outside exposure)
+
+- Status: completed; ready_for_qa=YES. 2026-07-29 (Asia/Shanghai).
+- Role: backend/security owner, single session.
+- Branch: `codex/alpha-gate-hardening`; worktree
+  `decision-lab-worktrees/alpha-gate-hardening` per section 20.
+- Base: `codex/analysis-progress-ui` @ c85d7b5 (fixed parent; this lane is the
+  third link in the chain db38e16 -> 6300dc1 -> caee4fe -> c85d7b5 -> here).
+  Worktree `AGENTS.md` byte-matches canonical (`d9f1f79`) — section 20 PASS.
+- Goal: close the three gaps that made ANY outside exposure unsafe.
+
+## What was actually wrong (audited, not assumed)
+
+1. **The most expensive route in the product had no metering at all.** One
+   focused run is ~8 model calls plus bounded retrieval and takes 6-9 minutes
+   live. Meanwhile the far cheaper pure-computation simulation-run route already
+   had a complete limiter (`app/simulations/run_policy.py`). AGENTS.md section 11
+   requires Postgres-backed limits for "login, high cost Run, connectors and
+   uploads" — the high-cost-Run half was simply missing. On a public origin this
+   is unbounded model/retrieval spend by anyone.
+2. **`POST /api/auth/guest` had no metering.** Only login did. One address could
+   mint unlimited guest workspaces, and each guest workspace carries its own run
+   budget — an amplifier for (1).
+3. **`app.main` had no middleware whatsoever**, so not one response carried a
+   security header (nosniff / frame-ancestors / referrer-policy / COOP / CORP).
+   Section 12 requires a configurable HTTPS entry point and section 14's
+   security gate lists security response headers.
+
+## Delivered
+
+- `app/analyses/run_policy.py` (NEW): `AnalysisRunRateLimiter` with two
+  independent fail-closed dimensions — per (workspace, user) burst 5 / 60 min,
+  and per workspace rolling day 20 / 24 h. Storage reuses the migrated
+  `login_rate_buckets` sliding window under dedicated SHA-256 digest dimensions
+  (`analysisrun:` / `analysisrunday:`), so no raw workspace/user id is written to
+  the limiter store and keys cannot collide with login or simulation buckets.
+  No migration, no new dependency.
+- `app/analyses/routes.py`: the gate runs BEFORE the handler reads the body or
+  touches the charter. A 429 cannot consume an Idempotency-Key (only
+  `create_queued_run` writes the idempotency record, and a 429 never reaches it).
+- `app/auth/guest.py`: the CREATE path (not the free reuse path) is metered
+  through the shipped `LoginRateLimiter`, with a guest-specific second dimension
+  — exactly the pattern invite redemption already uses.
+- `app/security/headers.py` (NEW) + `app/main.py`: pure-ASGI
+  `SecurityHeadersMiddleware` adding nosniff, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer`, COOP, CORP, a minimal `Permissions-Policy` and
+  `CSP default-src 'none'; frame-ancestors 'none'`. It never buffers a body, so
+  SSE passes through untouched, and it never overwrites a header a route already
+  set. **HSTS is opt-in** via `SECURITY_HSTS_ENABLED` so a plain-HTTP dev server
+  cannot poison the developer's browser for the whole domain. No CORS middleware
+  on purpose: the deployment contract is a single origin (web proxies `/api`),
+  so permissive CORS would widen the surface rather than close a gap.
+
+## Verification
+
+- New battery `app/analyses/tests/test_alpha_gate_hardening.py`: 8 tests —
+  burst ceiling, independent workspace-day ceiling (driven through distinct
+  users so burst cannot mask it), digest keys never containing raw ids, the
+  ROUTE answering 429 before doing any work, guest create-path metering order
+  (after reuse, before allocation), headers on normal AND error responses, HSTS
+  opt-in, and the canonical app actually mounting the middleware.
+- Owner suite `app/analyses/tests`: **218 passed** (baseline 210 + 8 new).
+- Canonical suite `services/api/tests`: **574 passed** — identical to baseline.
+- `ruff check app` clean; `compileall app` clean.
+- Contract neutrality vs main: identical OpenAPI (69 ops, no schema delta) ->
+  `CONTRACT_NEUTRAL`. Response headers and 429s are not OpenAPI surface here.
+- **Live HTTP verification** against a real uvicorn (fixture mode, zero model
+  spend) — `output/alpha_gate_check.py`, result `ALPHA_GATE_RESULT=PASS`:
+  - all seven headers present on `/health` AND on an error envelope;
+  - HSTS correctly ABSENT over plain HTTP;
+  - five run creations answered 201, the sixth answered 429 with
+    `code=REQUEST_RATE_LIMITED`, `limit=workspaceUserBurst`,
+    `retryAfterSeconds=3600`; exactly five runs were created.
+
+## Still blocking a public alpha (not this lane's scope)
+
+- `.env.prototype` does not exist, so the full compose stack (api + worker + web)
+  has never been started in its current shape.
+- Contract drift: `packages/contracts/openapi.json` has 56 operations, the app
+  serves 69 (11 paths never regenerated) — needs a CCR + official regeneration.
+- Golden-path e2e: `e2e/` still only covers the simulation demo.
+- The three lanes on this chain are unmerged and have had no independent QA.
+- `recover_stale_runs` is still not called anywhere.
+- Frontend still sends random hex for `caseSnapshotHash` / `methodContentHash`,
+  so the "traceable decision" claim is formally satisfied but not real.
+- Guest alpha on a public origin should be replaced by the shipped invite
+  mechanism (`workspace_invites` + `/join`), which is naturally rate-bounded,
+  attributable and revocable.
+
+- Secret policy: do not record credentials here.

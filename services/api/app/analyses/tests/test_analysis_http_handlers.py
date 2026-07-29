@@ -182,16 +182,25 @@ async def test_create_charter_draft_full(client, world):
 
 
 async def test_create_charter_missing_fields(client, world):
+    # Revised with the server-authoritative snapshot change: caseSnapshotHash is
+    # no longer a caller-required field (the server freezes it from the database),
+    # so omitting it is legal and only the genuinely caller-owned field is
+    # reported missing. Omitting decisionSubjectId is added here to keep the
+    # multi-field shape of the assertion covered.
     body = _charter_body(world)
     del body["decisionQuestion"]
     del body["caseSnapshotHash"]
+    del body["decisionSubjectId"]
     response = await client.post(
         f"{_ws(world)}/cases/{world.case_id}/analysis-charters", json=body
     )
     assert response.status_code == 422
     error = response.json()["error"]
     assert error["code"] == "VALIDATION_FAILED"
-    assert set(error["details"]["missingFields"]) == {"caseSnapshotHash", "decisionQuestion"}
+    assert set(error["details"]["missingFields"]) == {
+        "decisionSubjectId",
+        "decisionQuestion",
+    }
 
 
 async def test_create_charter_full_wrong_lens_set(client, world):

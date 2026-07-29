@@ -77,6 +77,37 @@ async def _park_run(workspace_id: UUID, analysis_run_id: UUID) -> None:
         )
 
 
+async def _recover_stale_runs() -> None:
+    """Park runs whose heartbeat expired (crashed or killed worker).
+
+    ``recover_stale_runs`` shipped with the state machine but was never called by
+    anything, so a run whose worker died stayed in its executing stage forever:
+    it blocked the case's single-active-run slot and no operator action could
+    reach it. It only became meaningful once stage boundaries started committing
+    (heartbeats are now visible outside the worker's transaction), which is why
+    it is wired here rather than earlier.
+
+    Called on an IDLE poll only: a busy worker is already the reason the queue is
+    moving, and doing recovery between claims keeps this off the hot path.
+    """
+
+    from app.analyses.repository import AnalysisRuntimeRepository
+
+    try:
+        async with async_session_factory() as session:
+            recovered = await AnalysisRuntimeRepository(session).recover_stale_runs()
+            if recovered:
+                await session.commit()
+                log.warning(
+                    "parked %d stale run(s) with an expired heartbeat: %s",
+                    len(recovered),
+                    ", ".join(str(run_id) for run_id in recovered),
+                )
+    except Exception:
+        # Recovery is best-effort maintenance; it must never stop the loop.
+        log.exception("stale-run recovery pass failed")
+
+
 async def main() -> None:
     logging.basicConfig(
         level=os.getenv("WORKER_LOG_LEVEL", "INFO"),
@@ -119,6 +150,9 @@ async def main() -> None:
             if claimed is not None:
                 log.info("processed analysis run %s", claimed)
                 continue  # drain the queue without sleeping
+            # Idle: the queue is empty, so this is the cheap moment to reclaim
+            # anything a dead worker left mid-stage.
+            await _recover_stale_runs()
         try:
             await asyncio.wait_for(stop.wait(), timeout=_poll_interval())
         except (TimeoutError, asyncio.TimeoutError):
