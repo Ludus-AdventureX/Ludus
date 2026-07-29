@@ -1,9 +1,117 @@
-# Work Log: live deep-analysis execution hardening (deploy lane)
+# Work Log: analysis run visibility (P0-A / P0-B / P0-C / P1-D / P1)
 
-- Status: ACTIVE on worktree decision-lab-deploy-stack; branch codex/prototype-deploy-stack. No rebase/amend/force.
-- Context: with FIXTURE_MODE=false + DeepSeek MODEL_* set, the deep-analysis worker ran live but the multi-stage run failed. Two real defects found and fixed by live E2E through the deployed stack.
-- Fix 1 (model_provider.py DeepSeekModelProvider._client): default httpx transport had retries=0, so an intermittent cold-TLS ConnectError from the provider killed a whole multi-stage run. Now builds httpx.AsyncHTTPTransport(retries=3) when no test transport is injected (connection-establishment retries only, idempotent, never replays a partial request).
-- Fix 2 (analysis_worker.py): live models emit `output` as a summary string and `lensPayloads` as [] instead of {}. The executor already normalizes both before persistence, but the pre-persistence _STAGE_RESULT_SCHEMA rejected them. Relaxed output to object|string and lensPayloads to object|array (module-local executor gate only, NOT a canonical DB/API contract), and hardened the stage executor system prompt with explicit per-key value types + an example.
-- Live verification (deployed stack, deepseek-v4-pro, real HTTP): guest -> case -> charter confirm -> run create -> worker claimed and drove ALL focused stages (planning/retrieving/analyzing/criticizing/synthesizing/validating) -> terminal `blocked` at progress 0.86 (quality-gate fail-closed terminal, lastResumableStage=null). Worker log: "processed analysis run ..." with zero ConnectError/SchemaValidationError. Balance endpoint confirmed the key valid (available). DeepSeek official model name for this account = deepseek-v4-pro / deepseek-v4-flash (deepseek-chat/reasoner rejected 400).
-- Gates: ruff + compileall clean on both changed files; live E2E as above.
-- Secret policy: MODEL_API_KEY lives only in gitignored .env.prototype; never recorded here.
+- Status: completed (implementation); ready_for_qa=YES. 2026-07-29 (Asia/Shanghai).
+- Role: runtime/worker owner, single session.
+- Branch: `codex/analysis-run-visibility`; worktree
+  `decision-lab-worktrees/analysis-run-visibility` per section 20.
+- Base: local `main` db38e16 (= 28cff76 + the docs-only governance-clause
+  commit). Worktree `AGENTS.md` byte-matches canonical (`d9f1f79`), section 20
+  check PASS.
+- Goal: make a running analysis observable and make the key-free path work.
+
+## Findings this work item is fixing (all reproduced live, not inferred)
+
+- P0-A: the worker advanced an entire run inside ONE transaction (run.py owned
+  the session and committed once after `run_once`). Live evidence: a run that
+  had already spent 5 minutes and six DeepSeek calls still read
+  `queued / progress 0 / started_at NULL` from the API, with a matching
+  `idle in transaction 00:05:07` backend. Consequence: no status, progress,
+  heartbeat or SSE event is visible while the analysis runs; a crash rolls the
+  whole run back; `recover_stale_runs` can never see the heartbeat.
+- P0-B: `FIXTURE_MODE=true` cannot run an analysis at all.
+  `FixtureModelProvider.responses` is empty by default and the worker passes no
+  `fixture_key`, so every stage resolved to `{}` -> `EmptyModelContentError` ->
+  the run was parked `needs_attention` within ~3s. This contradicts the
+  key-free promise in compose.prototype.yaml and section 8.
+- P1: `needs_attention` is not in the backend terminal set, so the SSE stream
+  of a parked run never closes (browser EventSource hangs; 50ms DB poll loop).
+- P0-C (found while testing the fixture path): the READY report hook wrote the
+  evidence funnel's warning STRINGS into `EvidenceReview.reconciliationFindings`,
+  which is typed `list[dict]`. Validation failed inside a try/except that only
+  logged, so any run whose evidence set carried a warning (majority low-trust
+  sources, or zero opposing facts) reached `ready` with NO report at all. The
+  earlier live run happened to have real Exa sources and no warning, which is
+  why this never surfaced.
+- P1-D: `AnalysisRun.origin_modes` was never written. Every run reported
+  `originModes: []`, so nothing could distinguish a live analysis from a fixture
+  one - AGENTS.md section 8 forbids hiding the fixture/cached/live marker.
+- P1-E (NOT fixed here, reported): `packages/contracts/openapi.json` holds 56
+  operations while the app now serves 69. Eleven paths (invites, invites/redeem,
+  invites revoke, calibration, mentor-reviews, question-clarifier, sandbox,
+  sandbox/preview, export, portfolio, purge) never had contracts regenerated,
+  so the web app cannot type them from the generated package. This predates
+  this branch and belongs to the contract/integration lane (CCR + regeneration).
+
+## Scope
+
+- Stage boundaries become commit boundaries (claim, stage entry, packets,
+  each lens, enrichment, stage completion, terminal transition, report).
+- Precise parking: park the run the worker actually claimed instead of
+  re-claiming the queue head.
+- Deterministic fixture stage responses so the key-free path reaches `ready`.
+- SSE closes on `needs_attention` as well.
+- Structured funnel quality findings so a warning degrades the report's stated
+  confidence instead of deleting the report.
+- `originModes` recorded on the run (idempotent, additive).
+
+## Changed files
+
+- services/api/app/workers/analysis_worker.py (checkpoints, claimed run,
+  origin-mode stamp, fixture fallback wiring)
+- services/api/app/workers/run.py (precise parking, transaction ownership doc)
+- services/api/app/workers/fixture_stages.py (NEW, deterministic stage payloads)
+- services/api/app/workers/report_builder.py (structured quality findings)
+- services/api/app/agents/model_provider.py (FixtureModelProvider.fallback)
+- services/api/app/analyses/repository.py (record_origin_mode)
+- services/api/app/analyses/routes.py (SSE stream-closing set)
+- services/api/app/analyses/tests/test_run_visibility_and_fixture_path.py (NEW)
+- services/api/app/analyses/tests/test_analysis_sse_and_commands.py (+1 test)
+
+No migration, no schema change, no route/DTO/event/error-code change.
+
+## Verification (all run against this tree)
+
+- Owner suite `app/analyses/tests`: 210 passed (baseline 204 + 6 new), 0 failed.
+- Canonical suite `services/api/tests` (pytest testpaths): 574 passed, 0 failed
+  - identical to the recorded 574 baseline, zero regression.
+- Contract neutrality: this tree's FastAPI app and the main tree's app produce
+  IDENTICAL OpenAPI (69 ops both sides, no added/removed operation, no schema
+  delta) -> CONTRACT_NEUTRAL. `generate_contracts.ps1 -Check` exported the
+  canonical OpenAPI successfully but could not finish the TypeScript half in
+  this worktree (openapi-typescript needs node_modules, which needs approval to
+  install); the OpenAPI comparison above covers the drift question for this
+  change. NOTE: the script also created a worktree-local `.venv` (uv, 83
+  packages, gitignored) and `.contract-check/`.
+- ruff `app` clean; compileall `app` clean.
+- LIVE end-to-end (DeepSeek deepseek-v4-pro, real HTTP, guest -> case ->
+  charter -> confirm -> run): read from OUTSIDE the worker's transaction while
+  the run was still executing, the API/DB showed
+  `criticizing 0.43 {live}` -> `synthesizing 0.57 {live}` -> `ready 1.0 {live}`.
+  Before this change the same run read `queued / progress 0 / originModes []`
+  for its entire multi-minute duration. 105 events, 5 research packets, 1
+  persisted report.
+- P0-C proven on that same live run: Exa timed out, so every source graded L6
+  and the funnel raised the 100%-low-trust warning; the report persisted anyway
+  and carries the warning as a structured `evidence_quality` finding. The
+  previous live run (real Exa sources, no warning) has 0 such findings, which is
+  exactly why the defect stayed hidden.
+- P0-B proven live: with `MODEL_PROVIDER=fixture` the worker drained a backlog
+  of queued runs to `ready` at ~0.2s each. Before this change every one of them
+  was parked `needs_attention` within ~3s.
+- Known environment side effects: the dev database `decision_lab` now holds
+  test-created runs in intermediate states (the owner suite ran against the dev
+  container rather than a disposable PG16 project, so full-gate QA should re-run
+  on a run-scoped container per section 14).
+
+## Not done / handed on
+
+- P1-E contract drift (56 vs 69 operations) - contract/integration lane.
+- `recover_stale_runs` is still not called anywhere; it only becomes meaningful
+  now that heartbeats are visible, and it was outside this work item's scope.
+- Frontend progress bar / stage indicator / queued timeout (the next wave) now
+  has real per-stage data to render.
+- Full-run fixture path still blocks at the five-lens audit: no lens payloads
+  are synthesized. That is an honest verdict, not a crash, and focused is the
+  documented key-free scope.
+
+- Secret policy: do not record credentials here.

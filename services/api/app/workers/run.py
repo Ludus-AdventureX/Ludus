@@ -6,15 +6,20 @@ Model execution comes from the environment seam only
 (``MODEL_PROVIDER=deepseek`` live, or ``FIXTURE_MODE=true`` deterministic
 fixture origin) — nothing vendor-specific is hard-coded here.
 
-Transaction ownership: the repository layer never commits; this runner owns
-the session and commits once after ``run_once`` returns. On an unexpected
-executor/persistence failure the claimed transaction is rolled back (the run
-returns to ``queued``); the runner then re-claims the queue head in a FRESH
-session (queued -> planning, the canonical claim transition) and parks it
-``planning -> needs_attention`` so a poison run cannot wedge the queue head
-forever; operators resume it through the shipped resolution/resume API.
-Cancellation is already handled inside the worker (CooperativeStop) and
-needs nothing here.
+Transaction ownership: the repository layer never commits, but the WORKER now
+commits at every stage boundary (``AnalysisWorker._checkpoint``). A run used to
+advance inside one long transaction, which made its status, progress, heartbeat
+and events invisible until it finished — a run five minutes and six model calls
+deep still read ``queued / progress 0`` through the API. This runner therefore
+owns the session but no longer owns the run's visibility; its final commit is
+just a no-op backstop for anything written after the last boundary.
+
+On an unexpected executor/persistence failure the current (partial) stage rolls
+back and the runner parks EXACTLY the run it claimed, in place, from whatever
+executing stage it reached — every ``executing -> needs_attention`` edge is
+legal. Operators resume it through the shipped resolution/resume API.
+Cancellation is already handled inside the worker (CooperativeStop) and needs
+nothing here.
 """
 
 from __future__ import annotations
@@ -36,14 +41,18 @@ def _poll_interval() -> float:
     return float(os.getenv("WORKER_POLL_INTERVAL_SECONDS", "2.0"))
 
 
-async def _park_queue_head() -> None:
-    """Best-effort poison-run parking in a fresh session (fresh transaction).
+async def _park_run(workspace_id: UUID, analysis_run_id: UUID) -> None:
+    """Park EXACTLY the failed run, in place, in a fresh session.
 
-    After the failed transaction rolled back, the failing run is back at the
-    queue head (claim takes the oldest queued run). Re-claim it with the
-    canonical locked transition (queued -> planning) and park it
-    planning -> needs_attention; both edges are legal in the state machine.
-    Single-worker deployment: the re-claimed head is the run that just failed.
+    Stage boundaries commit, so after the failed stage rolls back the run is
+    still sitting in an executing stage (not back in ``queued``) and can be
+    parked directly. The previous strategy re-claimed the queue head, which was
+    only correct because the whole run lived in one transaction and therefore
+    rolled back to ``queued``; with more than one queued run it could park an
+    innocent run instead of the poison one.
+
+    A run that reached a terminal state concurrently (e.g. cancelled) is left
+    alone: the transition guard rejects it and that is the correct outcome.
     """
 
     from app.analyses.repository import AnalysisRuntimeRepository
@@ -51,22 +60,21 @@ async def _park_queue_head() -> None:
     try:
         async with async_session_factory() as session:
             repo = AnalysisRuntimeRepository(session)
-            run = await repo.claim_next_queued()
-            if run is None:
-                return
             await repo.transition(
-                run.workspace_id,
-                run.analysis_run_id,
+                workspace_id,
+                analysis_run_id,
                 AnalysisRunStatus.NEEDS_ATTENTION,
                 payload={"reason": "worker_execution_error"},
             )
             await session.commit()
             log.warning(
                 "run %s parked needs_attention after worker failure",
-                run.analysis_run_id,
+                analysis_run_id,
             )
     except Exception:
-        log.exception("could not park the failed run; it stays queued")
+        log.exception(
+            "could not park run %s; it stays in its current stage", analysis_run_id
+        )
 
 
 async def main() -> None:
@@ -91,6 +99,7 @@ async def main() -> None:
 
     while not stop.is_set():
         claimed: UUID | None = None
+        worker: AnalysisWorker | None = None
         try:
             async with async_session_factory() as session:
                 worker = AnalysisWorker(
@@ -100,8 +109,12 @@ async def main() -> None:
                 if claimed is not None:
                     await session.commit()
         except Exception:
-            log.exception("worker iteration failed; rolled back, parking the queue head")
-            await _park_queue_head()
+            log.exception("worker iteration failed; parking the claimed run")
+            target = worker.claimed if worker is not None else None
+            if target is None:
+                log.error("failure before any claim; nothing to park")
+            else:
+                await _park_run(*target)
         else:
             if claimed is not None:
                 log.info("processed analysis run %s", claimed)

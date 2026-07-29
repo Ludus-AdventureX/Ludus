@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Awaitable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
@@ -113,6 +113,13 @@ class FixtureModelProvider:
     supports_structured_output: bool = True
     responses: dict[str, Mapping[str, Any]] = field(default_factory=dict)
     request_model: str = "fixture-deterministic"
+    # Deterministic synthesizer for callers that registered no exact response.
+    # Tests leave this None on purpose: an unregistered key must still surface as
+    # a structural failure they can assert. The production key-free path injects
+    # one, because without it EVERY stage of a FIXTURE_MODE run resolved to {}
+    # and the run was parked within seconds - the key-free path promised by
+    # compose.prototype.yaml and AGENTS.md section 8 never actually worked.
+    fallback: Callable[[Sequence[ModelMessage]], Mapping[str, Any]] | None = None
 
     def register(self, fixture_key: str, content: Mapping[str, Any]) -> None:
         self.responses[fixture_key] = content
@@ -130,7 +137,11 @@ class FixtureModelProvider:
         import json
 
         key = fixture_key or (messages[-1].content if messages else "")
-        content = self.responses.get(key, {})
+        content = self.responses.get(key)
+        if content is None and self.fallback is not None:
+            content = self.fallback(messages)
+        if content is None:
+            content = {}
         raw_text = json.dumps(content, ensure_ascii=False, sort_keys=True)
         return StructuredCompletion(
             content=content,

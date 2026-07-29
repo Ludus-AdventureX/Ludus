@@ -92,6 +92,36 @@ def _funnel_audit(stage_outputs: Mapping[str, Any]) -> Mapping[str, Any]:
     return {}
 
 
+def _funnel_quality_findings(stage_outputs: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Funnel quality warnings as STRUCTURED entries (never bare strings).
+
+    ``EvidenceReview.reconciliation_findings`` is typed
+    ``list[dict[str, Any]]`` following ``ReconciliationFinding.report_entry()``.
+    Emitting the funnel's warning strings raised a validation error inside the
+    READY report hook, which only logged - so every run whose evidence set
+    carried a warning (majority low-trust sources, or zero opposing facts)
+    reached ``ready`` with NO report at all. A quality warning must degrade the
+    report's stated confidence, never delete the report.
+
+    ``resolvable=False`` is honest: these are properties of the evidence set,
+    not conflicts a reader can adjudicate away.
+    """
+
+    audit = _funnel_audit(stage_outputs)
+    evidence_ids = [str(item) for item in list(audit.get("evidenceIds") or [])[:5]]
+    return [
+        {
+            "metric": "evidence_set_quality",
+            "category": "evidence_quality",
+            "evidenceIds": evidence_ids,
+            "detail": str(warning),
+            "resolvable": False,
+            "affectedClaimIds": [],
+        }
+        for warning in list(audit.get("warnings") or [])[:5]
+    ]
+
+
 def _role_digest(stage_outputs: Mapping[str, Any], role: str) -> Mapping[str, Any]:
     """The digest of an enrichment role (safety_anchor / chief_of_staff)."""
 
@@ -257,9 +287,7 @@ def build_focused_document(
             "evidenceIds": [str(e) for e in _funnel_audit(stage_outputs).get("evidenceIds", [])],
             "conflictGroupIds": [],
             "freshnessWarnings": [],
-            "reconciliationFindings": [
-                str(w) for w in _funnel_audit(stage_outputs).get("warnings", [])
-            ][:5],
+            "reconciliationFindings": _funnel_quality_findings(stage_outputs),
         },
         "counterArguments": counter_arguments,
         "residualUncertainty": residual_uncertainty,

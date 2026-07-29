@@ -223,6 +223,7 @@ class AnalysisWorker:
         lens_writer: LensWriter | None = None,
         lens_audit: LensAudit | None = None,
         origin_mode: OriginMode = OriginMode.FIXTURE,
+        checkpoint: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self._session = session
         self._repo = AnalysisRuntimeRepository(session)
@@ -233,10 +234,32 @@ class AnalysisWorker:
         # orchestration tests only, production wiring uses the shipped audit.
         self._lens_audit = lens_audit or audit_full_run_lens_set
         self._origin_mode = origin_mode
+        self._commit = checkpoint or session.commit
+        # The run this worker actually claimed, so the runner can park exactly
+        # that run after a failure instead of guessing at the queue head.
+        self.claimed: tuple[UUID, UUID] | None = None
 
     @property
     def repository(self) -> AnalysisRuntimeRepository:
         return self._repo
+
+    async def _checkpoint(self) -> None:
+        """Publish everything written so far: a stage boundary IS a commit boundary.
+
+        Previously the runner owned one transaction for the whole run, so every
+        status, progress, heartbeat and event stayed invisible until the run
+        finished. Live evidence: a run five minutes and six model calls deep
+        still read ``queued / progress 0 / started_at NULL`` through the API
+        while the backend sat in ``idle in transaction``. That single fact is
+        what made a working worker look broken and made progress unobservable,
+        SSE silent, ``recover_stale_runs`` blind and a crash cost the whole run.
+
+        Committing per boundary is safe for the claim contract: the claim
+        already moved the row out of ``queued``, so releasing the row lock
+        cannot cause a double claim.
+        """
+
+        await self._commit()
 
     async def run_once(self, *, workspace_id: UUID | None = None) -> UUID | None:
         """Claim and fully process one queued run; None when the queue is empty."""
@@ -244,6 +267,10 @@ class AnalysisWorker:
         run = await self._repo.claim_next_queued(workspace_id=workspace_id)
         if run is None:
             return None
+        self.claimed = (run.workspace_id, run.analysis_run_id)
+        # Publish the claim itself (queued -> planning + its event) so the run
+        # stops looking unclaimed the moment work begins.
+        await self._checkpoint()
         await self._execute(run)
         return run.analysis_run_id
 
@@ -277,6 +304,10 @@ class AnalysisWorker:
         # on the run persists hashes only, not the output bodies).
         stage_outputs: dict[str, Any] = {}
 
+        # Provenance first: stamp how this run is being executed before any
+        # artifact exists, so fixture output can never be read as live.
+        await self._repo.record_origin_mode(workspace_id, run_id, self._origin_mode)
+
         try:
             for index, stage in enumerate(_STAGE_SEQUENCE):
                 # Stage boundary: cooperative stop before starting work.
@@ -287,6 +318,10 @@ class AnalysisWorker:
                         workspace_id, run_id, stage, stage_input=stage_inputs
                     )
                 await self._repo.heartbeat(workspace_id, run_id)
+                # Stage entry and heartbeat become durable BEFORE the long
+                # model call, so both the UI and stale-run recovery can see
+                # which stage is running right now.
+                await self._checkpoint()
 
                 executor = self._executors.for_role(_STAGE_ROLE[stage])
 
@@ -307,6 +342,7 @@ class AnalysisWorker:
                         },
                         origin_mode=self._origin_mode,
                     )
+                    await self._checkpoint()
 
                 # External-call boundary check before the main role execution.
                 await self._check_cancelled(run)
@@ -384,6 +420,11 @@ class AnalysisWorker:
                         },
                         origin_mode=self._origin_mode,
                     )
+
+                if result.packets:
+                    # Publish this stage's packets and their events before the
+                    # lens/enrichment legs, which add minutes of model time.
+                    await self._checkpoint()
 
                 if is_full and stage in FULL_LENS_SCHEDULE:
                     await self._run_lens_stages(run, stage, result)
@@ -471,6 +512,9 @@ class AnalysisWorker:
                             + audit_findings
                         },
                     )
+                    # The verdict is durable before the report leg runs, so a
+                    # report failure can never cost the terminal state.
+                    await self._checkpoint()
                     if passed:
                         # READY report hook: assemble + persist the canonical
                         # report artifact from confirmed inputs. "No qualifying
@@ -479,7 +523,11 @@ class AnalysisWorker:
                         # the READY state - log and continue (compensable).
                         try:
                             await self._persist_run_report(run, stage_outputs)
+                            await self._checkpoint()
                         except Exception:
+                            # READY is already committed; discard only the failed
+                            # report work so the session stays usable.
+                            await self._session.rollback()
                             logging.getLogger(__name__).exception(
                                 "report persistence failed for READY run %s", run_id
                             )
@@ -498,6 +546,9 @@ class AnalysisWorker:
                         else None
                     ),
                 )
+                # Progress, output hash and the stage digest event become
+                # visible now - this is what the UI reads between stages.
+                await self._checkpoint()
                 stage_inputs = {"previousStage": stage.value, **dict(result.output)}
                 if charter_context is not None:
                     # The charter must survive stage handoffs - each stage
@@ -506,6 +557,9 @@ class AnalysisWorker:
         except CooperativeStop:
             # Canonical cancelled terminal state was already written by the
             # cancel command; keep persisted events/artifacts, publish nothing.
+            # The stage work completed before the stop is legitimate history,
+            # so it is committed rather than silently rolled back.
+            await self._checkpoint()
             return
 
     async def _fresh(self, run: AnalysisRun) -> AnalysisRun:
@@ -588,6 +642,7 @@ class AnalysisWorker:
                     payload={"role": role, "enrichmentRole": role, "digest": dict(digest)},
                     origin_mode=self._origin_mode,
                 )
+                await self._checkpoint()
         except Exception:
             logging.getLogger(__name__).warning(
                 "role enrichment %s failed for run %s", role, run.analysis_run_id,
@@ -689,6 +744,9 @@ class AnalysisWorker:
                 },
                 origin_mode=self._origin_mode,
             )
+            # Each persisted lens is published on its own: a full run spends
+            # minutes per lens and the trace must not wait for the whole set.
+            await self._checkpoint()
 
 
 
@@ -1108,6 +1166,17 @@ def build_role_executors_from_env() -> tuple[RoleExecutors, OriginMode]:
 
     provider = build_model_provider_from_env()
     origin_mode = OriginMode.FIXTURE if provider.name == "fixture" else OriginMode.LIVE
+    if origin_mode == OriginMode.FIXTURE and getattr(provider, "fallback", None) is None:
+        # Without this the key-free path cannot run at all: the fixture provider
+        # has no registered stage responses, so every stage resolved to {} and
+        # the run was parked within seconds. The synthesizer is deterministic
+        # and labels every fact as fixture, so it cannot pass for live output.
+        from app.workers.fixture_stages import synthesize_stage_response
+
+        provider.fallback = synthesize_stage_response
+        logging.getLogger(__name__).info(
+            "fixture origin: deterministic stage responses bound (no model key in use)"
+        )
     # Heterogeneous adversary (MODEL_B_*): only meaningful for live execution;
     # fixture runs stay fully deterministic on one provider.
     adversary = (

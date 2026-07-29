@@ -623,6 +623,32 @@ class AnalysisRuntimeRepository:
         await self._apply_transition(run, AnalysisRunStatus.PLANNING)
         return run
 
+    async def record_origin_mode(
+        self, workspace_id: UUID, analysis_run_id: UUID, mode: OriginMode
+    ) -> None:
+        """Accumulate the run's deduplicated ``originModes`` (provenance, section 8).
+
+        The column existed and the API projected it, but nothing ever wrote to
+        it: every run reported ``originModes: []``, so a reader could not tell a
+        live analysis from a fixture one. AGENTS.md requires the
+        fixture/cached/live marker to stay visible and forbids fixture output
+        from passing as live, which is impossible while the array is empty.
+
+        Idempotent and additive: re-recording the same mode is a no-op, and a
+        run that mixes modes (live plus an audited fixture fallback) keeps both
+        in insertion order.
+        """
+
+        run = await self._lock_run(workspace_id, analysis_run_id)
+        existing = [
+            value.value if isinstance(value, OriginMode) else str(value)
+            for value in (run.origin_modes or [])
+        ]
+        if mode.value in existing:
+            return
+        run.origin_modes = [*existing, mode.value]
+        await self._session.flush()
+
     async def heartbeat(self, workspace_id: UUID, analysis_run_id: UUID) -> None:
         await self._session.execute(
             update(AnalysisRun)

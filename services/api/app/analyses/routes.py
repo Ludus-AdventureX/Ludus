@@ -76,6 +76,16 @@ router = APIRouter(prefix="/api/workspaces/{workspaceId}")
 
 _SSE_POLL_SECONDS = 0.05
 
+# Statuses that end an SSE stream. This is the canonical terminal set PLUS
+# needs_attention: a parked run is not terminal (a resolution can resume it),
+# but nothing further will be emitted until a human acts, so keeping the stream
+# open leaves the browser's EventSource hanging on a 50ms server-side poll
+# forever. Closing lets the client re-read the run and show the parked state;
+# a resume opens a new stream and Last-Event-ID replays without a gap.
+_STREAM_CLOSING_STATUSES = frozenset(
+    {*TERMINAL_STATUSES, AnalysisRunStatus.NEEDS_ATTENTION}
+)
+
 
 def case_not_found() -> ApiFailure:
     return ApiFailure(
@@ -198,8 +208,8 @@ async def stream_run_events(
             current = await repo.get_run(context.workspace_id, analysis_run_id)
             if current is None:
                 return
-            if AnalysisRunStatus(current.status) in TERMINAL_STATUSES:
-                # flush any events written together with the terminal transition
+            if AnalysisRunStatus(current.status) in _STREAM_CLOSING_STATUSES:
+                # flush any events written together with the closing transition
                 tail = await repo.list_events_after(
                     context.workspace_id, analysis_run_id, cursor
                 )

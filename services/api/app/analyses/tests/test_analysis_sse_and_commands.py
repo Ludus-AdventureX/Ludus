@@ -145,6 +145,40 @@ async def test_sse_stream_serves_full_canonical_envelopes(
     assert frames[-1]["data"]["type"] == "analysis.cancelled"
 
 
+async def test_sse_stream_closes_on_needs_attention(session, worlds_client) -> None:
+    """A parked run must END the stream, even though it is not terminal.
+
+    ``needs_attention`` is resumable, so it is correctly absent from
+    TERMINAL_STATUSES - but nothing more will be emitted until a human files a
+    resolution. Streaming on left the browser's EventSource hanging while the
+    server re-queried the run every 50ms; the client could never fall through to
+    rendering the parked state. Closing is safe: a resume opens a new stream and
+    Last-Event-ID replays from the persisted sequence with no gap.
+    """
+
+    client, world, _ = worlds_client
+    repo = AnalysisRuntimeRepository(session)
+    _, run = await make_queued_run(session, world)
+    ws, run_id = world.workspace_id, run.analysis_run_id
+    await repo.transition(ws, run_id, S.PLANNING)
+    await repo.transition(ws, run_id, S.RETRIEVING)
+    await repo.transition(
+        ws, run_id, S.NEEDS_ATTENTION, payload={"reason": "heartbeat_expired"}
+    )
+
+    response = await client.get(
+        f"/api/workspaces/{ws}/analyses/{run_id}/events",
+        timeout=10.0,
+    )
+
+    assert response.status_code == 200
+    frames = _parse_sse(response.text)
+    types = [frame["data"]["type"] for frame in frames]
+    # The closing transition's own event is flushed before the stream ends.
+    assert types[-1] == "analysis.needs_attention"
+    assert frames[-1]["data"]["payload"]["reason"] == "heartbeat_expired"
+
+
 async def test_sse_last_event_id_resumes_from_persisted_sequence(
     session, worlds_client
 ) -> None:
