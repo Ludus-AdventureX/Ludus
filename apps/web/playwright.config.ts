@@ -65,6 +65,13 @@ export default defineConfig({
         POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "decision_lab_dev",
         DATABASE_URL: process.env.DATABASE_URL ?? "",
         ENABLE_GUEST_ALPHA: process.env.ENABLE_GUEST_ALPHA ?? "true",
+        // Registration is invite-gated. This is sha256("e2e-alpha-invite") and
+        // MUST stay in sync with SIGNUP_CODE in analysis-golden-path.spec.ts;
+        // an unset variable would close registration and the golden path could
+        // never authenticate.
+        SIGNUP_INVITE_CODE_HASHES:
+          process.env.SIGNUP_INVITE_CODE_HASHES ??
+          "17252925e4055c8a58fd43516e1005d5dda46216153914bdc23d266776049506",
         FIXTURE_MODE: process.env.FIXTURE_MODE ?? "true",
         AUTH_ALLOWED_ORIGINS:
           process.env.AUTH_ALLOWED_ORIGINS ?? JSON.stringify([webOrigin]),

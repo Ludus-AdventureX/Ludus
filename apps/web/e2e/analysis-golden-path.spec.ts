@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
- * The analysis golden path: ask a question, launch a formal run, and watch the
- * six-stage indicator advance to a terminal verdict.
+ * The analysis golden path: authenticate through the invite gate, ask a
+ * question, launch a formal run, and watch the six-stage indicator advance to a
+ * terminal verdict.
  *
  * This is the path the product owner reported as "the worker does not work and
  * the whole flow does not run", and until now `e2e/` covered only the simulation
@@ -18,23 +19,59 @@ import { expect, test } from "@playwright/test";
 const QUESTION =
   "资金与研发资源有限，球形机器人项目应优先进入救援市场还是家庭服务市场？";
 
+// MUST match sha256(SIGNUP_CODE) configured as SIGNUP_INVITE_CODE_HASHES in
+// playwright.config.ts. Registration is the only way in now that the guest door
+// is closed, so an unmatched code would leave the whole path unable to start.
+const SIGNUP_CODE = "e2e-alpha-invite";
+
 const STAGES = ["planning", "retrieving", "analyzing", "criticizing", "synthesizing", "validating"];
+
+/**
+ * Register a fresh account through /enter. A unique email keeps every test run
+ * independent (register commits), and landing back on the shell home confirms
+ * the session cookie is set before anything tries to create a case.
+ */
+async function registerFreshAccount(page: Page): Promise<void> {
+  const email = `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
+  await page.goto("/enter");
+
+  await page.getByLabel("邮箱").fill(email);
+  await page.getByLabel("密码").fill("e2e-strong-password");
+  await page.getByLabel("邀请码").fill(SIGNUP_CODE);
+
+  // Wait for the redirect the /enter route performs on success: a failed invite
+  // gate would keep us on /enter with an alert, so this both drives and asserts
+  // that the account was admitted.
+  await Promise.all([
+    page.waitForURL((url) => !url.pathname.startsWith("/enter"), { timeout: 30_000 }),
+    page.getByRole("button", { name: "创建账号并进入" }).click(),
+  ]);
+}
 
 test("analysis golden path: launch a run and watch the stages advance", async ({ page }) => {
   test.setTimeout(180_000);
 
-  await page.goto("/");
+  // 0. Authenticate through the invite gate; the create flow needs a session.
+  await registerFreshAccount(page);
 
   // 1. Create a decision case from the first screen (no marketing detour).
+  await page.goto("/");
   const composer = page.getByRole("textbox").first();
   await expect(composer).toBeVisible({ timeout: 30_000 });
   await composer.fill(QUESTION);
+  // Assert the value landed before clicking: a click that races the fill was the
+  // one intermittent artefact this spec had, and it never reproduced in a real
+  // browser. Waiting on the value removes the race deterministically.
+  await expect(composer).toHaveValue(QUESTION);
   // Anchored name on purpose: a loose /创建/ also matches the masthead's
   // "尚未创建决策项目" drawer trigger, which appears earlier in the DOM and would
   // open the project drawer instead of creating anything.
-  await page.getByRole("button", { name: /^建立决策项目/ }).click();
-
-  await expect(page).toHaveURL(/\/cases\/[^/]+\?ws=/, { timeout: 60_000 });
+  const create = page.getByRole("button", { name: /^建立决策项目/ });
+  await expect(create).toBeEnabled();
+  await Promise.all([
+    page.waitForURL(/\/cases\/[^/]+\?ws=/, { timeout: 60_000 }),
+    create.click(),
+  ]);
 
   // 2. Launch the formal run.
   const launch = page.getByRole("button", { name: /发起聚焦深度分析/ });
@@ -73,7 +110,8 @@ test("analysis golden path: launch a run and watch the stages advance", async ({
 });
 
 test("without a workspace anchor the panel refuses to fabricate a run", async ({ page }) => {
-  // Honest gap state: no ?ws= means no launch affordance at all.
+  // Honest gap state: no ?ws= means no launch affordance at all. This holds
+  // whether or not a session exists, so it does not authenticate first.
   await page.goto("/cases/00000000-0000-4000-8000-000000000000");
   await expect(page.locator('[data-analysis-launch="gap"]').first()).toBeVisible({
     timeout: 30_000,
