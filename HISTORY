@@ -4055,3 +4055,16 @@ text must go through Python bytes I/O, never a PowerShell string pipeline.
   the merge target's `node_modules`.
 
 - Secret policy: do not record credentials here.
+
+
+2026-07-30 - alpha follow-ups lane (`codex/alpha-followups`, main 3eae639 ->
+3ec0cf2, local fast-forward). Four commits: methodContentHash resolved from the
+published pack (never the caller, fail-closed, packs in the API image); invite-
+gated registration with the public guest door closed and an `/enter` register/
+login UI; the golden-path e2e rewritten auth-first and stabilised; and
+`scripts/qa_gate.ps1`, a dev-independent one-shot-container QA gate. Contracts
+regenerated for the new `inviteCode` field. Final full gate green (backend 1017,
+web 159, lint/typecheck/build, contract-neutrality). The `ludus-alpha` stack +
+volume were stopped and removed; canonical db untouched. Remote `main` not pushed.
+
+- Secret policy: do not record credentials here.

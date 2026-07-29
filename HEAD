@@ -98,3 +98,52 @@ and never recorded). Project name `ludus-alpha`.
   database still holds test-created runs.
 
 - Secret policy: do not record credentials here.
+
+
+# 2026-07-30 - alpha follow-ups (invite gate, method authority, e2e, independent QA)
+
+Branch `codex/alpha-followups`: four commits on top of main `3eae639`
+(`7faa7fd` method authority, `6115ab8` invite backend + contract regen,
+`fc2678e` invite frontend, `3ec0cf2` e2e + QA gate), fast-forwarded into local
+`main`. Final `scripts/qa_gate.ps1` run against a one-shot Postgres: migrate +
+backend 1017 + web lint/typecheck/159 unit/build + contract-neutrality all PASS.
+
+## What this lane closed (resolving the prior record's Honest gaps)
+
+- **methodContentHash is now server-authoritative.** The prior record listed it
+  as still caller-supplied; it is now resolved from the published pack through
+  the shipped MethodPackLoader on every charter write path, the caller's value
+  ignored, failing closed (500) when the catalog is unreadable and 422 for an
+  unknown method. The API image now carries `method-packs/` (build context moved
+  to the repo root).
+- **The golden-path e2e is stabilised.** Rewritten auth-first (the create flow
+  needs a session now), with the fill/click race removed via a value assertion
+  plus `Promise.all(waitForURL, click)`. Green twice back to back here. The
+  earlier "not reliably green" was in part a STALE reused web server on 3010
+  (old build, no `/enter`); killing it made the run deterministic.
+- **An independent QA flow exists.** `scripts/qa_gate.ps1` runs the full battery
+  against a run-scoped one-shot Postgres - never the dev db or the canonical
+  stack - and always reclaims it. It caught a real contract drift on its first
+  run before it could be committed.
+- **The public guest door is closed.** `ENABLE_GUEST_ALPHA` defaults off;
+  registration is invite-gated (`SIGNUP_INVITE_CODE_HASHES`, constant-time,
+  fail-closed, uniform 403) behind a real `/enter` register/login UI. Backend
+  11/11; the create flow now runs against the account's own workspace.
+- **The `ludus-alpha` compose stack + its volume are stopped and removed** (5
+  containers + 1 prototype volume); the canonical `decision-lab` db is untouched.
+
+## Correction to the prior record
+
+- Contract regeneration is done: `RegisterRequest` gained a writeOnly
+  `inviteCode`; `openapi.json` + `types.gen.ts` rebuilt (the only diff);
+  contract-neutrality PASS.
+
+## Honest gaps that remain
+
+- **Remote `main` is NOT pushed.** Everything is local; pushing needs a fresh
+  `git ls-remote` read and explicit authorisation (section 19).
+- Still both implementer and integrator on this lane; no separate reviewer.
+- The dev database (`decision-lab-db-1`) still holds e2e/test-created accounts
+  and runs; harmless, not cleaned.
+
+- Secret policy: do not record credentials here.
