@@ -1,17 +1,20 @@
-// Guest-backed decision case create flow for the empty-state shells.
-// Wire contract (all same-origin /api, credentials included):
+// Decision case create flow for the empty-state shells, on the invite-gated
+// alpha. The prototype guest bootstrap is gone: the user must already hold an
+// authenticated session (see /enter and lib/shell/session.ts), so the flow is
 //
 //   GET  /api/auth/csrf                      -> { data: { csrfToken } }
-//   POST /api/auth/guest                     -> { data: { workspaceId, ... } }
-//        (ENABLE_GUEST_ALPHA gate: disabled answers a uniform 404)
+//   GET  /api/auth/session                   -> memberships (workspaces)
+//        (401 -> AUTH_REQUIRED: the shell sends the visitor to /enter)
 //   POST /api/workspaces/{workspaceId}/cases -> { data: CaseCreateData }
 //        (require_csrf; body CaseCreateRequest { decisionQuestion })
 //
-// The guest step is idempotent at the server: a fresh browser gets a new
-// guest workspace, an existing cookie-bound session is restored transparently
-// (same behaviour the /demo simulation flow relies on).
+// The workspace is the one the account already owns; no workspace is created
+// here. A visitor without a session is not an error to swallow — it is a cue to
+// authenticate, surfaced as the AUTH_REQUIRED code below.
 
-export type CaseCreateStep = "csrf" | "guest" | "create";
+import { readAccountSession, SessionError } from "@/lib/shell/session";
+
+export type CaseCreateStep = "csrf" | "session" | "create";
 
 export class CaseCreateFlowError extends Error {
   readonly code: string;
@@ -85,28 +88,34 @@ export async function createDecisionCase(
     throw new CaseCreateFlowError("CSRF_TOKEN_MISSING", "CSRF token 响应缺少 csrfToken。", 200, "csrf");
   }
 
-  let guestEnvelope: Envelope;
+  // The account already owns a workspace; find it. An unauthenticated visitor
+  // is redirected to /enter by the shell, so this is a typed signal, not a
+  // swallowed failure.
+  let session;
   try {
-    guestEnvelope = await requestJson(fetchImpl, "guest", "/api/auth/guest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken }
-    });
+    session = await readAccountSession(fetchImpl);
   } catch (error) {
-    // The gate answers a uniform 404 while ENABLE_GUEST_ALPHA is off; keep the
-    // message actionable instead of pretending the button did nothing.
-    if (error instanceof CaseCreateFlowError && error.status === 404) {
-      throw new CaseCreateFlowError(
-        "GUEST_UNAVAILABLE",
-        "访客通道当前未开启，暂时无法建立决策项目。",
-        404,
-        "guest"
-      );
+    if (error instanceof SessionError) {
+      throw new CaseCreateFlowError(error.code, error.message, error.status, "session");
     }
     throw error;
   }
-  const workspaceId = (guestEnvelope.data as { workspaceId?: string } | undefined)?.workspaceId;
+  if (!session.authenticated) {
+    throw new CaseCreateFlowError(
+      "AUTH_REQUIRED",
+      "请先登录或使用邀请码注册，再建立决策项目。",
+      401,
+      "session",
+    );
+  }
+  const workspaceId = session.workspaces[0]?.workspaceId;
   if (!workspaceId) {
-    throw new CaseCreateFlowError("GUEST_PAYLOAD_INVALID", "Guest 响应缺少 workspaceId。", 200, "guest");
+    throw new CaseCreateFlowError(
+      "NO_WORKSPACE",
+      "当前账号还没有可用工作区。",
+      200,
+      "session",
+    );
   }
 
   const createEnvelope = await requestJson(
@@ -142,4 +151,23 @@ export function createdCaseUrl(created: CreatedDecisionCase): string {
 /** Navigation seam: components call this so jsdom tests can mock the module. */
 export function navigateToCreatedCase(created: CreatedDecisionCase): void {
   window.location.assign(createdCaseUrl(created));
+}
+
+/**
+ * A create failure means "authenticate first" when the session step reported
+ * AUTH_REQUIRED. The shell uses this to send the visitor to /enter rather than
+ * showing a dead-end notice for a state the user can actually resolve.
+ */
+export function isAuthRequired(error: unknown): boolean {
+  return error instanceof CaseCreateFlowError && error.code === "AUTH_REQUIRED";
+}
+
+/** /enter with a return path, so the visitor comes back to where they were. */
+export function enterUrl(nextPath = "/"): string {
+  return `/enter?next=${encodeURIComponent(nextPath)}`;
+}
+
+/** Navigation seam for the auth redirect (mockable in jsdom tests). */
+export function navigateToEnter(nextPath = "/"): void {
+  window.location.assign(enterUrl(nextPath));
 }

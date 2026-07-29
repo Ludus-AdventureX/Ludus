@@ -6,7 +6,9 @@ import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useS
 import {
   CaseCreateFlowError,
   createDecisionCase,
-  navigateToCreatedCase
+  isAuthRequired,
+  navigateToCreatedCase,
+  navigateToEnter
 } from "@/lib/shell/createCase";
 
 const copy = {
@@ -377,6 +379,11 @@ export function DecisionShell() {
       setDraftNotice(copy.emptySubmitNotice);
       navigateToCreatedCase(created);
     } catch (error) {
+      // Unauthenticated visitor -> invite-gated entry, returning here after.
+      if (isAuthRequired(error)) {
+        navigateToEnter("/");
+        return;
+      }
       setDraftNotice(
         error instanceof CaseCreateFlowError ? error.message : copy.emptyCreateFailedFallback
       );

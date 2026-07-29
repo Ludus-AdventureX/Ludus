@@ -27,15 +27,19 @@ vi.mock("next/image", async () => {
 
 // The homepage shell drives the real guest-backed create flow; unit tests
 // keep the network and navigation seams mocked (the golden path covers wire).
-const { createDecisionCaseMock, navigateToCreatedCaseMock } = vi.hoisted(() => ({
+const { createDecisionCaseMock, navigateToCreatedCaseMock, navigateToEnterMock } = vi.hoisted(() => ({
   createDecisionCaseMock: vi.fn(),
-  navigateToCreatedCaseMock: vi.fn()
+  navigateToCreatedCaseMock: vi.fn(),
+  navigateToEnterMock: vi.fn()
 }));
 
 vi.mock("@/lib/shell/createCase", () => ({
   CaseCreateFlowError: class CaseCreateFlowError extends Error {},
   createDecisionCase: createDecisionCaseMock,
-  navigateToCreatedCase: navigateToCreatedCaseMock
+  navigateToCreatedCase: navigateToCreatedCaseMock,
+  navigateToEnter: navigateToEnterMock,
+  isAuthRequired: (error: unknown) =>
+    !!error && typeof error === "object" && (error as { code?: string }).code === "AUTH_REQUIRED"
 }));
 
 afterEach(() => {

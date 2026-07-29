@@ -5,7 +5,9 @@ import { describe, expect, test, vi } from "vitest";
 import {
   CaseCreateFlowError,
   createDecisionCase,
-  createdCaseUrl
+  createdCaseUrl,
+  enterUrl,
+  isAuthRequired
 } from "../lib/shell/createCase";
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -16,7 +18,15 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 const csrfEnvelope = { ok: true, data: { csrfToken: "token-1" } };
-const guestEnvelope = { ok: true, data: { workspaceId: "ws-guest-1", graphId: "g-1" } };
+const sessionEnvelope = {
+  ok: true,
+  data: {
+    user: { id: "u-1", email: "invited@example.test" },
+    memberships: [
+      { workspaceId: "ws-own-1", workspaceName: "Personal Workspace", role: "owner" }
+    ]
+  }
+};
 const caseEnvelope = {
   ok: true,
   data: {
@@ -29,18 +39,18 @@ const caseEnvelope = {
   eventId: "evt_case_created"
 };
 
-describe("createDecisionCase (csrf -> guest -> POST /cases)", () => {
-  test("walks the three frozen routes and returns the created identifiers", async () => {
+describe("createDecisionCase (csrf -> session -> POST /cases)", () => {
+  test("uses the authenticated workspace and returns the created identifiers", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(csrfEnvelope))
-      .mockResolvedValueOnce(jsonResponse(guestEnvelope, 201))
+      .mockResolvedValueOnce(jsonResponse(sessionEnvelope))
       .mockResolvedValueOnce(jsonResponse(caseEnvelope, 201));
 
     const created = await createDecisionCase("先验证哪一个市场方向？", fetchMock);
 
     expect(created).toEqual({
-      workspaceId: "ws-guest-1",
+      workspaceId: "ws-own-1",
       decisionCaseId: "case-123",
       version: 1,
       title: "先验证哪一个市场方向？",
@@ -54,36 +64,35 @@ describe("createDecisionCase (csrf -> guest -> POST /cases)", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "/api/auth/guest",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({ "X-CSRF-Token": "token-1" })
-      })
+      "/api/auth/session",
+      expect.objectContaining({ method: "GET", credentials: "include" })
     );
     const [createPath, createInit] = fetchMock.mock.calls[2];
-    expect(createPath).toBe("/api/workspaces/ws-guest-1/cases");
+    expect(createPath).toBe("/api/workspaces/ws-own-1/cases");
     expect(createInit).toMatchObject({ method: "POST" });
     expect(JSON.parse(String(createInit?.body))).toEqual({
       decisionQuestion: "先验证哪一个市场方向？"
     });
   });
 
-  test("maps the uniform guest 404 to an actionable GUEST_UNAVAILABLE error", async () => {
+  test("an unauthenticated 401 becomes an AUTH_REQUIRED cue, not a dead end", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(csrfEnvelope))
       .mockResolvedValueOnce(
         jsonResponse(
-          { ok: false, error: { code: "NOT_FOUND", message: "Not Found", retryable: false } },
-          404
+          { ok: false, error: { code: "UNAUTHENTICATED", message: "no session" } },
+          401
         )
       );
 
     const failure = await createDecisionCase("q", fetchMock).catch((error) => error);
 
     expect(failure).toBeInstanceOf(CaseCreateFlowError);
-    expect(failure.code).toBe("GUEST_UNAVAILABLE");
-    expect(failure.step).toBe("guest");
+    expect(failure.code).toBe("AUTH_REQUIRED");
+    expect(failure.step).toBe("session");
+    expect(isAuthRequired(failure)).toBe(true);
+    // The session probe is not a create attempt: it must not reach /cases.
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -91,7 +100,7 @@ describe("createDecisionCase (csrf -> guest -> POST /cases)", () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(csrfEnvelope))
-      .mockResolvedValueOnce(jsonResponse(guestEnvelope, 201))
+      .mockResolvedValueOnce(jsonResponse(sessionEnvelope))
       .mockResolvedValueOnce(
         jsonResponse(
           {
@@ -113,12 +122,16 @@ describe("createDecisionCase (csrf -> guest -> POST /cases)", () => {
   test("threads the workspace anchor into the created case url", () => {
     expect(
       createdCaseUrl({
-        workspaceId: "ws-guest-1",
+        workspaceId: "ws-own-1",
         decisionCaseId: "case-123",
         version: 1,
         title: "t",
         clarifyingQuestions: []
       })
-    ).toBe("/cases/case-123?ws=ws-guest-1");
+    ).toBe("/cases/case-123?ws=ws-own-1");
+  });
+
+  test("enterUrl carries the return path so the visitor comes back", () => {
+    expect(enterUrl("/")).toBe("/enter?next=%2F");
   });
 });

@@ -5,7 +5,9 @@ import { FormEvent, useRef, useState } from "react";
 import {
   CaseCreateFlowError,
   createDecisionCase,
-  navigateToCreatedCase
+  isAuthRequired,
+  navigateToCreatedCase,
+  navigateToEnter
 } from "@/lib/shell/createCase";
 
 // Look V7 `#view-empty` frame for the case shell: question-first empty state.
@@ -57,6 +59,12 @@ export function EmptyCaseView() {
       setNotice(copy.submitNotice);
       navigateToCreatedCase(created);
     } catch (error) {
+      // An unauthenticated visitor is not a failure to display: send them to
+      // the invite-gated entry and bring them back here afterwards.
+      if (isAuthRequired(error)) {
+        navigateToEnter("/");
+        return;
+      }
       setNotice(error instanceof CaseCreateFlowError ? error.message : copy.createFailedFallback);
       questionInput.current?.focus();
     } finally {

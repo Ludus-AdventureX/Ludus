@@ -8,8 +8,14 @@ export default function Home() {
       <DecisionShell />
       <nav
         aria-label="Technical Alpha demo entry"
-        className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6"
+        className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6"
       >
+        <Link
+          href="/enter"
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-neutral-800"
+        >
+          <span>受邀进入 / 登录</span>
+        </Link>
         <Link
           href="/demo"
           className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow-sm hover:border-neutral-400"
