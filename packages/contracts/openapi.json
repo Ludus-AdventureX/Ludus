@@ -597,6 +597,57 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "InviteCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkspaceCapability"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "maxUses": {
+            "default": 5,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Maxuses",
+            "type": "integer"
+          },
+          "ttlHours": {
+            "default": 72,
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Ttlhours",
+            "type": "integer"
+          }
+        },
+        "title": "InviteCreateRequest",
+        "type": "object"
+      },
+      "InviteRedeemRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "format": "password",
+            "title": "Token",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "InviteRedeemRequest",
+        "type": "object"
+      },
       "LeadingIndicator": {
         "additionalProperties": false,
         "properties": {
@@ -730,6 +781,32 @@
           "status"
         ],
         "title": "MembershipSummary",
+        "type": "object"
+      },
+      "MentorReviewCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "blindSpots": {
+            "title": "Blindspots",
+            "type": "string"
+          },
+          "nextStep": {
+            "title": "Nextstep",
+            "type": "string"
+          },
+          "qualityScore": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Qualityscore",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "qualityScore",
+          "blindSpots",
+          "nextStep"
+        ],
+        "title": "MentorReviewCreateRequest",
         "type": "object"
       },
       "MethodVersionRef": {
@@ -969,6 +1046,50 @@
           "sourceScope"
         ],
         "title": "PreRunSourceSpan",
+        "type": "object"
+      },
+      "PurgeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmWorkspaceId": {
+            "title": "Confirmworkspaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmWorkspaceId"
+        ],
+        "title": "PurgeRequest",
+        "type": "object"
+      },
+      "QuestionClarifierRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "constraints": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "goals": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "QuestionClarifierRequest",
         "type": "object"
       },
       "QuickAnalysisRequest": {
@@ -1616,6 +1737,20 @@
           "frozenFromSourceSpanId"
         ],
         "title": "RunFrozenSourceSpan",
+        "type": "object"
+      },
+      "SandboxPreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "nodeOverrides": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Nodeoverrides",
+            "type": "object"
+          }
+        },
+        "title": "SandboxPreviewRequest",
         "type": "object"
       },
       "SessionSummary": {
@@ -3099,6 +3234,50 @@
         ]
       }
     },
+    "/api/auth/invites/redeem": {
+      "post": {
+        "description": "Redeem an invite token into an ACTIVE MEMBER membership.\n\nFail-closed metering (login limiter, IP-scoped) runs before any lookup;\nthe invite row is locked FOR UPDATE so concurrent redemptions count\nused_count atomically; re-redemption by an existing member is idempotent\nand consumes no use.",
+        "operationId": "redeem_invite_api_auth_invites_redeem_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteRedeemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Redeem Invite Api Auth Invites Redeem Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Redeem Invite",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "login_api_auth_login_post",
@@ -3992,6 +4171,53 @@
         "summary": "Create Analysis Run"
       }
     },
+    "/api/workspaces/{workspaceId}/calibration": {
+      "get": {
+        "description": "Cross-case calibration line (R3): how the workspace's FORMAL\nretrospectives actually landed. Aggregates decision_reviews.outcome -\nself-reported but persisted and append-only, so the line survives\ndevices and cases. Zero reviews -> honest zeros, never a fabricated rate.",
+        "operationId": "workspace_calibration_api_workspaces__workspaceId__calibration_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Workspace Calibration Api Workspaces  Workspaceid  Calibration Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workspace Calibration",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      }
+    },
     "/api/workspaces/{workspaceId}/cases": {
       "get": {
         "operationId": "list_cases_api_workspaces__workspaceId__cases_get",
@@ -4617,6 +4843,127 @@
         ]
       }
     },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/mentor-reviews": {
+      "get": {
+        "operationId": "list_mentor_reviews_api_workspaces__workspaceId__cases__decisionCaseId__mentor_reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Mentor Reviews Api Workspaces  Workspaceid  Cases  Decisioncaseid  Mentor Reviews Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Mentor Reviews",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      },
+      "post": {
+        "description": "Structured mentor feedback: thinking quality 1-5 + blind spot + one\nnext step. REVIEW capability writes (the mentor invite preset); students\nread. Append-only.",
+        "operationId": "create_mentor_review_api_workspaces__workspaceId__cases__decisionCaseId__mentor_reviews_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MentorReviewCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Mentor Review Api Workspaces  Workspaceid  Cases  Decisioncaseid  Mentor Reviews Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Mentor Review",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      }
+    },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/messages": {
       "post": {
         "operationId": "post_case_message_api_workspaces__workspaceId__cases__decisionCaseId__messages_post",
@@ -4680,6 +5027,73 @@
         "tags": [
           "workspaces",
           "conversations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/question-clarifier": {
+      "post": {
+        "description": "Advisory question-quality card: pseudo-decision / false dilemma /\nreversibility + a decidable rewrite. Creates NOTHING - adoption happens\nclient-side when the student launches with the refined question.",
+        "operationId": "clarify_case_question_api_workspaces__workspaceId__cases__decisionCaseId__question_clarifier_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionClarifierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Clarify Case Question Api Workspaces  Workspaceid  Cases  Decisioncaseid  Question Clarifier Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clarify Case Question",
+        "tags": [
+          "workspaces",
+          "cases"
         ]
       }
     },
@@ -4903,6 +5317,130 @@
           }
         },
         "summary": "Create Report Export",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/sandbox": {
+      "get": {
+        "description": "Baseline what-if state: the case's factors at their analysed strength.",
+        "operationId": "get_factor_sandbox_baseline_api_workspaces__workspaceId__cases__decisionCaseId__sandbox_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Factor Sandbox Baseline Api Workspaces  Workspaceid  Cases  Decisioncaseid  Sandbox Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Factor Sandbox Baseline",
+        "tags": [
+          "workspaces",
+          "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/sandbox/preview": {
+      "post": {
+        "description": "Layer-1 deterministic re-propagation under user factor overrides.\n\nPure compute over server-derived factors - no persistence, instantly\nreproducible. Deep re-analysis (Layer 3) is a separate analysis run the\nclient launches; this endpoint never fabricates a live model verdict.",
+        "operationId": "factor_sandbox_preview_api_workspaces__workspaceId__cases__decisionCaseId__sandbox_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SandboxPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Factor Sandbox Preview Api Workspaces  Workspaceid  Cases  Decisioncaseid  Sandbox Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Factor Sandbox Preview",
         "tags": [
           "workspaces",
           "reports"
@@ -5697,6 +6235,53 @@
         "summary": "Get Same Source Group"
       }
     },
+    "/api/workspaces/{workspaceId}/export": {
+      "get": {
+        "description": "Full-workspace JSON projection (OWNER). Values are stringified so the\nexport is loss-tolerant and always serializable; hashes stay verbatim, so\nsigned decisions stay verifiable outside the system.",
+        "operationId": "export_workspace_api_workspaces__workspaceId__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Workspace Api Workspaces  Workspaceid  Export Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Workspace",
+        "tags": [
+          "workspaces",
+          "data-rights"
+        ]
+      }
+    },
     "/api/workspaces/{workspaceId}/exports/{exportArtifactId}": {
       "get": {
         "operationId": "read_export_artifact_api_workspaces__workspaceId__exports__exportArtifactId__get",
@@ -5868,6 +6453,266 @@
         "tags": [
           "workspaces",
           "reports"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/invites": {
+      "get": {
+        "operationId": "list_invites_api_workspaces__workspaceId__invites_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Invites Api Workspaces  Workspaceid  Invites Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Invites",
+        "tags": [
+          "workspaces",
+          "invites"
+        ]
+      },
+      "post": {
+        "operationId": "create_invite_api_workspaces__workspaceId__invites_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Invite Api Workspaces  Workspaceid  Invites Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Invite",
+        "tags": [
+          "workspaces",
+          "invites"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/invites/{inviteId}/revoke": {
+      "post": {
+        "operationId": "revoke_invite_api_workspaces__workspaceId__invites__inviteId__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "inviteId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Inviteid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Revoke Invite Api Workspaces  Workspaceid  Invites  Inviteid  Revoke Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Invite",
+        "tags": [
+          "workspaces",
+          "invites"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/portfolio": {
+      "get": {
+        "description": "One-screen status wall: every case x latest run status x signed\ndecision x review due date. Pure projection - nothing fabricated; a case\nwith no runs simply shows none.",
+        "operationId": "workspace_portfolio_api_workspaces__workspaceId__portfolio_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Workspace Portfolio Api Workspaces  Workspaceid  Portfolio Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workspace Portfolio",
+        "tags": [
+          "workspaces",
+          "cases"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/purge": {
+      "post": {
+        "description": "Irreversible workspace deletion (OWNER + echoed-id confirmation).\n\nOne authoritative delete of the workspace row; every business table\ncascades. The audit line carries ids only - purged content is gone.",
+        "operationId": "purge_workspace_api_workspaces__workspaceId__purge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Purge Workspace Api Workspaces  Workspaceid  Purge Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Purge Workspace",
+        "tags": [
+          "workspaces",
+          "data-rights"
         ]
       }
     },
