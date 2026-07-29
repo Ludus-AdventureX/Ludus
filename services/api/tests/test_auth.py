@@ -15,7 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.models import User
 
-from tests.conftest import QA_PASSWORD, csrf_headers, qa_client, register_user
+from tests.conftest import (
+    QA_PASSWORD,
+    QA_SIGNUP_CODE,
+    csrf_headers,
+    qa_client,
+    register_user,
+)
 
 
 async def test_register_stores_argon2_hash_only(db_connection: AsyncConnection) -> None:
@@ -63,7 +69,13 @@ async def test_duplicate_email_registration_is_uniformly_rejected() -> None:
         headers = await csrf_headers(client)
         duplicate = await client.post(
             "/api/auth/register",
-            json={"email": email, "password": QA_PASSWORD},
+            # A valid invite code, so the duplicate-email path is what is being
+            # exercised here rather than the invite gate in front of it.
+            json={
+                "email": email,
+                "password": QA_PASSWORD,
+                "inviteCode": QA_SIGNUP_CODE,
+            },
             headers=headers,
         )
         assert duplicate.status_code == 422

@@ -26,6 +26,7 @@ from app.auth.config import get_auth_settings
 from app.auth.deps import AuthenticatedPrincipal, require_authenticated_principal
 from app.auth.passwords import DUMMY_PASSWORD_HASH, hash_password, verify_password
 from app.auth.sessions import create_user_session, revoke_user_session, utc_now
+from app.auth.signup_invites import signup_code_accepted
 from app.auth.tokens import TokenDecodeError, decode_session_token, encode_session_token
 from app.contracts.schemas import CanonicalModel, NonEmptyText
 from app.db import get_session
@@ -63,6 +64,11 @@ PasswordField = Annotated[str, StringConstraints(min_length=8, max_length=200)]
 class RegisterRequest(CanonicalModel):
     email: EmailField
     password: PasswordField
+    # Wire name inviteCode. Required in practice (registration is invite-gated),
+    # but typed optional so a missing code is answered by the uniform gate
+    # failure below rather than by a schema error that would confirm the field
+    # matters.
+    invite_code: Annotated[SecretStr, StringConstraints(max_length=200)] | None = None
     workspace_name: (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
         | None
@@ -132,6 +138,18 @@ def _registration_rejected() -> ApiFailure:
         "VALIDATION_FAILED",
         "Registration could not be completed with the provided details.",
         http_status=422,
+    )
+
+
+def _signup_unavailable() -> ApiFailure:
+    # One response for "no code", "wrong code" and "registration is closed on
+    # this deployment". Distinguishing them would tell a prober whether codes
+    # exist at all and whether the one they hold is close to a real one; the
+    # legitimately invited person already has a working code.
+    return ApiFailure(
+        "SIGNUP_INVITE_REQUIRED",
+        "Registration requires a valid invite code.",
+        http_status=403,
     )
 
 
@@ -232,9 +250,23 @@ async def get_csrf_token(response: Response) -> CsrfEnvelope:
 )
 async def register(
     body: RegisterRequest,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_session),
 ) -> AuthSessionEnvelope:
+    # Invite gate + metering BEFORE any account work. Registration allocates a
+    # workspace, and a workspace carries its own analysis-run budget, so an
+    # unmetered open sign-up is the cheapest way to burn the product's money.
+    client_ip = request.client.host if request.client else "unknown"
+    limiter = LoginRateLimiter()
+    await limiter.check_login_attempt(
+        db, client_ip=client_ip, email=f"register:{body.email}"
+    )
+
+    code = body.invite_code.get_secret_value() if body.invite_code else None
+    if not signup_code_accepted(code):
+        raise _signup_unavailable()
+
     existing = await db.scalar(select(User.id).where(User.email == body.email))
     if existing is not None:
         raise _registration_rejected()

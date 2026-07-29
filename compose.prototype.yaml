@@ -44,7 +44,11 @@ services:
     restart: unless-stopped
 
   migrate:
-    build: services/api
+    build:
+      # Repository root: the API image also carries method-packs/ (see
+      # services/api/Dockerfile).
+      context: .
+      dockerfile: services/api/Dockerfile
     image: decision-lab-api:prototype
     command: ["alembic", "upgrade", "head"]
     environment:
@@ -58,7 +62,8 @@ services:
     image: decision-lab-api:prototype
     environment:
       <<: *db-env
-      ENABLE_GUEST_ALPHA: ${ENABLE_GUEST_ALPHA:-true}
+      ENABLE_GUEST_ALPHA: ${ENABLE_GUEST_ALPHA:-false}
+      SIGNUP_INVITE_CODE_HASHES: ${SIGNUP_INVITE_CODE_HASHES:-}
       FIXTURE_MODE: ${FIXTURE_MODE:-true}
       MODEL_PROVIDER: ${MODEL_PROVIDER:-}
       MODEL_BASE_URL: ${MODEL_BASE_URL:-}

@@ -12,17 +12,20 @@ Two layers:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import os
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from uuid import UUID, uuid4
 
 import httpx
+import pytest
 import pytest_asyncio
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
+from app.auth.signup_invites import SIGNUP_INVITE_HASHES_ENV, invite_code_digest
 from app.db import get_database_url
 from app.models import (
     User,
@@ -40,6 +43,25 @@ from app.types import (
 
 QA_PASSWORD = "correct horse battery staple"
 QA_ORIGIN = "http://testserver"
+
+# Registration is invite-gated (app.auth.signup_invites): no configured code
+# means no account, which is the intended production behaviour. The suite
+# configures one known code for the whole session so registration is possible
+# here without weakening the gate itself.
+QA_SIGNUP_CODE = "qa-alpha-invite-code"
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _qa_signup_invite_code() -> Iterator[None]:
+    previous = os.environ.get(SIGNUP_INVITE_HASHES_ENV)
+    os.environ[SIGNUP_INVITE_HASHES_ENV] = invite_code_digest(QA_SIGNUP_CODE)
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(SIGNUP_INVITE_HASHES_ENV, None)
+        else:
+            os.environ[SIGNUP_INVITE_HASHES_ENV] = previous
 
 
 @pytest_asyncio.fixture
@@ -195,7 +217,7 @@ async def register_user(
     headers = await csrf_headers(client)
     response = await client.post(
         "/api/auth/register",
-        json={"email": email, "password": password},
+        json={"email": email, "password": password, "inviteCode": QA_SIGNUP_CODE},
         headers=headers,
     )
     assert response.status_code == 201, response.text

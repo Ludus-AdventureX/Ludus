@@ -1692,6 +1692,8 @@ export interface components {
         RegisterRequest: {
             /** Email */
             email: string;
+            /** Invitecode */
+            inviteCode?: string | null;
             /** Password */
             password: string;
             /** Workspacename */

@@ -1313,6 +1313,20 @@
             "title": "Email",
             "type": "string"
           },
+          "inviteCode": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 200,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitecode"
+          },
           "password": {
             "maxLength": 200,
             "minLength": 8,
