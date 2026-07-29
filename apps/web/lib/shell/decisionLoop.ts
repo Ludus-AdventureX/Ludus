@@ -429,6 +429,50 @@ export function defaultRunEventSourceFactory(): RunEventSourceFactory | null {
 }
 
 /**
+ * Read the run's PERSISTED event stream and return its trace entries.
+ *
+ * SSE alone is not enough to show the thinking trace:
+ * - a fast run (fixture mode finishes in well under a second) can reach a
+ *   terminal state before the EventSource has delivered anything, leaving the
+ *   panel with a verdict and no reasoning;
+ * - a page reload starts a brand-new EventSource, so everything the run already
+ *   emitted would be invisible forever.
+ *
+ * The events endpoint is append-only and closes immediately for a settled run,
+ * so replaying it is cheap and idempotent - the panel de-duplicates by stage.
+ */
+export async function replayRunTrace(
+  workspaceId: string,
+  analysisRunId: string,
+  fetchImpl: FetchLike = defaultFetch(),
+): Promise<RunTraceEvent[]> {
+  let response: Response;
+  try {
+    response = await fetchImpl(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}` +
+        `/analyses/${encodeURIComponent(analysisRunId)}/events`,
+      { credentials: "include", headers: { Accept: "text/event-stream" } },
+    );
+  } catch {
+    return []; // The trace is an enrichment; never fail the run over it.
+  }
+  if (!response.ok) return [];
+  let body: string;
+  try {
+    body = await response.text();
+  } catch {
+    return [];
+  }
+  const traces: RunTraceEvent[] = [];
+  for (const line of body.split("\n")) {
+    if (!line.startsWith("data:")) continue;
+    const trace = parseTraceEvent(line.slice(5).trim());
+    if (trace) traces.push(trace);
+  }
+  return traces;
+}
+
+/**
  * Event-driven run watching over GET /analyses/{runId}/events (SSE frames use
  * `event:` = canonical category). Every observed event triggers a status
  * re-read (GET stays the source of truth), with a slow safety poll so a
@@ -492,7 +536,17 @@ export async function watchRunUntilTerminal(
       if (options.signal?.aborted) return last;
       last = await getRunStatus(workspaceId, analysisRunId, fetchImpl);
       options.onTick?.(last);
-      if (TERMINAL_RUN_STATUSES.has(last.status)) return last;
+      if (TERMINAL_RUN_STATUSES.has(last.status)) {
+        // Replay the persisted stream before returning: a run that settled
+        // faster than the EventSource could deliver would otherwise show a
+        // verdict with no reasoning behind it.
+        if (options.onTrace) {
+          for (const trace of await replayRunTrace(workspaceId, analysisRunId, fetchImpl)) {
+            options.onTrace(trace);
+          }
+        }
+        return last;
+      }
       await new Promise<void>((resolve) => {
         wake = resolve;
         setTimeout(resolve, safetyPollMs);

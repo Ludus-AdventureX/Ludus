@@ -29,7 +29,10 @@ test("analysis golden path: launch a run and watch the stages advance", async ({
   const composer = page.getByRole("textbox").first();
   await expect(composer).toBeVisible({ timeout: 30_000 });
   await composer.fill(QUESTION);
-  await page.getByRole("button", { name: /建立决策项目|创建|开始/ }).first().click();
+  // Anchored name on purpose: a loose /创建/ also matches the masthead's
+  // "尚未创建决策项目" drawer trigger, which appears earlier in the DOM and would
+  // open the project drawer instead of creating anything.
+  await page.getByRole("button", { name: /^建立决策项目/ }).click();
 
   await expect(page).toHaveURL(/\/cases\/[^/]+\?ws=/, { timeout: 60_000 });
 
