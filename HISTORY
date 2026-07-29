@@ -3804,3 +3804,82 @@ No migration, no schema change, no route/DTO/event/error-code change.
   documented key-free scope.
 
 - Secret policy: do not record credentials here.
+
+## Archived work 2026-07-29 (Asia/Shanghai) - prior lane HEAD: analysis progress UI (branch codex/analysis-progress-ui @ c85d7b5), replaced by the alpha-gate hardening lane on this branch.
+
+# Work Log: analysis progress UI (Wave 2)
+
+- Status: implementation complete; browser verification BLOCKED on approval.
+  2026-07-29 (Asia/Shanghai).
+- Role: web owner, single session.
+- Branch: `codex/analysis-progress-ui`; worktree
+  `decision-lab-worktrees/analysis-progress-ui` per section 20.
+- Base: `codex/analysis-run-visibility` @ caee4fe (the backend visibility fix is
+  this lane's fixed parent revision, because a progress bar cannot be verified
+  against a backend that publishes nothing mid-run). Worktree `AGENTS.md`
+  byte-matches canonical (`d9f1f79`) — section 20 check PASS.
+- Goal: answer "where is my analysis right now?" on screen.
+
+## Delivered
+
+- `AnalysisProgress.tsx` (new): six-stage indicator (规划/检索/分析/反方/综合/验证)
+  + an accessible progress bar driven by the run's OWN persisted progress, with
+  each stage's digest hanging on its own stage row instead of a flat list.
+  Independent passes (safety anchor / chief of staff) render outside the six
+  stages so they are never mistaken for pipeline stages.
+- Queued honesty: progress stays at 0 while queued (nothing creeps forward);
+  after 30s a warning appears, after 180s it escalates and says the worker is
+  probably not running; both offer an explicit cancel.
+- `cancelRun()` client for the shipped idempotent cancel endpoint.
+- Layered error text: network / 401-403 / 404 / 5xx / poll-timeout each get an
+  actionable Chinese sentence instead of a raw code.
+- Styles consume existing semantic tokens (`--analysis`, `--danger`, `--ink-3`,
+  `--surface-wash`); no theme hex in JSX, no gradient/glow, and stage state is
+  carried by text + `data-stage-state` so colour is never the only signal.
+- Fixed the pre-existing `prefer-const` lint error in `tests/signoff-panel.test.tsx`
+  that made `pnpm lint` fail on main (disclosed scope exception: one line, in the
+  same web test surface, required for the lint gate to be meaningful).
+
+## Verification
+
+- `pnpm --dir apps/web test`: 149 passed (baseline 139 + 10 new), 0 failed.
+- New battery `tests/analysis-progress.test.tsx`: 10 tests — stage-state
+  derivation for active/done/pending/stopped, aria-valuenow from real progress,
+  digest bound to its stage, enrichment outside the six stages, queued 0%,
+  30s warning, 180s escalation, cancel wiring, blocked toning.
+- `pnpm --dir apps/web typecheck`: clean. `pnpm --dir apps/web lint`: 0 errors
+  (6 warnings, same as baseline). `pnpm --dir apps/web build`: success.
+- Backend/API untouched by this lane.
+
+## Browser verification: not done, and why
+
+Running the real UI in this worktree needs `node_modules`, which this lane does
+not have. Reusing the main tree's modules through a junction was tried and must
+NOT be used: Next.js resolves modules through the link to
+`../../../../decision-lab-mainline-integration/node_modules/...`, which escapes
+the project root, and the React Server Components manifest then fails with
+`Could not find the module ...` — a 500 on the case page in BOTH `next dev` and
+`next build && next start`.
+
+That junction artefact briefly looked like a product defect in the case page's
+`export const runtime = "edge"`. It is not: the same page is identical on main,
+and the failure disappears with the junction removed from the equation. Nothing
+is wrong with the case route. Recording this explicitly so the false lead is not
+inherited.
+
+Installing dependencies requires product-owner approval (section 18), so the
+browser pass (screenshots of the stage indicator advancing during a live run) is
+pending that approval. The junctions were removed with
+`[System.IO.Directory]::Delete(path, false)` — never `Remove-Item -Recurse`,
+which follows a junction and would delete the main tree's real dependencies —
+and the main tree's `node_modules` were verified intact afterwards.
+
+## Not done / handed on
+
+- Browser/e2e evidence for the progress indicator (needs the dependency
+  approval above); the Playwright golden-path spec is Wave 3.
+- ETA estimation per stage and SSE auto-reconnect remain on the optimisation
+  list; the safety poll already prevents a stranded UI.
+- `needs_attention` recovery UI (three canonical resolutions) is Wave 4.
+
+- Secret policy: do not record credentials here.

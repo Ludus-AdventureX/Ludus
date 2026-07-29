@@ -70,6 +70,7 @@ from .repository import (
     RunResolutionInvalid,
     normalized_request_hash,
 )
+from .run_policy import AnalysisRunRateLimiter
 from .state_machine import TERMINAL_STATUSES, InvalidCharter, InvalidTransition
 
 router = APIRouter(prefix="/api/workspaces/{workspaceId}")
@@ -856,6 +857,15 @@ async def create_analysis_run(
     """Create a queued Run from a confirmed charter (Idempotency-Key header)."""
 
     key = validate_idempotency_key(idempotency_key)
+    # Cost gate BEFORE any work: a formal run is ~8 model calls plus retrieval,
+    # and this route had no metering at all. Metered per (workspace, user) burst
+    # and per workspace rolling day, fail-closed. The limiter owns its own
+    # commit so an attempt counts even when the body below is rejected, and a
+    # 429 cannot consume an Idempotency-Key because only create_queued_run
+    # writes the idempotency record and a 429 never reaches it.
+    await AnalysisRunRateLimiter().check_run_attempt(
+        db, workspace_id=context.workspace_id, user_id=context.user_id
+    )
     body = body or {}
     if "idempotencyKey" in body or "idempotency_key" in body:
         raise _validation_failed(

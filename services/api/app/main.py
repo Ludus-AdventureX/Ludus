@@ -9,6 +9,7 @@ from app.auth.guest import router as guest_alpha_router
 from app.auth.routes import router as auth_router
 from app.evidence.routes import router as evidence_router
 from app.security.envelope import register_error_handlers
+from app.security.headers import SecurityHeadersMiddleware
 from app.tenancy.routes import workspace_router
 
 
@@ -21,6 +22,13 @@ app = FastAPI(
     version="0.1.0",
     description="API for the Ludus decision operating system.",
 )
+
+# Security response headers on EVERY response, including error and SSE ones.
+# The app had no middleware at all before this, so nothing carried nosniff,
+# frame-ancestors or referrer policy; section 12/14 require them at the hosted
+# entry point. HSTS stays opt-in via SECURITY_HSTS_ENABLED so a plain-HTTP dev
+# server never poisons the developer's browser.
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Canonical router mounting is owned by the Contract Lead (CCR-20260724-005):
 # auth endpoints per docs/product-plan/10 and the tenancy-guarded workspace

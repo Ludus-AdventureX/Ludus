@@ -40,6 +40,7 @@ from app.models import User, UserSession, Workspace, WorkspaceMembership
 from app.prototype.guest_bootstrap import bootstrap_guest_demo, derive_demo_ids
 from app.security.csrf import require_csrf
 from app.security.envelope import ApiFailure
+from app.security.rate_limits import LoginRateLimiter
 from app.types import UserStatus, WorkspaceMembershipStatus, WorkspaceRole
 
 router = APIRouter(prefix="/api/auth", tags=["auth-guest-prototype"])
@@ -171,6 +172,18 @@ async def create_guest(
             )
         # A guest without a workspace is a broken bootstrap; fall through and
         # mint a fresh guest instead of resurrecting the torso.
+
+    # Cost/abuse gate on the CREATE path only (the reuse path above allocates
+    # nothing). Without this, one address could mint unlimited guest workspaces,
+    # and each guest workspace carries its own analysis-run budget - the two
+    # together are an amplifier for the most expensive route in the product.
+    # Reuses the shipped login limiter exactly as invite redemption does: the IP
+    # dimension shares one address budget with login, and the second dimension
+    # is guest-specific.
+    client_ip = request.client.host if request.client else "unknown"
+    await LoginRateLimiter().check_login_attempt(
+        db, client_ip=client_ip, email=f"guest-bootstrap:{client_ip}"
+    )
 
     # Create path: one transaction for user + session + workspace + membership
     # + demo scope; any failure rolls everything back together.
