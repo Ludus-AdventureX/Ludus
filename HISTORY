@@ -3976,3 +3976,82 @@ and the main tree's `node_modules` were verified intact afterwards.
   attributable and revocable.
 
 - Secret policy: do not record credentials here.
+
+## Archived work 2026-07-29 (Asia/Shanghai) - prior lane HEAD: remaining alpha fixes (branch codex/alpha-remaining-fixes @ c2f5f2e), replaced by the mainline integration record for the whole five-lane chain.
+
+# Work Log: remaining alpha fixes (traceability, stale recovery, golden-path e2e)
+
+- Status: completed; ready_for_qa=YES. 2026-07-29 (Asia/Shanghai).
+- Role: backend + web owner, single session.
+- Branch: `codex/alpha-remaining-fixes`; worktree
+  `decision-lab-worktrees/alpha-remaining-fixes` per section 20.
+- Base: `codex/alpha-gate-hardening` @ 44b1177 (chain link 5:
+  db38e16 -> 6300dc1 -> caee4fe -> c85d7b5 -> 44b1177 -> here).
+  Worktree `AGENTS.md` byte-matches canonical (`d9f1f79`) — section 20 PASS.
+
+## Delivered
+
+1. **Server-authoritative snapshot freezing** (CCR-20260729-SNAPSHOT-01).
+   `caseVersion` / `caseSnapshotHash` / `dossierSnapshotVersion` /
+   `dossierSnapshotHash` are now computed from the database by
+   `app/analyses/snapshots.py`; the caller's values are ignored. The web client
+   used to send `sha256:` + 32 random bytes for each, so the audit chain could
+   neither recognise "same input" nor detect "input changed" — a traceability
+   claim that cannot fail. Only CONFIRMED dossier entries participate, ordered by
+   id with canonical JSON, so identical content always hashes identically.
+   Replacement (amendment) drafts RE-freeze instead of inheriting the superseded
+   charter's snapshot.
+2. **Stale-run recovery is finally wired.** `recover_stale_runs` shipped with the
+   state machine but nothing ever called it, so a run whose worker died stayed in
+   its executing stage forever and kept the case's single active-run slot. It now
+   runs on the worker's IDLE poll (off the hot path). It only became meaningful
+   after stage boundaries started committing, which is why it lands now.
+3. **Golden-path e2e.** `apps/web/e2e/analysis-golden-path.spec.ts` drives ask ->
+   launch -> six-stage indicator -> terminal verdict across three processes (web,
+   api, worker) in fixture mode. The worker has no HTTP port so it cannot be a
+   Playwright `webServer`; it is spawned in `globalSetup` and reclaimed in
+   `globalTeardown` through a pid file. The spec accepts `ready` OR `blocked` as
+   terminal: a blocked run is an honest quality-gate refusal and the test must not
+   pressure the gate into passing.
+4. **Web client stops fabricating hashes** — `buildCharterBody` no longer sends
+   the four snapshot fields at all.
+
+## Verification
+
+- Owner suite `app/analyses/tests`: **226 passed** (baseline 218 + 8 new).
+- Canonical suite `services/api/tests`: **574 passed** — identical to baseline,
+  so the charter contract change broke nothing in the QA battery.
+- `ruff check app` clean; `compileall app` clean.
+- OpenAPI identical to `main` (69 ops, zero schema delta) -> `CONTRACT_NEUTRAL`.
+- e2e NOT executed in this worktree (no `node_modules`; installing needs
+  approval). It must be run from a tree that has dependencies installed — the
+  merge target does.
+
+## Two real defects my own tests caught mid-work (worth recording)
+
+- `DossierEntry.decision_case_id.in_([case_id, None])` silently dropped EVERY
+  subject-wide fact: SQL `col IN (x, NULL)` never matches a NULL row. Fixed to an
+  explicit `or_(... == case_id, ... .is_(None))`. Without the subject-scope test
+  this would have shipped as a snapshot that quietly ignored half the dossier.
+- `recover_stale_runs()` returned **71 runs** on its first real call: the shared
+  dev database is full of runs left mid-stage by earlier sessions. That is
+  evidence the recovery gap was real, and also why the recovery test asserts
+  against its own run id instead of global emptiness.
+
+## Process failure to disclose
+
+I edited a test file with a PowerShell string pipeline
+(`Get-Content -Raw | Set-Content`) and corrupted its Chinese literals into
+mojibake — the exact failure mode recorded in my own tooling notes. The file was
+rewritten with ASCII fixtures. Byte-level edits of files containing non-ASCII
+text must go through Python bytes I/O, never a PowerShell string pipeline.
+
+## Still open
+
+- `methodContentHash` remains caller-supplied; making it authoritative means
+  reading the published pack through the shipped loader (Ways/Router lane).
+- `.env.prototype` + full compose stack: next step.
+- Contract regeneration (56 persisted vs 69 served operations): next step, needs
+  the merge target's `node_modules`.
+
+- Secret policy: do not record credentials here.

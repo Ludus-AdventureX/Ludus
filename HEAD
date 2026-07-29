@@ -1,76 +1,100 @@
-# Work Log: remaining alpha fixes (traceability, stale recovery, golden-path e2e)
+# Work Log: mainline integration of the analysis-recovery chain (5 lanes)
 
-- Status: completed; ready_for_qa=YES. 2026-07-29 (Asia/Shanghai).
-- Role: backend + web owner, single session.
-- Branch: `codex/alpha-remaining-fixes`; worktree
-  `decision-lab-worktrees/alpha-remaining-fixes` per section 20.
-- Base: `codex/alpha-gate-hardening` @ 44b1177 (chain link 5:
-  db38e16 -> 6300dc1 -> caee4fe -> c85d7b5 -> 44b1177 -> here).
-  Worktree `AGENTS.md` byte-matches canonical (`d9f1f79`) — section 20 PASS.
+- Status: completed (local `main`); remote NOT pushed. 2026-07-29 (Asia/Shanghai).
+- Role: mainline integration owner, single session.
+- Tree: `decision-lab-mainline-integration` on `main`.
+- Local `main`: db38e16 -> **4712fe7** (linear fast-forward chain, no merge commits).
 
-## Delivered
+## What landed
 
-1. **Server-authoritative snapshot freezing** (CCR-20260729-SNAPSHOT-01).
-   `caseVersion` / `caseSnapshotHash` / `dossierSnapshotVersion` /
-   `dossierSnapshotHash` are now computed from the database by
-   `app/analyses/snapshots.py`; the caller's values are ignored. The web client
-   used to send `sha256:` + 32 random bytes for each, so the audit chain could
-   neither recognise "same input" nor detect "input changed" — a traceability
-   claim that cannot fail. Only CONFIRMED dossier entries participate, ordered by
-   id with canonical JSON, so identical content always hashes identically.
-   Replacement (amendment) drafts RE-freeze instead of inheriting the superseded
-   charter's snapshot.
-2. **Stale-run recovery is finally wired.** `recover_stale_runs` shipped with the
-   state machine but nothing ever called it, so a run whose worker died stayed in
-   its executing stage forever and kept the case's single active-run slot. It now
-   runs on the worker's IDLE poll (off the hot path). It only became meaningful
-   after stage boundaries started committing, which is why it lands now.
-3. **Golden-path e2e.** `apps/web/e2e/analysis-golden-path.spec.ts` drives ask ->
-   launch -> six-stage indicator -> terminal verdict across three processes (web,
-   api, worker) in fixture mode. The worker has no HTTP port so it cannot be a
-   Playwright `webServer`; it is spawned in `globalSetup` and reclaimed in
-   `globalTeardown` through a pid file. The spec accepts `ready` OR `blocked` as
-   terminal: a blocked run is an honest quality-gate refusal and the test must not
-   pressure the gate into passing.
-4. **Web client stops fabricating hashes** — `buildCharterBody` no longer sends
-   the four snapshot fields at all.
+| SHA | Lane |
+|---|---|
+| db38e16 | governance clauses that existed only as an uncommitted working copy |
+| 6300dc1 | run visibility: stage boundaries become commit boundaries; fixture path works; precise parking; SSE closes on `needs_attention`; `originModes` recorded; report survives a quality warning |
+| caee4fe | that lane's handoff |
+| c85d7b5 | six-stage indicator + real progress bar + honest queued escape |
+| 44b1177 | alpha gate: run cost limiter, guest metering, security headers |
+| c2f5f2e | server-authoritative snapshots (CCR-20260729-SNAPSHOT-01), stale-run recovery wired, golden-path e2e |
+| 1b2064c | contract regeneration (56 -> 69 operations) |
+| 826bb93 | **case page 500'd in every production build** - edge runtime removed |
+| 4712fe7 | thinking trace replay (was lost on a fast run or a page reload) |
 
-## Verification
+## Gate results on `main` @ 4712fe7
 
-- Owner suite `app/analyses/tests`: **226 passed** (baseline 218 + 8 new).
-- Canonical suite `services/api/tests`: **574 passed** — identical to baseline,
-  so the charter contract change broke nothing in the QA battery.
-- `ruff check app` clean; `compileall app` clean.
-- OpenAPI identical to `main` (69 ops, zero schema delta) -> `CONTRACT_NEUTRAL`.
-- e2e NOT executed in this worktree (no `node_modules`; installing needs
-  approval). It must be run from a tree that has dependencies installed — the
-  merge target does.
+- Backend canonical suite `services/api/tests`: **574 passed** (= baseline).
+- Backend owner suite `app/analyses/tests`: **226 passed** (baseline 204 at the
+  start of this work; +22 across the chain).
+- Web suite: **150 passed**; typecheck clean; lint 0 errors (6 warnings = the
+  pre-existing baseline); production build clean.
+- `scripts/generate_contracts.ps1 -Check`: **CONTRACT_DRIFT_OK**, 65 paths /
+  69 operations, matching the running app exactly (it held 56 before).
+- Migrations: this chain adds none; single head `d4e6f8a0b2c4` unchanged.
+- Alpha-gate live HTTP check (`output/alpha_gate_check.py`): **PASS** - seven
+  security headers on normal AND error responses, HSTS absent over plain HTTP,
+  five run creations 201 then 429 `limit=workspaceUserBurst retryAfter=3600`.
 
-## Two real defects my own tests caught mid-work (worth recording)
+## Containerised full-stack bring-up (compose.prototype.yaml)
 
-- `DossierEntry.decision_case_id.in_([case_id, None])` silently dropped EVERY
-  subject-wide fact: SQL `col IN (x, NULL)` never matches a NULL row. Fixed to an
-  explicit `or_(... == case_id, ... .is_(None))`. Without the subject-scope test
-  this would have shipped as a snapshot that quietly ignored half the dossier.
-- `recover_stale_runs()` returned **71 runs** on its first real call: the shared
-  dev database is full of runs left mid-stage by earlier sessions. That is
-  evidence the recovery gap was real, and also why the recovery test asserts
-  against its own run id instead of global emptiness.
+`.env.prototype` created locally (gitignored; secrets generated on the machine
+and never recorded). Project name `ludus-alpha`.
 
-## Process failure to disclose
+- `docker compose build`: both images built.
+- `up -d`: db healthy, migrate exited 0, api healthy, web healthy, worker up.
+- `run --rm smoke`: **SMOKE OK** - `api:8000/health` 200 and
+  `web:3000/api/health` 200 (the single-origin proxy end to end).
+- **Golden path through the container stack's single origin** (port 3200):
+  `queued -> planning -> retrieving 0.14 -> ready 1.0` in **13.8s**,
+  `originModes ['fixture']`, 19 persisted events carrying 8 stage digests,
+  1 report at `status=ready`.
+- **Browser verification of the deployed UI**: create -> case page -> launch;
+  progress 0% -> 100%; all six stages rendered with state text; every stage
+  showing its one-line conclusion; safety-anchor and chief-of-staff entries
+  outside the six stages; terminal text "分析完成，通过质量门"; console clean.
+  Every fixture sentence carries its `[fixture]` prefix, so nothing can pass for
+  live output.
 
-I edited a test file with a PowerShell string pipeline
-(`Get-Content -Raw | Set-Content`) and corrupted its Chinese literals into
-mojibake — the exact failure mode recorded in my own tooling notes. The file was
-rewritten with ASCII fixtures. Byte-level edits of files containing non-ASCII
-text must go through Python bytes I/O, never a PowerShell string pipeline.
+## Defects found DURING integration (not in any lane's plan)
 
-## Still open
+1. **The case page returned 500 in every production build.** `next build && next
+   start` - which is exactly what the compose deploy runs - failed with
+   `Could not find the module ... in the React Server Consumer Manifest` for
+   every `/cases/...` URL, because the route declared `runtime = "edge"` while
+   its client components are bundled for the Node server. Dev mode hid it, e2e
+   never covered the page, and the compose stack had never been started, so the
+   product's core screen was unopenable in every deployable build. Fixed in
+   826bb93.
+2. **The thinking trace vanished on a fast run or a page reload**, because the
+   panel only consumed SSE increments and never read the persisted stream.
+   Fixed in 4712fe7.
+3. `DossierEntry.decision_case_id.in_([case_id, None])` silently dropped every
+   subject-wide fact (SQL `IN` never matches NULL) - caught by the new
+   subject-scope test before it shipped.
 
-- `methodContentHash` remains caller-supplied; making it authoritative means
-  reading the published pack through the shipped loader (Ways/Router lane).
-- `.env.prototype` + full compose stack: next step.
-- Contract regeneration (56 persisted vs 69 served operations): next step, needs
-  the merge target's `node_modules`.
+## Corrections to my own earlier records
+
+- I previously concluded the case-page manifest error was caused by a
+  `node_modules` junction and that the page itself was fine. **That was wrong**:
+  it reproduces in this tree with real, locally installed dependencies and no
+  junction. The junction produced a similar-looking error and masked a genuine
+  P0.
+- I edited a test file with a PowerShell string pipeline and corrupted its
+  Chinese literals - the exact failure my own tooling notes warn about. Rewritten
+  with ASCII fixtures.
+
+## Honest gaps
+
+- **Remote `main` is NOT updated.** Everything above is local. Pushing needs a
+  fresh `git ls-remote` read and explicit authorisation (section 19).
+- **The golden-path e2e is not reliably green.** Its second case (honest gap
+  state) passes consistently; the first case has completed successfully but also
+  failed on a Playwright artefact where the composer fill/click did not take
+  effect - a real browser session does not reproduce it. Committed for the CI
+  value, but it cannot gate anything until stabilised.
+- `methodContentHash` is still caller-supplied (Ways/Router lane owns making it
+  authoritative through the published-pack loader).
+- No independent QA has reviewed this chain; I am both implementer and integrator
+  here, which is exactly the separation section 19 asks for and did not get.
+- The `ludus-alpha` compose project and its volume are still running, and the dev
+  database still holds test-created runs.
 
 - Secret policy: do not record credentials here.
