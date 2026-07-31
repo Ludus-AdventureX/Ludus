@@ -53,6 +53,17 @@ export function EmptyCaseView() {
     }
     setIsCreating(true);
     setNotice("");
+    // Pre-check session: redirect immediately if not authenticated, instead of
+    // waiting for the full create flow to fail with 401.
+    try {
+      const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
+      if (!sessionRes.ok) {
+        navigateToEnter("/");
+        return;
+      }
+    } catch {
+      // Network error: fall through and let createDecisionCase handle it.
+    }
     try {
       const created = await createDecisionCase(question.trim());
       setIsDrafted(true);
@@ -95,6 +106,9 @@ export function EmptyCaseView() {
               placeholder={copy.formPlaceholder}
             />
             <div className="empty-form-actions">
+              <button type="button" className="secondary-action" disabled title="项目创建后可上传材料">
+                <span>先导入材料</span>
+              </button>
               <button type="submit" className="primary-action" disabled={isCreating}>
                 <span>{isDrafted ? copy.draftedTitle : isCreating ? copy.creatingTitle : copy.createText}</span>
                 <small>{isDrafted ? copy.draftedSubline : isCreating ? copy.creatingSubline : copy.createSubline}</small>

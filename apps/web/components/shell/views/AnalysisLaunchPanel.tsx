@@ -93,6 +93,19 @@ function findingText(finding: Record<string, unknown>): string {
   return JSON.stringify(finding);
 }
 
+/** Stable gate reason codes translated for humans; the code stays visible. */
+const FINDING_LABELS: Record<string, string> = {
+  strategic_lens_incomplete: "五个战略透镜产物不完整（有缺失或未通过行为校验）",
+  strategic_lens_reference_mismatch: "报告引用的透镜产物与本次运行实际产出的五件不一致",
+  strategic_lens_duplicate_type: "同一战略透镜出现了多份产物",
+  strategic_lens_outside_charter: "出现了章程冻结集合之外的透镜产物",
+};
+
+function humanizeFinding(text: string): string {
+  const label = FINDING_LABELS[text];
+  return label ? `${label}（${text}）` : text;
+}
+
 export type AnalysisLaunchPanelProps = {
   workspaceId?: string | null;
   decisionCaseId?: string;
@@ -108,6 +121,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
   const [adopted, setAdopted] = useState(false);
   const [clarifying, setClarifying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [existingRunBusy, setExistingRunBusy] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   // Synchronous re-entrancy guard: state.phase updates are async, so a fast
   // double click could otherwise start two polling loops (review finding P1).
@@ -116,6 +130,26 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
   useEffect(() => {
     return () => abortRef.current?.abort();
   }, []);
+
+  // Check for an existing active run on mount (user may have left and returned).
+  useEffect(() => {
+    if (!workspaceId || !decisionCaseId) return;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(decisionCaseId)}/analyses`,
+          { credentials: "include" },
+        );
+        if (!res.ok) return;
+        const body = (await res.json()) as { data?: { items?: Array<{ status?: string }> } };
+        const items = body?.data?.items ?? [];
+        const active = items.find((r) =>
+          ["queued", "planning", "retrieving", "analyzing", "criticizing", "synthesizing", "validating"].includes(r.status ?? "")
+        );
+        if (active) setExistingRunBusy(true);
+      } catch { /* graceful */ }
+    })();
+  }, [workspaceId, decisionCaseId]);
 
   const launch = useCallback(async () => {
     if (!workspaceId || !decisionCaseId) return;
@@ -177,6 +211,9 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
           progress: final.progress,
           status: final.status,
         }));
+        // B3: the portfolio wall reads its own projection; nudge it to
+        // refetch so "未分析" flips the moment the run settles.
+        window.dispatchEvent(new CustomEvent("ludus:portfolio-refresh"));
       }
     } catch (error) {
       if (!abort.signal.aborted) {
@@ -231,7 +268,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     );
   }
 
-  const busy = state.phase === "launching" || state.phase === "analyzing";
+  const busy = state.phase === "launching" || state.phase === "analyzing" || existingRunBusy;
 
   return (
     <div className="analysis-launch" data-analysis-launch="ready">
@@ -239,11 +276,11 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
       <div className="clarifier-block" data-clarifier-block>
         <button
           type="button"
-          className="secondary-action small"
+          className="text-action"
           disabled={busy || clarifying}
           onClick={() => void runClarifier()}
         >
-          <span>{clarifying ? "质检中…" : "先做问题质检（问对问题再分析）"}</span>
+          {clarifying ? "质检中…" : "先做问题质检"} <span>↗</span>
         </button>
         {clarifier && !clarifier.available && (
           <p className="phase-slot-note">问题质检暂不可用——可直接发起分析。</p>
@@ -279,7 +316,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         )}
       </div>
       <fieldset className="analysis-level" disabled={busy}>
-        <legend>分析深度</legend>
+        <legend className="sr-only">分析深度</legend>
         <label>
           <input
             type="radio"
@@ -288,7 +325,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
             checked={level === "focused"}
             onChange={() => setLevel("focused")}
           />
-          聚焦研究（focused）
+          聚焦研究
         </label>
         <label>
           <input
@@ -298,7 +335,7 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
             checked={level === "full"}
             onChange={() => setLevel("full")}
           />
-          完整战略分析（full，含五 Lens）
+          完整战略分析
         </label>
       </fieldset>
       <button
@@ -308,16 +345,20 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
         onClick={() => void launch()}
       >
         <span>
-          {state.phase === "idle" && "发起聚焦深度分析"}
+          {state.phase === "idle" && "发起分析"}
           {state.phase === "launching" && `${launchStepLabels[state.step ?? "csrf"]}…`}
           {state.phase === "analyzing" && "分析进行中…"}
-          {state.phase === "done" && "再次发起分析"}
-          {state.phase === "error" && "重试发起分析"}
+          {state.phase === "done" && "再次发起"}
+          {state.phase === "error" && "重试"}
         </span>
       </button>
 
       {state.phase === "idle" ? (
-        <p className="analysis-launch-status">确认后将创建分析章程并交给后端工作器逐阶段推进；系统不伪造进度。</p>
+        <p className="analysis-launch-status">
+          {existingRunBusy
+            ? "当前有运行中的分析，完成后可再次发起。"
+            : "确认后系统开始深度研究，不会伪造进度。"}
+        </p>
       ) : (
         <div role="status" aria-live="polite" className="analysis-launch-status">
           {state.phase === "launching" && <p>正在{launchStepLabels[state.step ?? "csrf"]}…</p>}
@@ -331,27 +372,58 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
                 {...(state.runId ? { runId: state.runId } : {})}
                 {...(state.phase === "analyzing" ? { onCancel: () => void cancel(), cancelling } : {})}
               />
+              {state.phase === "done" && (
+                <p className="analysis-next-hint">
+                  <a
+                    className="text-action"
+                    href={`/cases/${encodeURIComponent(decisionCaseId)}?ws=${encodeURIComponent(workspaceId)}&view=analysis`}
+                  >
+                    到 E 证据页查看完整研究轨迹与质量门 <span>↗</span>
+                  </a>
+                  {state.status === "ready" && (
+                    <a
+                      className="text-action"
+                      href={`/cases/${encodeURIComponent(decisionCaseId)}?ws=${encodeURIComponent(workspaceId)}&view=report`}
+                    >
+                      到 J 判断页阅读条件化建议 <span>↗</span>
+                    </a>
+                  )}
+                </p>
+              )}
             </div>
           )}
           {state.phase === "error" && <p>{state.error}</p>}
         </div>
       )}
 
-      {state.phase === "done" && state.status === "blocked" && (
-        <div className="analysis-blocked-guide" data-analysis-blocked-guide>
-          <p>质量门拦截了本次分析——不是失败，而是证据链还支撑不起结论。卡点：</p>
-          {findings.length > 0 ? (
-            <ul>
-              {findings.map((text) => (
-                <li key={text}>{text}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>验证阶段判定证据支撑不足（未给出具体条目）。</p>
-          )}
-          <p>建议：回到 Q 区把上面缺口对应的事实补进档案（确认候选），再发起一次分析。</p>
-        </div>
-      )}
+      {state.phase === "done" && state.status === "blocked" && (() => {
+        // A fixture run structurally cannot produce five real lens artifacts,
+        // so "go add facts to Q" would be a dead-end instruction there. Detect
+        // the mode from the run's own trace — never guessed, never fabricated.
+        const fixtureRun = trace.some((entry) => entry.model?.startsWith("fixture"));
+        return (
+          <div className="analysis-blocked-guide" data-analysis-blocked-guide>
+            <p>质量门拦截了本次分析——不是失败，而是证据链还支撑不起结论。卡点：</p>
+            {findings.length > 0 ? (
+              <ul>
+                {findings.map((text) => (
+                  <li key={text}>{humanizeFinding(text)}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>验证阶段判定证据支撑不足（未给出具体条目）。</p>
+            )}
+            {fixtureRun ? (
+              <p>
+                本次运行处于演示占位模式（未接入真实模型）：完整战略分析在该模式下必然被质量门拦截，
+                这不是你的档案缺口。接入真实模型后再发起 full，或先用聚焦研究（focused）验证流程。
+              </p>
+            ) : (
+              <p>建议：回到 Q 区把上面缺口对应的事实补进档案（确认候选），再发起一次分析。</p>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

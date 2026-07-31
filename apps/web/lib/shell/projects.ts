@@ -16,9 +16,8 @@ export type ProjectDirectory =
   | { status: "error" }
   | { status: "ready"; workspaces: WorkspaceDirectoryEntry[] };
 
-// Flip to true only when the canonical case list route ships; the drawer and
-// its tests read this single source of truth so no fake case list appears.
-export const caseListRouteAvailable = false;
+// The canonical case list route (GET /cases) is now available.
+export const caseListRouteAvailable = true;
 
 function parseWorkspaces(payload: unknown): WorkspaceDirectoryEntry[] | null {
   if (typeof payload !== "object" || payload === null) return null;

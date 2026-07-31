@@ -31,6 +31,15 @@ function laneOf(item: PortfolioItem): { key: string; label: string } {
 
 export function PortfolioPanel({ workspaceId = null }: PortfolioPanelProps) {
   const [items, setItems] = useState<PortfolioItem[] | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  // B3: a settled run elsewhere on the page dispatches this event so the
+  // wall's "未分析" flips without a manual reload.
+  useEffect(() => {
+    const bump = () => setRefreshTick((t) => t + 1);
+    window.addEventListener("ludus:portfolio-refresh", bump);
+    return () => window.removeEventListener("ludus:portfolio-refresh", bump);
+  }, []);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -49,7 +58,7 @@ export function PortfolioPanel({ workspaceId = null }: PortfolioPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [workspaceId, refreshTick]);
 
   if (!workspaceId || items === null) return null;
 

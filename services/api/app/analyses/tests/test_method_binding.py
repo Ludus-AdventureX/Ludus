@@ -13,7 +13,7 @@ server cannot read fails closed (500) instead of inventing a hash.
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import httpx
 import pytest_asyncio

@@ -89,11 +89,13 @@ describe("ProjectDrawer + Session B shell completion (Task 11 Phase 0)", () => {
     expect(within(dialog).getByText("Hardtech Lab")).toBeVisible();
     expect(within(dialog).getByText("角色 owner")).toBeVisible();
 
-    // Honest gap: no case list route yet, so no fabricated case entries.
-    expect(caseListRouteAvailable).toBe(false);
-    expect(within(dialog).getByText(/Case 列表只读路由尚未上线/)).toBeVisible();
-    const emptyWorkbench = within(dialog).getByRole("link", { name: /空工作台/ });
-    expect(emptyWorkbench).toHaveAttribute("href", "/cases/new");
+    // The canonical case list route (GET /cases) shipped; the drawer consumes
+    // it. With an empty list it renders no fabricated case entries and the
+    // honest new-project link stays.
+    expect(caseListRouteAvailable).toBe(true);
+    expect(within(dialog).queryByText(/Case 列表只读路由尚未上线/)).not.toBeInTheDocument();
+    const emptyWorkbench = within(dialog).getByRole("link", { name: /新建项目/ });
+    expect(emptyWorkbench).toHaveAttribute("href", "/");
 
     // Background is inert while the modal drawer is open; URL records the panel.
     expect(container.querySelector("header.masthead")).toHaveAttribute("inert");
@@ -113,10 +115,20 @@ describe("ProjectDrawer + Session B shell completion (Task 11 Phase 0)", () => {
   });
 
   test("renders a retryable error state that recovers on retry", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("network down"))
-      .mockResolvedValueOnce(jsonResponse(200, sessionEnvelope));
+    // The drawer's own session read fails once, then recovers. URL-based
+    // dispatch keeps the shell's other session consumers (AccountEntry) off
+    // the reject, and the shipped case list route answers with an empty list.
+    let sessionReads = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/auth/session") {
+        sessionReads += 1;
+        if (sessionReads === 2) throw new Error("network down");
+        return jsonResponse(200, sessionEnvelope);
+      }
+      if (url.endsWith("/cases")) return jsonResponse(200, { ok: true, data: { items: [] } });
+      return jsonResponse(200, sessionEnvelope);
+    });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(createElement(CaseShell, { decisionCaseId: "LX-2407" }));
@@ -126,7 +138,7 @@ describe("ProjectDrawer + Session B shell completion (Task 11 Phase 0)", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "重试" }));
     expect(await within(dialog).findByText("Personal Workspace")).toBeVisible();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4); // AccountEntry 1 + session 2 + retry 3 + cases 4
   });
 
   test("traps focus, closes on Escape and returns focus to the trigger", async () => {

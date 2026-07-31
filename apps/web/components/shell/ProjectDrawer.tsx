@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { caseListRouteAvailable, fetchProjectDirectory, type ProjectDirectory } from "@/lib/shell/projects";
+import { logoutAccount } from "@/lib/shell/session";
 
 // Look V7 `#caseDrawer` as the production ProjectDrawer (Session B).
 // Workspace entries come from the Task 3 read-only session API; the
@@ -34,13 +35,29 @@ type ProjectDrawerProps = {
 };
 
 export function ProjectDrawer({ open, decisionCaseId, onClose }: ProjectDrawerProps) {
-  // null = request in flight (initial load or retry).
   const [directory, setDirectory] = useState<ProjectDirectory | null>(null);
+  const [cases, setCases] = useState<Array<{ decisionCaseId: string; title: string; status: string }>>([]);
+  const [loggingOut, setLoggingOut] = useState(false);
   const drawerDialog = useRef<HTMLElement>(null);
 
   const loadDirectory = useCallback(async () => {
     setDirectory(null);
-    setDirectory(await fetchProjectDirectory());
+    const dir = await fetchProjectDirectory();
+    setDirectory(dir);
+    // Load case list for the first workspace when available.
+    if (caseListRouteAvailable && dir.status === "ready" && dir.workspaces.length > 0) {
+      const ws = dir.workspaces[0]!;
+      try {
+        const res = await fetch(
+          `/api/workspaces/${encodeURIComponent(ws.workspaceId)}/cases`,
+          { credentials: "include" },
+        );
+        if (res.ok) {
+          const body = (await res.json()) as { data?: { items?: Array<{ decisionCaseId: string; title: string; status: string }> } };
+          setCases(body?.data?.items ?? []);
+        }
+      } catch { /* graceful */ }
+    }
   }, []);
 
   useEffect(() => {
@@ -121,7 +138,7 @@ export function ProjectDrawer({ open, decisionCaseId, onClose }: ProjectDrawerPr
           {directory === null && <p className="draft-notice" role="status">正在读取工作区…</p>}
 
           {directory?.status === "unauthenticated" && (
-            <p className="draft-notice" role="status">尚未登录：登录后这里会列出你的真实工作区；不显示伪造列表。</p>
+            <p className="draft-notice" role="status">尚未登录：登录后这里会列出你的工作区与项目。</p>
           )}
 
           {directory?.status === "error" && (
@@ -142,33 +159,71 @@ export function ProjectDrawer({ open, decisionCaseId, onClose }: ProjectDrawerPr
                 <span>
                   <b>{workspaceName}</b>
                   <small>{`角色 ${role}`}</small>
-                  <em>{caseListRouteAvailable ? "" : "该工作区的 Case 列表等待只读路由上线。"}</em>
                 </span>
               </div>
             ))}
 
+          {cases.length > 0 && (
+            <>
+              {cases.map((c) => (
+                <Link
+                  key={c.decisionCaseId}
+                  className="case-choice"
+                  href={`/cases/${encodeURIComponent(c.decisionCaseId)}?ws=${encodeURIComponent(directory?.status === "ready" ? directory.workspaces[0]?.workspaceId ?? "" : "")}`}
+                  aria-current={decisionCaseId === c.decisionCaseId ? "page" : undefined}
+                  onClick={onClose}
+                >
+                  <span className="case-glyph">Q</span>
+                  <span>
+                    <b>{c.title || c.decisionCaseId.slice(0, 8)}</b>
+                    <small>{c.status}</small>
+                  </span>
+                </Link>
+              ))}
+            </>
+          )}
+
           <Link
             className="case-choice"
-            href="/cases/new"
+            href="/"
             aria-current={decisionCaseId ? undefined : "page"}
-            onClick={onClose}
+            onClick={() => {
+              onClose();
+              // Focus the question input after navigation settles.
+              setTimeout(() => {
+                const input = document.getElementById("caseShellQuestion") as HTMLTextAreaElement | null;
+                input?.focus();
+              }, 300);
+            }}
           >
             <span className="case-glyph empty">{"\uff0b"}</span>
             <span>
-              <b>空工作台</b>
-              <small>尚未创建 Case</small>
-              <em>打开新建决策入口；创建前不会生成任何档案。</em>
+              <b>新建项目</b>
+              <small>打开新建决策入口</small>
             </span>
           </Link>
         </div>
 
-        <section className="case-drawer-note">
-          <span>接口缺口</span>
-          <p>Case 列表只读路由尚未上线（Task 3 目前只提供会话与工作区摘要）；这里不显示伪造项目，路由接入后自动列出真实 Case。</p>
-        </section>
-
         <footer>
           <button className="secondary-action" type="button" onClick={onClose}>留在当前项目</button>
+          {directory?.status === "ready" && (
+            <button
+              className="text-action"
+              type="button"
+              disabled={loggingOut}
+              onClick={async () => {
+                setLoggingOut(true);
+                try {
+                  await logoutAccount();
+                  window.location.assign("/enter");
+                } catch {
+                  setLoggingOut(false);
+                }
+              }}
+            >
+              {loggingOut ? "退出中…" : "退出登录"}
+            </button>
+          )}
         </footer>
       </section>
     </aside>

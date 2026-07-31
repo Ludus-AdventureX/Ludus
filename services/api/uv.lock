@@ -271,6 +271,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
+    { name = "jsonschema" },
     { name = "openai" },
     { name = "playwright" },
     { name = "pydantic" },
@@ -286,7 +287,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "jsonschema" },
     { name = "pip-audit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -301,6 +301,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "jinja2", specifier = ">=3.1,<4" },
+    { name = "jsonschema", specifier = ">=4.23,<5" },
     { name = "openai", specifier = ">=2.0,<3" },
     { name = "playwright", specifier = ">=1.55,<2" },
     { name = "pydantic", specifier = ">=2.11,<3" },
@@ -316,7 +317,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "jsonschema", specifier = ">=4.23,<5" },
     { name = "pip-audit", specifier = ">=2.9,<3" },
     { name = "pytest", specifier = ">=9.0.3,<10" },
     { name = "pytest-asyncio", specifier = ">=1.1,<2" },

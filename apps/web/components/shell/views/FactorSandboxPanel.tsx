@@ -119,7 +119,7 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
     return (
       <section className="factor-sandbox" data-factor-sandbox="empty">
         <p className="phase-slot-note">
-          还没有可推演的因子——先在 E 证据区完成一次分析，其影响因子会出现在这里供你增删改推演。
+          推演尚未开放——完成一次深度分析后，影响因子会出现在这里。
         </p>
       </section>
     );

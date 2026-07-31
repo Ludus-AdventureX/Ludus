@@ -4,6 +4,7 @@ import Image from "next/image";
 import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { CaseViewRouter } from "@/components/shell/CaseViewRouter";
+import { AccountEntry } from "@/components/shell/AccountEntry";
 import { DecisionSpine } from "@/components/shell/DecisionSpine";
 import { InvitePanel } from "@/components/shell/InvitePanel";
 import { ProjectDrawer } from "@/components/shell/ProjectDrawer";
@@ -22,6 +23,13 @@ type CaseShellProps = {
 };
 
 export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShellProps) {
+  // Recover workspace from localStorage when the URL lost it (e.g. session
+  // refresh, browser back). The server-supplied prop takes precedence.
+  const effectiveWorkspaceId = tenantWorkspaceId ?? (
+    typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("ws") || localStorage.getItem("ludus-ws"))
+      : null
+  );
   const [activeWorkspace, setActiveWorkspace] = useState<CaseWorkspaceId>(defaultWorkspaceId);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -91,7 +99,7 @@ export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShel
           </button>
         </div>
         <div className="masthead-actions">
-          <InvitePanel workspaceId={tenantWorkspaceId} />
+          <InvitePanel workspaceId={effectiveWorkspaceId} />
           <span className="source-mode is-empty"><i /> <span>档案未接入</span></span>
           <button
             className="mobile-case-trigger"
@@ -112,12 +120,13 @@ export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShel
       <main className="stage" id="mainStage" inert={drawerOpen}>
         <CaseViewRouter
           decisionCaseId={decisionCaseId}
-          tenantWorkspaceId={tenantWorkspaceId}
+          tenantWorkspaceId={effectiveWorkspaceId}
           activeWorkspace={activeWorkspace}
         />
       </main>
 
       <ProjectDrawer open={drawerOpen} decisionCaseId={decisionCaseId} onClose={closeDrawer} />
+      <AccountEntry />
     </div>
   );
 }

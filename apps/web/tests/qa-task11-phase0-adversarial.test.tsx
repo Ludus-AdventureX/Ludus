@@ -81,11 +81,12 @@ describe("QA adversarial: Task 11 Phase 0 shell (A+B)", () => {
     await within(dialog).findByText("Personal Workspace");
 
     // Shift+Tab from the first focusable must wrap to the last, never leave.
+    // The footer's last focusable is now the account action (logged-in state).
     const closeButton = within(dialog).getByRole("button", { name: "关闭项目抽屉" });
     closeButton.focus();
     await user.tab({ shift: true });
     expect(dialog).toContainElement(document.activeElement as HTMLElement);
-    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "留在当前项目" }));
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "退出登录" }));
 
     // If focus somehow lands outside the dialog, the next Tab recaptures it.
     (document.activeElement as HTMLElement).blur();

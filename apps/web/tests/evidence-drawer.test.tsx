@@ -284,7 +284,9 @@ describe("evidence anchors availability (READ-01 flip)", () => {
 
     await user.click(trigger);
     expect(await screen.findByRole("dialog", { name: "证据溯源" })).toBeInTheDocument();
-    expect(screen.getByText(/当前没有把决策档案解析到分析 Run 的只读路由/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/完成一次深度分析后，证据保管链会出现在这里；当前没有可展示的证据记录/)
+    ).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

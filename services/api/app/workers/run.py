@@ -33,6 +33,7 @@ from uuid import UUID
 from app.db import async_session_factory
 from app.types import AnalysisRunStatus
 from app.workers.analysis_worker import AnalysisWorker, build_role_executors_from_env
+from app.agents.model_provider import build_model_provider_from_env
 
 log = logging.getLogger("app.workers.run")
 
@@ -114,6 +115,7 @@ async def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     executors, origin_mode = build_role_executors_from_env()
+    provider = build_model_provider_from_env()
     log.info(
         "analysis worker starting (origin_mode=%s, poll=%.1fs)",
         origin_mode.value,
@@ -134,7 +136,8 @@ async def main() -> None:
         try:
             async with async_session_factory() as session:
                 worker = AnalysisWorker(
-                    session, executors=executors, origin_mode=origin_mode
+                    session, executors=executors, origin_mode=origin_mode,
+                    provider=provider,
                 )
                 claimed = await worker.run_once()
                 if claimed is not None:

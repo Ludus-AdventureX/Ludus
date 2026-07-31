@@ -41,7 +41,11 @@ describe("AnalysisLaunchPanel", () => {
 
   test("launches the real loop and lands on the backend terminal verdict", async () => {
     const user = userEvent.setup();
+    // Mount-time existing-run probe (GET .../cases/{case}/analyses) is the
+    // FIRST request the panel fires; the mock queue must start there or every
+    // launch step shifts by one and the loop reads a CSRF response as the seed.
     const responses: Array<[RegExp, Response]> = [
+      [/\/analyses$/, jsonResponse(200, { ok: true, data: { items: [] } })],
       [/\/api\/auth\/csrf$/, jsonResponse(200, { ok: true, data: { csrfToken: "tok" } })],
       [
         new RegExp(`/cases/${CASE}$`),
@@ -70,13 +74,13 @@ describe("AnalysisLaunchPanel", () => {
 
     render(createElement(AnalysisLaunchPanel, { workspaceId: WS, decisionCaseId: CASE }));
 
-    await user.click(screen.getByRole("button", { name: /发起聚焦深度分析/ }));
+    await user.click(screen.getByRole("button", { name: /发起分析/ }));
 
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent("质量门未通过"),
     );
     expect(screen.getByRole("status").querySelector("[data-analysis-terminal='blocked']")).not.toBeNull();
-    expect(screen.getByRole("button", { name: /再次发起分析/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /再次发起/ })).toBeEnabled();
   });
 
   test("surfaces an honest error and offers retry when the launch fails", async () => {
@@ -87,10 +91,10 @@ describe("AnalysisLaunchPanel", () => {
     );
 
     render(createElement(AnalysisLaunchPanel, { workspaceId: WS, decisionCaseId: CASE }));
-    await user.click(screen.getByRole("button", { name: /发起聚焦深度分析/ }));
+    await user.click(screen.getByRole("button", { name: /发起分析/ }));
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("CSRF 校验失败"));
-    expect(screen.getByRole("button", { name: /重试发起分析/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /重试/ })).toBeEnabled();
   });
 
   test("renders the SSE thinking trace and the blocked guidance from findings", async () => {
@@ -107,6 +111,7 @@ describe("AnalysisLaunchPanel", () => {
     vi.stubGlobal("EventSource", FakeEventSource);
 
     const responses: Array<[RegExp, Response]> = [
+      [/\/analyses$/, jsonResponse(200, { ok: true, data: { items: [] } })],
       [/\/api\/auth\/csrf$/, jsonResponse(200, { ok: true, data: { csrfToken: "tok" } })],
       [
         new RegExp(`/cases/${CASE}$`),
@@ -137,7 +142,7 @@ describe("AnalysisLaunchPanel", () => {
     );
 
     render(createElement(AnalysisLaunchPanel, { workspaceId: WS, decisionCaseId: CASE }));
-    await user.click(screen.getByRole("button", { name: /发起聚焦深度分析/ }));
+    await user.click(screen.getByRole("button", { name: /发起分析/ }));
 
     await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
     const fire = (payload: unknown) =>

@@ -5,12 +5,10 @@ import { useState } from "react";
 import { SignoffPanel } from "@/components/shell/views/SignoffPanel";
 import { ProvenancePanel } from "@/components/shell/views/ProvenancePanel";
 import { RetrospectivePanel } from "@/components/shell/views/RetrospectivePanel";
-import { MentorReviewPanel } from "@/components/shell/views/MentorReviewPanel";
 
-// Look V7 `#view-decision` layout frame. The decision-signoff slot is FILLED
-// by SignoffPanel; once a decision is signed, ProvenancePanel renders the
-// tamper-evident hash chain ("how this decision was reached"). The record
-// sheet below stays honest until a real signed decision exists.
+// Look V7 `#view-decision` layout frame. MentorReview removed per product
+// decision (not part of P0 single decision-maker flow; if needed later it
+// belongs in the Review dialog under the R spine slot).
 
 export type DecisionViewProps = {
   workspaceId?: string | null;
@@ -44,10 +42,6 @@ export function DecisionView({ workspaceId = null, decisionCaseId }: DecisionVie
         refreshKey={signedAt}
       />
 
-      <MentorReviewPanel
-        {...(workspaceId ? { workspaceId } : {})}
-        {...(decisionCaseId ? { decisionCaseId } : {})}
-      />
       <RetrospectivePanel
         {...(workspaceId ? { workspaceId } : {})}
         {...(decisionCaseId ? { decisionCaseId } : {})}
@@ -63,8 +57,8 @@ export function DecisionView({ workspaceId = null, decisionCaseId }: DecisionVie
           <div className="decision-seal" aria-label="等待用户签署的决定印记"><span>D</span><small>—</small></div>
           <div>
             <span className="margin-label">条件性承诺</span>
-            <h2>决定记录将由 Task 14W 接入</h2>
-            <p>append-only DecisionRecord 只在授权人完成签署事务后出现；这里不展示示例承诺、条件或签名。</p>
+            <h2>等待授权人签署</h2>
+            <p>决定记录只在授权人完成签署事务后出现；这里不展示示例承诺、条件或签名。</p>
           </div>
         </div>
         <div className="decision-conditions">

@@ -150,6 +150,9 @@ export function createdCaseUrl(created: CreatedDecisionCase): string {
 
 /** Navigation seam: components call this so jsdom tests can mock the module. */
 export function navigateToCreatedCase(created: CreatedDecisionCase): void {
+  // Persist the workspace so returning to the app after session refresh keeps
+  // the user in the same workspace (fixes "unknown workspace UUID" bug).
+  try { localStorage.setItem("ludus-ws", created.workspaceId); } catch { /* SSR / private */ }
   window.location.assign(createdCaseUrl(created));
 }
 

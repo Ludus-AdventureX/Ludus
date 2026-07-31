@@ -224,6 +224,7 @@ class AnalysisWorker:
         lens_audit: LensAudit | None = None,
         origin_mode: OriginMode = OriginMode.FIXTURE,
         checkpoint: Callable[[], Awaitable[None]] | None = None,
+        provider: "ModelProvider | None" = None,
     ) -> None:
         self._session = session
         self._repo = AnalysisRuntimeRepository(session)
@@ -235,9 +236,18 @@ class AnalysisWorker:
         self._lens_audit = lens_audit or audit_full_run_lens_set
         self._origin_mode = origin_mode
         self._commit = checkpoint or session.commit
+        # Provider reference for dedicated lens calls (A5 fix). When None the
+        # lens fallback is skipped gracefully (fixture mode).
+        self._provider = provider
         # The run this worker actually claimed, so the runner can park exactly
         # that run after a failure instead of guessing at the queue head.
         self.claimed: tuple[UUID, UUID] | None = None
+
+    def _get_provider(self) -> "ModelProvider":
+        """Return the model provider for dedicated lens calls."""
+        if self._provider is None:
+            raise RuntimeError("no provider configured for dedicated lens calls")
+        return self._provider
 
     @property
     def repository(self) -> AnalysisRuntimeRepository:
@@ -285,6 +295,12 @@ class AnalysisWorker:
         run_id = run.analysis_run_id
         is_full = FormalAnalysisLevel(run.analysis_level) == FormalAnalysisLevel.FULL
         stage_inputs: dict[str, Any] = {"analysisRunId": str(run_id)}
+
+        # Workspace custom model: override the system default if configured
+        ws_provider = await self._load_workspace_model_provider(workspace_id)
+        if ws_provider is not None:
+            self._provider = ws_provider
+
         # Feed the CONFIRMED charter to every stage: without it the model
         # analyses a phantom question (live-trace finding: planning reported
         # 'decision question not provided' while runs still went READY).
@@ -300,6 +316,25 @@ class AnalysisWorker:
                 "preferenceWeights": dict(charter.preference_weights or {}),
             }
             stage_inputs["charter"] = charter_context
+        # Inject extracted profiles (decision-maker + question) so every stage
+        # sees the user's preferences, constraints and problem structure.
+        try:
+            from sqlalchemy import text as _text
+            profile_rows = (
+                await self._session.execute(
+                    _text(
+                        "SELECT profile_type, content FROM case_profiles "
+                        "WHERE workspace_id = :ws AND decision_case_id = :cid"
+                    ),
+                    {"ws": workspace_id, "cid": run.decision_case_id},
+                )
+            ).all()
+            if profile_rows:
+                stage_inputs["profiles"] = {
+                    row[0]: row[1] for row in profile_rows
+                }
+        except Exception:
+            pass  # best-effort; missing profiles do not block the run
         # In-process stage output capture for the READY report hook (stage_results
         # on the run persists hashes only, not the output bodies).
         stage_outputs: dict[str, Any] = {}
@@ -347,13 +382,17 @@ class AnalysisWorker:
                 # External-call boundary check before the main role execution.
                 await self._check_cancelled(run)
                 if stage == AnalysisRunStatus.RETRIEVING and charter is not None:
-                    # The external leg: bounded real web retrieval (Exa) with
-                    # deterministic domain grading. Fail-open - an empty result
-                    # leaves the model on internal knowledge, which the funnel
-                    # then honestly sinks to L6.
+                    # BYOK connector keys: prefer workspace-stored keys over env.
+                    byok_exa, byok_firecrawl = await self._load_byok_keys(run.workspace_id)
                     web_sources = await search_web(
                         charter.decision_question,
                         [str(o) for o in (charter.option_ids or [])],
+                        **({
+                            "api_key": byok_exa,
+                        } if byok_exa else {}),
+                        **({
+                            "firecrawl_api_key": byok_firecrawl,
+                        } if byok_firecrawl else {}),
                     )
                     if web_sources:
                         stage_inputs = {
@@ -567,6 +606,86 @@ class AnalysisWorker:
         assert refreshed is not None
         return refreshed
 
+    async def _load_byok_keys(self, workspace_id: UUID) -> tuple[str | None, str | None]:
+        """Read BYOK connector keys for this workspace (Exa + Firecrawl).
+
+        Returns (exa_key, firecrawl_key) decrypted for one-time use. Failures
+        return (None, None) — the worker falls back to env keys.
+        """
+
+        from app.connectors.crypto import crypto_available, decrypt_secret
+        from app.models import WorkspaceConnector
+        from sqlalchemy import select as _sel2
+
+        if not crypto_available():
+            return None, None
+        try:
+            rows = (
+                await self._session.execute(
+                    _sel2(WorkspaceConnector).where(
+                        WorkspaceConnector.workspace_id == workspace_id,
+                        WorkspaceConnector.provider.in_(["exa", "firecrawl"]),
+                    )
+                )
+            ).scalars().all()
+            exa_key = None
+            fc_key = None
+            for row in rows:
+                try:
+                    plain = decrypt_secret(
+                        row.ciphertext, row.nonce, row.key_version,
+                        workspace_id=str(workspace_id), provider=row.provider,
+                    )
+                except Exception:
+                    continue
+                if row.provider == "exa":
+                    exa_key = plain
+                elif row.provider == "firecrawl":
+                    fc_key = plain
+            return exa_key, fc_key
+        except Exception:
+            return None, None
+
+    async def _load_workspace_model_provider(self, workspace_id: UUID) -> "ModelProvider | None":
+        """Load workspace custom model connector and build a BYOK provider.
+
+        Returns None if no model connector is configured for this workspace,
+        in which case the caller falls back to the system default provider.
+        """
+
+        from app.connectors.crypto import crypto_available, decrypt_secret
+        from app.models import WorkspaceConnector
+        from app.agents.model_provider import build_model_provider_from_connector
+        from sqlalchemy import select as _sel3
+
+        if not crypto_available():
+            return None
+        try:
+            row = (
+                await self._session.execute(
+                    _sel3(WorkspaceConnector).where(
+                        WorkspaceConnector.workspace_id == workspace_id,
+                        WorkspaceConnector.provider == "model",
+                    )
+                )
+            ).scalar_one_or_none()
+            if row is None:
+                return None
+            api_key = decrypt_secret(
+                row.ciphertext, row.nonce, row.key_version,
+                workspace_id=str(workspace_id), provider="model",
+            )
+            config = row.config or {}
+            base_url = config.get("base_url", "")
+            model_name = config.get("model_name", "")
+            if not base_url or not model_name:
+                return None
+            return build_model_provider_from_connector(
+                base_url=base_url, api_key=api_key, model_name=model_name,
+            )
+        except Exception:
+            return None
+
     async def _load_first_party_facts(self, run: AnalysisRun) -> list[dict[str, str]]:
         """The decision-maker's CONFIRMED dossier facts for this case (L0 leg).
 
@@ -711,23 +830,46 @@ class AnalysisWorker:
         stage: AnalysisRunStatus,
         result: StageResult,
     ) -> None:
-        """Persist each scheduled lens through the shipped write path, then emit."""
+        """Persist each scheduled lens through the shipped write path, then emit.
+
+        When the generic stage executor returned no lens payload (the usual
+        case for live models that were never shown the per-lens prompt), invoke
+        a DEDICATED lens call through the registered implementation's prompt
+        assembly + the same model provider. This is the missing wiring that
+        caused every live full run to produce zero lens artifacts.
+        """
 
         for lens_type in FULL_LENS_SCHEDULE[stage]:
             payload = result.lens_payloads.get(lens_type)
             if payload is None:
+                # Dedicated lens execution fallback: use the published prompt
+                # and the registered implementation to invoke the model.
+                payload = await self._execute_dedicated_lens(
+                    run, stage, lens_type, result
+                )
+            if payload is None:
                 continue
             # External-call/persistence boundary: cooperative stop first.
             await self._check_cancelled(run)
-            artifact_id = await self._lens_writer(
-                self._session,
-                workspace_id=run.workspace_id,
-                decision_case_id=run.decision_case_id,
-                analysis_run_id=run.analysis_run_id,
-                payload=payload,
-                ledger=result.output.get("ledger"),
-                origin_modes=(self._origin_mode,),
-            )
+            try:
+                artifact_id = await self._lens_writer(
+                    self._session,
+                    workspace_id=run.workspace_id,
+                    decision_case_id=run.decision_case_id,
+                    analysis_run_id=run.analysis_run_id,
+                    payload=payload,
+                    ledger=result.output.get("ledger"),
+                    origin_modes=(self._origin_mode,),
+                )
+            except Exception:
+                # Behavior gate rejection or persistence error: log and skip.
+                # The lens audit at the validating gate will catch the absence
+                # and block the run (fail-closed) rather than crashing here.
+                logging.getLogger(__name__).warning(
+                    "lens %s persistence failed for run %s; skipping",
+                    lens_type, run.analysis_run_id, exc_info=True,
+                )
+                continue
             # Only after successful persistence: record the id and emit the
             # canonical strategic_lens.completed event.
             await self._repo.record_lens_artifact_id(
@@ -747,6 +889,115 @@ class AnalysisWorker:
             # Each persisted lens is published on its own: a full run spends
             # minutes per lens and the trace must not wait for the whole set.
             await self._checkpoint()
+
+    async def _execute_dedicated_lens(
+        self,
+        run: AnalysisRun,
+        stage: AnalysisRunStatus,
+        lens_type: str,
+        parent_result: StageResult,
+    ) -> Mapping[str, Any] | None:
+        """Invoke the model with the published per-lens prompt and schema.
+
+        This is the wiring that was previously missing: the generic stage prompt
+        says 'lensPayloads: {}' and live models comply. This fallback reads the
+        actual lens prompt from the published method pack, assembles the frozen
+        inputs through the registered LensImplementation, and calls the model
+        with an output schema that produces a valid StrategicLensStageOutput
+        payload. Behavior validation happens downstream in persist_lens_stage_output.
+
+        Failures are logged and return None (the audit will catch the absence at
+        the validating gate); this keeps the established fail-closed posture.
+        """
+
+        from pathlib import Path
+
+        from app.agents.lenses import (
+            LENS_SPECS,
+            LensRequest,
+            StrategicLensStageOutput,
+        )
+        from app.agents.model_provider import ModelMessage, complete_structured_checked
+        from app.strategic_lenses.registry import build_lens_registry
+        from app.types import StrategicLensType
+
+        try:
+            lens_enum = StrategicLensType(lens_type)
+            spec = LENS_SPECS[lens_enum]
+            registry = build_lens_registry()
+            impl = registry.get(lens_enum)
+
+            # Read the published prompt from the method pack (shipped in the
+            # Docker image under /app/method-packs/).
+            prompt_path = Path("/app/method-packs/hardtech-market-direction/1.1.0") / spec.prompt_ref
+            if not prompt_path.is_file():
+                # Fallback for local dev where the image mounts differently.
+                prompt_path = (
+                    Path(__file__).resolve().parents[3]
+                    / "method-packs" / "hardtech-market-direction" / "1.1.0" / spec.prompt_ref
+                )
+            prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.is_file() else ""
+
+            # Assemble the LensRequest from the frozen run context.
+            charter = await self._session.get(AnalysisCharter, run.charter_id)
+            option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
+            # Gather research packet IDs and evidence IDs from the DATABASE
+            # (prior stages already persisted them; parent_result only has the
+            # current stage's output which doesn't carry earlier artifacts).
+            from sqlalchemy import select as _sel
+            from app.analyses.models import ResearchPacket
+            packet_rows = (
+                await self._session.execute(
+                    _sel(ResearchPacket.id)
+                    .where(
+                        ResearchPacket.workspace_id == run.workspace_id,
+                        ResearchPacket.analysis_run_id == run.analysis_run_id,
+                    )
+                    .limit(20)
+                )
+            ).scalars().all()
+            packet_ids = tuple(str(pid) for pid in packet_rows)
+            # Evidence: use admitted evidence IDs from retrieving stage output
+            # (persisted in stage_results on the run row).
+            fresh = await self._fresh(run)
+            retrieving_output = (fresh.stage_results or {}).get("retrieving", {})
+            funnel = retrieving_output.get("evidenceFunnel", {}) if isinstance(retrieving_output, Mapping) else {}
+            evidence_ids = tuple(
+                str(e.get("evidenceId") or e.get("id", ""))
+                for e in funnel.get("admitted", [])
+                if isinstance(e, Mapping)
+            )
+
+            request = LensRequest(
+                lens_type=lens_enum,
+                workspace_id=str(run.workspace_id),
+                analysis_run_id=str(run.analysis_run_id),
+                prompt_text=prompt_text,
+                research_packet_refs=packet_ids[:20],
+                evidence_refs=evidence_ids[:30],
+                option_ids=option_ids,
+            )
+            inputs = impl.build_prompt_inputs(request)
+
+            # Get the role executor's provider reference (reuse the same model).
+            # Call the model with the lens-specific prompt.
+            completion = await complete_structured_checked(
+                self._get_provider(),
+                system=inputs.system,
+                messages=(ModelMessage(role="user", content=inputs.user),),
+                schema=None,  # JSON output mode, no strict schema (lens is complex)
+                request_model="",
+            )
+            content = completion.content
+            # Validate it parses as a valid StrategicLensStageOutput.
+            StrategicLensStageOutput.from_payload(content)
+            return dict(content)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "dedicated lens %s execution failed for run %s; audit will catch absence",
+                lens_type, run.analysis_run_id, exc_info=True,
+            )
+            return None
 
 
 

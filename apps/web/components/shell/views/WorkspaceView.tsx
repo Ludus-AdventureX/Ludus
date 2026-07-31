@@ -3,13 +3,13 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { DecisionHealthBar } from "@/components/shell/DecisionHealthBar";
-import { AnalysisLaunchPanel } from "@/components/shell/views/AnalysisLaunchPanel";
-import { PortfolioPanel } from "@/components/shell/views/PortfolioPanel";
+import { ProfilePanel } from "@/components/shell/views/ProfilePanel";
 import {
   CaseApiError,
   confirmCandidate,
   fetchCandidates,
   fetchCaseDetail,
+  fetchMessages,
   postCaseMessage,
   rejectCandidate,
   statementTypeLabels,
@@ -83,7 +83,25 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
   useEffect(() => {
     void refreshCase();
     void refreshCandidates();
-  }, [refreshCase, refreshCandidates]);
+    // Load persisted conversation history so notes survive page navigation.
+    if (workspaceId) {
+      void fetchMessages(workspaceId, decisionCaseId).then((messages) => {
+        const restored: LedgerNote[] = [];
+        for (let i = 0; i < messages.length; i++) {
+          const msg = messages[i]!;
+          const time = msg.createdAt
+            ? new Date(msg.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+            : "";
+          if (msg.role === "user") {
+            restored.push({ kind: "human", text: msg.content, time });
+          } else {
+            restored.push({ kind: "system", text: msg.content, patchSummary: "", time });
+          }
+        }
+        setNotes(restored);
+      }).catch(() => { /* graceful: notes stay empty if fetch fails */ });
+    }
+  }, [refreshCase, refreshCandidates, workspaceId, decisionCaseId]);
 
   const submitNote = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -110,6 +128,8 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
         }
       ]);
       if (result.candidateRevisionId) await refreshCandidates();
+      // Trigger profile refresh after each successful round.
+      window.dispatchEvent(new CustomEvent("ludus:profile-refresh"));
     } catch (error) {
       setComposerNotice(
         error instanceof CaseApiError ? `系统回应失败：${error.message}` : "系统回应失败，请稍后重试。"
@@ -121,7 +141,8 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
   };
 
   const onComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    // Enter alone sends; Shift+Enter inserts newline (chat convention).
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       formRef.current?.requestSubmit();
     }
@@ -182,13 +203,7 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
                   : "缺少工作区锚点（URL 未携带 ?ws=），问题工作区保持骨架展示，不伪造档案数据。"}
             </p>
           </div>
-          <div className="intro-actions">
-            <PortfolioPanel {...(workspaceId ? { workspaceId } : {})} />
-            <AnalysisLaunchPanel
-              {...(workspaceId ? { workspaceId } : {})}
-              decisionCaseId={decisionCaseId}
-            />
-          </div>
+          <div className="intro-actions" />
         </div>
       </header>
 
@@ -201,32 +216,6 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
             </div>
             <p><i className="human-dot" /> 只有你确认的内容才会进入正式档案</p>
           </header>
-
-          {workspaceId && (
-            <form ref={formRef} className="ledger-composer" id="noteForm" onSubmit={submitNote}>
-              <div className="composer-topline">
-                <span>新札记</span>
-              </div>
-              <label className="sr-only" htmlFor="noteInput">写下你的判断、担忧、直觉或问题</label>
-              <textarea
-                ref={noteInput}
-                id="noteInput"
-                rows={3}
-                value={draft}
-                onChange={(event) => { setDraft(event.target.value); setComposerNotice(""); }}
-                onKeyDown={onComposerKeyDown}
-                placeholder="写下你对方向和取舍的判断……"
-                disabled={isSending}
-              />
-              <div className="composer-actions">
-                <span className="composer-hint">Ctrl / ⌘ + Enter</span>
-                <button type="submit" className="commit-note" disabled={isSending}>
-                  {isSending ? "系统整理中…" : <>记入札记 <span>↗</span></>}
-                </button>
-              </div>
-              {composerNotice && <p className="draft-notice" role="status">{composerNotice}</p>}
-            </form>
-          )}
 
           <div className="ledger-body" id="ledgerBody">
             {notes.length === 0 && (
@@ -315,9 +304,39 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
             ))}
             {candidateNotice && <p className="draft-notice" role="status">{candidateNotice}</p>}
           </div>
+
+          {workspaceId && (
+            <form ref={formRef} className="ledger-composer" id="noteForm" onSubmit={submitNote}>
+              <div className="composer-topline">
+                <span>新札记</span>
+              </div>
+              <label className="sr-only" htmlFor="noteInput">写下你的判断、担忧、直觉或问题</label>
+              <textarea
+                ref={noteInput}
+                id="noteInput"
+                rows={3}
+                value={draft}
+                onChange={(event) => { setDraft(event.target.value); setComposerNotice(""); }}
+                onKeyDown={onComposerKeyDown}
+                placeholder="写下你对方向和取舍的判断……"
+                disabled={isSending}
+              />
+              <div className="composer-actions">
+                <span className="composer-hint">Enter 发送 / Shift+Enter 换行</span>
+                <button type="submit" className="commit-note" disabled={isSending}>
+                  {isSending ? "系统整理中…" : <>记入札记 <span>↗</span></>}
+                </button>
+              </div>
+              {composerNotice && <p className="draft-notice" role="status">{composerNotice}</p>}
+            </form>
+          )}
         </article>
 
         <aside className="folio-peek" aria-label="当前案例摘要">
+          <ProfilePanel
+            {...(workspaceId ? { workspaceId } : {})}
+            decisionCaseId={decisionCaseId}
+          />
           <div className="folio-question">
             <span>{coordinate} · OWNER / USER</span>
             <p>

@@ -141,13 +141,18 @@ describe("Case shell route skeleton (Task 11 Phase 0 Session A)", () => {
     const projectTrigger = container.querySelector('[data-phase-slot="project-drawer"]');
     expect(projectTrigger).toBeEnabled();
     expect(projectTrigger).toHaveAttribute("aria-haspopup", "dialog");
-    expect(container.querySelector('[data-analysis-launch]')).toBeInTheDocument();
+    // B3: the launch controls live on the E view only (moved from Q); Q stays
+    // a read/ledger surface without a launch entry.
+    expect(container.querySelector('[data-analysis-launch]')).not.toBeInTheDocument();
     expect(container.querySelector('[data-phase-slot="decision-health-bar"]')).toBeInTheDocument();
 
     const spine = screen.getByRole("navigation", { name: "决策生命周期" });
     await user.click(within(spine).getByRole("button", { name: /证据/ }));
+    // The E view hosts the real launch panel and the quality margin.
     expect(container.querySelector('[data-analysis-launch]')).toBeInTheDocument();
-    expect(container.querySelector('[data-phase-slot="quality-gate-panel"]')).toBeInTheDocument();
+    // B2: the promised QualityGatePanel is finally mounted (real component,
+    // not a phase-slot placeholder note).
+    expect(container.querySelector('[data-quality-gate-panel]')).toBeInTheDocument();
     expect(container.querySelector('[data-phase-slot="evidence-drawer-trigger"]')).toBeInTheDocument();
     // No total confidence percentage and no fabricated counters anywhere.
     expect(container.textContent).not.toMatch(/\d+\s*%/);

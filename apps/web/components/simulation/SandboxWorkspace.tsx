@@ -128,7 +128,7 @@ export function SandboxWorkspace({ decisionCaseId, data }: SandboxWorkspaceProps
               <small>等待真实因果图</small>
             </header>
             <p className="pressure-question">
-              压力测试与完整因果模型只消费 confirmed graph 与真实 SimulationRun；预览与非收敛结果不会进入正式建议。案例（{decisionCaseId}）的报告、确认图与情景档案读取路由尚未上线。
+              推演尚未开放——完成一次深度分析并确认因果图后，这里将展示脆弱条件与压力测试。
             </p>
           </article>
         </div>

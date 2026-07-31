@@ -64,7 +64,7 @@ export function DecisionSpine({ activeWorkspace, onSelectWorkspace, inert, revie
           data-phase-slot="review-dialog-trigger"
           disabled
           aria-disabled="true"
-          title="复盘对话框由 Task 14W 接入"
+          title="复盘功能正在建设中"
         >
           <span className="step-coordinate">{reviewTrigger.coordinate}</span>
           <span className="step-copy"><b>{reviewTrigger.label}</b><small>{reviewTrigger.description}</small></span>

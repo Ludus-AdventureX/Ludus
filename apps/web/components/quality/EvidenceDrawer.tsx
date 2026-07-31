@@ -281,9 +281,9 @@ export function EvidenceDrawer({
         <div className="evidence-ledger" aria-label="证据账本">
           {ledger.phase === "gap" && (
             <section className="evidence-gap-note">
-              <span>接口缺口</span>
+              <span>证据溯源</span>
               <p role="status">
-                当前没有把决策档案解析到分析 Run 的只读路由；证据账本在该路由上线后自动接入真实数据，这里不显示伪造证据。
+                完成一次深度分析后，证据保管链会出现在这里；当前没有可展示的证据记录。
               </p>
             </section>
           )}

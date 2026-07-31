@@ -170,6 +170,20 @@ export async function fetchCandidates(
 
 // --- Writers (CSRF double-submit) ---------------------------------------------
 
+export type MessageView = { role: "user" | "assistant"; content: string; createdAt: string | null };
+
+export async function fetchMessages(
+  workspaceId: string,
+  decisionCaseId: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<MessageView[]> {
+  const data = (await requestJson(
+    fetchImpl,
+    `${caseBase(workspaceId, decisionCaseId)}/messages`
+  )) as { items?: MessageView[] };
+  return Array.isArray(data?.items) ? data.items : [];
+}
+
 export async function postCaseMessage(
   workspaceId: string,
   decisionCaseId: string,
