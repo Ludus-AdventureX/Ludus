@@ -341,14 +341,19 @@ async def read_case_version(
 # --- question clarifier (R2: ask the right question first) --------------------
 
 from app.agents.model_provider import ModelProvider, build_model_provider_from_env  # noqa: E402
+from app.agents.conversation_fixtures import with_conversation_fixture_fallback  # noqa: E402
 from app.cases.clarifier import clarify_question  # noqa: E402
 from app.contracts.schemas import CanonicalModel as _CanonicalModel  # noqa: E402
 
 
 def get_clarifier_provider() -> ModelProvider:
-    """Provider seam (overridable in QA assemblies)."""
+    """Provider seam (overridable in QA assemblies).
 
-    return build_model_provider_from_env()
+    Fixture deployments get the deterministic conversation fallback so the
+    quality check degrades to an honest [fixture] card instead of failing.
+    """
+
+    return with_conversation_fixture_fallback(build_model_provider_from_env())
 
 
 class QuestionClarifierRequest(_CanonicalModel):

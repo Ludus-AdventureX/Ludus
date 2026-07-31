@@ -24,15 +24,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 
 from app.agents.errors import StructuredOutputError
+from app.agents.conversation_fixtures import with_conversation_fixture_fallback
 from app.agents.model_provider import (
     ModelMessage,
     ModelProvider,
     build_model_provider_from_env,
+    build_model_provider_from_connector,
 )
 from app.db import get_session
 from app.dossiers.routes import map_dossier_error
 from app.dossiers.service import DossierService, ProposeEntry
-from app.models import Conversation, DomainEvent, Message
+from app.models import Conversation, DomainEvent, Message, WorkspaceConnector
 from app.security.csrf import require_csrf
 from app.security.envelope import ApiFailure, workspace_not_found
 from app.tenancy.context import WorkspaceContext, require_capability
@@ -62,15 +64,56 @@ _REPLY_SCHEMA: dict[str, Any] = {
 
 
 def get_model_provider() -> ModelProvider:
-    """App-level dependency; tests override it with a FixtureModelProvider."""
+    """App-level dependency; tests override it with a FixtureModelProvider.
 
-    return build_model_provider_from_env()
+    A fixture DEPLOYMENT (no model key) gets the deterministic conversation
+    fallback bound here, so chat and clarifier degrade honestly instead of
+    502-ing on every message. Test overrides bypass this function entirely.
+    """
+
+    return with_conversation_fixture_fallback(build_model_provider_from_env())
+
+
+async def _resolve_workspace_provider(
+    workspace_id: UUID, db: AsyncSession
+) -> ModelProvider | None:
+    """Load workspace custom model connector and build a provider if configured."""
+
+    from app.connectors.crypto import crypto_available, decrypt_secret
+
+    if not crypto_available():
+        return None
+    row = (
+        await db.execute(
+            select(WorkspaceConnector).where(
+                WorkspaceConnector.workspace_id == workspace_id,
+                WorkspaceConnector.provider == "model",
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    try:
+        api_key = decrypt_secret(
+            row.ciphertext, row.nonce, row.key_version,
+            workspace_id=str(workspace_id), provider="model",
+        )
+    except Exception:
+        return None
+    config = row.config or {}
+    base_url = config.get("base_url", "")
+    model_name = config.get("model_name", "")
+    if not base_url or not model_name:
+        return None
+    return build_model_provider_from_connector(
+        base_url=base_url, api_key=api_key, model_name=model_name,
+    )
 
 
 def _model_failure(exc: StructuredOutputError) -> ApiFailure:
     return ApiFailure(
         "MODEL_OUTPUT_INVALID",
-        "The model reply failed structural validation after one repair retry.",
+        "模型未能给出符合结构要求的回应（已自动重试一次）。已保存的内容不受影响，可稍后重试。",
         http_status=502,
         retryable=True,
         details={"reason": exc.code},
@@ -116,6 +159,36 @@ async def _get_case_conversation(
     return conversation
 
 
+@router.get("/cases/{decisionCaseId}/messages")
+async def list_case_messages(
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(require_capability(WorkspaceCapability.CONTRIBUTE)),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Return persisted conversation messages for one case (most recent 50)."""
+
+    rows = (
+        await db.execute(
+            select(Message)
+            .where(
+                Message.workspace_id == context.workspace_id,
+                Message.decision_case_id == decision_case_id,
+            )
+            .order_by(Message.created_at)
+            .limit(50)
+        )
+    ).scalars().all()
+    items = [
+        {
+            "role": msg.role.value if hasattr(msg.role, "value") else str(msg.role),
+            "content": msg.content,
+            "createdAt": msg.created_at.isoformat() if msg.created_at else None,
+        }
+        for msg in rows
+    ]
+    return {"ok": True, "data": {"items": items}}
+
+
 @router.post(
     "/cases/{decisionCaseId}/messages",
     dependencies=[Depends(require_csrf)],
@@ -127,6 +200,11 @@ async def post_case_message(
     db: AsyncSession = Depends(get_session),
     provider: ModelProvider = Depends(get_model_provider),
 ) -> dict[str, Any]:
+    # Prefer workspace-configured model over env default
+    ws_provider = await _resolve_workspace_provider(context.workspace_id, db)
+    if ws_provider is not None:
+        provider = ws_provider
+
     service = DossierService(db, workspace_id=context.workspace_id)
     case = await service.repository.get_case(context.workspace_id, decision_case_id)
     if case is None:
@@ -152,16 +230,29 @@ async def post_case_message(
     )
     db.add(user_message)
     await db.flush()
+    # The note must survive a model failure: commit it BEFORE the provider
+    # call, otherwise the dependency-scoped session rolls it back and the UI's
+    # "已发送" becomes a lie (the exact defect reported in the alpha test).
+    await db.commit()
 
     # 2. Assistant reply over the provider seam (final text only; any
     #    reasoning_content was already dropped inside the provider).
     try:
         completion = await provider.complete_structured(
             system=(
-                "You are the decision assistant. Acknowledge the user's message, "
-                "state what you would record as candidate dossier changes, and "
-                "name what still needs confirmation. Reply with ONLY a JSON "
-                'object like {"assistantMessage": "..."}.'
+                "你是 Ludus 决策助手。你的职责是帮助决策人厘清问题边界、暴露假设、"
+                "识别关键取舍。\n\n"
+                "行为规则：\n"
+                "1. 始终使用用户的语言回复（用户中文你就中文）。\n"
+                "2. 认真倾听用户的判断、担忧和追问，回应时：\n"
+                "   - 确认你理解了什么\n"
+                "   - 指出你会记录为候选档案变更的内容（事实/约束/假设/未知项）\n"
+                "   - 追问仍需确认的关键信息\n"
+                "3. 不要给出最终结论或建议——那是深度分析的工作。\n"
+                "4. 如果用户的表述暗含未说出的假设或风险，温和地指出。\n"
+                "5. 保持简洁、具体、有建设性。不说废话、不重复用户原文。\n\n"
+                "输出格式：只输出一个 JSON 对象 {\"assistantMessage\": \"你的回复\"}，"
+                "不要输出其他任何内容。"
             ),
             messages=[ModelMessage(role="user", content=body.message)],
             schema=_REPLY_SCHEMA,
@@ -256,6 +347,13 @@ async def post_case_message(
             )
     await db.commit()
 
+    # Best-effort profile extraction in a SEPARATE session (the request session
+    # closes when the response returns, so a fire-and-forget task cannot reuse it).
+    import asyncio
+    asyncio.ensure_future(_update_case_profiles(
+        provider, context.workspace_id, decision_case_id
+    ))
+
     data = CaseMessageData(
         candidateRevisionId=candidate_id,
         baseDossierVersion=base_dossier_version,
@@ -319,3 +417,111 @@ async def create_quick_analysis(
         raise _model_transport_failure(exc)
     await db.commit()
     return {"ok": True, "data": quick_analysis_projection(result)}
+
+
+# --- Profile extraction + read endpoint ----------------------------------------
+
+from .profile_extractor import extract_profiles  # noqa: E402
+
+
+async def _update_case_profiles(
+    provider: ModelProvider,
+    workspace_id: UUID,
+    decision_case_id: UUID,
+) -> None:
+    """Best-effort: extract profiles from history and upsert.
+
+    Uses its own session because the request session is closed by the time
+    this fire-and-forget coroutine runs.
+    """
+    import logging
+    from app.db import async_session_factory
+
+    try:
+        async with async_session_factory() as db:
+            rows = (
+                await db.execute(
+                    select(Message)
+                    .where(
+                        Message.workspace_id == workspace_id,
+                        Message.decision_case_id == decision_case_id,
+                    )
+                    .order_by(Message.created_at)
+                    .limit(50)
+                )
+            ).scalars().all()
+            if not rows:
+                return
+            messages = [
+                {"role": msg.role.value if hasattr(msg.role, "value") else str(msg.role),
+                 "content": msg.content}
+                for msg in rows
+            ]
+            profiles = await extract_profiles(provider, messages)
+            if profiles is None:
+                return
+            for profile_type, content in [
+                ("decision_maker", profiles.get("decisionMaker", {})),
+                ("question", profiles.get("question", {})),
+            ]:
+                existing = (
+                    await db.execute(
+                        sa_text(
+                            "SELECT 1 FROM case_profiles "
+                            "WHERE workspace_id = :ws AND decision_case_id = :cid AND profile_type = :pt"
+                        ),
+                        {"ws": workspace_id, "cid": decision_case_id, "pt": profile_type},
+                    )
+                ).scalar_one_or_none()
+                import json as _json
+                if existing:
+                    await db.execute(
+                        sa_text(
+                            "UPDATE case_profiles SET content = CAST(:content AS jsonb), "
+                            "version = version + 1, updated_at = now() "
+                            "WHERE workspace_id = :ws AND decision_case_id = :cid "
+                            "AND profile_type = :pt"
+                        ),
+                        {"content": _json.dumps(content, ensure_ascii=False),
+                         "ws": workspace_id, "cid": decision_case_id, "pt": profile_type},
+                    )
+                else:
+                    await db.execute(
+                        sa_text(
+                            "INSERT INTO case_profiles (workspace_id, decision_case_id, profile_type, content) "
+                            "VALUES (:ws, :cid, :pt, CAST(:content AS jsonb))"
+                        ),
+                        {"ws": workspace_id, "cid": decision_case_id, "pt": profile_type,
+                         "content": _json.dumps(content, ensure_ascii=False)},
+                    )
+            await db.commit()
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "profile extraction failed for case %s", decision_case_id, exc_info=True
+        )
+
+
+from sqlalchemy import text as sa_text  # noqa: E402
+
+
+@router.get("/cases/{decisionCaseId}/profiles")
+async def get_case_profiles(
+    decision_case_id: UUID = Path(alias="decisionCaseId"),
+    context: WorkspaceContext = Depends(require_capability(WorkspaceCapability.CONTRIBUTE)),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Return the latest extracted profiles for one case."""
+
+    rows = (
+        await db.execute(
+            sa_text(
+                "SELECT profile_type, content, version FROM case_profiles "
+                "WHERE workspace_id = :ws AND decision_case_id = :cid"
+            ),
+            {"ws": context.workspace_id, "cid": decision_case_id},
+        )
+    ).all()
+    result: dict[str, Any] = {}
+    for row in rows:
+        result[row[0]] = {"content": row[1], "version": row[2]}
+    return {"ok": True, "data": result}
