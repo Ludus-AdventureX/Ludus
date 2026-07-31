@@ -57,6 +57,11 @@ workspace_router.include_router(simulation_case_anchor_router)
 from app.tenancy.invites import router as invites_router  # noqa: E402
 
 workspace_router.include_router(invites_router)
+# BYOK connector management (AGENTS sections 8 + 12): audited catalog only,
+# AES-256-GCM at rest, masked reads, manage_connectors capability.
+from app.connectors.routes import router as connectors_router  # noqa: E402
+
+workspace_router.include_router(connectors_router)
 # Data rights (interlude B): OWNER export + confirmed purge.
 from app.tenancy.data_rights import router as data_rights_router  # noqa: E402
 

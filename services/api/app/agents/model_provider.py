@@ -514,3 +514,25 @@ def build_secondary_model_provider_from_env(
         name="secondary",
         transport=transport,
     )
+
+
+def build_model_provider_from_connector(
+    *,
+    base_url: str,
+    api_key: str,
+    model_name: str,
+) -> ModelProvider:
+    """Construct a provider from a workspace model connector (BYOK endpoint).
+
+    Uses the same DeepSeekModelProvider which is OpenAI-compatible and works
+    with any compliant endpoint (Kimi, Qwen, GPT, etc.).
+    """
+
+    return DeepSeekModelProvider(
+        base_url=base_url,
+        api_key=api_key,
+        default_model=model_name,
+        timeout_seconds=90.0,
+        thinking_enabled=False,
+        name="workspace-custom",
+    )

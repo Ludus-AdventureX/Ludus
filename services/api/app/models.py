@@ -14,6 +14,7 @@ from sqlalchemy import (
     Float,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -2102,3 +2103,39 @@ class DomainEvent(Base):
     actor_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
     payload: Mapped[dict[str, Any]] = json_object_column()
     created_at: Mapped[datetime] = created_at_column()
+
+
+class WorkspaceConnector(Base):
+    """BYOK read-only connector credential (AGENTS section 12).
+
+    Stores ONLY ciphertext + nonce + key version + display mask; the plaintext
+    key exists in memory during one provider call and never persists.
+    """
+
+    __tablename__ = "workspace_connectors"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_workspace_connectors_workspace_id"),
+        UniqueConstraint(
+            "workspace_id", "provider",
+            name="uq_workspace_connectors_workspace_provider",
+        ),
+        CheckConstraint(
+            "provider IN ('exa', 'firecrawl', 'tavily', 'model', 'mcp')",
+            name="ck_workspace_connectors_provider_in_catalog",
+        ),
+        Index("ix_workspace_connectors_workspace", "workspace_id"),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    key_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    mask: Mapped[str] = mapped_column(String(24), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="available", server_default="available"
+    )
+    created_at: Mapped[datetime] = created_at_column()
+    config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
