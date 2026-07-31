@@ -1,0 +1,122 @@
+#!/bin/sh
+# ============================================================================
+# pre-commit hook — Enforces AGENTS.md §12/§17 secret & banned-file rules
+# Activated by: git config core.hooksPath .githooks
+# ============================================================================
+
+blocked=0
+
+# === Rule §13: Block commits on frozen Task 6 branches ===
+current_branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo "DETACHED")
+case "$current_branch" in
+    codex/task-06-method-pack|codex/qa-task-06-method-pack|codex/integrate-task-06-method-pack)
+        echo "=========================================="
+        echo "[BLOCKED] Commit on frozen branch: $current_branch"
+        echo ""
+        echo "  AGENTS.md §13: MUST NOT continue modifying or committing"
+        echo "  on completed Task 6 branches. Create a fresh"
+        echo "  codex/<task-name> branch from latest local main."
+        echo "=========================================="
+        exit 1
+        ;;
+esac
+
+# === Rule §19: Commits on main require explicit confirmation ===
+if [ "$current_branch" = "main" ] && [ "${LUDUS_ALLOW_MAIN_COMMIT:-0}" != "1" ]; then
+    echo "=========================================="
+    echo "[BLOCKED] Commit directly on main"
+    echo ""
+    echo "  AGENTS.md §13/§19: New development uses codex/<task-name>"
+    echo "  task branches; only the designated Mainline Integration"
+    echo "  owner updates main after the full acceptance gate."
+    echo ""
+    echo "  Integration owner may confirm explicitly with:"
+    echo "    LUDUS_ALLOW_MAIN_COMMIT=1 git commit ..."
+    echo "=========================================="
+    exit 1
+fi
+
+# === Rule §12/§17: Block staging of banned files ===
+BANNED_PATHS="LICENSE
+探讨/.env
+探讨/auth.json"
+
+staged=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+
+echo "$BANNED_PATHS" | while IFS= read -r banned; do
+    if echo "$staged" | grep -qxF "$banned"; then
+        echo "=========================================="
+        echo "[BLOCKED] Staging of banned file: $banned"
+        echo ""
+        echo "  AGENTS.md §12/§17: This file MUST NOT be committed."
+        echo "  Run: git reset HEAD $banned"
+        echo "=========================================="
+        exit 1
+    fi
+done || blocked=1
+
+# === Rule §12: Block .env files (allow .env.example) ===
+env_files=$(echo "$staged" | grep -E '(^|/)\.env$' | grep -v '\.env\.example' || true)
+if [ -n "$env_files" ]; then
+    echo "=========================================="
+    echo "[BLOCKED] Staging of .env file(s):"
+    echo "$env_files"
+    echo ""
+    echo "  AGENTS.md §12: .env files contain secrets and MUST NOT"
+    echo "  be committed. Only .env.example (with placeholders) is"
+    echo "  allowed."
+    echo "=========================================="
+    blocked=1
+fi
+
+# === Rule §12: Block .key files ===
+key_files=$(echo "$staged" | grep -E '\.key$' || true)
+if [ -n "$key_files" ]; then
+    echo "=========================================="
+    echo "[BLOCKED] Staging of key file(s):"
+    echo "$key_files"
+    echo ""
+    echo "  AGENTS.md §12: Private key files MUST NOT be committed."
+    echo "=========================================="
+    blocked=1
+fi
+
+# === Rule §12: Scan staged content for secret patterns ===
+# Only scan text files that are being added or modified
+SECRET_PATTERNS='(sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY)'
+
+if [ -n "$staged" ]; then
+    # Check staged diff content for high-confidence secret patterns
+    leaked=$(git diff --cached -U0 --diff-filter=ACM -- . \
+        ':(exclude)*.example' ':(exclude)*.sample' ':(exclude)*.md' \
+        | grep -E "^\+" \
+        | grep -v "^+++" \
+        | grep -oE "$SECRET_PATTERNS" \
+        | head -5 || true)
+    if [ -n "$leaked" ]; then
+        echo "=========================================="
+        echo "[BLOCKED] Potential secret detected in staged changes"
+        echo ""
+        echo "  Patterns found (first 5):"
+        echo "$leaked" | sed 's/^/    /'
+        echo ""
+        echo "  AGENTS.md §12: API Keys, JWT secrets, private keys,"
+        echo "  tokens, and personal data MUST NOT be committed."
+        echo ""
+        echo "  If this is a false positive (e.g., test fixture with"
+        echo "  placeholder), set LUDUS_ALLOW_SECRET_PATTERN=1:"
+        echo "    LUDUS_ALLOW_SECRET_PATTERN=1 git commit ..."
+        echo "=========================================="
+        if [ "${LUDUS_ALLOW_SECRET_PATTERN:-0}" != "1" ]; then
+            blocked=1
+        else
+            echo "  [OVERRIDE] LUDUS_ALLOW_SECRET_PATTERN=1 — proceeding"
+        fi
+    fi
+fi
+
+if [ "$blocked" -ne 0 ]; then
+    exit 1
+fi
+
+exit 0

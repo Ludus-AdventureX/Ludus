@@ -281,6 +281,7 @@ AnalysisRun:     queued | planning | retrieving | analyzing | criticizing |
 - 文件：覆盖 API/Worker/Renderer shared volume 可见性、Workspace 路径规范化、跨租户 404、路径穿越拒绝、hash/metadata 一致性和静态直链不可用。
 - 金路径/UI：用 Playwright 跑 1440x900、平板和 390x844，人工检查截图中的重叠、裁切、空白和来源标识。
 - 测试默认不得调用付费或真实外部服务。live-provider 测试必须显式、可选，并在无 Key 时安全跳过。
+- QA/门禁资源回收：任何 QA 或门禁运行启动 compose 栈时，MUST 使用运行专属项目名（`docker compose -p ludus-qa-<run-id> ... up -d`），使容器统一携带 `com.docker.compose.project` 标签；门禁结束（无论成败）后 MUST 对本次启动的项目执行 `scripts/qa_teardown.ps1 -Project ludus-qa-<run-id>`（内部执行 `docker compose -p <project> down --remove-orphans` 并复查残留）。清理前先运行 `scripts/qa_teardown.ps1 -Inventory`（只读 `docker ps` 盘点）并与产品方确认；只允许按本次项目标签清理，停止/删除非本次启动的容器需按第 18 节单独授权。验收标准：一次完整门禁运行结束后 `docker ps` 中无本次遗留的 QA 容器。
 
 常用命令以仓库实际脚本为准，初始合同为：
 
@@ -292,6 +293,8 @@ pnpm --dir apps/web test
 pnpm --dir apps/web build
 pnpm --dir apps/web exec playwright test
 powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+powershell -ExecutionPolicy Bypass -File scripts/qa_teardown.ps1 -Inventory
+powershell -ExecutionPolicy Bypass -File scripts/qa_teardown.ps1 -Project ludus-qa-<run-id>
 uv run --project services/api python scripts/verify_demo.py
 pnpm --dir apps/web audit --prod
 uv run --project services/api pip-audit
@@ -360,3 +363,53 @@ Hackathon Prototype 候选只有在不可降级主链路、Web App、5 分钟演
 - Updating or publishing `main` requires fixed and traceable implementation and QA SHAs. At minimum: QA verdict is PASS; P0/P1 findings are zero; relevant tests, migrations, contract-drift checks, Decision OS verification, and static checks pass; changed paths comply with manifest owner scope; secret/IP/publish-scope audit passes; and remote `main` is re-read immediately before merge or push to detect concurrent advancement.
 - When repository policy requires a PR or status checks, agents MUST inspect its changed files, reviews, comments, and required checks before merge. Local integration must use an isolated integration branch and perform equivalent review and full acceptance. Agents MUST NOT force-push, rewrite shared history, skip required checks, overwrite remote `main`, or substitute local cache state for live remote verification.
 - After every remote write, agents MUST fresh-read the remote `main` SHA and record, in `HEAD`, `HISTORY`, or an approved handoff: remote URL; remote main before/after SHA; pushed branch/SHA; PR URL or number when applicable; check and review verdicts; merge method; live-verification result; and remaining risks. Credentials must never be recorded.
+
+## 20. Worktree 生命周期约定
+
+本节约束 `decision-lab` 仓库全部 `git worktree` 的创建、校验与回收，适用于人类开发者和 AI 开发代理。
+
+### 创建
+
+- 新 worktree MUST 统一放入集中目录 `E:\Temp\xiayu\Documents\adventure-x\decision-lab-worktrees\<task-name>\`；MUST NOT 再在 `adventure-x` 顶层散落创建 `decision-lab-*` 平级目录。`decision-lab-G0` 仅保留其第 18 节定义的 Gate 0 切片用途，不再接收新 worktree。
+- worktree 目录名 SHOULD 与任务分支名对应（分支 `codex/<task-name>` 对应目录 `<task-name>`），每个任务一个专属 worktree，遵守第 13/19 节的分支与 ownership 规则。
+- 创建 worktree 后、开始任何开发前，MUST 校验该 worktree 内 `AGENTS.md` 与 canonical（`decision-lab/AGENTS.md`，即主工作树当前版本）逐字节一致（例如比较 SHA-256）。不一致时 MUST 立即停止：这说明基线分支落后于当前约束，必须先以最新本地 `main` 重建基线或将差异上报产品方，不得在过期约束下继续工作。
+
+### 回收
+
+- 任务完结（合并、否决或废弃）后，owner MUST 在主仓库执行 `git worktree remove <path>`（或删除目录后执行 `git worktree prune`），使 `git worktree list` 与磁盘目录一一对应，无悬挂条目。分支本身按第 19 节规则保留或删除。
+- 目录删除属于 destructive 清理，遵守第 13 节：每次删除前 MUST 获得产品方对具体路径清单的单独授权，不得凭历史授权批量删除。
+- 定期盘点 SHOULD 以 `git worktree list --porcelain` 为准核对磁盘：路径缺失的条目执行 `git worktree prune`；磁盘存在但已完结的 worktree 列入待授权清理清单。
+
+### 存量处理
+
+- 2026-07-29 盘点：存量 108 个非主 worktree（约 65 个散落顶层、43 个位于 `decision-lab-G0/worktrees/`），无悬挂条目；抽查显示多数存量 worktree 的 `AGENTS.md` 相对 canonical 已漂移。存量按产品方授权节奏另行清理，清理前不得在其中继续开发。
+
+## 21. 任务书签发与执行规程
+
+本节承载所有 dispatch 任务书（现存于 `decision-lab-G0/dispatch/`，后续签发位置同样适用）中稳定不变的固定规程。任务书 MUST NOT 重抄本节条款；任务书与本节冲突时以本节为准，确需偏离的必须在任务书中显式标注偏离条款、理由与产品方回执。
+
+### 固定规程（每个任务无条件适用）
+
+- **Base 校验**：开工第一步 MUST 执行 `git ls-remote origin main` 取新鲜回执；回执 SHA MUST 满足任务书给定的 base 门槛（等于或不早于指定 SHA），并写入 kickoff worklog 与 `HEAD`。回执不满足门槛或前置依赖未落 main 时 MUST NOT 开工。
+- **分支与 worktree**：每个任务使用全新 `codex/<task-name>` 分支和按第 20 节创建的专属 worktree；任务分支上 MUST NOT rebase、amend 已推送提交或 force-push。
+- **依赖默认冻结**：任务默认零新增依赖；缺失工具或运行时 MUST 上报而非自装（第 18 节审批流程）。
+- **写域白名单**：任务书列出的写域是排他白名单，白名单外文件 MUST NOT 修改；确需越界（如既有测试适配）MUST 在 handoff 中逐条披露并说明原因。
+- **规范来源逐字消费**：任务书指定的计划文档/合同 MUST 逐字消费，禁止自创形状；canonical 面（路由、schema、事件、错误码）变更先写 CCR 文档，再用官方 `scripts/generate_contracts.ps1` 先生成后 `-Check`，ops 数只增不改，schemas 变更在 CCR 中披露。
+- **验收门固定骨架**：后端在一次性 PG16 容器上运行 canonical 与全量 pytest（`-q -W error -rxX`，基线数以任务书参数为准）零回归；`generate_contracts.ps1 -Check` = CONTRACT_DRIFT_OK；ruff/compileall/diff-check 干净。前端 `pnpm --dir apps/web test` 基线零回归，typecheck/build/lint 0 error。自有 QA 电池（跨租户 404 字节一致、反枚举、空态/降级等负面用例）MUST 随候选提交，禁止只留本地。
+- **归档与交接**：handoff MUST 落 `docs/handoffs/<TASK>_HANDOFF.md`；完成时汇报 tip SHA + `ready_for_qa`；独立 QA PASS 后只能由集成 lane 落 main（第 19 节）；`HEAD`/`HISTORY` 按第 18 节维护。
+
+### 任务书参数单（任务书只填以下变化项）
+
+```text
+任务名/角色:       <TASK-ID>（lane、owner、会话约定）
+分支名:            codex/<task-name>
+Base 门槛:         ls-remote main 回执 ≥ <SHA>（含迁移单头等状态断言）
+前置依赖:          <须先落 main 的任务，无则留空>
+规范来源:          <文档 + 行号/小节>
+目标条目:          <本任务特有目标，编号列出>
+写域白名单:        <排他路径清单>
+测试基线数:        canonical <N> / 全量 <M> / web <K>
+迁移参数:          <rev-id、down_revision，无迁移则留空>
+专项验收断言:      <本任务特有的验收项>
+```
+
