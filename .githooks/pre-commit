@@ -37,8 +37,9 @@ if [ "$current_branch" = "main" ] && [ "${LUDUS_ALLOW_MAIN_COMMIT:-0}" != "1" ];
 fi
 
 # === Rule §12/§17: Block staging of banned files ===
-BANNED_PATHS="LICENSE
-探讨/.env
+# §17 (2026-08-01): root LICENSE is now required (PolyForm Noncommercial 1.0.0);
+# sensitive paths below remain permanently banned.
+BANNED_PATHS="探讨/.env
 探讨/auth.json"
 
 staged=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)

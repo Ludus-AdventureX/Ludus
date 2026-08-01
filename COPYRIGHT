@@ -1,13 +1,17 @@
-﻿Copyright (c) 2026 xiayuzizhuo666 / Ludus.
-All rights reserved.
+Copyright (c) 2026 Cai Wentao (Full-stack Developer) / Ludus.
 
-No license is granted to use, copy, modify, distribute, sublicense, host,
-or commercially exploit the Ludus source code, documentation, methods,
-prompts, datasets, designs, or other original materials except under a
-separate written agreement from the rights holder.
+Licensed under the PolyForm Noncommercial License 1.0.0 (the "License");
+you may use, copy, modify, and distribute the software for noncommercial
+purposes only, in accordance with the License. A copy of the License is
+provided in the LICENSE file in the repository root and is available at
+<https://polyformproject.org/licenses/noncommercial/1.0.0>.
+
+Required Notice: Copyright (c) 2026 Cai Wentao (Full-stack Developer) / Ludus.
+
+Commercial use, including selling or licensing the software, hosting it as
+a paid service, incorporating it into commercial products, or otherwise
+using it to generate revenue, requires a separate written agreement with
+the rights holder.
 
 Third-party components remain subject to their respective licenses and
 copyright notices.
-
-Before public distribution or commercial contracting, replace the account
-identifier above with the applicable person or company legal name.

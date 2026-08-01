@@ -336,12 +336,13 @@ Hackathon Prototype 候选只有在不可降级主链路、Web App、5 分钟演
 
 ## 17. 知识产权、许可与公开发布
 
-- 截至 2026-07-22，本仓库 MUST 保持 Private，根目录 MUST NOT 添加 `LICENSE`；Ludus 自有内容按 `LICENSING.md` 和 `COPYRIGHT` 的 **All Rights Reserved** 状态管理。不得把当前仓库描述为已经采用 MIT、Apache-2.0、AGPL-3.0、BSL 1.1 或其他公开许可。
-- 当前候选商业化结构是“核心私有 + 可选择性开放外围能力”。`ways/**` 自有方法、决策/评分/质量门、Agent 编排、因果模拟策略、系统 Prompt、eval corpus、golden fixtures、调优数据和可实质复现核心技术的资料默认 Proprietary；不得复制到公开仓库、公开包、公开镜像或公开演示资产。
-- SDK、API client、插件接口和非核心示例只有在路径级 IP boundary audit 后 MAY 候选 Apache-2.0；经拆分的社区 Web/API shell MAY 候选 AGPL-3.0-only + 商业双许可；选定服务器模块 MAY 候选 BSL 1.1，但 BSL 必须称为 Source Available，不得称为 OSI Open Source。以上均不是当前已授予许可。
+- 自 2026-08-01 起，本仓库 Ludus 自有内容（代码、文档、方法、Prompt、数据与资产）按 **PolyForm Noncommercial License 1.0.0**（根目录 `LICENSE`，SPDX: `PolyForm-Noncommercial-1.0.0`）对外授权。任何人可为**非商业目的**使用、复制、修改、分发本软件，包括个人学习、研究、实验、教学、慈善与宗教用途，以及慈善组织、教育机构、公共研究机构与政府机构的使用。
+- **任何商业目的的使用均被禁止**，包括销售、收费托管、OEM、为第三方创收提供服务或用于商业产品开发；商业使用必须获得产品方书面商业许可。
+- PolyForm Noncommercial 1.0.0 是 Source Available（源码可得）许可，**不是 OSI 开源许可证**。不得把当前仓库描述为已采用 MIT、Apache-2.0、AGPL-3.0、GPL、BSL 1.1、OSI Open Source 或其他公开许可。
+- 本仓库当前为 Public 可见。`ways/**` 自有方法、决策/评分/质量门、Agent 编排、因果模拟策略、系统 Prompt、eval corpus、golden fixtures 等核心资产随仓库公开供学习与研究，但仍受非商业条款约束：不得用于商业用途，不得单独打包进入商业产品或服务，不得以其为基础构建对外收费的衍生服务。
 - 任何开发者或 Agent MUST NOT 擅自创建、替换或修改根 `LICENSE`、SPDX header、版权主体、CLA/DCO、公开包发布配置或仓库可见性。许可变更必须获得产品方对具体路径、版本与许可的书面批准，并同步 `LICENSING.md`、`COPYRIGHT`、`README.md`、本文件和发布物。
-- 未经产品方确认，MUST NOT 把仓库改为 Public，也不得向任何公开 remote、registry 或镜像仓库推送核心内容。向当前受控 Private `origin` 首次 push 前仍必须确认远程可见性并完成当前树及 Git 历史的 secret/IP scan。
-- 第三方材料不因进入私有仓库而变成 Ludus Proprietary。任何 Extract & adapt 必须保留上游版权/许可证并记录精确版本、commit、源路径、函数和修改；公开发布前必须完成 `THIRD_PARTY_NOTICES.md`、资产授权、专利/商业秘密、商标与贡献者权利链审计。
+- 向公开 remote、registry 或镜像仓库推送、或改变仓库可见性前，MUST 完成 `LICENSING.md` 第 4 节全部 Gate：IP boundary audit、`THIRD_PARTY_NOTICES.md` 来源与许可审计、资产授权审计、专利/商业秘密审查、商标与主体确认、贡献治理、secret/IP scan（含 Git 历史），并经产品方书面确认。
+- 第三方材料不因进入本仓库而改变其自身许可。任何 Extract & adapt 必须保留上游版权/许可证并记录精确版本、commit、源路径、函数和修改；公开发布前必须完成 `THIRD_PARTY_NOTICES.md`、资产授权、专利/商业秘密、商标与贡献者权利链审计。
 - 如果仓库公开边界、第三方许可、贡献者再许可权或可专利披露存在不确定性，任务状态 MUST 标为 blocked 并交由产品方/法律顾问决定；不得以实现便利替代法律决策。
 
 ## 18. HEAD/HISTORY、验证切片与本地环境
