@@ -1,4 +1,4 @@
-﻿# Ludus
+# Ludus
 
 > Ludus is an AI-native decision operating system that turns complex questions into traceable evidence, structured analysis, causal simulations, and human-signed, reviewable decisions.
 ## Promotion animation
@@ -12,16 +12,16 @@ https://github.com/user-attachments/assets/89ed0993-a0e2-4159-a5f6-9ec83a8b0f5a
 ## Current status
 
 - **Development phase:** Gate 0 validated; Task 2/19A implementation pending
-- **Repository visibility:** Private
-- **License:** AGPL-3.0-only (open source) + commercial dual licensing; see [`LICENSE`](LICENSE)
+- **Repository visibility:** Public
+- **License:** PolyForm Noncommercial 1.0.0 (Source Available; noncommercial use permitted, commercial use requires a written license)
 - **Capacity clock:** Not started. Automated Gate 0 passed; the 6-agent/72-hour clock remains conditional on accepting the proven system-Chrome Playwright fallback or acquiring bundled Chromium.
 - **Production readiness:** Not ready
 
-See [`LICENSING.md`](LICENSING.md) and [`COPYRIGHT`](COPYRIGHT) before copying, distributing, relicensing, or publishing any part of this repository.
+See [`LICENSING.md`](LICENSING.md) and [`COPYRIGHT`](COPYRIGHT) before copying, distributing, relicensing, or publishing any part of this repository. This repository is licensed under the PolyForm Noncommercial License 1.0.0: noncommercial use (learning, research, teaching, evaluation) is permitted; commercial use requires a separate written license from the rights holder.
 
 ## Authoritative repository and workspace sources
 
-The canonical product, architecture, contract, execution, and acceptance plan is now versioned inside this Private repository. Visual reference and disposable validation artifacts remain external workspace inputs:
+The canonical product, architecture, contract, execution, and acceptance plan is now versioned inside this repository. Visual reference and disposable validation artifacts remain external workspace inputs:
 
 | Purpose | Path |
 |---|---|
@@ -55,7 +55,7 @@ apps/web/                 Next.js frontend (Task 1W)
 packages/contracts/       Generated OpenAPI/TypeScript contract package
 services/api/             FastAPI service
 scripts/                  Preflight, provider probe, contract generation, validation
-ways/                     Versioned decision-method packages (private core by default)
+ways/                     Versioned decision-method packages (noncommercial core by default)
 HEAD                      Current work record
 HISTORY                   Append-only completed/prior work history
 ```

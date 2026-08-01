@@ -1,23 +1,17 @@
-﻿Copyright (c) 2026 xiayuzizhuo666 / Ludus.
+Copyright (c) 2026 Cai Wentao (Full-stack Developer) / Ludus.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, version 3 of the License
-only (AGPL-3.0-only). See the LICENSE file in the repository root.
+Licensed under the PolyForm Noncommercial License 1.0.0 (the "License");
+you may use, copy, modify, and distribute the software for noncommercial
+purposes only, in accordance with the License. A copy of the License is
+provided in the LICENSE file in the repository root and is available at
+<https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
+Required Notice: Copyright (c) 2026 Cai Wentao (Full-stack Developer) / Ludus.
 
-Ludus is dual-licensed. As an alternative to the AGPL-3.0-only terms,
-a separate commercial license is available from the rights holder for
-organizations that cannot or do not wish to comply with the AGPL
-source-code obligations. See LICENSING.md for the dual-licensing
-policy and contact process.
+Commercial use, including selling or licensing the software, hosting it as
+a paid service, incorporating it into commercial products, or otherwise
+using it to generate revenue, requires a separate written agreement with
+the rights holder.
 
 Third-party components remain subject to their respective licenses and
 copyright notices.
-
-Before public distribution or commercial contracting, replace the account
-identifier above with the applicable person or company legal name.
