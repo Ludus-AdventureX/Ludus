@@ -4223,3 +4223,288 @@ backend 1017 + web lint/typecheck/159 unit/build + contract-neutrality all PASS.
   and runs; harmless, not cleaned.
 
 - Secret policy: do not record credentials here.
+
+
+==============================================================================
+# ARCHIVED FROM HEAD AT 2026-08-01 (Asia/Shanghai), archived before full-lens-fix + assumption-registration session
+==============================================================================
+
+# Work Log: alpha 体验修复会话（A/B/C 三层整改）
+
+- Status: active
+- Started: 2026-07-30 (Asia/Shanghai)
+- Role: 交互式修复会话（用户驱动），单 owner
+- Tree: `decision-lab-mainline-integration` on `main` @ 3eae639（本次改动暂不提交，
+  留在工作树中由用户审阅；提交需用户明确授权）
+- 部署对象: `ludus-alpha` compose 项目（compose.prototype.yaml + .env.prototype，
+  web 映射 127.0.0.1:3200）
+- 约束: 不 rebase/amend/force-push；不推远程；不新增依赖；秘密值不落本文件
+
+## 背景（审计结论摘要，全文见本会话对话记录）
+
+全流程实测（3200 端口）+ 日志/DB/源码追踪确认三条总根因：
+
+1. 整栈运行在 FIXTURE_MODE=true / MODEL_PROVIDER=fixture（MODEL_API_KEY 已配
+   但未启用）→ 对话/质检 502（EmptyModelContentError，API 侧 fixture provider
+   无兜底）、focused 全为 [fixture] 占位、full 永远被 lens 审计拦截
+   （strategic_lens_incomplete / strategic_lens_reference_mismatch）。
+2. 新组件（Invite/Mentor/Signoff/FactorSandbox/Retro/Provenance/Portfolio/
+   Progress/ReportList/clarifier）绕过 look 设计系统：look-styles.css 867 行后
+   附加区引用不存在的 token（var(--hairline,#2a2a35) 等）落到暗色 hex fallback，
+   圆角/渐变/pill/rem 违反 Look V7 合同；.signoff-panel 完全无 CSS（决定页表单
+   错位重叠）。
+3. 视图间无共享 Run/报告状态：report_artifacts 已写入但 J 页标题硬编码
+   "报告尚未生成"、列表显示裸 UUID、详情为 JSON dump；E 页不消费 run
+   （QualityGatePanel 为占位文案，quality_gate_results 表 0 行）；
+   Q 页 .intro-grid align-items:end + 重组件塞入 intro-actions 槽导致启动分析
+   时左栏整体下移。
+
+## 任务规划
+
+### A 层 — 让系统"真"起来（P0，先行）
+
+- [ ] A1 环境切换: .env.prototype 设 MODEL_PROVIDER=deepseek、
+      MODEL_BASE_URL=https://api.deepseek.com、MODEL_NAME=deepseek-v4-pro、
+      FIXTURE_MODE=false（Key 已在，不记录值）；force-recreate api/worker；
+      验证容器 env 与 worker 日志 provider 绑定。
+- [ ] A2 后端诚实性: conversations 路由用户消息先持久化再调模型（模型失败不再
+      吞消息、不再裸 502 文案）；fixture 部署下对话/质检绑定确定性兜底（与
+      worker 的 synthesize_stage_response 同构）；前端 composer 错误文案改人话。
+- [ ] A3 前端拦截语义: blocked reason_codes 映射人话+修复动作；originModes 含
+      fixture 时 full 深度预先告知不可用（前端-only，不改 canonical 合同）。
+- [ ] A4 验证: 浏览器实测 3200 —— 质检出卡、札记有系统回应、focused 真实检索
+      产出、full 走真实五透镜；截图留档 output/；更新本文件。
+
+### B 层 — 信息架构：让结果有去处（A 完成后）
+
+- [ ] B1 J 判断页动态化：标题/状态由 report_artifacts 驱动；structured_content
+      渲染为版式化报告（执行简报/条件化建议/证据引用/最强反对/六维质量/来源
+      模式）；删除 JSON dump 与 UUID 按钮文案。
+- [ ] B2 E 证据页接真数据：研究轨迹=analysis_events 回放；QualityGatePanel 消费
+      quality_gate_results（管线补写 focused gate 行）+ blocked findings。
+- [ ] B3 发起入口收敛：只留 Q 页发起，运行中引导至 E 页；删 E 页重复控件；
+      决策组合墙状态与 run 同步。
+- [ ] B4 布局修复：AnalysisLaunchPanel/进度流移出 view-intro；intro-actions 恢复
+      轻量；重内容列 align-items 改 start；启动分析零位移。
+
+### C 层 — 设计系统统一：去 AIGC 味（B 完成后）
+
+- [ ] C1 重写 look-styles.css 867 行后附加区：全部消费既有 semantic token，
+      方角/hairline/px/无渐变无阴影无 pill，形制对齐 ledger-sheet 族。
+- [ ] C2 原生控件替换：slider/checkbox/radio 按 look 语言重绘。
+- [ ] C3 决定页重构：无 qualifying full run 时签署区收起为状态说明；补 signoff
+      样式；签署来源拒绝 focused run；导师评审从 D 页移除（如保留移入 Review）。
+- [ ] C4 邀请协作者重做：look 风格 dialog；"授予签署权"独立二次确认。
+- [ ] C5 文案清理：删除 Task 编号（Task 14W 等）、[fixture] 前缀改来源 badge、
+      UUID 改问题标题+短编号、工程黑话改用户语言。
+- [ ] C6 R 复盘 dialog 落地（Review canonical 结构后端已备）。
+- [ ] C7 验收：Playwright 金路径 1440x900 + 390x844 截图人工审查；每视图
+      loading/empty/error/blocked 状态核对。
+
+## 已完成
+
+- A0 归档：上一条 HEAD（mainline integration + alpha follow-ups 记录）已于
+  2026-07-30 字节安全追加至 HISTORY（8485 bytes，前缀校验 PASS）。
+- A1 环境切换（完成）：.env.prototype 已改 MODEL_PROVIDER=deepseek、
+  MODEL_BASE_URL=https://api.deepseek.com、MODEL_NAME=deepseek-v4-pro、
+  FIXTURE_MODE=false（Key 自 decision-lab/.env 程序化迁入，未回显）；
+  另补 SIGNUP_INVITE_CODE_HASHES（本地测试邀请码的 SHA-256，码值不入档）。
+  发现并处置：前序泣道已自行回收 ludus-alpha 栈（含 volume）并把
+  alpha-followups 并入 main（tip 6142d04）；本次以新 main 重建镜像重拉栈。
+- A1-附带（完成）：新 main 的生产镜像缺依赖——methods/source_validator 运行时
+  import jsonschema，但 pyproject 把它放在 dev 组，api 容器启动即死
+  （ModuleNotFoundError）。已将 jsonschema>=4.23,<5 移入 runtime
+  dependencies 并 uv lock 重锁（零新增包，仅分组移动，lock 变化 4 行）。
+- A2 后端诚实性（完成）：
+  - conversations/routes.py：用户消息在调模型前先 commit（模型失败不再
+    回滚札记，UI 的“已发送”不再说谎）；MODEL_OUTPUT_INVALID 文案改人话。
+  - 新增 app/agents/conversation_fixtures.py：fixture 部署下对话/质检绑定
+    确定性兜底（超集 payload 同时满足两套 schema，全部 [fixture] 前缀）；
+    conversations.get_model_provider 与 cases.get_clarifier_provider 接入。
+- A3 前端拦截语义（完成）：AnalysisLaunchPanel 的 blocked 卡点码映射人话
+  （strategic_lens_* 四码）；trace 模型名以 fixture 开头时，blocked 引导改为
+  “演示模式必然拦截，非档案缺口”，不再指向死循环的“回 Q 区补事实”。
+
+## 验证记录
+
+- 静态门：ruff + compileall 对三个后端改动文件全净；apps/web tsc --noEmit 全净。
+- 部署门：docker compose build + up 成功；api healthy；/api/health 200；
+  容器内 env 确认 MODEL_PROVIDER=deepseek、FIXTURE_MODE=false、Key len=35。
+- 浏览器实测（3200，邀请码注册新账号+新案例）：
+  1) 问题质检：真实模型返回完整质检卡（真决策/疑似假两难+第三选项/
+     Type1/问题改写），“暂不可用”消失。
+  2) 记入札记：系统回应真实生成（含待确认清单），structural validation
+     错误消失。
+  3) focused live 金路径：Run 6e558ff4 六阶段 queued→…→ready（约 6 分钟），
+     origin_modes={live}，每阶段带 deepseek-v4-pro 标识与真实内容；
+     report_artifacts 写入真实报告（qualityGate.passed=true，证据带真实 URL，
+     来源分级 L5/L6）。注：EXA/FIRECRAWL 无 Key，检索为模型自主检索降级路径。
+  4) full live：六阶段全部真实执行后仍 blocked@0.86，卡点
+     strategic_lens_incomplete + reference_mismatch，strategic_lens_artifacts
+     为 0 行 —— 见下方新发现 P0。
+
+## 新发现 P0（A 层验证过程中暴露，超出 A 层原定范围）
+
+- **full 深度对 live 也是结构性死路**：worker 的通用 stage prompt 只声明
+  "lensPayloads 没有就给 {}"，从未按方法包的五透镜独立 prompt/schema 发起
+  专项调用；live 模型自然返回 {} → 五透镜零持久化 → lens 审计必拦。
+  基建全部已存在但未接线：method-packs/.../prompts/lenses/*.md、
+  strategic-lens-output.schema.json、app/strategic_lenses/（五 lens 实现+
+  validators+repository 写路径）、worker 的 FULL_LENS_SCHEDULE/_run_lens_stages
+  消费侧。缺的是：_run_lens_stages 在 payload 缺失时按包内 prompt+schema 逐
+  lens 调模型的执行器（owner 归属 Ways/Agent Pipeline 泳道）。
+- 处置：已向用户上报，等待决策（立即修 六 B/C 后修 六 另开泳道）。
+  A3 的 blocked 引导已避免死循环文案，但 live 下的卡点仍会被误读为
+  "证据不足"，需在修复前临时标注或尽快修复。
+
+## 未验证 / 风险
+
+- 上一条 HEAD 声称 alpha 栈已停止移除且 invite gate 已并入 main，但实测
+  ludus-alpha 五容器在跑、main tip 仍为 3eae639、guest 入口开启——记录与现实
+  不一致，本次以现实为准，不追溯改写历史记录。
+- 本机另有 3000/8000 本地进程（decision-lab-worktrees/analysis-progress-ui），
+  易与 3200 混淆；本会话只动 3200 栈。
+- 切 live 后 DeepSeek 调用产生真实费用；EXA/FIRECRAWL key 状态待 A1 时核验。
+
+## 下一步
+
+- 用户自选模型 + 自定义 MCP 连接器已完成并部署。
+  - workspace_connectors 表已扩展：provider 支持 exa/tavily/firecrawl/model/mcp，新增 config JSONB 列。
+  - 连接器设置面板支持三种类型：搜索连接器、自定义模型、MCP 工具服务器。
+  - 对话/分析优先使用 workspace 自定义模型，无则回落系统默认 DeepSeek。
+  - MCP 工具发现端点 GET /connectors/{id}/tools 已实现。
+- 剩余工作：
+  - P1: Worker MCP 工具调用集成（深度分析 retrieving 阶段可调用 MCP 工具）
+  - full 五透镜 evidence ledger 集成（另开泳道）
+
+
+==============================================================================
+# ARCHIVED FROM HEAD AT 2026-08-01 (Asia/Shanghai), archived after full-lens-fix + assumption-registration session (work complete)
+==============================================================================
+
+# Work Log: full 透镜链路修复 + 假设 ID 化注册（质量门解锁）
+
+- Status: active
+- Started: 2026-08-01 (Asia/Shanghai)
+- Role: 交互式修复会话（用户驱动），单 owner
+- Tree: `decision-lab-mainline-integration` on `main` @ ac8946e（改动未提交，
+  留在工作树由用户审阅；提交需用户明确授权）
+- 约束: 不 rebase/amend/force-push；不推远程；不新增依赖；秘密值不落本文件；
+  canonical compose（decision-lab）与第三方容器不受波及
+
+## 背景（审计结论，已逐行确认）
+
+用户 RingBell 分析在 full 深度被质量门双拦截（strategic_lens_incomplete +
+strategic_lens_reference_mismatch）。审查结论：问题内容无结构性问题，质量门
+fail-closed 工作正常，坏在透镜写路径参数未接通 + 假设引用无权威来源。三条根因：
+
+1. ledger 恒 None：原 861 行 `ledger=result.output.get("ledger")` —— live
+   executor 与 fixture provider 均不产出该键 → persist_lens_stage_output 中
+   ledger.missing_references() 抛 AttributeError → except 静默 continue →
+   五透镜全部写不进 StrategicLensArtifact → 质量门双拦截。
+2. prompt 路径：本地 fallback parents[3]（services/）应为 parents[4]（仓库根）。
+3. claims 表无生产写入者：assumption 唯一数据库权威（Claim 行）恒空 →
+   counterparty 校验器死锁：模型声明 coreAssumptionIds 被拒（ID 不存在）、
+   不声明则行为校验失败（core_assumptions_must_be_registered_references）。
+
+## 任务规划（本会话）
+
+- [x] 1. 修 ledger：_run_lens_stages 从数据库构造 FrozenReferenceLedger
+- [x] 2. 修 prompt 路径：parents[3] → parents[4]
+- [x] 3. option 1（用户批准）：dossier 假设 ID 化注册为权威（claims 表写入链路）
+- [x] 4. 测试验证：新增单元 + 端到端测试；worker/lens/claims 零回归
+- [x] 5. 清理：一次性 PG 容器 + 探针文件（用户多轮确认后删除）
+- [x] 6. 汇报：完成状态逐项核对
+- [ ] 7. Task 13 正式沙盘图创建链路（报告→draft 图→确认→SIM-02A）——未做，
+     需用户决策后单独规划
+
+## 已完成
+
+- 1. `_frozen_reference_sets(run)` helper + `_run_lens_stages` 构造
+  FrozenReferenceLedger（source_packet_ids/evidence_ids/claim_ids/
+  assumption_ids/challenge_ids 全部来自已持久化实体；同源喂养专用 lens prompt
+  输入与写入路径——模型看到的引用写入路径必然可解析，杜绝自声明）。
+- 2. `_execute_dedicated_lens` 引用收集重写：弃用恒空的 stage evidenceFunnel
+  读取（record_stage_completed 只存 outputHash，audit.admitted 是计数），
+  改为 DB research_packets.evidence_ids 展开 + claim/assumption/challenge
+  refs（≤20 传入 LensRequest）。
+- 3. `_register_dossier_assumptions`（ledger 冻结前调用）：将
+  decision_case_id 归属 run（隐式 case 级；subject 级条目 decision_case_id
+  为 NULL 不匹配）+ statement_type=ASSUMPTION + status=CONFIRMED 的
+  DossierEntry 注册为 Claim 行（statement_type=assumption、importance=core、
+  source=user、source_span_ids=[str(dossier_entry_id)] 幂等锚，重复进入阶段
+  不重复写入）。对话 messages 中的假设刻意不注册：无 statement_type 标记，
+  自由文本无法确定性提取（docstring 已说明设计取舍）。
+- 4. 测试：新增 services/api/tests/lens_lanes/test_dossier_assumption_registration.py
+  （4 单元：注册/过滤/幂等/空 fail-closed）+ test_analysis_worker.py 追加
+  2 端到端（ledger 联动 + 空 ledger fail-closed）。首轮 2 failed 为测试断言
+  自身错误（assumption_ids 是 Claim.id 而非 dossier entry id），修复后全绿。
+- 5. 清理：ludus-pg-lensfix 容器（postgres:16，端口 55442）+ 用户批准的
+  7 个探针文件 + 本次新产生的 2 个（run_assumption_tests.ps1、
+  assumption-lane-pytest.log，用户已确认）全部删除；canonical 容器
+  （ludus-alpha-*、decision-lab-db-1）未波及。
+- 6. HEAD/HISTORY 落档：旧 HEAD（A/B/C 会话）已于 2026-08-01 字节安全
+  归档至 HISTORY（10012 bytes，前缀/尾部校验 PASS）；本文件为当前会话记录。
+
+## 验证记录
+
+- 核心套件（worker + lens lanes）：135 passed（ledger/prompt 修复后）。
+- 新增测试后全套件：141 passed 全绿（worker/lens/claims 既有测试零回归）。
+- full-suite（CI 完整命令，一次性 PG 16 + alembic upgrade head）：
+  1011 passed, 6 failed；6 个失败经 git stash 前后对比确认为预存失败
+  （BYOK connector 模型差异 2、Windows asyncpg ResourceWarning 3、worktree
+  额外迁移文件 1），与本次修改无关。
+- 清理后验证：docker ps -a 无 ludus-pg-lensfix；test-results/ 仅剩
+  .last-run.json 与 3 张既有截图。
+- 注：一次性测试库已随清理删除，未保留可重跑环境；测试证据来自
+  2026-08-01 实测记录。
+
+## 未验证 / 风险
+
+- counterparty 在数据条件满足时可通过质量门（模型质量正常时），但未用真实
+  live 模型端到端实跑 full 全流程（DeepSeek 调用产生真实费用，需用户发起）。
+- Task 13 正式沙盘链路仍未打通：无生产代码创建 CausalGraph（build_from_report
+  仅测试引用）、GraphConfirmationPanel 图确认纯本地 state 无持久化 API、
+  正式模拟按钮恒禁用、前端 sandboxData.ts fail-closed 加载器。这是下一个
+  大工程的候选（另开泳道）。
+- 3 个文件改动未提交（analysis_worker.py +199/-29、test_analysis_worker.py
+  +94、test_dossier_assumption_registration.py 新增），是否提交待用户授权。
+- 因素节点增删改查：Ludus 与 MiroFish 均无专门模型（MiroFish 有本体生成 +
+  自动建图服务，但节点只读；其异步建图任务化范式可借鉴）——已向用户说明。
+
+## 下一步
+
+- 当前工作（质量门解锁 + 假设 ID 化注册）已收尾；汇报完成后本文件归档至
+  HISTORY。
+- 待用户决策：① 是否提交当前 3 个文件改动；② 是否启动 Task 13 图创建链路
+  规划（大工程）；③ 是否发起一次真实 full 分析验证质量门端到端通过。
+
+## Archived work 2026-08-01 (Asia/Shanghai) - 质量门端到端拦截根因修复与展示透出
+
+# Current Work: 质量门端到端拦截根因修复与展示透出（归档）
+
+- Started: 2026-08-01 (Asia/Shanghai)
+- Status: completed (code converged, QA verified; deployment steps deferred to owner)
+- Tree: decision-lab-mainline-integration on main
+- Objective: 后端透出模型验证拒绝理由（validator_rejected）、前端修正卡点展示、测试验证；随后由结构修复任务接管提交。
+
+## Completed in this work
+
+- 后端：analysis_worker.py 在 validating 段 passed=false 且非 lens-audit 失败时，将 validating digest（headline/keyFindings/openQuestions）以 validator_rejected 码并入 audit_findings，blocked 事件携带真实卡点。
+- 前端：runReads.ts FINDING_LABELS 增加 validator_rejected；QualityGatePanel.tsx REPAIR_ACTIONS 增加 validator_rejected 且 gate.passed=true 时不显示分数；AnalysisLaunchPanel.tsx setFindings 过滤 passed:true 的 deterministic_gate 并展开 validator_rejected 的 headline/keyFindings。
+- lenses.py 为三个行为门控透镜补充完整 content 示例（ev-sample-* 占位 id），修复合约文本未 pin 的嵌套字段。
+- 测试：test_analysis_worker.py（validator_rejected 透出断言）、test_registry_assembly.py、test_dossier_assumption_registration.py（新增）、analysis-launch-panel.test.tsx（前端）。
+
+## Verification results (2026-08-01, 结构修复任务复验)
+
+- 后端受影响：test_analysis_worker.py 10/10 PASS；tests/lens_lanes/ 130/130 PASS；test_task0405_qa_adversarial_r2.py 12/12 PASS（单跑）。
+- 前端：vitest run 全量 24 文件 149/149 PASS（含 analysis-launch-panel 5/5）。
+- 全量 pytest：583 passed / 6 failed。6 个失败中 3 个为 main 基线既有 QA 电池滞后（test_models::test_core_table_set_and_workspace_scope、test_decision_os_invariants::test_database_status_columns_use_enums、test_task0405_qa_battery::test_qa7_lane_migration_chained_to_task10_revision），stash 验证与本次改动无关，属 alpha-followups 波次遗留（新表 workspace_connectors、迁移新增未同步 pin）；另 3 个（adv5 x2 / adv6）为全量并发残留状态，单跑通过。
+- 本工作未部署（镜像重建、端到端 full 验证为 owner 后续动作）。
+
+## 剩余风险
+
+- 部署与真实 full 端到端验证未执行（DeepSeek 费用/容器重建属 owner 授权范围）。
+- Q 区假设确认通路（profiles 画像 vs dossier_entries）核查未完成。
+- main 基线 3 个 QA 电池滞后项需 alpha-followups owner 更新 pin（test_models 期望表集合、test_qa7 迁移集、workspace_connectors.status 枚举类型）。
+
