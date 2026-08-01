@@ -2656,3 +2656,15 @@ The following record was inherited from seam commit cce4d70 (codex/task-07-agent
 - Fast gates: owner 84/0; four no-profile probes rejected; sensitivity capture 0 None + identical fingerprints; ruff/compileall/diff-check/conflict/scope clean; services/api/tests, migrations, models/types/schemas, packages/contracts, routes/web zero diff. Full battery deferred to the integration gate; QA-owned no-profile acceptance calls now require the P2 QA flip (recorded in handoff).
 - Handoff: docs/handoffs/SIM_ENG_02_PROFILE_ENFORCEMENT_FAST_FIX_HANDOFF.md; ready_for_fast_QA = YES; ready_for_public_route = NO.
 - No credentials recorded.
+
+## Archived work 2026-08-01T20:15:06.8849760+08:00
+
+# Archive Licensing Sync - PolyForm Noncommercial 1.0.0 - 2026-08-01 (Asia/Shanghai)
+
+- Role: Product-owner-directed, repository-wide licensing change (product-owner approval 2026-08-01).
+- Change: root LICENSE added - PolyForm Noncommercial 1.0.0 (SPDX: PolyForm-Noncommercial-1.0.0, Source Available, NOT OSI open source; noncommercial use permitted, commercial use requires written license); copyright holder now Cai Wentao (Full-stack Developer); LICENSING.md/COPYRIGHT/AGENTS.md section 17/README.md synced across the whole repo; pre-commit hook unblocked root LICENSE (鎺㈣/.env and 鎺㈣/auth.json bans retained).
+- Drift resolved: AGPL-3.0 dual-licensing commit 0054a8d replaced on main and all worktrees (AGPL allowed commercial use, contradicting the new noncommercial policy).
+- Commits: main e8ff446; canonical worktree (codex/a2a-pandaai-agent) afb11a0 incl. hook sync; mirrored on alpha-followups 65c85b9, alpha-gate-hardening 7217819, alpha-remaining-fixes f3f6383, analysis-progress-ui df88631, analysis-run-visibility af6033f; qa-baseline-check (detached HEAD) disk-synced only, 5 files uncommitted.
+- Verification: all 8 repository copies byte-identical for LICENSE/LICENSING.md/COPYRIGHT; residual scan for AGPL/All Rights Reserved/Private references clean; main worktree pre-existing uncommitted changes untouched.
+- Remaining: remote push not performed (product-owner action); mainline-integration worktree pre-existing uncommitted changes still pending its owner; qa-baseline-check detached commit optional.
+- No credentials recorded.
