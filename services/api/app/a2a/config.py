@@ -19,8 +19,17 @@ _DEFAULT_TASK_BUDGET_SECONDS = 900.0
 _DEFAULT_LENS_MODEL_CALLS = 24.0
 
 # services/api/app/a2a/config.py -> repo root (decision-lab) is 4 parents up:
-# a2a -> app -> services/api -> services -> repo root.
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+# a2a -> app -> services/api -> services -> repo root. The container tree is
+# shallower (/app/app/a2a/...), so walk up until method-packs is found instead
+# of hard-coding an index that overflows.
+_REPO_ROOT = next(
+    (
+        parent
+        for parent in Path(__file__).resolve().parents
+        if (parent / "method-packs").is_dir()
+    ),
+    Path("/app"),
+)
 
 
 def a2a_enabled() -> bool:
