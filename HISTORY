@@ -4519,3 +4519,33 @@ fail-closed 工作正常，坏在透镜写路径参数未接通 + 假设引用�
 - Verification: all 8 repository copies byte-identical for LICENSE/LICENSING.md/COPYRIGHT; residual scan for AGPL/All Rights Reserved/Private references clean; main worktree pre-existing uncommitted changes untouched.
 - Remaining: remote push not performed (product-owner action); mainline-integration worktree pre-existing uncommitted changes still pending its owner; qa-baseline-check detached commit optional.
 - No credentials recorded.
+
+## Archived work 2026-08-01 (Asia/Shanghai) - 仓库结构修复（分叉合并 / 文档索引 / worktree 回收）
+
+# Current Work: 仓库结构修复（分叉合并 / 文档索引 / worktree 回收）（归档）
+
+- Started: 2026-08-01 (Asia/Shanghai)
+- Status: completed
+- Tree: decision-lab on main（canonical 已切回 main）
+- Objective: 修复决策仓库结构性偏移——收敛 main 未提交工作、合并 codex/a2a-pandaai-agent 分叉入 main、canonical 切回 main、README/AGENTS.md 文档索引修复、回收 qa-baseline-check worktree。
+
+## Completed in this work
+
+1. main 未提交质量门修复收敛：validator_rejected 透出 + 前端展示修正 + lenses 内容示例 + 测试，复验（worker 10/10、lens_lanes 130/130、adversarial 12/12、vitest 149/149）后提交 427c8f0；原 HEAD 归档 HISTORY。
+2. 分叉合并：codex/a2a-pandaai-agent 4 个独有提交（A2A surface / QA teardown / licensing / lifecycle）no-ff 合入 main（96c371b），冲突 6 文件全部手工解决；6ad82ce 修复 a2a config _REPO_ROOT 容器越界；2daf841 同步 alpha-followups 契约漂移（65→71 paths）；13ad7ed 记录生命周期。
+3. canonical 切回 main；回收 decision-lab-mainline-integration（集成 lane 使命完成）与 qa-baseline-check（无独有内容）两个 worktree（产品方确认）。
+4. 文档索引修复 a84f807：README 导航补 16 个 CCR（20/20 全列）；AGENTS.md 第 11 行必读清单纳入全部 accepted CCR；修改后 AGENTS.md 同步 5 个任务 worktree 磁盘（逐字节一致）。
+
+## Verification results (2026-08-01, canonical=main @ a84f807)
+
+- 后端全量 pytest：590 passed / 6 failed。6 个失败均为已知基线：3 个 alpha-followups 波次 QA 电池滞后（test_models 期望表集合、test_decision_os_invariants workspace_connectors.status 非 Enum、test_qa7 迁移集 pin，未含新增表/迁移）；adv5×2/adv6 为全量并发残留（单跑 12/12 通过）。
+- ruff 全量干净；compileall OK；前端 vitest 149/149 + build 通过；迁移链单头 c3d4e5f6a7b8；generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK。
+- worktree：5 个任务 worktree AGENTS.md 与 canonical 逐字节一致；worktree list 与磁盘一一对应，无悬挂条目。
+
+## 剩余风险 / 后续
+
+- 3 个 QA 电池滞后项属 alpha-followups 波次遗留（connectors/profiles 引入新表与迁移后未更新 pin 断言），需该 lane owner 更新 test_models/test_decision_os_invariants/test_qa7；workspace_connectors.status 是否改用 PG Enum 需 contract 裁决。
+- 质量门修复的部署（镜像重建 + 真实 full 端到端验证）未执行，属原 owner 后续动作。
+- main 领先 origin/main 11 个提交，remote push 为产品方动作。
+- lenses.py 有一处未提交修改（meadows currentInterventions 约束说明，mtime 2026-08-01 21:58，非本次任务写入），疑似并行会话，未纳入提交。
+
