@@ -272,6 +272,80 @@
         "title": "CaseOperationalStatus",
         "type": "string"
       },
+      "ConnectorUpsertRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "apiKey": {
+            "default": "",
+            "title": "Apikey",
+            "type": "string"
+          },
+          "authType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authtype"
+          },
+          "baseUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseurl"
+          },
+          "modelName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelname"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "serverName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servername"
+          },
+          "serverUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serverurl"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "ConnectorUpsertRequest",
+        "type": "object"
+      },
       "CsrfEnvelope": {
         "additionalProperties": false,
         "properties": {
@@ -4979,6 +5053,61 @@
       }
     },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/messages": {
+      "get": {
+        "description": "Return persisted conversation messages for one case (most recent 50).",
+        "operationId": "list_case_messages_api_workspaces__workspaceId__cases__decisionCaseId__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Case Messages Api Workspaces  Workspaceid  Cases  Decisioncaseid  Messages Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Case Messages",
+        "tags": [
+          "workspaces",
+          "conversations"
+        ]
+      },
       "post": {
         "operationId": "post_case_message_api_workspaces__workspaceId__cases__decisionCaseId__messages_post",
         "parameters": [
@@ -5038,6 +5167,63 @@
           }
         },
         "summary": "Post Case Message",
+        "tags": [
+          "workspaces",
+          "conversations"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/profiles": {
+      "get": {
+        "description": "Return the latest extracted profiles for one case.",
+        "operationId": "get_case_profiles_api_workspaces__workspaceId__cases__decisionCaseId__profiles_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Case Profiles Api Workspaces  Workspaceid  Cases  Decisioncaseid  Profiles Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Case Profiles",
         "tags": [
           "workspaces",
           "conversations"
@@ -5659,6 +5845,324 @@
         "tags": [
           "workspaces",
           "cases"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/connectors": {
+      "get": {
+        "operationId": "list_connectors_api_workspaces__workspaceId__connectors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Connectors Api Workspaces  Workspaceid  Connectors Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Connectors",
+        "tags": [
+          "workspaces",
+          "connectors"
+        ]
+      },
+      "post": {
+        "description": "Create or replace this workspace's key for one provider.",
+        "operationId": "upsert_connector_api_workspaces__workspaceId__connectors_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectorUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upsert Connector Api Workspaces  Workspaceid  Connectors Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upsert Connector",
+        "tags": [
+          "workspaces",
+          "connectors"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/connectors/catalog": {
+      "get": {
+        "description": "The fixed audited catalog + whether writes are currently possible.",
+        "operationId": "get_catalog_api_workspaces__workspaceId__connectors_catalog_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Catalog Api Workspaces  Workspaceid  Connectors Catalog Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Catalog",
+        "tags": [
+          "workspaces",
+          "connectors"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/connectors/{connectorId}": {
+      "delete": {
+        "operationId": "delete_connector_api_workspaces__workspaceId__connectors__connectorId__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connectorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connectorid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Connector Api Workspaces  Workspaceid  Connectors  Connectorid  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Connector",
+        "tags": [
+          "workspaces",
+          "connectors"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/connectors/{connectorId}/test": {
+      "post": {
+        "description": "Probe the provider with the stored key; update + return the status.",
+        "operationId": "test_connector_api_workspaces__workspaceId__connectors__connectorId__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connectorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connectorid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Test Connector Api Workspaces  Workspaceid  Connectors  Connectorid  Test Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Connector",
+        "tags": [
+          "workspaces",
+          "connectors"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/connectors/{connectorId}/tools": {
+      "get": {
+        "description": "Discover tools exposed by an MCP connector.\n\nConnects to the MCP server and fetches the tool list. Only works for\nprovider='mcp' connectors.",
+        "operationId": "list_connector_tools_api_workspaces__workspaceId__connectors__connectorId__tools_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connectorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connectorid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Connector Tools Api Workspaces  Workspaceid  Connectors  Connectorid  Tools Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Connector Tools",
+        "tags": [
+          "workspaces",
+          "connectors"
         ]
       }
     },

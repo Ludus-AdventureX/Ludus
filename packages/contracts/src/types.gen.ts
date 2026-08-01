@@ -535,10 +535,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Case Messages
+         * @description Return persisted conversation messages for one case (most recent 50).
+         */
+        get: operations["list_case_messages_api_workspaces__workspaceId__cases__decisionCaseId__messages_get"];
         put?: never;
         /** Post Case Message */
         post: operations["post_case_message_api_workspaces__workspaceId__cases__decisionCaseId__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Case Profiles
+         * @description Return the latest extracted profiles for one case.
+         */
+        get: operations["get_case_profiles_api_workspaces__workspaceId__cases__decisionCaseId__profiles_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -713,6 +737,107 @@ export interface paths {
         };
         /** Read Case Version */
         get: operations["read_case_version_api_workspaces__workspaceId__cases__decisionCaseId__versions__version__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/connectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Connectors */
+        get: operations["list_connectors_api_workspaces__workspaceId__connectors_get"];
+        put?: never;
+        /**
+         * Upsert Connector
+         * @description Create or replace this workspace's key for one provider.
+         */
+        post: operations["upsert_connector_api_workspaces__workspaceId__connectors_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/connectors/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog
+         * @description The fixed audited catalog + whether writes are currently possible.
+         */
+        get: operations["get_catalog_api_workspaces__workspaceId__connectors_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/connectors/{connectorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Connector */
+        delete: operations["delete_connector_api_workspaces__workspaceId__connectors__connectorId__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/connectors/{connectorId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Connector
+         * @description Probe the provider with the stored key; update + return the status.
+         */
+        post: operations["test_connector_api_workspaces__workspaceId__connectors__connectorId__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/connectors/{connectorId}/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Connector Tools
+         * @description Discover tools exposed by an MCP connector.
+         *
+         *     Connects to the MCP server and fetches the tool list. Only works for
+         *     provider='mcp' connectors.
+         */
+        get: operations["list_connector_tools_api_workspaces__workspaceId__connectors__connectorId__tools_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1314,6 +1439,26 @@ export interface components {
          * @enum {string}
          */
         CaseOperationalStatus: "ok" | "blocked" | "needs_attention" | "cancelled" | "reopened" | "archived";
+        /** ConnectorUpsertRequest */
+        ConnectorUpsertRequest: {
+            /**
+             * Apikey
+             * @default
+             */
+            apiKey: string;
+            /** Authtype */
+            authType?: string | null;
+            /** Baseurl */
+            baseUrl?: string | null;
+            /** Modelname */
+            modelName?: string | null;
+            /** Provider */
+            provider: string;
+            /** Servername */
+            serverName?: string | null;
+            /** Serverurl */
+            serverUrl?: string | null;
+        };
         /** CsrfEnvelope */
         CsrfEnvelope: {
             data: components["schemas"]["CsrfTokenData"];
@@ -3392,6 +3537,40 @@ export interface operations {
             };
         };
     };
+    list_case_messages_api_workspaces__workspaceId__cases__decisionCaseId__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionCaseId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_case_message_api_workspaces__workspaceId__cases__decisionCaseId__messages_post: {
         parameters: {
             query?: never;
@@ -3407,6 +3586,40 @@ export interface operations {
                 "application/json": components["schemas"]["CaseMessageRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_case_profiles_api_workspaces__workspaceId__cases__decisionCaseId__profiles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionCaseId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3730,6 +3943,211 @@ export interface operations {
             path: {
                 decisionCaseId: string;
                 version: number;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_connectors_api_workspaces__workspaceId__connectors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_connector_api_workspaces__workspaceId__connectors_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectorUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_catalog_api_workspaces__workspaceId__connectors_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_connector_api_workspaces__workspaceId__connectors__connectorId__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connectorId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_connector_api_workspaces__workspaceId__connectors__connectorId__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connectorId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_connector_tools_api_workspaces__workspaceId__connectors__connectorId__tools_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connectorId: string;
                 workspaceId: string;
             };
             cookie?: never;
