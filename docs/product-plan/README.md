@@ -127,6 +127,22 @@ User / UserSession
 | [docs/audits/strategy-analyst-recommendation-audit-20260719.md](docs/audits/strategy-analyst-recommendation-audit-20260719.md) | 专业战略分析师建议的逐项审计、资产吸收结论与分期可行性 |
 | [docs/contract-changes/CCR-20260721-003.md](docs/contract-changes/CCR-20260721-003.md) | Source/ID/DeepAnalysis/权限/Signoff/abstain/Simulation/Look V7/manifest 的 accepted 合同修复 |
 | [docs/contract-changes/CCR-20260722-004.md](docs/contract-changes/CCR-20260722-004.md) | DecisionSubject.slug and Workspace/Subject/Case same-subject integrity accepted contract repair |
+| [docs/contract-changes/CCR-20260724-005.md](docs/contract-changes/CCR-20260724-005.md) | Task 3 auth/workspace router mounting 与 auth 错误合同注册的 accepted 变更 |
+| [docs/contract-changes/CCR-20260724-006.md](docs/contract-changes/CCR-20260724-006.md) | Canonical `login_rate_buckets` migration 与 `AUTH_LOGIN_RATE_*` 占位符 |
+| [docs/contract-changes/CCR-20260724-Ways-01.md](docs/contract-changes/CCR-20260724-Ways-01.md) | StrategicLensArtifact canonical schema、ConnectorStatus 枚举与 Task 7/8/10 写域修复 |
+| [docs/contract-changes/CCR-20260724-SIM-01.md](docs/contract-changes/CCR-20260724-SIM-01.md) | canonical 因果图合同（graph aggregate、版本、scenario/strategy/score、frozen-reference FKs） |
+| [docs/contract-changes/CCR-20260724-SIM-01-ADDENDUM-A1.md](docs/contract-changes/CCR-20260724-SIM-01-ADDENDUM-A1.md) | SIM-01 补充裁决：模拟身份与引擎能力对账、UUID identity 确认、fail-closed 能力缺口接受 |
+| [docs/contract-changes/CCR-20260724-ENG-02.md](docs/contract-changes/CCR-20260724-ENG-02.md) | Profile-Aware 模拟输入哈希（引擎版本提升 sim-engine-1.1.0） |
+| [docs/contract-changes/CCR-20260724-ENG-02-ADDENDUM-A1.md](docs/contract-changes/CCR-20260724-ENG-02-ADDENDUM-A1.md) | ENG-02 实现裁决：profile 对所有 1.1.0 哈希强制、sensitivity.py 范围扩展 |
+| [docs/contract-changes/CCR-20260724-SIM-02A.md](docs/contract-changes/CCR-20260724-SIM-02A.md) | 模拟 Run API 合同（POST run / GET replay）+ 不可变 profile 与幂等记录 |
+| [docs/contract-changes/CCR-20260724-SIM-02A-ADDENDUM-A1.md](docs/contract-changes/CCR-20260724-SIM-02A-ADDENDUM-A1.md) | SIM-02A 合同勘误：内部调用方影响 |
+| [docs/contract-changes/CCR-20260725-ANALYSIS-01.md](docs/contract-changes/CCR-20260725-ANALYSIS-01.md) | Task 9/10 深度分析管线 wire-contract 预冻结 |
+| [docs/contract-changes/CCR-20260725-ANALYSIS-01-ADDENDUM-A1.md](docs/contract-changes/CCR-20260725-ANALYSIS-01-ADDENDUM-A1.md) | Task 9/10 合同缺口十项对账（docs-only canonical 同步） |
+| [docs/contract-changes/CCR-20260725-GUEST-01.md](docs/contract-changes/CCR-20260725-GUEST-01.md) | Guest bootstrap 端点响应形状裁决（flat data wins；独立裁决撤回待 GUEST-02） |
+| [docs/contract-changes/CCR-20260726-MOUNT-01.md](docs/contract-changes/CCR-20260726-MOUNT-01.md) | 深度研究管线路由挂载与合同重生成（A3 波次） |
+| [docs/contract-changes/CCR-20260726-MOUNT-02.md](docs/contract-changes/CCR-20260726-MOUNT-02.md) | Charter/Run/Lens 路由发布与 M8 CSRF 闭合（MOUNT-02 波次） |
+| [docs/contract-changes/CCR-20260726-MOUNT-02-ADDENDUM-A1.md](docs/contract-changes/CCR-20260726-MOUNT-02-ADDENDUM-A1.md) | MOUNT-02 补充：dispatcher 增补项（r2） |
+| [docs/contract-changes/CCR-20260726-READ-01.md](docs/contract-changes/CCR-20260726-READ-01.md) | Case/Sandbox 读表面挂载与补齐 + MOUNT-02 audit binding 闭合 |
 | [docs/contract-changes/CCR-20260719-002.md](docs/contract-changes/CCR-20260719-002.md) | 决策操作系统工程不变量与签署流程的 accepted canonical 变更 |
 | [docs/contract-changes/CCR-20260716-001.md](docs/contract-changes/CCR-20260716-001.md) | 自定义影响因素与即时实验预览的 accepted canonical 合同变更 |
 | [agent-work-manifest.yaml](agent-work-manifest.yaml) | Task 1–19 及 1W/14W/18A/19A–D 子切片的 owner、依赖、write scope、Gate 0 与调度规则 |
