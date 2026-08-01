@@ -9,10 +9,15 @@
 
 1. main 未提交质量门修复已复验（后端 10/10 + 130/130 + 12/12，前端 149/149）并归档 HISTORY；前一个 HEAD 记录已置 completed 归档。
 2. 3 个基线 QA 电池滞后（test_models / test_decision_os_invariants / test_qa7）确认与本次改动无关，属 alpha-followups 波次遗留，已披露。
+3. **阶段 2 合并完成（分叉已消除）**：`codex/a2a-pandaai-agent` 4 个独有提交（A2A surface / QA teardown / licensing / lifecycle）以 no-ff 合入 main。
+   - 提交链：427c8f0（质量门修复）→ d346a4c（lifecycle）→ 96c371b（merge）→ 6ad82ce（a2a config root 修复）→ 2daf841（契约同步）
+   - 冲突解决：main.py（main routers + A2A mount）、pyproject.toml（jsonschema 保持运行时依赖 + a2a-sdk/panda-data）、Dockerfile（repo-root context）、README.md（a2a 侧）、uv.lock（lock --check 105 包 EXIT=0）、HEAD/HISTORY（append-only 合并）
+   - 额外修复：test_worker_report_hook.py 配套 monkeypatch（427c8f0 引入 apply_validation_verdict 后该测试损坏，原在 pytest testpaths 之外未被覆盖）；a2a config.py `_REPO_ROOT` 改为向上查找 method-packs（容器树更浅 parents[4] 越界）
+   - 发现并修复 main 契约漂移：alpha-followups 波次（00c44ce/0dc37c5）connectors/profiles 路由已挂载但生成物未更新 → 官方脚本重生成 65→71 paths +1 schema，前端 tsc 通过
+   - 验证：ruff/compileall 干净；A2A 测试 7/7（uv sync 后）；前端 vitest 149/149 + build 通过；迁移链单头 c3d4e5f6a7b8；generate_contracts.ps1 -Check = CONTRACT_DRIFT_OK；全量 pytest 587 passed / 9 failed（3 个 A2A 环境问题已通过 uv sync 解决；剩余 6 个为已知基线：3 个 QA 电池滞后 + adv5×2/adv6 全量并发残留，单跑通过）
 
 ## 下一步
 
-- 阶段 2：合并 `codex/a2a-pandaai-agent` → main（预期冲突：main.py、pyproject.toml、uv.lock、README.md、.env.example、HEAD/HISTORY）
 - 阶段 3：canonical 切回 main + 回收 decision-lab-mainline-integration 与 qa-baseline-check worktree（先展示清单确认）
 - 阶段 4：README 导航补 16 个 CCR；AGENTS.md 第 11 行必读清单同步；AGENTS.md 同步 5 个任务 worktree
 - 阶段 5：全量门验证 + 最终交付报告
