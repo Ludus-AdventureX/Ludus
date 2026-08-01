@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.analyses.case_reads import router as case_reads_router
 from app.analyses.routes import router as analyses_router
+from app.a2a.mount import mount_a2a
 from app.auth.guest import router as guest_alpha_router
 from app.auth.routes import router as auth_router
 from app.evidence.routes import router as evidence_router
@@ -50,6 +51,9 @@ app.include_router(case_reads_router)
 # PROTOTYPE (guest alpha): hidden from OpenAPI and hard-gated by
 # ENABLE_GUEST_ALPHA (uniform 404 when disabled); no product contract.
 app.include_router(guest_alpha_router)
+# PROTOTYPE (A2A remote agent, PandaAI track): mount-time gated by A2A_ENABLED;
+# when the flag is off nothing is mounted and the app is unchanged.
+mount_a2a(app)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])

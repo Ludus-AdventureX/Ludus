@@ -1,0 +1,121 @@
+#!/bin/sh
+# ============================================================================
+# pre-push hook — Enforces AGENTS.md §12/§13/§17/§19/§21 Git prohibitions
+# Activated by: git config core.hooksPath .githooks
+# ============================================================================
+set -e
+
+CANONICAL_REMOTE="https://github.com/Ludus-AdventureX/Ludus.git"
+
+# Frozen branches that MUST NOT receive new commits (§13)
+FROZEN_BRANCHES="refs/heads/codex/task-06-method-pack
+refs/heads/codex/qa-task-06-method-pack
+refs/heads/codex/integrate-task-06-method-pack"
+
+# Protected branches that only Mainline Integration owner may push (§19)
+PROTECTED_BRANCHES="refs/heads/main"
+
+ZERO="0000000000000000000000000000000000000000"
+
+remote="$1"
+url="$2"
+
+# === Rule §17/§19: Block push to non-canonical remote ===
+if [ "$url" != "$CANONICAL_REMOTE" ]; then
+    echo "=========================================="
+    echo "[BLOCKED] Push to non-canonical remote"
+    echo "  Target: $url"
+    echo "  Canonical: $CANONICAL_REMOTE"
+    echo ""
+    echo "  AGENTS.md §17/§19: Only the controlled Private origin"
+    echo "  may receive pushes. Adding or changing remotes requires"
+    echo "  explicit product-owner approval."
+    echo "=========================================="
+    exit 1
+fi
+
+blocked=0
+
+while read local_ref local_sha remote_ref remote_sha; do
+    # Sanitize possible trailing CR from Windows-originated stdin
+    local_ref=$(printf '%s' "$local_ref" | tr -d '\r')
+    local_sha=$(printf '%s' "$local_sha" | tr -d '\r')
+    remote_ref=$(printf '%s' "$remote_ref" | tr -d '\r')
+    remote_sha=$(printf '%s' "$remote_sha" | tr -d '\r')
+
+    # Skip empty lines
+    [ -z "$local_ref" ] && continue
+
+    # === Rule §13: Block push to frozen Task 6 branches ===
+    echo "$FROZEN_BRANCHES" | while IFS= read -r frozen; do
+        if [ "$remote_ref" = "$frozen" ]; then
+            echo "=========================================="
+            echo "[BLOCKED] Push to frozen branch: $remote_ref"
+            echo ""
+            echo "  AGENTS.md §13: MUST NOT commit to completed Task 6"
+            echo "  branches. New work requires a fresh codex/<task-name>"
+            echo "  branch from latest local main."
+            echo "=========================================="
+            exit 1
+        fi
+    done || blocked=1
+
+    # === Rule §19: Block direct push to main ===
+    for protected in $PROTECTED_BRANCHES; do
+        if [ "$remote_ref" = "refs/heads/main" ]; then
+            echo "=========================================="
+            echo "[BLOCKED] Direct push to main"
+            echo ""
+            echo "  AGENTS.md §19: Only a designated Mainline Audit/"
+            echo "  Integration owner may update main, after full"
+            echo "  acceptance gate (QA PASS, zero P0/P1, tests pass,"
+            echo "  contract-drift clean, secret/IP scan pass)."
+            echo ""
+            echo "  Use a PR or integration branch workflow instead."
+            echo "=========================================="
+            blocked=1
+            break
+        fi
+    done
+
+    # === Rule §19: Detect and block non-fast-forward (force-push) ===
+    if [ "$local_sha" = "$ZERO" ]; then
+        # Deleting remote branch — allow (rare, admin only)
+        continue
+    fi
+    if [ "$remote_sha" = "$ZERO" ]; then
+        # New branch creation — allowed
+        continue
+    fi
+
+    # Check if remote_sha is ancestor of local_sha (fast-forward)
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        echo "=========================================="
+        echo "[BLOCKED] Non-fast-forward push (force-push detected)"
+        echo "  Branch: $remote_ref"
+        echo "  Remote SHA: $remote_sha"
+        echo "  Local SHA:  $local_sha"
+        echo ""
+        echo "  AGENTS.md §19/§21: Agents MUST NOT force-push,"
+        echo "  rewrite shared history, or rebase/amend already-pushed"
+        echo "  commits. Task branches MUST NOT rebase or amend"
+        echo "  already-pushed commits."
+        echo ""
+        echo "  If you absolutely must force-push (with product-owner"
+        echo "  approval), set LUDUS_ALLOW_FORCE_PUSH=1:"
+        echo "    LUDUS_ALLOW_FORCE_PUSH=1 git push --force ..."
+        echo "=========================================="
+        if [ "${LUDUS_ALLOW_FORCE_PUSH:-0}" != "1" ]; then
+            blocked=1
+        else
+            echo "  [OVERRIDE] LUDUS_ALLOW_FORCE_PUSH=1 — proceeding"
+        fi
+    fi
+
+done
+
+if [ "$blocked" -ne 0 ]; then
+    exit 1
+fi
+
+exit 0

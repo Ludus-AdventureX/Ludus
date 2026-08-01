@@ -1,0 +1,2 @@
+# Git hooks are POSIX sh scripts and must keep LF endings on checkout
+.githooks/* text eol=lf

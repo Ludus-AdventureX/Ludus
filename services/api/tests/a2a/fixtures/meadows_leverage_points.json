@@ -1,0 +1,164 @@
+{
+  "lensType": "meadows_leverage_points",
+  "sourceSkillVersion": "1.0.0",
+  "phase": "strategic_synthesis",
+  "references": {
+    "sourcePacketIds": [
+      "SP-research-1"
+    ],
+    "claimIds": [
+      "CL-rescue-first"
+    ],
+    "evidenceIds": [
+      "EV-rescue-tender-2026Q2",
+      "EV-cash-runway-model"
+    ],
+    "assumptionIds": [
+      "AS-household-presale-conversion"
+    ],
+    "challengeIds": [
+      "CH-critic-2"
+    ]
+  },
+  "researchRequests": [
+    {
+      "requestId": "RR-procurement-cycle",
+      "question": "省级应急管理采购从中标到回款的实际周期分布是多少？",
+      "evidenceNeed": "procurement",
+      "priority": "high",
+      "affectedClaimIds": [
+        "CL-rescue-first"
+      ]
+    }
+  ],
+  "content": {
+    "systemMap": {
+      "boundary": "球形机器人初创公司未来 18 个月的市场进入系统：研发资源分配、目标市场选择与现金流。",
+      "statedGoal": "同时探索救援与家庭服务两个市场，保持技术领先。",
+      "actualGoal": "按资源流向推断，实际目标是维持研发团队规模并延长现金跑道，市场验证被持续推迟。",
+      "stocks": [
+        "现金储备",
+        "可部署工程师时数",
+        "救援场景验证数据",
+        "家庭场景品牌认知"
+      ],
+      "flows": [
+        "月度研发支出",
+        "试点项目回款",
+        "演示与投标带来的线索流入"
+      ],
+      "reinforcingLoops": [
+        "R1：救援试点成功 -> 采购方背书 -> 更多试点邀请 -> 更多验证数据",
+        "R2：家庭市场营销投入 -> 曝光 -> 预售 -> 更多营销预算"
+      ],
+      "balancingLoops": [
+        "B1：研发支出上升 -> 跑道缩短 -> 招聘冻结 -> 交付速度下降"
+      ],
+      "delays": [
+        "救援采购 9-18 个月的回款延迟",
+        "家庭市场从预售到量产约 12 个月的交付延迟"
+      ],
+      "actors": [
+        "创始团队",
+        "应急管理采购方",
+        "家庭渠道分销商",
+        "种子投资人"
+      ],
+      "rulesAndIncentives": [
+        "政府采购必须先通过资质认证",
+        "投资人以下一轮估值叙事为核心激励"
+      ]
+    },
+    "levelsCovered": [
+      3,
+      5,
+      6,
+      12
+    ],
+    "currentInterventions": [
+      {
+        "interventionId": "MI-12-price",
+        "level": 12,
+        "levelName": "parameters",
+        "strengthBand": "low",
+        "target": "家庭版预售定价",
+        "action": "把家庭版预售价下调 15% 以刺激转化",
+        "feasibility": "high",
+        "expectedEffect": "预售转化率短期提升，但不改变双市场资源争夺结构",
+        "failureSignal": "降价 4 周后预售转化率提升不足 3 个百分点"
+      },
+      {
+        "interventionId": "MI-6-dashboard",
+        "level": 6,
+        "levelName": "information_flows",
+        "strengthBand": "medium",
+        "target": "救援试点数据的可见性",
+        "action": "建立救援试点关键指标的月度仪表盘并同步给采购方与投资人",
+        "feasibility": "high",
+        "expectedEffect": "让资源分配讨论基于同一份救援验证数据，削弱叙事偏好",
+        "failureSignal": "仪表盘上线 6 周内没有采购方主动询价或复购意向"
+      },
+      {
+        "interventionId": "MI-5-gate",
+        "level": 5,
+        "levelName": "rules",
+        "strengthBand": "medium",
+        "target": "内部资源分配规则",
+        "action": "设立救援优先规则：救援线索 48 小时内必须获得工程响应",
+        "feasibility": "medium",
+        "expectedEffect": "把稀缺工程师时数从家庭线自动倾斜回救援验证",
+        "failureSignal": "规则生效后救援线索平均响应时间仍超过 5 个工作日"
+      }
+    ],
+    "highLeverageGaps": [
+      {
+        "interventionId": "MI-3-goal",
+        "level": 3,
+        "levelName": "goals",
+        "strengthBand": "high",
+        "target": "公司目标定义",
+        "action": "把目标从“双市场并行”改为“18 个月内拿下救援市场标杆客户”",
+        "feasibility": "medium",
+        "expectedEffect": "资源冲突在目标层一次性消解，R2 回路失去预算来源",
+        "failureSignal": "目标切换 8 周后救援标杆客户谈判仍无实质进展",
+        "whyAvoided": "创始团队对放弃家庭市场有沉没成本与情感阻力，投资人偏好双市场叙事",
+        "disruptionRisk": "目标收窄可能触发家庭线工程师流失与渠道伙伴解约"
+      }
+    ],
+    "runawayPositiveLoops": [
+      {
+        "loop": "R2：家庭市场营销投入 -> 曝光 -> 预售 -> 更多营销预算，在现金约束下持续挤占救援验证资源",
+        "runawaySignal": "月度营销支出连续两个月环比增长超过 20% 且救援试点数据停滞",
+        "brake": "触发后冻结营销预算增量并回拨给救援试点，直至 R1 数据恢复增长"
+      }
+    ],
+    "interventionSequence": [
+      {
+        "order": 1,
+        "interventionId": "MI-6-dashboard",
+        "purpose": "information_gain",
+        "precondition": "至少存在一个进行中的救援试点且指标可按月采集",
+        "failureSignal": "仪表盘上线 6 周内无采购方主动询问"
+      },
+      {
+        "order": 2,
+        "interventionId": "MI-5-gate",
+        "purpose": "trust_building",
+        "precondition": "仪表盘已运行一个完整月度周期并被创始团队采纳为例会输入",
+        "failureSignal": "救援线索响应规则连续两周被例外审批绕过"
+      },
+      {
+        "order": 3,
+        "interventionId": "MI-3-goal",
+        "purpose": "system_change",
+        "precondition": "仪表盘显示救援线索转化率连续两个月高于家庭预售转化率",
+        "failureSignal": "目标切换 8 周后救援标杆客户谈判无实质进展"
+      }
+    ],
+    "riskTradeoffs": [
+      "高杠杆目标收窄可逆性差：裁撤家庭线后重启成本高",
+      "低杠杆降价见效快但可能拉低品牌定位并压缩毛利",
+      "救援采购回款延迟使目标切换后的前 6 个月现金流风险上升"
+    ]
+  }
+}

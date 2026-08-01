@@ -87,11 +87,22 @@ async def test_blocked_run_produces_no_report(session, world) -> None:
     assert await _reports_for(session, world.workspace_id, run.analysis_run_id) == []
 
 
-async def test_full_ready_run_persists_detailed_report_with_five_lens_ids(session, world) -> None:
+async def test_full_ready_run_persists_detailed_report_with_five_lens_ids(
+    session, world, monkeypatch
+) -> None:
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
     executors, _ = _stub_executors()
     writer, _ = _recording_lens_writer()
     audit, _ = _stub_lens_audit(ok=True)
+    # The recording writer never persists artifact rows, so the worker's
+    # draft->ready acceptance must be stubbed for this unit test (the real
+    # transition is covered by the live end-to-end verification).
+    from app.workers import analysis_worker as worker_module
+
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(worker_module, "apply_validation_verdict", _noop)
     worker = AnalysisWorker(session, executors=executors, lens_writer=writer, lens_audit=audit)
 
     await worker.run_once(workspace_id=world.workspace_id)

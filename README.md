@@ -1,13 +1,6 @@
 # Ludus
 
 > Ludus is an AI-native decision operating system that turns complex questions into traceable evidence, structured analysis, causal simulations, and human-signed, reviewable decisions.
-## Promotion animation
-
-
-
-https://github.com/user-attachments/assets/89ed0993-a0e2-4159-a5f6-9ec83a8b0f5a
-
-
 
 ## Current status
 
@@ -54,7 +47,7 @@ Offline bootstrap may continue while external services or credentials are unavai
 apps/web/                 Next.js frontend (Task 1W)
 packages/contracts/       Generated OpenAPI/TypeScript contract package
 services/api/             FastAPI service
-scripts/                  Preflight, provider probe, contract generation, validation
+scripts/                  Preflight, provider probe, contract generation, validation, QA teardown
 ways/                     Versioned decision-method packages (noncommercial core by default)
 HEAD                      Current work record
 HISTORY                   Append-only completed/prior work history
@@ -63,6 +56,8 @@ HISTORY                   Append-only completed/prior work history
 ## Environment policy
 
 Do not install global tools, install project dependencies, create `.venv`, start persistent containers, or install browser runtimes without explicit product-owner approval. Secrets belong only in ignored local environment files or the host secret store; never place them in Git, logs, `HEAD`, or `HISTORY`.
+
+QA/gate runs that start a compose stack must use a run-scoped project name (`docker compose -p ludus-qa-<run-id> ... up -d`) and must tear that stack down at the end of the run, pass or fail, via `scripts/qa_teardown.ps1 -Project ludus-qa-<run-id>`. Run `scripts/qa_teardown.ps1 -Inventory` first (read-only `docker ps`) and confirm with the product owner before any cleanup; stopping or removing containers not started by the current run requires separate authorization. A complete gate run must leave no QA containers behind in `docker ps`.
 
 ## Work log protocol
 

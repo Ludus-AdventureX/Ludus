@@ -1,0 +1,175 @@
+{
+  "lensType": "pre_mortem",
+  "sourceSkillVersion": "1.0.0",
+  "phase": "adversarial_stress",
+  "references": {
+    "sourcePacketIds": [
+      "RP-spherical-robot-001"
+    ],
+    "claimIds": [
+      "CL-rescue-priority-01",
+      "CL-household-viability-02"
+    ],
+    "evidenceIds": [
+      "EV-rescue-procurement-cycle-18m",
+      "EV-household-price-band-2026",
+      "EV-ip-rating-test-report-lab",
+      "EV-runway-cash-plan-q3"
+    ],
+    "assumptionIds": [
+      "AS-ip68-survives-rubble-field",
+      "AS-rescue-pilot-converts-to-tender",
+      "AS-single-market-focus-sufficient"
+    ],
+    "challengeIds": [
+      "CH-safety-anchor-runway-01",
+      "CH-counterparty-incumbent-bid-02"
+    ]
+  },
+  "researchRequests": [
+    {
+      "requestId": "RR-pm-procurement-benchmark",
+      "question": "近三年国内省级应急管理部门救援机器人采购立项到合同签订的实际周期分布是多少？",
+      "evidenceNeed": "procurement",
+      "priority": "critical",
+      "affectedClaimIds": [
+        "CL-rescue-priority-01"
+      ]
+    },
+    {
+      "requestId": "RR-pm-rubble-field-test",
+      "question": "球形外壳在真实废墟环境（钢筋、粉尘、积水）中的连续工作failure mode是否有第三方实测数据？",
+      "evidenceNeed": "technical_test",
+      "priority": "high",
+      "affectedClaimIds": [
+        "CL-rescue-priority-01"
+      ]
+    }
+  ],
+  "content": {
+    "failureHorizon": "18 个月后（2028-01）",
+    "failureStatement": "现在是 2028 年 1 月，球形机器人项目押注救援市场的方向已经彻底失败：没有一份政府采购合同签署，现金跑道耗尽，团队被迫裁撤硬件线并寻求收购。",
+    "perspectives": [
+      "internal",
+      "external",
+      "systemic_hindsight"
+    ],
+    "failureCauses": [
+      {
+        "causeId": "PM-C1-cert-delay",
+        "perspective": "internal",
+        "category": "internal_execution",
+        "cause": "救援装备强制认证与省级入围目录流程被低估：认证送检排队、整改复测各消耗一个季度，产品在窗口期内未取得投标资格。",
+        "downstreamConsequences": [
+          "错过年度应急装备集中采购窗口，下一窗口在 12 个月之后",
+          "演示样机无法转化为可投标产品，销售管线全部停留在意向阶段"
+        ],
+        "likelihoodScore": 4,
+        "impactScore": 4,
+        "riskScore": 16,
+        "controllability": "partly_controllable"
+      },
+      {
+        "causeId": "PM-C2-procurement-cycle",
+        "perspective": "external",
+        "category": "external",
+        "cause": "政府救援采购从立项到付款的真实周期为 12-18 个月，且受年度预算批复节奏约束，远超公司 10 个月现金跑道，收入到账时间结构性晚于资金耗尽时间。",
+        "downstreamConsequences": [
+          "即使中标，首笔回款也在现金耗尽之后到达",
+          "为过桥被迫接受高稀释融资或放弃救援市场"
+        ],
+        "likelihoodScore": 4,
+        "impactScore": 5,
+        "riskScore": 20,
+        "controllability": "uncontrollable"
+      },
+      {
+        "causeId": "PM-C3-rubble-assumption",
+        "perspective": "internal",
+        "category": "assumption_failure",
+        "cause": "「IP68 球形外壳能在真实废墟中连续作业」的核心技术假设未经第三方实测：钢筋卡滞与粉尘积水复合工况导致现场演示失败，采购方信任崩塌。",
+        "downstreamConsequences": [
+          "关键客户现场验证失败后拒绝进入下一轮评审",
+          "负面口碑在窄小的应急装备圈内快速扩散，波及其他省份客户"
+        ],
+        "likelihoodScore": 3,
+        "impactScore": 5,
+        "riskScore": 15,
+        "controllability": "partly_controllable"
+      },
+      {
+        "causeId": "PM-C4-household-price-war",
+        "perspective": "external",
+        "category": "timing",
+        "cause": "在团队专注救援认证的同时，家庭服务市场价格战把可比球形陪伴产品压到 1500 元档位，回退家庭市场的退路在 12 个月内被永久关闭。",
+        "downstreamConsequences": [
+          "救援方向失败后已无可行的第二市场退路",
+          "库存物料按家庭价格带清算造成一次性减值"
+        ],
+        "likelihoodScore": 3,
+        "impactScore": 4,
+        "riskScore": 12,
+        "controllability": "uncontrollable"
+      },
+      {
+        "causeId": "PM-C5-single-bet-runway",
+        "perspective": "systemic_hindsight",
+        "category": "systemic_blind_spot",
+        "cause": "事后复盘：真正的系统性错误不是选了救援市场，而是把全部现金跑道押在单一长周期市场上，没有为「认证+采购双重延迟」这一常态情形保留任何缓冲或分段止损点。",
+        "downstreamConsequences": [
+          "每次延迟都被解释为个案而非结构信号，止损决策被持续推迟",
+          "资金耗尽时既无认证资产也无家庭市场收入，残值接近零"
+        ],
+        "likelihoodScore": 3,
+        "impactScore": 5,
+        "riskScore": 15,
+        "controllability": "controllable"
+      },
+      {
+        "causeId": "PM-C6-champion-turnover",
+        "perspective": "systemic_hindsight",
+        "category": "relationship_or_politics",
+        "cause": "试点合作依赖单一消防支队内部支持者：该支持者岗位轮换后，试点报告未被继任者采纳，前期关系投入一夜清零，且团队直到轮换公示才得知。",
+        "downstreamConsequences": [
+          "唯一在手试点失去内部推动者，转化为正式采购的通道中断",
+          "被迫从零建立新的客户关系，额外消耗 2 个季度"
+        ],
+        "likelihoodScore": 2,
+        "impactScore": 4,
+        "riskScore": 8,
+        "controllability": "partly_controllable"
+      }
+    ],
+    "topRisks": [
+      {
+        "rank": 1,
+        "causeId": "PM-C2-procurement-cycle",
+        "prevention": "在正式押注前，用两周完成 3 个省份救援采购真实周期的一手核实（访谈已中标供应商与代理商），并把「首笔回款最早日期」写入现金计划的硬约束；若回款早于跑道耗尽不可达成，则改为先做认证、后融资、再投标的分段承诺。",
+        "contingency": "一旦采购周期确认超过 12 个月，立即启动过桥方案：以已获认证资产为标的引入战略投资或设备租赁模式，将一次性销售改为按月租金回款，压缩回款时间差。",
+        "detectionIndicator": "立项后第 60 天：目标省份年度采购预算批复文件中是否出现本品类；以及首个投标包发布日期相对计划的偏移天数。"
+      },
+      {
+        "rank": 2,
+        "causeId": "PM-C3-rubble-assumption",
+        "prevention": "在投入模具与认证费用前，先花 6 周完成第三方废墟场实测（钢筋卡滞、粉尘、积水三工况各 20 次循环），以实测报告替代内部实验室数据作为投标技术附件。",
+        "contingency": "若实测暴露卡滞类结构缺陷，冻结救援市场推广，切换到「废墟外围侦察」等降级场景重新定义产品边界，避免在核心工况上继续消耗信任。",
+        "detectionIndicator": "第三方实测的单次任务完成率与平均无故障时间：完成率低于 80% 或 MTBF 低于 4 小时即触发假设失效告警。"
+      },
+      {
+        "rank": 3,
+        "causeId": "PM-C5-single-bet-runway",
+        "prevention": "把跑道拆分为两个 5 个月的决策段：第一段只投入认证前置与采购周期核实，设定明确的继续/止损门槛（认证进度、投标资格、意向书数量），未达标则不进入第二段全量投入。",
+        "contingency": "触发止损门槛时，保留救援认证资产但冻结市场投入，将剩余跑道转向家庭市场最小验证或技术授权变现，避免残值归零。",
+        "detectionIndicator": "每月末对照决策段门槛的达成率仪表：认证里程碑偏移超过 30 天或意向书数量为零连续两个月即触发段间评审。"
+      }
+    ],
+    "verdict": "validate_first",
+    "verdictRationale": "救援方向存在一个不可控的致命原因（PM-C2 采购周期与现金跑道的结构性错配）和一个未经实测的核心技术假设（PM-C3）。两者都有明确、低成本、可在 8 周内完成的验证动作，因此结论不是放弃，而是先验证再承诺：在采购周期一手数据与第三方废墟实测完成之前，不应把剩余跑道押入救援市场。高风险原因不与低风险项平均，PM-C2 单独构成先验证的充分理由。",
+    "additionalInformationNeeded": [
+      "3 个目标省份近三年救援机器人采购从立项到首笔付款的真实周期一手数据",
+      "第三方废墟场三工况实测报告（完成率、MTBF、failure mode 清单）",
+      "救援装备强制认证的当前排队时长与整改复测平均次数",
+      "家庭服务市场球形品类的当前价格带与库存物料的可回退性评估"
+    ]
+  }
+}

@@ -21,7 +21,9 @@ dependencies = [
   "playwright>=1.55,<2",
   "pypdf>=6,<7",
   "python-docx>=1.2,<2",
-  "jsonschema>=4.23,<5"
+  "jsonschema>=4.23,<5",
+  "a2a-sdk>=0.3,<0.4",
+  "panda-data>=0.0.12",
 ]
 
 [dependency-groups]
