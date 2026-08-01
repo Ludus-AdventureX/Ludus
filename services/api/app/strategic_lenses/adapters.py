@@ -17,6 +17,9 @@ from app.agents.lenses import (
     LensPromptInputs,
     LensRequest,
     StrategicLensStageOutput,
+    lens_content_example,
+    lens_output_contract,
+    load_lens_content_schema,
 )
 from app.types import StrategicLensType
 
@@ -64,12 +67,23 @@ class PreMortemLensAdapter:
     """Seam adapter over the Pre-Mortem behavior gate (Critic-owned, L2)."""
 
     lens_type = StrategicLensType.PRE_MORTEM
+    _phase = "adversarial_stress"
+    _content_def = "preMortemContent"
 
     def build_prompt_inputs(self, request: LensRequest) -> LensPromptInputs:
         return LensPromptInputs(
             system=request.prompt_text,
-            user=_deterministic_user_prompt(request),
-            schema_content_def="preMortemContent",
+            user=_deterministic_user_prompt(request)
+            + "\n\n"
+            + lens_output_contract(
+                lens_type=self.lens_type.value,
+                phase=self._phase,
+                source_skill_version="1.0.0",
+                content_def=self._content_def,
+                content_schema=load_lens_content_schema(self._content_def),
+                content_example=lens_content_example(self._content_def),
+            ),
+            schema_content_def=self._content_def,
         )
 
     def validate_behavior(self, output: StrategicLensStageOutput) -> LensBehaviorReport:
@@ -90,12 +104,23 @@ class MeadowsLensAdapter:
     """Seam adapter over the Meadows leverage-points gate (Synthesis-owned, L5)."""
 
     lens_type = StrategicLensType.MEADOWS_LEVERAGE_POINTS
+    _phase = "strategic_synthesis"
+    _content_def = "meadowsContent"
 
     def build_prompt_inputs(self, request: LensRequest) -> LensPromptInputs:
         return LensPromptInputs(
             system=request.prompt_text,
-            user=_deterministic_user_prompt(request),
-            schema_content_def="meadowsContent",
+            user=_deterministic_user_prompt(request)
+            + "\n\n"
+            + lens_output_contract(
+                lens_type=self.lens_type.value,
+                phase=self._phase,
+                source_skill_version="1.0.0",
+                content_def=self._content_def,
+                content_schema=load_lens_content_schema(self._content_def),
+                content_example=lens_content_example(self._content_def),
+            ),
+            schema_content_def=self._content_def,
         )
 
     def validate_behavior(self, output: StrategicLensStageOutput) -> LensBehaviorReport:

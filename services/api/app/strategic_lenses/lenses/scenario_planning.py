@@ -29,7 +29,10 @@ from app.agents.lenses import (
     LensPromptInputs,
     LensRequest,
     StrategicLensStageOutput,
+    lens_content_example,
+    lens_output_contract,
     lens_spec,
+    load_lens_content_schema,
 )
 from app.types import StrategicLensType
 
@@ -113,16 +116,19 @@ class ScenarioPlanningLens:
                 "challengeIds": sorted(request.challenge_refs),
             },
             "upstreamLensContent": upstream,
-            "outputContract": {
-                "schemaId": SPEC.output_schema_id,
-                "contentDef": SPEC.content_def,
-                "phase": SPEC.phase,
-                "sourceSkillVersion": SPEC.source_skill_version,
-            },
         }
+        user = json.dumps(user_payload, ensure_ascii=False, sort_keys=True) + "\n\n"
+        user += lens_output_contract(
+            lens_type=LENS_TYPE.value,
+            phase=SPEC.phase,
+            source_skill_version=SPEC.source_skill_version,
+            content_def=SPEC.content_def,
+            content_schema=load_lens_content_schema(SPEC.content_def),
+            content_example=lens_content_example(SPEC.content_def),
+        )
         return LensPromptInputs(
             system=request.prompt_text,
-            user=json.dumps(user_payload, ensure_ascii=False, sort_keys=True),
+            user=user,
             schema_content_def=SPEC.content_def,
         )
 

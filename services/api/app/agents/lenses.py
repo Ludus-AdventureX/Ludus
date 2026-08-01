@@ -18,8 +18,10 @@ persistence/report wiring; specialists never touch shared schema/migration/API.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from app.types import FULL_REQUIRED_STRATEGIC_LENSES, StrategicLensType
@@ -70,6 +72,582 @@ REFERENCE_KEYS: tuple[str, ...] = (
     "assumptionIds",
     "challengeIds",
 )
+
+
+# Full content examples for the three lenses whose behavior gates demand nested
+# fields the JSON-schema text alone does not pin down. Live models emit the
+# top-level skeleton but omit array-element fields (e.g. porter forces), so the
+# contract now carries a complete, gate-passing content shape. The ``ev-sample-*``
+# ids are placeholders the model MUST replace with ids from the frozen lists.
+_PORTER_CONTENT_EXAMPLE: dict[str, Any] = {
+    "marketAnalyses": [
+        {
+            "optionId": "opt_a",
+            "industryBoundary": {
+                "coreValue": "示例：该市场为购买方创造的核心价值",
+                "upstream": ["示例：上游供应商类别"],
+                "downstream": ["示例：下游渠道与客户"],
+                "adjacentMarkets": ["示例：相邻市场"],
+                "crossIndustrySubstitutes": ["示例：跨行业替代品"],
+                "boundaryRisk": "示例：边界过宽或过窄的错判风险",
+            },
+            "forces": [
+                {
+                    "forceId": "rivalry",
+                    "threatScore": 3,
+                    "keyIndicators": ["示例：集中度"],
+                    "evidenceIds": ["ev-sample-1", "ev-sample-2"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+                {
+                    "forceId": "new_entrants",
+                    "threatScore": 4,
+                    "keyIndicators": ["示例：进入壁垒"],
+                    "evidenceIds": ["ev-sample-3", "ev-sample-4"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "strengthening",
+                },
+                {
+                    "forceId": "substitutes",
+                    "threatScore": 2,
+                    "keyIndicators": ["示例：替代性价比"],
+                    "evidenceIds": ["ev-sample-5", "ev-sample-6"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+                {
+                    "forceId": "supplier_power",
+                    "threatScore": 3,
+                    "keyIndicators": ["示例：供应商集中度"],
+                    "evidenceIds": ["ev-sample-7", "ev-sample-8"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+                {
+                    "forceId": "buyer_power",
+                    "threatScore": 3,
+                    "keyIndicators": ["示例：买家集中度"],
+                    "evidenceIds": ["ev-sample-9", "ev-sample-10"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+            ],
+            "averageThreatScore": 3.0,
+            "changingTrend": "示例：正在变化的技术/政策/需求趋势",
+            "regulatoryAssessment": "示例：监管评估",
+            "complementors": ["示例：互补者"],
+        },
+        {
+            "optionId": "opt_b",
+            "industryBoundary": {
+                "coreValue": "示例：该市场为购买方创造的核心价值",
+                "upstream": ["示例：上游供应商类别"],
+                "downstream": ["示例：下游渠道与客户"],
+                "adjacentMarkets": ["示例：相邻市场"],
+                "crossIndustrySubstitutes": ["示例：跨行业替代品"],
+                "boundaryRisk": "示例：边界错判风险",
+            },
+            "forces": [
+                {
+                    "forceId": "rivalry",
+                    "threatScore": 3,
+                    "keyIndicators": ["示例：集中度"],
+                    "evidenceIds": ["ev-sample-1", "ev-sample-2"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+                {
+                    "forceId": "new_entrants",
+                    "threatScore": 3,
+                    "keyIndicators": ["示例：进入壁垒"],
+                    "evidenceIds": ["ev-sample-3", "ev-sample-4"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+                {
+                    "forceId": "substitutes",
+                    "threatScore": 2,
+                    "keyIndicators": ["示例：替代性价比"],
+                    "evidenceIds": ["ev-sample-5", "ev-sample-6"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "weakening",
+                },
+                {
+                    "forceId": "supplier_power",
+                    "threatScore": 4,
+                    "keyIndicators": ["示例：供应商集中度"],
+                    "evidenceIds": ["ev-sample-7", "ev-sample-8"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "strengthening",
+                },
+                {
+                    "forceId": "buyer_power",
+                    "threatScore": 3,
+                    "keyIndicators": ["示例：买家集中度"],
+                    "evidenceIds": ["ev-sample-9", "ev-sample-10"],
+                    "reasoning": "示例：该力的推理链",
+                    "directionOfChange": "stable",
+                },
+            ],
+            "averageThreatScore": 3.0,
+            "changingTrend": "示例：正在变化的技术/政策/需求趋势",
+            "regulatoryAssessment": "示例：监管评估",
+            "complementors": ["示例：互补者"],
+        },
+    ],
+    "crossMarketComparison": "示例：跨市场对比与力量差异",
+    "strategicImplications": [
+        {
+            "optionId": "opt_a",
+            "strategy": "differentiation",
+            "logic": "示例：与力量证据形成逻辑链的战略启示",
+            "conditions": ["示例：成立的先决条件"],
+        }
+    ],
+    "scoreIsNotDecisionFormula": True,
+}
+
+
+_SCENARIO_CONTENT_EXAMPLE: dict[str, Any] = {
+    "focusQuestion": "示例：聚焦的决策问题",
+    "timeHorizon": "示例：24 个月",
+    "predeterminedElements": ["示例：预定要素"],
+    "keyUncertainties": [
+        {
+            "uncertaintyId": "unc-1",
+            "factor": "示例：不确定因素一",
+            "impact": "high",
+            "uncertainty": "high",
+            "evidenceIds": ["ev-sample-1"],
+        },
+        {
+            "uncertaintyId": "unc-2",
+            "factor": "示例：不确定因素二",
+            "impact": "high",
+            "uncertainty": "high",
+            "evidenceIds": ["ev-sample-2"],
+        },
+    ],
+    "axes": [
+        {
+            "axisId": "axis-1",
+            "uncertaintyId": "unc-1",
+            "lowState": "示例：低态描述",
+            "highState": "示例：高态描述",
+            "selectionRationale": "示例：为何选该轴",
+        },
+        {
+            "axisId": "axis-2",
+            "uncertaintyId": "unc-2",
+            "lowState": "示例：低态描述",
+            "highState": "示例：高态描述",
+            "selectionRationale": "示例：为何选该轴",
+        },
+    ],
+    "scenarios": [
+        {
+            "scenarioId": "scen-1",
+            "name": "示例：基线情景",
+            "kind": "baseline",
+            "axisStates": ["示例：轴1低态", "示例：轴2低态"],
+            "coreLogic": "示例：核心逻辑",
+            "timeline": [
+                {"period": "示例：2026H2", "turningPoint": "示例：转折点"},
+                {"period": "示例：2027H1", "turningPoint": "示例：转折点"},
+            ],
+            "stakeholderStates": [
+                {"stakeholder": "示例：利益相关者A", "state": "示例：状态"},
+                {"stakeholder": "示例：利益相关者B", "state": "示例：状态"},
+                {"stakeholder": "示例：利益相关者C", "state": "示例：状态"},
+            ],
+            "earlySignals": [
+                {
+                    "signalId": "sig-1",
+                    "type": "qualitative",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+                {
+                    "signalId": "sig-2",
+                    "type": "quantitative",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+                {
+                    "signalId": "sig-3",
+                    "type": "structural",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+            ],
+        },
+        {
+            "scenarioId": "scen-2",
+            "name": "示例：结构断裂一",
+            "kind": "structural_break",
+            "axisStates": ["示例：轴1高态", "示例：轴2低态"],
+            "coreLogic": "示例：核心逻辑",
+            "timeline": [
+                {"period": "示例：2026H2", "turningPoint": "示例：转折点"},
+                {"period": "示例：2027H1", "turningPoint": "示例：转折点"},
+            ],
+            "stakeholderStates": [
+                {"stakeholder": "示例：利益相关者A", "state": "示例：状态"},
+                {"stakeholder": "示例：利益相关者B", "state": "示例：状态"},
+                {"stakeholder": "示例：利益相关者C", "state": "示例：状态"},
+            ],
+            "earlySignals": [
+                {
+                    "signalId": "sig-4",
+                    "type": "qualitative",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+                {
+                    "signalId": "sig-5",
+                    "type": "quantitative",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+                {
+                    "signalId": "sig-6",
+                    "type": "structural",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+            ],
+        },
+        {
+            "scenarioId": "scen-3",
+            "name": "示例：结构断裂二",
+            "kind": "structural_break",
+            "axisStates": ["示例：轴1低态", "示例：轴2高态"],
+            "coreLogic": "示例：核心逻辑",
+            "timeline": [
+                {"period": "示例：2026H2", "turningPoint": "示例：转折点"},
+                {"period": "示例：2027H1", "turningPoint": "示例：转折点"},
+            ],
+            "stakeholderStates": [
+                {"stakeholder": "示例：利益相关者A", "state": "示例：状态"},
+                {"stakeholder": "示例：利益相关者B", "state": "示例：状态"},
+                {"stakeholder": "示例：利益相关者C", "state": "示例：状态"},
+            ],
+            "earlySignals": [
+                {
+                    "signalId": "sig-7",
+                    "type": "qualitative",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+                {
+                    "signalId": "sig-8",
+                    "type": "quantitative",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+                {
+                    "signalId": "sig-9",
+                    "type": "structural",
+                    "observable": "示例：可观测信号",
+                    "thresholdOrPattern": "示例：阈值或模式",
+                    "cadence": "示例：观察频率",
+                },
+            ],
+        },
+    ],
+    "strategyTests": [
+        {
+            "scenarioId": "scen-1",
+            "optionId": "opt_a",
+            "performance": "robust",
+            "failureReason": "示例：失败原因（robust 可为空描述）",
+            "requiredAdjustment": "示例：所需调整",
+            "triggerSignalIds": ["sig-1"],
+        },
+        {
+            "scenarioId": "scen-1",
+            "optionId": "opt_b",
+            "performance": "viable_with_adjustment",
+            "failureReason": "示例：失败原因",
+            "requiredAdjustment": "示例：所需调整",
+            "triggerSignalIds": ["sig-2"],
+        },
+        {
+            "scenarioId": "scen-2",
+            "optionId": "opt_a",
+            "performance": "killed",
+            "failureReason": "示例：被杀死的理由",
+            "requiredAdjustment": "示例：所需调整",
+            "triggerSignalIds": ["sig-4"],
+        },
+        {
+            "scenarioId": "scen-2",
+            "optionId": "opt_b",
+            "performance": "high_risk",
+            "failureReason": "示例：失败原因",
+            "requiredAdjustment": "示例：所需调整",
+            "triggerSignalIds": ["sig-5"],
+        },
+        {
+            "scenarioId": "scen-3",
+            "optionId": "opt_a",
+            "performance": "viable_with_adjustment",
+            "failureReason": "示例：失败原因",
+            "requiredAdjustment": "示例：所需调整",
+            "triggerSignalIds": ["sig-7"],
+        },
+        {
+            "scenarioId": "scen-3",
+            "optionId": "opt_b",
+            "performance": "robust",
+            "failureReason": "示例：失败原因（robust 可为空描述）",
+            "requiredAdjustment": "示例：所需调整",
+            "triggerSignalIds": ["sig-8"],
+        },
+    ],
+    "strategyKilledInAtLeastOneScenario": True,
+    "monitoringActions": ["示例：立即开始的监控动作"],
+    "irreducibleUnknowns": ["示例：不可约未知项"],
+}
+
+
+_MEADOWS_CONTENT_EXAMPLE: dict[str, Any] = {
+    "systemMap": {
+        "boundary": "示例：系统边界",
+        "statedGoal": "示例：宣称目标",
+        "actualGoal": "示例：实际目标",
+        "stocks": ["示例：存量"],
+        "flows": ["示例：流量"],
+        "reinforcingLoops": ["示例：增强回路"],
+        "balancingLoops": ["示例：平衡回路"],
+        "delays": ["示例：延迟"],
+        "actors": ["示例：行动者"],
+        "rulesAndIncentives": ["示例：规则与激励"],
+    },
+    "levelsCovered": [1, 2, 5, 10],
+    "currentInterventions": [
+        {
+            "interventionId": "int-1",
+            "level": 1,
+            "levelName": "transcend_paradigms",
+            "strengthBand": "high",
+            "target": "示例：干预目标",
+            "action": "示例：干预动作",
+            "feasibility": "medium",
+            "expectedEffect": "示例：预期效果",
+            "failureSignal": "示例：失败信号",
+        },
+        {
+            "interventionId": "int-2",
+            "level": 5,
+            "levelName": "rules",
+            "strengthBand": "medium",
+            "target": "示例：干预目标",
+            "action": "示例：干预动作",
+            "feasibility": "high",
+            "expectedEffect": "示例：预期效果",
+            "failureSignal": "示例：失败信号",
+        },
+        {
+            "interventionId": "int-3",
+            "level": 10,
+            "levelName": "stock_flow_structure",
+            "strengthBand": "low",
+            "target": "示例：干预目标",
+            "action": "示例：干预动作",
+            "feasibility": "medium",
+            "expectedEffect": "示例：预期效果",
+            "failureSignal": "示例：失败信号",
+        },
+    ],
+    "highLeverageGaps": [
+        {
+            "interventionId": "int-4",
+            "level": 2,
+            "levelName": "paradigm",
+            "strengthBand": "high",
+            "target": "示例：干预目标",
+            "action": "示例：干预动作",
+            "feasibility": "low",
+            "expectedEffect": "示例：预期效果",
+            "failureSignal": "示例：失败信号",
+            "whyAvoided": "示例：为何被回避",
+            "disruptionRisk": "示例：破坏性风险",
+        }
+    ],
+    "runawayPositiveLoops": [
+        {
+            "loop": "示例：增强回路描述",
+            "runawaySignal": "示例：失控信号",
+            "brake": "示例：刹车机制",
+        }
+    ],
+    "interventionSequence": [
+        {
+            "order": 1,
+            "interventionId": "int-2",
+            "purpose": "trust_building",
+            "precondition": "示例：前置条件",
+            "failureSignal": "示例：失败信号",
+        },
+        {
+            "order": 2,
+            "interventionId": "int-4",
+            "purpose": "system_change",
+            "precondition": "示例：前置条件",
+            "failureSignal": "示例：失败信号",
+        },
+    ],
+    "riskTradeoffs": ["示例：风险权衡"],
+}
+
+
+def load_lens_content_schema(content_def: str) -> str:
+    """Return one lens content-branch schema definition as JSON text.
+
+    The published prompts reference the schema only by URN, so live models
+    cannot see the file and free-style the ``content`` object; every behavior
+    gate then rejects the shape. The output contract carries the branch
+    definition verbatim (from the shipped method-pack ``$defs``) so the model
+    can emit a schema-shaped content the gate accepts. Empty string when the
+    pack is not installed (fixture/test-only runs never need it).
+    """
+
+    candidates: list[Path] = [
+        Path(
+            "/app/method-packs/hardtech-market-direction/1.1.0/schemas/"
+            "strategic-lens-output.schema.json"
+        )
+    ]
+    # Local dev fallback: walk up from this file to the repository root. Do not
+    # hard-code a parent index - the container tree (/app/app/agents/...) is
+    # shallower than the checkout tree (services/api/app/agents/...).
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidates.append(
+            parent
+            / "method-packs"
+            / "hardtech-market-direction"
+            / "1.1.0"
+            / "schemas"
+            / "strategic-lens-output.schema.json"
+        )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return ""
+        branch = data.get("$defs", {}).get(content_def)
+        return json.dumps(branch, ensure_ascii=False) if branch is not None else ""
+    return ""
+
+
+_CONTENT_EXAMPLES: dict[str, dict[str, Any]] = {
+    "porterContent": _PORTER_CONTENT_EXAMPLE,
+    "scenarioPlanningContent": _SCENARIO_CONTENT_EXAMPLE,
+    "meadowsContent": _MEADOWS_CONTENT_EXAMPLE,
+}
+
+
+def lens_content_example(content_def: str) -> str:
+    """Return the gate-passing content example for a lens as JSON text.
+
+    Empty string when no example is shipped for that content branch (the
+    counterparty/pre_mortem lenses already pass with the schema text alone).
+    """
+    example = _CONTENT_EXAMPLES.get(content_def)
+    return json.dumps(example, ensure_ascii=False) if example is not None else ""
+
+
+def lens_output_contract(
+    *,
+    lens_type: str,
+    phase: str,
+    source_skill_version: str,
+    content_def: str,
+    content_schema: str = "",
+    content_example: str = "",
+) -> str:
+    """The shared output contract every lens user message must carry.
+
+    Live models only emit fields they are explicitly told about; the five lens
+    prompts previously diverged (some never mentioned ``references``), so full
+    runs lost every lens to ``KeyError: 'references'`` before the behavior gate
+    ever ran. One canonical contract text keeps all lanes aligned with the
+    ``strategic-lens-output`` schema the server parses against. Example shape
+    is plain JSON text (no fences), mirroring what the model must return.
+    """
+
+    top_fields = sorted(ALLOWED_TOP_LEVEL_FIELDS)
+    content_line = f"- content: an object matching the {content_def} schema branch"
+    if content_schema:
+        content_line += ":\n" + content_schema
+    example_line = "Example shape:\n" + json.dumps(
+        {
+            "lensType": lens_type,
+            "sourceSkillVersion": source_skill_version,
+            "phase": phase,
+            "references": {key: [] for key in REFERENCE_KEYS},
+            "researchRequests": [],
+            "content": {},
+        },
+        ensure_ascii=False,
+    )
+    if content_example:
+        example_line += (
+            "\nExample content (follow this structure EXACTLY - every field shown "
+            "is required; the ev-sample-* ids and all 示例： values are placeholders "
+            "you MUST replace with real analysis content and ids from the frozen "
+            "lists above):\n"
+            + content_example
+        )
+    example_line += (
+        "\nConsistency and language rules:\n"
+        "- averageThreatScore MUST be the arithmetic mean of the five threatScore "
+        "values (porter).\n"
+        "- levelsCovered MUST contain exactly the distinct level values used by "
+        "currentInterventions and highLeverageGaps (meadows).\n"
+        "- EVERY highLeverageGaps element MUST include whyAvoided and "
+        "disruptionRisk; every currentInterventions element MUST include every "
+        "field shown (meadows).\n"
+        "- highLeverageGaps level/levelName/strengthBand must match exactly: "
+        "level 1=transcend_paradigms, 2=paradigm, 3=goals, 4=self_organization, "
+        "strengthBand always high (meadows).\n"
+        "- NEVER write the literal words 成功概率, 概率, probability, 成功率, 胜率, "
+        "or chance of success anywhere in content - even in a negation like "
+        "'not a success probability' (porter rejects any occurrence).\n"
+    )
+    return (
+        "## Output contract (MANDATORY)\n"
+        "Return exactly one JSON object with top-level fields "
+        + json.dumps(top_fields, ensure_ascii=False)
+        + ". You MUST include every one of these fields, including references.\n"
+        + f'- lensType: "{lens_type}"\n'
+        + f'- sourceSkillVersion: "{source_skill_version}"\n'
+        + f'- phase: "{phase}"\n'
+        + "- references: an object with exactly the keys "
+        + json.dumps(list(REFERENCE_KEYS), ensure_ascii=False)
+        + ", each an array of IDs cited from the frozen lists above; "
+        + "use [] where none apply\n"
+        + "- researchRequests: an array of request objects ([] if none)\n"
+        + content_line
+        + "\n"
+        + "Never emit server-owned fields "
+        + json.dumps(sorted(FORBIDDEN_SERVER_OWNED_FIELDS), ensure_ascii=False)
+        + ", markdown fences, hidden reasoning, or success probabilities.\n"
+        + example_line
+    )
 
 
 @dataclass(frozen=True, slots=True)

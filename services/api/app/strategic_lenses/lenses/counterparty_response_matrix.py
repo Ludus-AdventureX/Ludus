@@ -22,7 +22,6 @@ here redefines canonical schema, manifest, migrations, or other lenses.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -68,12 +67,24 @@ try:  # pragma: no cover - taken once the coordinator seam is merged
         FORBIDDEN_SERVER_OWNED_FIELDS,
         LensBehaviorReport,
         LensPromptInputs,
+        lens_output_contract,
+        load_lens_content_schema,
     )
 except ImportError:  # baseline without the shared seam: structural stand-ins
     from dataclasses import dataclass
 
     ALLOWED_TOP_LEVEL_FIELDS = _FALLBACK_ALLOWED_TOP_LEVEL_FIELDS
     FORBIDDEN_SERVER_OWNED_FIELDS = _FALLBACK_FORBIDDEN_SERVER_OWNED_FIELDS
+
+    def lens_output_contract(  # pragma: no cover - baseline without the seam
+        *, lens_type: str, phase: str, source_skill_version: str, content_def: str
+    ) -> str:
+        """Stand-in: baseline branches never run live lens calls."""
+        return ""
+
+    def load_lens_content_schema(content_def: str) -> str:  # pragma: no cover
+        """Stand-in: baseline branches never run live lens calls."""
+        return ""
 
     @dataclass(frozen=True, slots=True)
     class LensPromptInputs:  # type: ignore[no-redef]
@@ -357,14 +368,14 @@ class CounterpartyResponseMatrixLens:
             + "\n".join(f"- {option_id}" for option_id in option_ids)
             + "\n\n## Run-scoped reference IDs (cite only these)\n"
             + reference_lines
-            + "\n\n## Output contract\n"
-            + "Return exactly one JSON object with top-level fields "
-            + json.dumps(sorted(ALLOWED_TOP_LEVEL_FIELDS))
-            + f' where lensType="{LENS_TYPE.value}", phase="{PHASE}", '
-            + f'sourceSkillVersion="{SOURCE_SKILL_VERSION}" and content matches the '
-            + f"{CONTENT_DEF} schema branch. Never emit server-owned fields "
-            + json.dumps(sorted(FORBIDDEN_SERVER_OWNED_FIELDS))
-            + ", markdown fences, hidden reasoning, or success probabilities."
+            + "\n\n"
+            + lens_output_contract(
+                lens_type=LENS_TYPE.value,
+                phase=PHASE,
+                source_skill_version=SOURCE_SKILL_VERSION,
+                content_def=CONTENT_DEF,
+                content_schema=load_lens_content_schema(CONTENT_DEF),
+            )
         )
         return LensPromptInputs(system=prompt_text, user=user, schema_content_def=CONTENT_DEF)
 

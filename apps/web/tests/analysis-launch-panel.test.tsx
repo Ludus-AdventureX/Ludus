@@ -173,4 +173,80 @@ describe("AnalysisLaunchPanel", () => {
       "claim_support_below_threshold",
     );
   });
+
+  test("blocked guidance shows validator reasons and hides a passed gate", async () => {
+    const user = userEvent.setup();
+    const listeners: Array<[string, (event: { data?: unknown }) => void]> = [];
+    class FakeEventSource implements RunEventSourceLike {
+      constructor(_url: string, _init?: unknown) {}
+      addEventListener(type: string, listener: (event: { data?: unknown }) => void) {
+        listeners.push([type, listener]);
+      }
+      close() {}
+    }
+    vi.stubGlobal("EventSource", FakeEventSource);
+
+    const responses: Array<[RegExp, Response]> = [
+      [/\/analyses$/, jsonResponse(200, { ok: true, data: { items: [] } })],
+      [/\/api\/auth\/csrf$/, jsonResponse(200, { ok: true, data: { csrfToken: "tok" } })],
+      [
+        new RegExp(`/cases/${CASE}$`),
+        jsonResponse(200, { ok: true, data: { decisionSubjectId: "sub-1", decisionQuestion: "问题？" } }),
+      ],
+      [/analysis-charters$/, jsonResponse(201, { ok: true, data: { charterId: "ch-1" } })],
+      [/\/confirm$/, jsonResponse(200, { ok: true, data: {} })],
+      [/\/runs$/, jsonResponse(201, { ok: true, data: { analysisRunId: "run-12345678", status: "queued" } })],
+      [
+        /\/analyses\/run-12345678$/,
+        jsonResponse(200, { ok: true, data: { status: "blocked", progress: 0.86, lastResumableStage: null } }),
+      ],
+    ];
+    let index = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const path = String(input);
+        const step = responses[Math.min(index, responses.length - 1)];
+        index += 1;
+        if (!step[0].test(path)) throw new Error(`request ${index} was ${path}`);
+        return step[1].clone();
+      }),
+    );
+
+    render(createElement(AnalysisLaunchPanel, { workspaceId: WS, decisionCaseId: CASE }));
+    await user.click(screen.getByRole("button", { name: /发起分析/ }));
+
+    await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
+    const fire = (payload: unknown) =>
+      listeners.forEach(([, listener]) => listener({ data: JSON.stringify(payload) }));
+    fire({
+      type: "analysis.blocked",
+      payload: {
+        findings: [
+          {
+            code: "deterministic_gate",
+            passed: true,
+            score: 0.7,
+            dims: { evidence: 0.7, adversarial: 1.0, consistency: 1.0 },
+          },
+          {
+            code: "validator_rejected",
+            source: "model_validator",
+            headline: "追觅先上市仅为推测",
+            keyFindings: ["决策所依据的上市时间仅为推测", "5%投诉门槛无法应对低投诉高危害事故"],
+          },
+        ],
+      },
+    });
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-analysis-blocked-guide]")).toBeInTheDocument(),
+    );
+    const guide = document.querySelector("[data-analysis-blocked-guide]");
+    expect(guide).toHaveTextContent("决策所依据的上市时间仅为推测");
+    expect(guide).toHaveTextContent("5%投诉门槛无法应对低投诉高危害事故");
+    // A passed gate is a verdict, not a blocker: it must not masquerade as
+    // the reason the run was blocked.
+    expect(guide).not.toHaveTextContent("deterministic_gate");
+  });
 });

@@ -32,6 +32,8 @@ const REPAIR_ACTIONS: Record<string, string> = {
     "完整战略分析需要五个战略透镜全部产出并通过行为校验；当前部署的透镜执行尚未完全接通，请先使用聚焦研究，或等待透镜管线修复。",
   strategic_lens_reference_mismatch:
     "报告引用与实际产物不一致属于系统侧缺陷，无需补充档案；请重新发起一次分析。",
+  validator_rejected:
+    "验证审查发现论证链缺口（推测性前提、退出机制不足等）。把缺口对应的证据补进 Q 区档案（确认候选）后重新发起；若缺口为系统侧（透镜/引用），见对应修复动作。",
 };
 
 export function QualityGatePanel({ projection }: { projection: QualityGateProjection }) {
@@ -81,7 +83,9 @@ export function QualityGatePanel({ projection }: { projection: QualityGateProjec
                 ? "通过"
                 : "拦截"
               : "未出"}
-            {typeof gate?.score === "number" ? ` · ${gate.score.toFixed(2)}` : ""}
+            {typeof gate?.score === "number" && gate.passed !== true
+              ? ` · ${gate.score.toFixed(2)}`
+              : ""}
           </dd>
         </div>
       </dl>

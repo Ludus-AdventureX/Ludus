@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy import select
 
 from app.analyses.models import ResearchPacket as ResearchPacketRow
@@ -31,6 +32,19 @@ from app.workers.analysis_worker import (
 from runtime_world import make_queued_run
 
 S = AnalysisRunStatus
+
+
+@pytest.fixture
+def noop_lens_verdict(monkeypatch):
+    """Stub the draft->ready acceptance for tests whose recording lens writer
+    returns an artifact id that was never persisted (no DB row exists, so the
+    real verdict transition would fail closed with LensRunNotFound)."""
+
+    async def _noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(worker_module, "apply_validation_verdict", _noop)
+    return _noop
 
 
 def _stub_executors(*, quality_gate_passed: bool = True, with_lenses: bool = True):
@@ -108,7 +122,9 @@ def _stub_lens_audit(*, ok: bool = True):
     return audit, calls
 
 
-async def test_full_run_pipeline_reaches_ready_with_five_lenses(session, world) -> None:
+async def test_full_run_pipeline_reaches_ready_with_five_lenses(
+    session, world, noop_lens_verdict
+) -> None:
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
     executors, calls = _stub_executors()
     writer, written = _recording_lens_writer()
@@ -196,7 +212,9 @@ async def test_focused_run_skips_all_lens_stages(session, world) -> None:
     assert all(event.type != "strategic_lens.completed" for event in events)
 
 
-async def test_validation_failure_blocks_and_never_repairs(session, world) -> None:
+async def test_validation_failure_blocks_and_never_repairs(
+    session, world, noop_lens_verdict
+) -> None:
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
     executors, _ = _stub_executors(quality_gate_passed=False)
     writer, written = _recording_lens_writer()
@@ -217,8 +235,84 @@ async def test_validation_failure_blocks_and_never_repairs(session, world) -> No
     assert events[-1].type == "analysis.blocked"
 
 
+async def test_model_denial_surfaces_validator_rejection_in_blocked_findings(
+    session, world, noop_lens_verdict
+) -> None:
+    """A model qualityGatePassed=false must surface WHY it rejected: the
+    validating digest's headline/keyFindings ride the blocked findings as a
+    validator_rejected code (the structured validatorFindings array is
+    optional in practice, so the digest is the honest reason source), while
+    the passed deterministic gate stays alongside - never masquerading as the
+    blocker."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            if inputs.get("substage"):
+                return StageResult(output={"substage": inputs["substage"]})
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {"lensType": lens, "content": {"stub": True}}
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            if stage == S.VALIDATING:
+                return StageResult(
+                    output={
+                        "role": role,
+                        "stage": stage.value,
+                        "digest": {
+                            "headline": "追觅先上市仅为推测，未提供市场情报证据",
+                            "keyFindings": [
+                                "决策所依据的上市时间仅为推测",
+                                "5%投诉门槛无法应对低投诉高危害事故",
+                            ],
+                            "openQuestions": ["是否有内部测试数据"],
+                            "risks": [],
+                        },
+                    },
+                    lens_payloads=lens_payloads,
+                    quality_gate_passed=False,
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                lens_payloads=lens_payloads,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _written = _recording_lens_writer()
+    audit, _audit_calls = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
+    events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
+    blocked = [event for event in events if event.type == "analysis.blocked"]
+    assert blocked
+    findings = blocked[-1].payload.get("findings", [])
+    rejected = [f for f in findings if f.get("code") == "validator_rejected"]
+    assert len(rejected) == 1
+    assert "追觅先上市仅为推测" in rejected[0]["headline"]
+    assert len(rejected[0]["keyFindings"]) == 2
+    gate = [f for f in findings if f.get("code") == "deterministic_gate"]
+    assert gate and gate[0]["passed"] is True
+
+
 async def test_real_audit_blocks_full_run_when_persisted_set_is_corrupt(
-    session, world
+    session, world, noop_lens_verdict
 ) -> None:
     """§A1-⑥ red light with the DEFAULT (real) audit: the recording writer
     persists NO ready rows, so the persisted five-lens set is corrupt and the
@@ -311,3 +405,99 @@ def test_default_lens_writer_uses_shipped_persistence_path_import_only() -> None
     assert "persist_lens_stage_output(" in source
     assert worker_module.persist_lens_stage_output is persist_lens_stage_output
     assert LENS_VALIDATION_VERDICT is apply_validation_verdict
+
+
+async def test_dossier_assumptions_registered_into_lens_ledger(
+    session, world, noop_lens_verdict
+) -> None:
+    """Dossier CONFIRMED assumption entries become real Claim rows and reach
+    the lens writer as ledger.assumption_ids: the counterparty reference
+    authority is persisted rows, never model self-declaration."""
+
+    from app.models import DossierEntry
+    from app.types import DossierScope, DossierSourceType, DossierStatementType, EntryStatus
+
+    session.add(
+        DossierEntry(
+            workspace_id=world.workspace_id,
+            decision_subject_id=world.subject_id,
+            decision_case_id=world.case_id,
+            scope=DossierScope.CASE,
+            statement_type=DossierStatementType.ASSUMPTION,
+            content="procurement cycles run ~9 months",
+            status=EntryStatus.CONFIRMED,
+            source_type=DossierSourceType.USER,
+            version=1,
+        )
+    )
+    session.add(
+        DossierEntry(
+            workspace_id=world.workspace_id,
+            decision_subject_id=world.subject_id,
+            decision_case_id=world.case_id,
+            scope=DossierScope.CASE,
+            statement_type=DossierStatementType.ASSUMPTION,
+            content="first mover wins certification lockout",
+            status=EntryStatus.CONFIRMED,
+            source_type=DossierSourceType.USER,
+            version=1,
+        )
+    )
+    await session.flush()
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    ledgers = []
+
+    async def writer(session, **kwargs) -> UUID:
+        ledgers.append(kwargs["ledger"])
+        return uuid4()
+
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(session, executors=executors, lens_writer=writer, lens_audit=audit)
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    assert ledgers, "lens writer must have been called for a full run"
+    assumption_ids = set().union(*(ledger.assumption_ids for ledger in ledgers))
+    assert assumption_ids, "registered dossier assumptions must reach the lens ledger"
+    # The Claim rows are the persisted authority behind those ids.
+    from app.analyses.claims import Claim
+
+    rows = (
+        await session.execute(
+            select(Claim).where(
+                Claim.workspace_id == world.workspace_id,
+                Claim.analysis_run_id == run.analysis_run_id,
+            )
+        )
+    ).scalars().all()
+    assert len(rows) == 2
+    # Ledger ids are the Claim row ids (the persisted authority), not the
+    # dossier entry ids recorded as source_span_ids.
+    assert {str(row.id) for row in rows} == {
+        span for ledger in ledgers for span in ledger.assumption_ids
+    }
+
+
+async def test_lens_ledger_without_dossier_assumptions_stays_empty(
+    session, world, noop_lens_verdict
+) -> None:
+    """No dossier assumptions -> no Claim rows -> empty ledger.assumption_ids:
+    the counterparty gate keeps blocking honestly (fail-closed), the worker
+    never fabricates references."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    ledgers = []
+
+    async def writer(session, **kwargs) -> UUID:
+        ledgers.append(kwargs["ledger"])
+        return uuid4()
+
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(session, executors=executors, lens_writer=writer, lens_audit=audit)
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    assert ledgers, "lens writer must have been called for a full run"
+    assert all(not ledger.assumption_ids for ledger in ledgers)

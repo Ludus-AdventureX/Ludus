@@ -193,7 +193,32 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
             );
           }
           if (event.findings) {
-            setFindings(event.findings.map(findingText).filter(Boolean).slice(0, 5));
+            // Blocked guidance shows REAL blockers only: a passed deterministic
+            // gate is a verdict, not a blocker (its details live in the quality
+            // panel), and validator rejection reasons arrive as structured
+            // headline/keyFindings the user can act on.
+            const texts: string[] = [];
+            for (const finding of event.findings) {
+              if (finding.code === "deterministic_gate" && finding.passed === true) {
+                continue;
+              }
+              if (finding.code === "validator_rejected") {
+                const keys = Array.isArray(finding.keyFindings)
+                  ? finding.keyFindings
+                  : [];
+                if (keys.length > 0) {
+                  texts.push(...keys.map(String));
+                } else if (typeof finding.headline === "string" && finding.headline) {
+                  texts.push(finding.headline);
+                } else {
+                  texts.push("验证审查判定证据链不足（未给出具体条目）。");
+                }
+                continue;
+              }
+              const text = findingText(finding);
+              if (text) texts.push(text);
+            }
+            setFindings(texts.slice(0, 5));
           }
         },
         onTick: (snapshot: RunSnapshot) =>

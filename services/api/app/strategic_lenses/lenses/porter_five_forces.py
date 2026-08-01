@@ -33,7 +33,10 @@ from app.agents.lenses import (
     LensRequest,
     LensSpec,
     StrategicLensStageOutput,
+    lens_content_example,
+    lens_output_contract,
     lens_spec,
+    load_lens_content_schema,
 )
 from app.types import StrategicLensType
 
@@ -108,6 +111,15 @@ class PorterFiveForcesLens:
                 "Analyze each market option separately. Cite only the evidence",
                 "IDs listed above; submit researchRequests instead of guessing",
                 "when evidence for a force is missing.",
+                "",
+                lens_output_contract(
+                    lens_type=self.lens_type.value,
+                    phase=self._spec.phase,
+                    source_skill_version=self._spec.source_skill_version,
+                    content_def=self._spec.content_def,
+                    content_schema=load_lens_content_schema(self._spec.content_def),
+                    content_example=lens_content_example(self._spec.content_def),
+                ),
             )
         )
         return LensPromptInputs(

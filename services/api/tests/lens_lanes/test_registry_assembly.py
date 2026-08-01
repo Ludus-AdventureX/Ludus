@@ -64,6 +64,49 @@ def test_prompt_assembly_is_deterministic(lens_type: StrategicLensType) -> None:
     assert first.schema_content_def == LENS_SPECS[lens_type].content_def
 
 
+@pytest.mark.parametrize("lens_type", list(FULL_REQUIRED_STRATEGIC_LENSES))
+def test_every_lens_user_message_carries_output_contract(lens_type: StrategicLensType) -> None:
+    """Every lens must tell the model about the full top-level schema.
+
+    Live full runs previously lost all five lenses to ``KeyError: 'references'``
+    because the user prompts never mentioned the references field. This test
+    pins the shared contract into every lane so a future prompt edit cannot
+    silently drop it again.
+    """
+
+    registry = build_lens_registry()
+    impl = registry.get(lens_type)
+    request = LensRequest(
+        lens_type=lens_type,
+        workspace_id="ws-01",
+        analysis_run_id="run-01",
+        prompt_text=f"frozen prompt for {lens_type.value}",
+        research_packet_refs=("rp-1", "rp-2"),
+        evidence_refs=("ev-1", "ev-2"),
+        option_ids=("opt-rescue", "opt-home"),
+    )
+    user = impl.build_prompt_inputs(request).user
+    assert "Output contract (MANDATORY)" in user
+    assert '"references"' in user or "references:" in user
+    for key in ("sourcePacketIds", "claimIds", "evidenceIds", "assumptionIds", "challengeIds"):
+        assert key in user
+    # The content-branch schema definition must ride in the same message: the
+    # published prompts only cite the schema URN, so without this the model
+    # free-styles content and every behavior gate rejects the shape.
+    content_def = LENS_SPECS[lens_type].content_def
+    assert content_def in user
+    assert "$defs" in user or "type\": \"object" in user
+    # Lenses whose gates demand nested array-element fields (porter, scenario,
+    # meadows) must also carry a complete gate-passing content example.
+    if lens_type in (
+        StrategicLensType.PORTER_FIVE_FORCES,
+        StrategicLensType.SCENARIO_PLANNING,
+        StrategicLensType.MEADOWS_LEVERAGE_POINTS,
+    ):
+        assert "Example content" in user
+        assert "ev-sample-" in user
+
+
 def test_pre_mortem_adapter_keeps_fixture_verdicts() -> None:
     registry = build_lens_registry()
     impl = registry.get(StrategicLensType.PRE_MORTEM)

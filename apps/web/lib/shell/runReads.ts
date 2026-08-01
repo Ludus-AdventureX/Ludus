@@ -52,6 +52,7 @@ export const FINDING_LABELS: Record<string, string> = {
   strategic_lens_duplicate_type: "同一战略透镜出现了多份产物",
   strategic_lens_outside_charter: "出现了章程冻结集合之外的透镜产物",
   deterministic_gate: "确定性质量门（证据 × 反方 × 一致性乘法评分）",
+  validator_rejected: "验证审查拒绝：证据链存在漏洞（理由见验证阶段审查产物）",
 };
 
 export function humanizeFinding(code: string): string {

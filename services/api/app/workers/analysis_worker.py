@@ -51,6 +51,7 @@ from app.agents.model_provider import (
 # Shipped lens write path: imported (never copied). The default lens writer
 # below delegates to these exact callables.
 from app.strategic_lenses.repository import (
+    FrozenReferenceLedger,
     apply_validation_verdict,
     persist_lens_stage_output,
 )
@@ -529,6 +530,34 @@ class AnalysisWorker:
                                 {"code": code, "source": "lens_set_audit"}
                                 for code in audit.reason_codes
                             ]
+                    if (
+                        not passed
+                        and len(audit_findings) == 1
+                        and audit_findings[0].get("code") == "deterministic_gate"
+                    ):
+                        # Surface the model validator's rejection reasons: models
+                        # rarely emit the structured validatorFindings array, so
+                        # the validating digest's headline/keyFindings ARE the
+                        # reasons. Without this the blocked event only carries the
+                        # (passed!) deterministic gate and the UI cannot tell the
+                        # user what gap actually blocked the run.
+                        if not bool(result.quality_gate_passed):
+                            v_digest = _extract_digest(result.output) or {}
+                            audit_findings.append(
+                                {
+                                    "code": "validator_rejected",
+                                    "source": "model_validator",
+                                    "headline": str(v_digest.get("headline") or ""),
+                                    "keyFindings": [
+                                        str(item)
+                                        for item in (v_digest.get("keyFindings") or [])
+                                    ],
+                                    "openQuestions": [
+                                        str(item)
+                                        for item in (v_digest.get("openQuestions") or [])
+                                    ],
+                                }
+                            )
                     await self._repo.record_stage_completed(
                         workspace_id,
                         run_id,
@@ -824,6 +853,155 @@ class AnalysisWorker:
             gate_status="passed",
         )
 
+    async def _register_dossier_assumptions(self, run: AnalysisRun) -> None:
+        """Register the case's CONFIRMED dossier assumptions as Claim rows.
+
+        The counterparty lens behavior gate resolves every coreAssumptionIds
+        entry against the frozen ledger (fail-closed), and ledger
+        assumption_ids come from persisted Claim rows. Nothing else writes
+        those rows, so without this registration the lens can never pass: the
+        model may only cite IDs that exist. Dossier entries are the product
+        authority for assumptions (dossier_statement_type.assumption plus the
+        decision-maker CONFIRMED endorsement); each one becomes a Claim whose
+        source_span_ids pins the originating dossier entry, which also makes
+        registration idempotent. Conversation messages are deliberately NOT
+        registered: they carry no statement-type marker, so a deterministic
+        lane cannot attribute assumptions from free text without an extraction
+        model call.
+        """
+
+        from sqlalchemy import select as _sel
+
+        from app.analyses.claims import Claim
+        from app.models import DossierEntry
+        from app.types import DossierStatementType, EntryStatus, StatementType
+
+        entries = (
+            await self._session.execute(
+                _sel(DossierEntry.id, DossierEntry.content).where(
+                    DossierEntry.workspace_id == run.workspace_id,
+                    DossierEntry.decision_case_id == run.decision_case_id,
+                    DossierEntry.status == EntryStatus.CONFIRMED,
+                    DossierEntry.statement_type == DossierStatementType.ASSUMPTION,
+                )
+            )
+        ).all()
+        if not entries:
+            return
+        registered_spans = {
+            span
+            for (spans,) in (
+                await self._session.execute(
+                    _sel(Claim.source_span_ids).where(
+                        Claim.workspace_id == run.workspace_id,
+                        Claim.analysis_run_id == run.analysis_run_id,
+                        Claim.statement_type == StatementType.ASSUMPTION,
+                    )
+                )
+            ).all()
+            for span in (spans or [])
+        }
+        for entry_id, content in entries:
+            if str(entry_id) in registered_spans:
+                continue
+            self._session.add(
+                Claim(
+                    workspace_id=run.workspace_id,
+                    decision_case_id=run.decision_case_id,
+                    analysis_run_id=run.analysis_run_id,
+                    statement_type=StatementType.ASSUMPTION,
+                    text=str(content),
+                    importance="core",
+                    source="user",
+                    responsibility={},
+                    source_span_ids=[str(entry_id)],
+                    supporting_evidence_ids=[],
+                    opposing_evidence_ids=[],
+                    assumption_ids=[],
+                    support_score=0.0,
+                    scope="",
+                    status=EntryStatus.CONFIRMED,
+                )
+            )
+        await self._session.flush()
+
+    async def _frozen_reference_sets(
+        self, run: AnalysisRun
+    ) -> dict[str, frozenset[str]]:
+        """Collect the run-frozen reference sets from persisted entities.
+
+        The lens write path resolves every declared reference against this
+        ledger fail-closed, so it MUST equal exactly what the lens prompt shows
+        the model: research packet ids and their funnel-minted evidence ids
+        (both persisted in ``research_packets``), dossier-derived assumption
+        claims (registered by ``_register_dossier_assumptions``), plus any
+        claim/challenge rows the run produced (challenges still empty until
+        that lane persists rows; the model then cannot cite them and behavior
+        gates that require them block honestly). Same source feeds the
+        dedicated lens prompt inputs and ``FrozenReferenceLedger``, so what
+        the model sees is what the write path will resolve - never
+        ``result.output.get("ledger")``, which live executors never produce.
+        """
+
+        from sqlalchemy import select as _sel
+
+        from app.analyses.claims import Claim
+        from app.analyses.devils_advocate import Challenge
+        from app.analyses.models import ResearchPacket
+        from app.types import StatementType
+
+        packet_rows = (
+            await self._session.execute(
+                _sel(ResearchPacket.id, ResearchPacket.evidence_ids).where(
+                    ResearchPacket.workspace_id == run.workspace_id,
+                    ResearchPacket.analysis_run_id == run.analysis_run_id,
+                )
+            )
+        ).all()
+        source_packet_ids = frozenset(str(row.id) for row in packet_rows)
+        # Funnel-minted evidence ids are stored as annotated strings like
+        # "ev-retrieving-001 [L6] https://..."; the ledger and the lens prompt
+        # must agree on ONE citable form. The model can only echo a bare id, so
+        # strip the " [..]" annotation suffix here - then what the model sees
+        # is exactly what the write path will resolve.
+        evidence_ids = frozenset(
+            str(eid).split(" [", 1)[0].strip()
+            for row in packet_rows
+            for eid in (row.evidence_ids or [])
+        )
+        claim_rows = (
+            await self._session.execute(
+                _sel(Claim.id, Claim.statement_type).where(
+                    Claim.workspace_id == run.workspace_id,
+                    Claim.analysis_run_id == run.analysis_run_id,
+                )
+            )
+        ).all()
+        claim_ids = frozenset(str(row.id) for row in claim_rows)
+        assumption_ids = frozenset(
+            str(row.id)
+            for row in claim_rows
+            if row.statement_type == StatementType.ASSUMPTION
+        )
+        challenge_ids = frozenset(
+            str(cid)
+            for cid in (
+                await self._session.execute(
+                    _sel(Challenge.id).where(
+                        Challenge.workspace_id == run.workspace_id,
+                        Challenge.analysis_run_id == run.analysis_run_id,
+                    )
+                )
+            ).scalars().all()
+        )
+        return {
+            "source_packet_ids": source_packet_ids,
+            "evidence_ids": evidence_ids,
+            "claim_ids": claim_ids,
+            "assumption_ids": assumption_ids,
+            "challenge_ids": challenge_ids,
+        }
+
     async def _run_lens_stages(
         self,
         run: AnalysisRun,
@@ -839,6 +1017,13 @@ class AnalysisWorker:
         caused every live full run to produce zero lens artifacts.
         """
 
+        # Frozen-reference ledger for the whole lens set: built once from the
+        # persisted run (same source as the dedicated prompt inputs), so every
+        # lens in this stage resolves against the same authority. Dossier
+        # assumptions are registered BEFORE the ledger freezes so counterparty
+        # can cite them; without rows the gate still blocks honestly.
+        await self._register_dossier_assumptions(run)
+        ledger = FrozenReferenceLedger(**(await self._frozen_reference_sets(run)))
         for lens_type in FULL_LENS_SCHEDULE[stage]:
             payload = result.lens_payloads.get(lens_type)
             if payload is None:
@@ -858,7 +1043,7 @@ class AnalysisWorker:
                     decision_case_id=run.decision_case_id,
                     analysis_run_id=run.analysis_run_id,
                     payload=payload,
-                    ledger=result.output.get("ledger"),
+                    ledger=ledger,
                     origin_modes=(self._origin_mode,),
                 )
             except Exception:
@@ -866,14 +1051,32 @@ class AnalysisWorker:
                 # The lens audit at the validating gate will catch the absence
                 # and block the run (fail-closed) rather than crashing here.
                 logging.getLogger(__name__).warning(
-                    "lens %s persistence failed for run %s; skipping",
-                    lens_type, run.analysis_run_id, exc_info=True,
+                    "lens %s persistence failed for run %s; payload keys: %s; "
+                    "references: %s; skipping",
+                    lens_type, run.analysis_run_id,
+                    sorted(payload.keys()),
+                    {
+                        key: sorted(map(str, values))
+                        for key, values in payload.get("references", {}).items()
+                    },
+                    exc_info=True,
                 )
                 continue
             # Only after successful persistence: record the id and emit the
             # canonical strategic_lens.completed event.
             await self._repo.record_lens_artifact_id(
                 run.workspace_id, run.analysis_run_id, artifact_id
+            )
+            # The shipped write path persists draft artifacts; the lens audit
+            # only counts READY rows, so accept the artifact immediately (the
+            # behavior gate already passed inside persist_lens_stage_output).
+            # This was the last missing link that kept every full run blocked
+            # with strategic_lens_incomplete even when all five lenses landed.
+            await apply_validation_verdict(
+                await self._session.connection(),
+                workspace_id=run.workspace_id,
+                strategic_lens_artifact_id=artifact_id,
+                accepted=True,
             )
             await self._repo.append_event(
                 await self._fresh(run),
@@ -931,9 +1134,10 @@ class AnalysisWorker:
             # Docker image under /app/method-packs/).
             prompt_path = Path("/app/method-packs/hardtech-market-direction/1.1.0") / spec.prompt_ref
             if not prompt_path.is_file():
-                # Fallback for local dev where the image mounts differently.
+                # Fallback for local dev where the image mounts differently:
+                # parents[4] is the repo root (services/api/app/workers -> x4).
                 prompt_path = (
-                    Path(__file__).resolve().parents[3]
+                    Path(__file__).resolve().parents[4]
                     / "method-packs" / "hardtech-market-direction" / "1.1.0" / spec.prompt_ref
                 )
             prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.is_file() else ""
@@ -941,32 +1145,17 @@ class AnalysisWorker:
             # Assemble the LensRequest from the frozen run context.
             charter = await self._session.get(AnalysisCharter, run.charter_id)
             option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
-            # Gather research packet IDs and evidence IDs from the DATABASE
-            # (prior stages already persisted them; parent_result only has the
-            # current stage's output which doesn't carry earlier artifacts).
-            from sqlalchemy import select as _sel
-            from app.analyses.models import ResearchPacket
-            packet_rows = (
-                await self._session.execute(
-                    _sel(ResearchPacket.id)
-                    .where(
-                        ResearchPacket.workspace_id == run.workspace_id,
-                        ResearchPacket.analysis_run_id == run.analysis_run_id,
-                    )
-                    .limit(20)
-                )
-            ).scalars().all()
-            packet_ids = tuple(str(pid) for pid in packet_rows)
-            # Evidence: use admitted evidence IDs from retrieving stage output
-            # (persisted in stage_results on the run row).
-            fresh = await self._fresh(run)
-            retrieving_output = (fresh.stage_results or {}).get("retrieving", {})
-            funnel = retrieving_output.get("evidenceFunnel", {}) if isinstance(retrieving_output, Mapping) else {}
-            evidence_ids = tuple(
-                str(e.get("evidenceId") or e.get("id", ""))
-                for e in funnel.get("admitted", [])
-                if isinstance(e, Mapping)
-            )
+            # Frozen reference sets come from the DATABASE (prior stages
+            # already persisted them; parent_result only has the current
+            # stage's output which doesn't carry earlier artifacts). The same
+            # sets feed the FrozenReferenceLedger, so the model can only cite
+            # IDs the write path will resolve.
+            refs = await self._frozen_reference_sets(run)
+            packet_ids = tuple(sorted(refs["source_packet_ids"]))
+            evidence_ids = tuple(sorted(refs["evidence_ids"]))
+            claim_ids = tuple(sorted(refs["claim_ids"]))
+            assumption_ids = tuple(sorted(refs["assumption_ids"]))
+            challenge_ids = tuple(sorted(refs["challenge_ids"]))
 
             request = LensRequest(
                 lens_type=lens_enum,
@@ -975,6 +1164,9 @@ class AnalysisWorker:
                 prompt_text=prompt_text,
                 research_packet_refs=packet_ids[:20],
                 evidence_refs=evidence_ids[:30],
+                claim_refs=claim_ids[:20],
+                assumption_refs=assumption_ids[:20],
+                challenge_refs=challenge_ids[:20],
                 option_ids=option_ids,
             )
             inputs = impl.build_prompt_inputs(request)
@@ -993,9 +1185,18 @@ class AnalysisWorker:
             StrategicLensStageOutput.from_payload(content)
             return dict(content)
         except Exception:
+            # Diagnosis aid: the raw model reply is otherwise discarded, which
+            # turned every lens failure into a blind spot (the schema KeyError
+            # told us WHAT field was missing, never WHAT the model emitted).
+            raw_text = ""
+            try:
+                raw_text = completion.raw_text  # type: ignore[possibly-undefined]
+            except (NameError, UnboundLocalError):
+                raw_text = ""
             logging.getLogger(__name__).warning(
-                "dedicated lens %s execution failed for run %s; audit will catch absence",
-                lens_type, run.analysis_run_id, exc_info=True,
+                "dedicated lens %s execution failed for run %s; raw model output "
+                "(truncated): %s; audit will catch absence",
+                lens_type, run.analysis_run_id, raw_text[:2000], exc_info=True,
             )
             return None
 
