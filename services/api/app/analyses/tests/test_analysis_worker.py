@@ -341,6 +341,106 @@ async def test_real_audit_blocks_full_run_when_persisted_set_is_corrupt(
     assert "strategic_lens_incomplete" in codes
 
 
+async def test_lens_behavior_rejection_repairs_with_reason_codes(
+    session, world, noop_lens_verdict
+) -> None:
+    """Grey-goo principle 13 (adversarial feedback loop): a lens behavior gate
+    rejection MUST return INTO the producing lens model with its reason codes.
+    The worker re-invokes the dedicated lens with a repair instruction and
+    persists the repaired payload; one repair pass max, then fail-closed."""
+
+    from app.strategic_lenses.repository import LensBehaviorRejected
+    from app.types import StrategicLensType
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    rejected_lens = "porter_five_forces"
+    rejection_codes = ("forces_missing", "changing_trend_missing")
+    repair_requests: list[tuple[str, tuple[str, ...]]] = []
+    first_attempt_done = {"done": False}
+
+    async def writer(session, **kwargs) -> UUID:
+        lens_type = kwargs["payload"]["lensType"]
+        if lens_type == rejected_lens and not first_attempt_done["done"]:
+            first_attempt_done["done"] = True
+            raise LensBehaviorRejected(
+                StrategicLensType(rejected_lens), rejection_codes
+            )
+        return uuid4()
+
+    async def fake_dedicated(
+        run_row, stage, lens_type, parent_result, repair_context=None
+    ):
+        repair_requests.append((lens_type, repair_context or ()))
+        return {
+            "lensType": lens_type,
+            "sourceSkillVersion": "1.0.0",
+            "phase": "analyzing",
+            "references": {},
+            "researchRequests": [],
+            "content": {"repaired": True},
+        }
+
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+    worker._execute_dedicated_lens = fake_dedicated  # type: ignore[method-assign]
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    # The rejected lens was repaired WITH the exact behavior-gate reason codes
+    # (structured feedback, not a blind retry) and the run still lands ready.
+    assert (rejected_lens, rejection_codes) in repair_requests
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert AnalysisRunStatus(refreshed.status) == S.READY
+    events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
+    assert [e.type for e in events].count("strategic_lens.completed") == 5
+
+
+async def test_lens_behavior_rejection_second_failure_stays_fail_closed(
+    session, world, noop_lens_verdict
+) -> None:
+    """A second behavior rejection after the repair pass keeps the established
+    fail-closed posture: the lens is skipped (no unbounded retry loop) and the
+    validating-gate lens audit blocks the run."""
+
+    from app.strategic_lenses.repository import LensBehaviorRejected
+    from app.types import StrategicLensType
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    repair_calls: list[str] = []
+
+    async def writer(session, **kwargs) -> UUID:
+        lens_type = kwargs["payload"]["lensType"]
+        if lens_type == "porter_five_forces":
+            raise LensBehaviorRejected(
+                StrategicLensType(lens_type), ("forces_missing",)
+            )
+        return uuid4()
+
+    async def fake_dedicated(
+        run_row, stage, lens_type, parent_result, repair_context=None
+    ):
+        repair_calls.append(lens_type)
+        # The repaired payload still fails the gate on the second attempt.
+        return {"lensType": lens_type, "content": {"stub": True}}
+
+    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+    worker._execute_dedicated_lens = fake_dedicated  # type: ignore[method-assign]
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    # Exactly ONE repair pass was attempted (bounded retry), then skipped.
+    assert repair_calls == ["porter_five_forces"]
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    # The missing lens blocks readiness via the DEFAULT (real) audit.
+    assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
+
+
 async def test_cooperative_cancellation_stops_at_next_boundary(session, world) -> None:
     _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
     repo = AnalysisRuntimeRepository(session)
