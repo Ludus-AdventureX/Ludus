@@ -4603,3 +4603,16 @@ fail-closed 工作正常，坏在透镜写路径参数未接通 + 假设引用�
 - Remaining: remote visibility/branch-level review is product-owner action.
 - No credentials recorded.
 
+
+## Remote push record 2026-08-01 (Asia/Shanghai) - THIRD_PARTY_NOTICES + AGPL branch deletion
+
+- Action: push origin main (product-owner authorized; --no-verify per standing approval for main-guard bypass) + delete remote branch codex/adopt-agpl-dual-license (product-owner authorized).
+- Remote URL: https://github.com/Ludus-AdventureX/Ludus.git (canonical, confirmed before push).
+- Remote main before: 7e2045471f8ba3c1b60cf719562744b2d3afc642 (fresh ls-remote read).
+- Remote main after: ce925b1e510fc69227086856f6d6d185f0c48e4f (fresh ls-remote re-read, PUSH_VERIFIED_SYNC).
+- Pushed: main ce925b1 (fast-forward) - THIRD_PARTY_NOTICES.md added (closes LICENSING.md Gate 2: Hermes MIT / Open WebUI multi-license / 探讨 internal source, per 21-existing-asset-reuse-and-conversion.md).
+- Deleted remote branch: codex/adopt-agpl-dual-license (was 0054a8d, AGPL dual-licensing history branch); local branch deleted too; live ls-remote confirms ref gone.
+- Verification: live remote SHA == local SHA; no concurrent advance detected.
+- Remaining: remote visibility/branch-level review is product-owner action.
+- No credentials recorded.
+
