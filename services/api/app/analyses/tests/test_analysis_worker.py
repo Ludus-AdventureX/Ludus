@@ -601,3 +601,103 @@ async def test_lens_ledger_without_dossier_assumptions_stays_empty(
 
     assert ledgers, "lens writer must have been called for a full run"
     assert all(not ledger.assumption_ids for ledger in ledgers)
+
+
+# --- P2 wave 1: grey-goo Self-Anchor (§8) / logic spot-check (§13) / anchor
+# --- downgrade pre-check (v6.9.5) — pure functions, no DB required ----------
+
+
+def test_self_anchor_all_conflict_caps_score() -> None:
+    packet = {
+        "factor": "rescue demand",
+        "conclusion": "rescue demand is confirmed by procurement data",
+        "claim_support_score": 0.9,
+        "self_anchor": [
+            {"verdict": "conflict", "evidenceId": "ev-1"},
+            {"verdict": "conflict", "evidenceId": "ev-2"},
+        ],
+    }
+    sanitized = worker_module._sanitize_packet(packet)
+    assert sanitized is not None
+    assert sanitized["claim_support_score"] == 0.5  # capped, not kept at 0.9
+    assert sanitized["self_anchor"][0]["verdict"] == "conflict"
+
+
+def test_self_anchor_pass_or_mixed_keeps_score() -> None:
+    for verdicts in (
+        [{"verdict": "pass", "evidenceId": "ev-1"}],
+        [{"verdict": "conflict", "evidenceId": "ev-1"}, {"verdict": "pass", "evidenceId": "ev-2"}],
+        [],
+    ):
+        packet = {
+            "factor": "rescue demand",
+            "conclusion": "procurement cycles run ~9 months",
+            "claim_support_score": 0.8,
+            "self_anchor": verdicts,
+        }
+        sanitized = worker_module._sanitize_packet(packet)
+        assert sanitized["claim_support_score"] == 0.8
+
+
+def test_self_anchor_malformed_dropped_not_crashing() -> None:
+    packet = {
+        "factor": "rescue demand",
+        "conclusion": "procurement cycles run ~9 months",
+        "self_anchor": "not-a-list",
+    }
+    sanitized = worker_module._sanitize_packet(packet)
+    assert "self_anchor" not in sanitized
+    assert sanitized["claim_support_score"] == 0.5
+
+
+def test_logic_spot_check_catches_circular_reasoning_and_premise_drift() -> None:
+    circular = {
+        "factor": "market demand is growing strongly",
+        "conclusion": "the market is growing strongly, so demand is strong",
+    }
+    findings = worker_module._logic_spot_check(circular)
+    assert "circular_reasoning" in findings
+
+    drift = {
+        "factor": "rescue robot certification",
+        "conclusion": "supply chain delays push the timeline",
+    }
+    findings = worker_module._logic_spot_check(drift)
+    assert "premise_drift" in findings
+
+
+def test_logic_spot_check_clean_packet_returns_empty() -> None:
+    clean = {
+        "factor": "rescue robot certification timeline",
+        "conclusion": "certification takes nine months on average",
+    }
+    assert worker_module._logic_spot_check(clean) == ()
+
+
+def test_anchor_blocks_downgrade_when_two_shared_assumptions() -> None:
+    blocked, count = worker_module._anchor_blocks_downgrade(
+        {
+            "safety_anchor": {
+                "digest": {
+                    "keyFindings": [
+                        "all agents assume the LOI converts",
+                        "all agents assume buyer funding is committed",
+                    ]
+                }
+            }
+        }
+    )
+    assert blocked is True
+    assert count == 2
+
+
+def test_anchor_does_not_block_with_zero_or_one_finding() -> None:
+    for findings in ([], ["single shared assumption"]):
+        blocked, count = worker_module._anchor_blocks_downgrade(
+            {"safety_anchor": {"digest": {"keyFindings": findings}}}
+        )
+        assert blocked is False
+        assert count == len(findings)
+    # Missing anchor / missing digest must never block.
+    assert worker_module._anchor_blocks_downgrade({}) == (False, 0)
+    assert worker_module._anchor_blocks_downgrade({"safety_anchor": {}}) == (False, 0)
