@@ -29,6 +29,7 @@ import type {
   EvidenceEventSourceFactory,
   LensArtifactSummaryView,
   QualityDimensionsView,
+  RunEvidenceListView,
   SameSourceGroupView
 } from "@/lib/api/evidence";
 import {
@@ -111,7 +112,12 @@ type LedgerState =
   | { phase: "unauthenticated" }
   | { phase: "not-found" }
   | { phase: "error" }
-  | { phase: "ready"; items: EvidenceItemView[]; conflicts: ConflictRelationView[] };
+  | {
+      phase: "ready";
+      items: EvidenceItemView[];
+      conflicts: ConflictRelationView[];
+      funnelAudit: RunEvidenceListView["funnelAudit"];
+    };
 
 type DetailData = {
   item: EvidenceItemView;
@@ -187,6 +193,46 @@ function EvidenceSetWarnings({ items }: { items: EvidenceItemView[] }) {
         </p>
       ))}
     </div>
+  );
+}
+
+/**
+ * Grey-goo 原则⑩ (CCR-20260802-P2W2): the persisted TDD discard audit —
+ * "what was filtered out and why". Honest phases mirror the ledger: absent
+ * audit -> nothing rendered; present -> one row per discarded fact with its
+ * check + reason.
+ */
+function FunnelDiscardAudit({
+  funnelAudit
+}: {
+  funnelAudit: RunEvidenceListView["funnelAudit"];
+}) {
+  if (!funnelAudit) return null;
+  const discards = Array.isArray(funnelAudit.discarded) ? funnelAudit.discarded : [];
+  if (discards.length === 0) {
+    return (
+      <section className="funnel-discard-audit" data-funnel-discard-audit>
+        <span>被过滤的事实</span>
+        <p className="draft-notice" role="status">
+          本轮检索没有事实被过滤。
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="funnel-discard-audit" data-funnel-discard-audit>
+      <span>被过滤的事实（{discards.length} 条）</span>
+      <ul>
+        {discards.map(
+          (discard: { factor?: string; reason?: string; check?: string }, index: number) => (
+            <li key={`${discard.factor ?? index}-${index}`}>
+              <b>{discard.factor ?? "未命名因素"}</b>
+              <small>{`${discard.check ?? "relevance"}：${discard.reason ?? ""}`}</small>
+            </li>
+          )
+        )}
+      </ul>
+    </section>
   );
 }
 
@@ -290,7 +336,8 @@ export function EvidenceDrawer({
         setLedger({
           phase: "ready",
           items: Array.isArray(runEvidence.items) ? runEvidence.items : [],
-          conflicts: Array.isArray(runConflicts.conflicts) ? runConflicts.conflicts : []
+          conflicts: Array.isArray(runConflicts.conflicts) ? runConflicts.conflicts : [],
+          funnelAudit: runEvidence.funnelAudit ?? null
         });
       } catch (error) {
         if (ledgerRequestSeq.current !== requestId) return;
@@ -501,6 +548,7 @@ export function EvidenceDrawer({
           {ledger.phase === "ready" && ledger.items.length > 0 && (
             <>
               <EvidenceSetWarnings items={ledger.items} />
+              <FunnelDiscardAudit funnelAudit={ledger.funnelAudit} />
               <ul className="evidence-item-list">
                 {ledger.items.map((item) => {
                   const stance = evidenceStance(item);

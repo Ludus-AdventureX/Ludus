@@ -434,6 +434,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
     files = sorted(p.name for p in versions_dir.glob("*.py") if p.name != "__init__.py")
     assert files == [
         "0001_core_tenancy_and_dossiers.py",
+        "2b2d34dacee0_add_p2w2_retrieval_funnel_downgrade.py",
         "6b246c283d7a_add_canonical_contract_foundations.py",
         "a1b2c3d4e5f6_add_case_profiles.py",
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
@@ -479,7 +480,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "mentor reviews migration must chain after workspace invites"
     )
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"a4b5c6d7e8f9"}, f"unexpected integrated Alembic heads: {heads}"
+    assert heads == {"2b2d34dacee0"}, f"unexpected integrated Alembic heads: {heads}"
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:
