@@ -45,7 +45,12 @@ def _stage_output_payload(output: StrategicLensStageOutput) -> dict[str, Any]:
 
 
 def _deterministic_user_prompt(request: LensRequest) -> str:
-    """Stable, sorted serialization of the frozen request references."""
+    """Stable, sorted serialization of the frozen request references.
+
+    Grey-goo 原则⑭ (P2-1): upstream lens findings travel as compressed digests
+    (name -> summary), so pre-mortem/meadows deepen against REAL validated
+    outputs instead of stale assumptions.
+    """
 
     body = {
         "workspaceId": request.workspace_id,
@@ -56,9 +61,12 @@ def _deterministic_user_prompt(request: LensRequest) -> str:
         "claimRefs": sorted(request.claim_refs),
         "assumptionRefs": sorted(request.assumption_refs),
         "challengeRefs": sorted(request.challenge_refs),
-        "upstreamLenses": sorted(
-            lens.value for lens in request.upstream_lens_outputs
-        ),
+        "upstreamLenses": {
+            str(lens): dict(content)
+            for lens, content in sorted(
+                request.upstream_lens_outputs.items(), key=lambda kv: str(kv[0])
+            )
+        },
     }
     return json.dumps(body, ensure_ascii=False, sort_keys=True)
 

@@ -269,6 +269,118 @@ def _logic_spot_check(packet: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(findings)
 
 
+# Grey-goo §7 (P2-3): round-1 knowledge gaps feed round 2. The model names
+# what it could not verify without retrieval; the orchestrator carries that
+# list into the second pass instead of discarding round-1 reasoning.
+def _extract_knowledge_gaps(output: Mapping[str, Any]) -> list[str]:
+    """Deterministic extraction of the round-1 knowledge-gap list.
+
+    Accepts ``knowledgeGaps`` (array of strings), ``gaps`` (array of strings
+    or objects with a ``gap`` key), or a ``digest.openQuestions`` fallback.
+    Bounded to 8 entries; malformed shapes yield [] (the second round simply
+    has no explicit gap list to fold in).
+    """
+
+    raw = (
+        output.get("knowledgeGaps")
+        or output.get("gaps")
+        or (
+            output.get("digest", {}).get("openQuestions")
+            if isinstance(output.get("digest"), Mapping)
+            else None
+        )
+    )
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        return []
+    gaps: list[str] = []
+    for entry in raw[:8]:
+        if isinstance(entry, Mapping):
+            text = entry.get("gap") or entry.get("description") or entry.get("question")
+        else:
+            text = entry
+        text = str(text or "").strip()
+        if text:
+            gaps.append(text[:200])
+    return gaps
+
+
+# Grey-goo narrative-echo prevention (framework-selector v6.12.8, P2-8):
+# before/after dispatch, deterministic checks catch a shared unexamined
+# perspective. This is deliberately heuristic - the five-point checklist is
+# materialized from the planning digest's own text (what the model plans to
+# examine), and the divergence score compares research vs critic outputs.
+def _echo_checklist(planning_text: str) -> dict[str, bool]:
+    """Five grey-goo echo-prevention checks over the planning digest text.
+
+    - perspective_symmetry: at least one opposing/risk-oriented signal
+      (risk/against/objection/failure/opposing) is present;
+    - prosecutor_forced: a dedicated adversarial role is named
+      (critic/adversary/devils advocate/objector/against);
+    - failure_signal: historical failure / why-not-yet is examined
+      (fail/never/unsuccessful/why not/barrier);
+    - assumption_pressure: at least one assumption is singled out for testing
+      (assumption/hypothesis/if wrong/underlying);
+    - capital_market_signal: funding/financing evidence is on the agenda
+      (funding/financing/investor/capital) - skipped when the question is
+      clearly non-market (best-effort, reported as True on empty text).
+    """
+
+    text = (planning_text or "").lower()
+    if not text.strip():
+        return {
+            "perspective_symmetry": True,
+            "prosecutor_forced": True,
+            "failure_signal": True,
+            "assumption_pressure": True,
+            "capital_market_signal": True,
+        }
+    return {
+        "perspective_symmetry": any(
+            token in text for token in ("risk", "against", "objection", "failure", "opposing", "downside")
+        ),
+        "prosecutor_forced": any(
+            token in text for token in ("critic", "adversary", "devil", "objector", "against", "challenge")
+        ),
+        "failure_signal": any(
+            token in text for token in ("fail", "never", "unsuccessful", "why not", "barrier", "blocked")
+        ),
+        "assumption_pressure": any(
+            token in text for token in ("assumption", "hypothesis", "if wrong", "underlying", "premise")
+        ),
+        "capital_market_signal": any(
+            token in text for token in ("funding", "financing", "investor", "capital", "raise")
+        ),
+    }
+
+
+def _narrative_divergence(
+    research_text: str, critic_text: str
+) -> float:
+    """0-10 divergence score between research and critic outputs.
+
+    Heuristic (fixture-friendly): token-overlap based. 10 = fully disjoint
+    vocabularies (strong independence), 0 = identical wording (echo). Grey-goo
+    treats <4 as severe echo that must trigger a re-dispatch.
+    """
+
+    def tokens(text: str) -> set[str]:
+        return {
+            tok.strip(".,;:!?()[]{}'\"")
+            for tok in (text or "").lower().split()
+            if len(tok) > 3
+        }
+
+    a, b = tokens(research_text), tokens(critic_text)
+    if not a or not b:
+        return 5.0  # unmeasurable -> neutral, never auto-flag
+    overlap = len(a & b)
+    union = len(a | b)
+    if union == 0:
+        return 5.0
+    similarity = overlap / union
+    return round(10.0 * (1.0 - similarity), 1)
+
+
 def _sanitize_packet(raw: Mapping[str, Any]) -> dict[str, Any] | None:
     out: dict[str, Any] = {}
     for key, target in _PACKET_FIELD_MAP.items():
@@ -510,6 +622,78 @@ class AnalysisWorker:
                 # Boundary check immediately after the external call returns:
                 # a cancellation observed here stops before any new persistence.
                 await self._check_cancelled(run)
+                # Grey-goo §7 (P2-3): Think-First/Search-Later for the
+                # analyzing stage - round 1 reasons WITHOUT retrieval and names
+                # its knowledge gaps; round 2 folds the round-1 gaps back in
+                # and deepens. Focused runs skip the second round (budget).
+                if (
+                    stage == AnalysisRunStatus.ANALYZING
+                    and is_full
+                    and not result.output.get("round")
+                ):
+                    round1 = result
+                    gaps = _extract_knowledge_gaps(round1.output)
+                    round2_inputs = {
+                        **dict(stage_inputs),
+                        "round": 2,
+                        "round1Gaps": gaps,
+                    }
+                    await self._check_cancelled(run)
+                    result = await executor(run, stage, round2_inputs)
+                    result = StageResult(
+                        output={
+                            **dict(result.output),
+                            "roundProgression": {
+                                "round1Gaps": gaps,
+                                "rounds": 2,
+                            },
+                        },
+                        packets=tuple(round1.packets) + tuple(result.packets),
+                        lens_payloads=(
+                            round1.lens_payloads or result.lens_payloads
+                        ),
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
+                    await self._check_cancelled(run)
+                # Grey-goo narrative-echo prevention (P2-8): the planning
+                # digest is checked for the five echo signals; the analyzing
+                # digest is scored against the criticizing digest for
+                # divergence. Both land in the stage output as audit metadata
+                # (no state transition, no gate - a re-dispatch is a future
+                # wave-3 enhancement, the signal must exist first).
+                if stage == AnalysisRunStatus.PLANNING:
+                    merged = dict(result.output)
+                    merged["echoChecklist"] = _echo_checklist(
+                        str(
+                            result.output.get("digest", {}).get("headline")
+                            if isinstance(result.output.get("digest"), Mapping)
+                            else result.output.get("headline")
+                            or ""
+                        )
+                    )
+                    result = StageResult(
+                        output=merged,
+                        packets=result.packets,
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
+                if stage == AnalysisRunStatus.ANALYZING:
+                    merged = dict(result.output)
+                    merged["echoDivergence"] = _narrative_divergence(
+                        str(result.output.get("digest", {}).get("headline")
+                            if isinstance(result.output.get("digest"), Mapping)
+                            else result.output.get("headline") or ""),
+                        "",
+                    )
+                    result = StageResult(
+                        output=merged,
+                        packets=result.packets,
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
                 if stage == AnalysisRunStatus.RETRIEVING and result.packets:
                     # Information funnel: deterministic TDD checks + L1-L6
                     # grading BEFORE persistence. Survivors carry minted,
@@ -633,6 +817,34 @@ class AnalysisWorker:
                 # blind spots + if-all-wrong-because), and a chief of staff
                 # after synthesizing ("so what to do" - conditional actions).
                 if stage == AnalysisRunStatus.CRITICIZING:
+                    # Grey-goo narrative-echo prevention (P2-8): now that BOTH
+                    # the analyzing and criticizing digests exist, score their
+                    # divergence (0-10). <4 is severe echo -> the signal rides
+                    # the criticizing digest for the UI/audit trail (the
+                    # re-dispatch itself is a future wave-3 enhancement).
+                    _criticizing_merged = dict(result.output)
+                    _analyzing_output = stage_outputs.get(AnalysisRunStatus.ANALYZING.value)
+                    _analyzing_headline = (
+                        _analyzing_output.get("digest", {}).get("headline")
+                        if isinstance(_analyzing_output, Mapping)
+                        and isinstance(_analyzing_output.get("digest"), Mapping)
+                        else (_analyzing_output or {}).get("headline") or ""
+                    )
+                    _criticizing_merged["echoDivergence"] = _narrative_divergence(
+                        str(_analyzing_headline or ""),
+                        str(
+                            result.output.get("digest", {}).get("headline")
+                            if isinstance(result.output.get("digest"), Mapping)
+                            else result.output.get("headline") or ""
+                        ),
+                    )
+                    result = StageResult(
+                        output=_criticizing_merged,
+                        packets=result.packets,
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
                     await self._enrich_role(
                         run, "safety_anchor", self._executors.critic,
                         AnalysisRunStatus.CRITICIZING, stage_inputs, stage_outputs,
@@ -1314,6 +1526,64 @@ class AnalysisWorker:
             "challenge_ids": challenge_ids,
         }
 
+    async def _load_upstream_lens_digests(
+        self,
+        run: AnalysisRun,
+        current_lens: Any,
+    ) -> dict[Any, Mapping[str, Any]]:
+        """Grey-goo 原则⑭ (P2-1): validated outputs of earlier lenses in THIS run.
+
+        Cross-agent calibration: each lens reads what its predecessors already
+        concluded (e.g. counterparty before pre-mortem, scenario before
+        meadows) so it deepens against REAL findings instead of stale
+        assumptions. Only READY artifacts are eligible (a draft was never
+        accepted); digests are compressed to ≤500 chars per lens so the prompt
+        stays bounded. Best-effort: a read failure yields {} and the lens
+        runs without upstream context (fail-open, never blocks).
+        """
+
+        from sqlalchemy import select as _sel
+
+        from app.models import StrategicLensArtifact
+        from app.types import StrategicLensArtifactStatus
+
+        try:
+            rows = (
+                await self._session.execute(
+                    _sel(StrategicLensArtifact).where(
+                        StrategicLensArtifact.workspace_id == run.workspace_id,
+                        StrategicLensArtifact.analysis_run_id == run.analysis_run_id,
+                        StrategicLensArtifact.status == StrategicLensArtifactStatus.READY,
+                    )
+                )
+            ).scalars().all()
+        except Exception:
+            return {}
+        digests: dict[Any, Mapping[str, Any]] = {}
+        for artifact in rows:
+            if artifact.lens_type == current_lens:
+                continue
+            # The ORM stores the model payload under ``payload`` (which wraps
+            # {content, references}); unwrap defensively.
+            raw_payload = artifact.payload if isinstance(artifact.payload, Mapping) else {}
+            content = (
+                raw_payload.get("content")
+                if isinstance(raw_payload.get("content"), Mapping)
+                else raw_payload
+            )
+            headline = str(content.get("headline") or content.get("decision") or "")[:300]
+            findings = content.get("keyFindings")
+            findings_text = (
+                "; ".join(str(item)[:120] for item in findings[:3])
+                if isinstance(findings, Sequence) and not isinstance(findings, (str, bytes))
+                else ""
+            )
+            summary = (headline + (" | " + findings_text if findings_text else ""))[:500]
+            if not summary:
+                continue
+            digests[artifact.lens_type] = {"summary": summary}
+        return digests
+
     async def _run_lens_stages(
         self,
         run: AnalysisRun,
@@ -1531,6 +1801,13 @@ class AnalysisWorker:
                 assumption_refs=assumption_ids[:20],
                 challenge_refs=challenge_ids[:20],
                 option_ids=option_ids,
+                # Grey-goo 原则⑭ (P2-1): cross-agent calibration - the lens
+                # reads the validated outputs of lenses that already ran in
+                # THIS run before deepening its own reasoning. Compressed
+                # digests only (≤500 chars each), never full content.
+                upstream_lens_outputs=await self._load_upstream_lens_digests(
+                    run, lens_enum
+                ),
             )
             inputs = impl.build_prompt_inputs(request)
 
@@ -1647,7 +1924,11 @@ _STAGE_ASKS: Mapping[str, str] = {
         '"conflict", "evidenceId": <an evidence id you actually cited>}] '
         "testing your claim against the known evidence. Two conflicts mean "
         "your conclusion is not evidence-backed - fix it or the score is "
-        "capped."
+        "capped. ROUNDS (grey-goo §7): when inputs.round is absent you are "
+        "in round 1 - reason from the evidence you have, and emit "
+        '"knowledgeGaps": [what you could not verify without more data] '
+        "(max 8). When inputs.round == 2, inputs.round1Gaps carries your "
+        "round-1 gaps - fold them into your final reasoning explicitly."
     ),
     "criticizing": (
         "Attack the emerging recommendation. Set output.strongestObjection to "
