@@ -198,26 +198,42 @@ describe("ProjectDrawer + Session B shell completion (Task 11 Phase 0)", () => {
 
     const healthBar = container.querySelector('[data-phase-slot="decision-health-bar"]');
     expect(healthBar).toBeInTheDocument();
+    // Without mocked API data every segment stays an honest disabled
+    // placeholder (loading or error) - never a fabricated verdict.
     const segments = within(healthBar as HTMLElement).getAllByRole("button");
     expect(segments).toHaveLength(5);
     for (const { label } of decisionHealthSegments) {
       const segment = within(healthBar as HTMLElement).getByRole("button", { name: new RegExp(label) });
       expect(segment).toBeDisabled();
-      expect(segment).toHaveTextContent("未接入");
+      expect(segment.textContent).not.toMatch(/\d+\s*%/);
     }
     // No total confidence percentage anywhere in the skeleton.
     expect(healthBar?.textContent).not.toMatch(/\d+\s*%/);
   });
 
-  test("health bar segment clicks stay a slot until a later phase wires them", async () => {
-    const onSelectSegment = vi.fn();
-    const user = userEvent.setup();
-    render(createElement(DecisionHealthBar, { onSelectSegment }));
+  test("health bar segments with live state render as links to their owning view", () => {
+    render(
+      createElement(DecisionHealthBar, {
+        segments: [
+          {
+            id: "evidence", coordinate: "E", label: "证据",
+            href: "/cases/LX-2407?ws=ws-1&view=analysis", status: "ok", summary: "已收录 3 条证据",
+          },
+          {
+            id: "causal-chain", coordinate: "C", label: "因果链",
+            href: null, status: "loading", summary: "读取中…",
+          },
+        ],
+      }),
+    );
 
-    const segment = screen.getByRole("button", { name: /证据/ });
-    expect(segment).toBeEnabled();
-    await user.click(segment);
-    expect(onSelectSegment).toHaveBeenCalledWith("evidence");
+    const link = screen.getByRole("link", { name: /证据/ });
+    expect(link).toHaveAttribute("href", "/cases/LX-2407?ws=ws-1&view=analysis");
+    expect(link).toHaveTextContent("已收录 3 条证据");
+
+    const pending = screen.getByRole("button", { name: /因果链/ });
+    expect(pending).toBeDisabled();
+    expect(pending).toHaveTextContent("读取中…");
   });
 
   test("slot contract covers every frozen phase slot and marks Session B fills", () => {

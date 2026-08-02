@@ -543,3 +543,63 @@ async def test_adv8_fixture_determinism_under_adversarial_payloads() -> None:
         assert "reasoning_content" not in completion.raw_text
     assert len(outputs) == 1, "fixture output must be byte-identical across calls"
     assert json.loads(next(iter(outputs))) == payload
+
+
+@dataclass
+class MalformedJsonProvider:
+    """First call raises a malformed-JSON error; later calls succeed."""
+
+    break_on: int = 1
+    calls: int = 0
+
+    async def complete_structured(self, **kwargs: Any) -> StructuredCompletion:
+        self.calls += 1
+        if self.calls == self.break_on:
+            raise SchemaValidationError(
+                "model output is not valid JSON: Expecting ',' delimiter: line 1 column 3821"
+            )
+        return StructuredCompletion(
+            content={"assistantMessage": "recovered"},
+            raw_text='{"assistantMessage": "recovered"}',
+            request_model="scripted",
+            response_model="scripted",
+            finish_reason="stop",
+        )
+
+    async def probe(self):  # pragma: no cover - protocol completeness
+        raise AssertionError("probe must not run in unit tests")
+
+
+async def test_adv7_malformed_json_then_valid_repairs_exactly_once() -> None:
+    provider = MalformedJsonProvider()
+    completion = await complete_structured_checked(
+        provider,
+        system="s",
+        messages=[ModelMessage(role="user", content="hi")],
+        schema=_SCHEMA,
+        request_model="scripted",
+    )
+    assert completion.content["assistantMessage"] == "recovered"
+    assert provider.calls == 2, "malformed JSON must trigger exactly one repair"
+
+
+async def test_adv7_two_malformed_responses_raise_after_exactly_two_calls() -> None:
+    provider = MalformedJsonProvider(break_on=99)  # always malformed
+    provider.calls = 0
+
+    async def always_broken(self, **kwargs: Any) -> StructuredCompletion:
+        self.calls += 1
+        raise SchemaValidationError("model output is not valid JSON: truncated")
+
+    import types
+
+    provider.complete_structured = types.MethodType(always_broken, provider)
+    with pytest.raises(SchemaValidationError):
+        await complete_structured_checked(
+            provider,
+            system="s",
+            messages=[ModelMessage(role="user", content="hi")],
+            schema=_SCHEMA,
+            request_model="scripted",
+        )
+    assert provider.calls == 2, "budget is one repair retry, never a third call"

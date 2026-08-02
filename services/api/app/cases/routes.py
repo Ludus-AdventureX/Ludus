@@ -382,7 +382,11 @@ async def clarify_case_question(
     if case is None:
         raise workspace_not_found()
     question = body.question.strip()
-    if len(question) < 5:
+    if len(question) < 2:
+        # Chinese decision questions are short ("戒指闹钟" is a complete
+        # question); require at least 2 characters, not 5 (the original bound
+        # rejected every CJK case title and the clarifier degraded to
+        # "unavailable" - a misleading dead end).
         raise ApiFailure(
             "CLARIFIER_QUESTION_TOO_SHORT",
             "The decision question is too short to clarify.",

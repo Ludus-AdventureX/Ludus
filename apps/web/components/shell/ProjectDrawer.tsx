@@ -1,16 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 
 import { caseListRouteAvailable, fetchProjectDirectory, type ProjectDirectory } from "@/lib/shell/projects";
 import { logoutAccount } from "@/lib/shell/session";
 
 // Look V7 `#caseDrawer` as the production ProjectDrawer (Session B).
-// Workspace entries come from the Task 3 read-only session API; the
-// decision-case list route does not exist yet, so the case section renders
-// an honest gap note instead of fabricated projects. Focus trap and focus
-// return follow the DecisionShell drawer pattern.
+// Workspace entries come from the Task 3 read-only session API; case entries
+// come from the canonical case-list route. Navigating away is a FULL page
+// load (`window.location.assign`) instead of Next Link: the shell's drawer
+// effect calls history.replaceState with the pre-navigation pathname, which
+// would otherwise clobber the router push and leave the user on the current
+// case (live finding: switching projects / "new project" silently did
+// nothing).
+//
+// Focus trap and focus return follow the DecisionShell drawer pattern.
 
 const drawerFocusableSelector = [
   "a[href]",
@@ -165,21 +170,30 @@ export function ProjectDrawer({ open, decisionCaseId, onClose }: ProjectDrawerPr
 
           {cases.length > 0 && (
             <>
-              {cases.map((c) => (
-                <Link
-                  key={c.decisionCaseId}
-                  className="case-choice"
-                  href={`/cases/${encodeURIComponent(c.decisionCaseId)}?ws=${encodeURIComponent(directory?.status === "ready" ? directory.workspaces[0]?.workspaceId ?? "" : "")}`}
-                  aria-current={decisionCaseId === c.decisionCaseId ? "page" : undefined}
-                  onClick={onClose}
-                >
-                  <span className="case-glyph">Q</span>
-                  <span>
-                    <b>{c.title || c.decisionCaseId.slice(0, 8)}</b>
-                    <small>{c.status}</small>
-                  </span>
-                </Link>
-              ))}
+              {cases.map((c) => {
+                const href = `/cases/${encodeURIComponent(c.decisionCaseId)}?ws=${encodeURIComponent(directory?.status === "ready" ? directory.workspaces[0]?.workspaceId ?? "" : "")}`;
+                return (
+                  <Link
+                    key={c.decisionCaseId}
+                    className="case-choice"
+                    href={href}
+                    aria-current={decisionCaseId === c.decisionCaseId ? "page" : undefined}
+                    onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                      // Full-page navigation: the shell's drawer-close effect
+                      // rewrites the URL from the stale pathname and would
+                      // cancel a client-side router push (see module note).
+                      event.preventDefault();
+                      window.location.assign(href);
+                    }}
+                  >
+                    <span className="case-glyph">Q</span>
+                    <span>
+                      <b>{c.title || c.decisionCaseId.slice(0, 8)}</b>
+                      <small>{c.status}</small>
+                    </span>
+                  </Link>
+                );
+              })}
             </>
           )}
 
@@ -187,13 +201,10 @@ export function ProjectDrawer({ open, decisionCaseId, onClose }: ProjectDrawerPr
             className="case-choice"
             href="/"
             aria-current={decisionCaseId ? undefined : "page"}
-            onClick={() => {
-              onClose();
-              // Focus the question input after navigation settles.
-              setTimeout(() => {
-                const input = document.getElementById("caseShellQuestion") as HTMLTextAreaElement | null;
-                input?.focus();
-              }, 300);
+            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+              // Full-page navigation for the same reason as the case links.
+              event.preventDefault();
+              window.location.assign("/");
             }}
           >
             <span className="case-glyph empty">{"\uff0b"}</span>

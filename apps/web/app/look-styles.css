@@ -1145,3 +1145,23 @@ li[data-portfolio-lane="due"] .portfolio-lane-badge { color: #e0a85a; border-col
 li[data-portfolio-lane="blocked"] .portfolio-lane-badge { color: #e08585; }
 li[data-portfolio-lane="ready"] .portfolio-lane-badge { color: #7fc98f; }
 .portfolio-review-date { opacity: 0.75; font-size: 0.72rem; }
+
+/* Blocked-run remediation card (Q workspace). */
+.remediation-card { border: 1px solid rgb(var(--accent-unknown-rgb) / .25); border-left: 3px solid var(--accent-unknown); border-radius: 6px; padding: 12px 14px; margin: 12px 0 16px; background: rgb(var(--accent-unknown-rgb) / .04); }
+.remediation-head .remediation-kicker { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--text-muted); margin-bottom: 4px; }
+.remediation-head h3 { margin: 0 0 6px; font-size: 15px; }
+.remediation-head p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
+.remediation-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.remediation-item { border-top: 1px solid rgb(var(--accent-unknown-rgb) / .15); padding-top: 10px; }
+.remediation-kind { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--accent-unknown); margin-bottom: 4px; }
+.remediation-item p { margin: 0 0 8px; font-size: 13px; line-height: 1.6; }
+.remediation-actions { display: flex; gap: 10px; align-items: center; }
+.remediation-custom { margin-top: 8px; display: grid; gap: 8px; }
+.remediation-custom textarea { width: 100%; resize: vertical; }
+.remediation-notice { margin: 10px 0 0; font-size: 12.5px; color: var(--accent-key); }
+.remediation-hint { margin: 10px 0 0; font-size: 11.5px; color: var(--text-muted); }
+
+/* Parked run (needs_attention) disposal notice. */
+.run-parked-note { border: 1px solid rgb(var(--accent-unknown-rgb) / .25); border-radius: 6px; padding: 12px 14px; margin: 12px 0 16px; background: rgb(var(--accent-unknown-rgb) / .04); }
+.run-parked-note p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
+.run-parked-note .remediation-notice { color: var(--accent-key); font-size: 12.5px; }

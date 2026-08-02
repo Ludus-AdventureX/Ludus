@@ -47,8 +47,8 @@ export async function listCaseAnalyses(
 
 /** Stable gate reason codes translated for humans; the code stays visible. */
 export const FINDING_LABELS: Record<string, string> = {
-  strategic_lens_incomplete: "五个战略透镜产物不完整（有缺失或未通过行为校验）",
-  strategic_lens_reference_mismatch: "报告引用的透镜产物与本次运行实际产出的五件不一致",
+  strategic_lens_incomplete: "战略透镜产物不完整（本次运行有缺失或未通过行为校验）",
+  strategic_lens_reference_mismatch: "报告引用的透镜产物与本次运行实际产出的不一致",
   strategic_lens_duplicate_type: "同一战略透镜出现了多份产物",
   strategic_lens_outside_charter: "出现了章程冻结集合之外的透镜产物",
   deterministic_gate: "确定性质量门（证据 × 反方 × 一致性乘法评分）",

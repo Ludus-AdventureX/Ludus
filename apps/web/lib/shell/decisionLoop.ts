@@ -250,7 +250,8 @@ export type RunSnapshot = {
  *
  * Offered when a run sits in `queued` for too long, which in practice means the
  * analysis worker is not running: without an exit the user's only option was to
- * stare at a frozen panel.
+ * stare at a frozen panel. The MOUNT-01 M9 contract requires the
+ * Idempotency-Key header on cancel (key travels ONLY in the header).
  */
 export async function cancelRun(
   workspaceId: string,
@@ -263,7 +264,11 @@ export async function cancelRun(
     `/api/workspaces/${encodeURIComponent(workspaceId)}/analyses/${encodeURIComponent(analysisRunId)}/cancel`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+        "Idempotency-Key": `cancel-${analysisRunId}-${Date.now()}`,
+      },
     },
   );
 }

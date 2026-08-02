@@ -9,6 +9,7 @@ import { DecisionSpine } from "@/components/shell/DecisionSpine";
 import { InvitePanel } from "@/components/shell/InvitePanel";
 import { ProjectDrawer } from "@/components/shell/ProjectDrawer";
 import { defaultWorkspaceId, isCaseWorkspaceId, type CaseWorkspaceId } from "@/lib/shell/workspaces";
+import { fetchCaseDetail } from "@/lib/shell/caseData";
 
 // Five-workspace case shell (Task 11 Phase 0 Session A + B).
 // Session B fills the reserved project-drawer slot with the real
@@ -33,6 +34,8 @@ export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShel
   const [activeWorkspace, setActiveWorkspace] = useState<CaseWorkspaceId>(defaultWorkspaceId);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const [caseMeta, setCaseMeta] = useState<{ caseVersion: number; confirmedDossierVersion: number } | null>(null);
+  const [caseMetaState, setCaseMetaState] = useState<"loading" | "ready" | "error">("loading");
   const projectTrigger = useRef<HTMLButtonElement>(null);
   const drawerTrigger = useRef<HTMLButtonElement | null>(null);
   const isEmpty = !decisionCaseId;
@@ -61,6 +64,30 @@ export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShel
     else params.delete("panel");
     window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
   }, [activeWorkspace, drawerOpen, ready]);
+
+  // Real dossier/case version for the masthead source-mode marker. The marker
+  // used to be a static "档案未接入" string from the static-prototype era; the
+  // dossier surface is live now, so the marker reports the actual confirmed
+  // dossier version (honest loading/error states, never fabricated numbers).
+  useEffect(() => {
+    if (!decisionCaseId || !effectiveWorkspaceId) return;
+    let cancelled = false;
+    setCaseMetaState("loading");
+    (async () => {
+      try {
+        const detail = await fetchCaseDetail(effectiveWorkspaceId, decisionCaseId);
+        if (cancelled) return;
+        setCaseMeta({
+          caseVersion: detail.caseVersion,
+          confirmedDossierVersion: detail.confirmedDossierVersion,
+        });
+        setCaseMetaState("ready");
+      } catch {
+        if (!cancelled) setCaseMetaState("error");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [decisionCaseId, effectiveWorkspaceId]);
 
   const openDrawer = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     drawerTrigger.current = event.currentTarget;
@@ -100,7 +127,13 @@ export function CaseShell({ decisionCaseId, tenantWorkspaceId = null }: CaseShel
         </div>
         <div className="masthead-actions">
           <InvitePanel workspaceId={effectiveWorkspaceId} />
-          <span className="source-mode is-empty"><i /> <span>档案未接入</span></span>
+          <span className="source-mode is-empty"><i /> <span>
+            {caseMetaState === "ready" && caseMeta
+              ? `CaseVersion v${caseMeta.caseVersion} · Dossier v${caseMeta.confirmedDossierVersion}`
+              : caseMetaState === "error"
+                ? "档案读取失败"
+                : "档案读取中…"}
+          </span></span>
           <button
             className="mobile-case-trigger"
             type="button"
