@@ -435,11 +435,15 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
     assert files == [
         "0001_core_tenancy_and_dossiers.py",
         "6b246c283d7a_add_canonical_contract_foundations.py",
+        "a1b2c3d4e5f6_add_case_profiles.py",
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
+        "a4b5c6d7e8f9_harden_connector_status_enum.py",
         "a7c3e9f1b5d8_add_dossier_version_snapshots.py",
+        "b2c3d4e5f6a7_add_workspace_connectors.py",
         "b2c7e9d4a1f6_add_decision_maker_profiles_and_idempotency_records.py",
         "b3c5d7e9f1a2_add_workspace_invites.py",
         "b6e8f3a1d7c2_add_analysis_outputs.py",
+        "c3d4e5f6a7b8_extend_connectors_model_mcp.py",
         "c4a1f0b2d9e7_add_login_rate_buckets.py",
         "c8d4e6f0a1b2_add_decision_records_reviews.py",
         "d4e6f8a0b2c4_add_mentor_and_decision_reviews.py",
@@ -475,7 +479,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "mentor reviews migration must chain after workspace invites"
     )
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"d4e6f8a0b2c4"}, f"unexpected integrated Alembic heads: {heads}"
+    assert heads == {"a4b5c6d7e8f9"}, f"unexpected integrated Alembic heads: {heads}"
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:

@@ -161,6 +161,8 @@ def test_core_table_set_and_workspace_scope() -> None:
         "export_artifacts",
         # Task 4/5: immutable dossier snapshot companion (migration a7c3e9f1b5d8).
         "dossier_version_snapshots",
+        # BYOK connectors (migration b2c3d4e5f6a7 / c3d4e5f6a7b8).
+        "workspace_connectors",
     }
     assert set(Base.metadata.tables) == expected
 
