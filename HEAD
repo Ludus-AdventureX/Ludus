@@ -1,9 +1,9 @@
 # Work Log: idle
 
-- Status: idle after repository structure repair (fork merge / doc index / worktree cleanup).
+- Status: idle after quality-gate end-to-end repair and verification.
 - Last archived: 2026-08-01 (Asia/Shanghai).
-- Last archive entry: `Archive 仓库结构修复（分叉合并 / 文档索引 / worktree 回收）- 2026-08-01 (Asia/Shanghai)`.
-- Delivered: main 收敛质量门修复并提交（427c8f0）；codex/a2a-pandaai-agent 分叉 no-ff 合入 main（96c371b）+ A2A config 容器修复（6ad82ce）+ 契约漂移同步 65→71 paths（2daf841）；canonical 切回 main；回收 decision-lab-mainline-integration 与 qa-baseline-check worktree；README 导航补 16 个 CCR + AGENTS.md 必读清单（a84f807）；AGENTS.md 同步 5 个任务 worktree。
-- Verification: 后端 590 passed / 6 failed（6 个均为已知基线：3 个 alpha-followups QA 电池滞后 + adv5×2/adv6 并发残留单跑通过）；ruff/compileall 干净；vitest 149/149 + build 通过；CONTRACT_DRIFT_OK；迁移链单头 c3d4e5f6a7b8；worktree 与磁盘一一对应且 AGENTS.md 逐字节一致。
-- Remaining: remote push 是产品方动作（main 领先 origin/main 11 个提交）；3 个 QA 电池滞后项需 alpha-followups owner 更新 pin；质量门修复的镜像部署与真实 full 端到端验证未执行；lenses.py 有一处疑似并行会话的未提交修改未纳入。
+- Last archive entry: `Archive 质量门端到端修复与验证（透镜链路）- 2026-08-01 (Asia/Shanghai)`.
+- Delivered: 质量门机制端到端打通——validator_rejected 理由透出、透镜输出契约/content schema/content 示例/裸 ID/枚举规则、draft→ready 链路（apply_validation_verdict）、前端展示修正；第 12/13 轮真实 full 均 5/5 透镜 ready + deterministic gate passed，拦截均为模型 validator 对决策内容的真实审查（设计内行为）；后端 365+ passed、前端 149 passed。
+- Remaining: 探针脚本清理（output/*.py）；后续如需 full 达 ready 需补充验证期可行性等决策证据。
+- Push: origin/main 已推送（2026-08-01，8fb738b，ac8946e..8fb738b fast-forward，live SHA 验证一致；记录见 HISTORY "Remote push record 2026-08-01"）。
 - Secret policy: do not record credentials here.

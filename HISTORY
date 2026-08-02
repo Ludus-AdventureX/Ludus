@@ -4549,3 +4549,57 @@ fail-closed 工作正常，坏在透镜写路径参数未接通 + 假设引用�
 - main 领先 origin/main 11 个提交，remote push 为产品方动作。
 - lenses.py 有一处未提交修改（meadows currentInterventions 约束说明，mtime 2026-08-01 21:58，非本次任务写入），疑似并行会话，未纳入提交。
 
+
+
+==============================================================================
+# ARCHIVED FROM HEAD AT 2026-08-01T14:52+08:00
+==============================================================================
+
+# Work Log: 质量门端到端修复与验证（透镜链路）
+
+- Status: 已完成（第 13 轮验证终态确认）
+- Started: 2026-08-01 (Asia/Shanghai)
+
+## 任务
+用户报告真实 full 分析无法通过质量门（Run 59140a20 被 deterministic_gate 卡点误导），要求端到端调查"证据页功能是否有问题"。
+
+## 根因链（11 轮迭代查明）
+1. **前端展示误导**：blocked 事件只透出已通过的确定性门（passed:true 被当卡点展示），模型 validator 拒绝理由（validatorFindings）从未进入 findings。
+2. **透镜 5/5 全挂**（full 必败主因）：
+   - 模型输出缺 `references` 顶层字段（prompt 无输出契约）→ KeyError；
+   - content 结构不符行为门（schema 仅以 URN 引用，模型看不到定义）；
+   - 数组元素嵌套字段省略（示例为空对象）；
+   - 引用 ID 带 ` [L6] https://...` 后缀，模型只回裸 ID → ledger 解析失败；
+   - porter 概率禁词、meadows 枚举/一致性错配；
+   - **最终断点**：artifact 落库为 draft 后从未调用 `apply_validation_verdict` 提升 ready → lens audit 恒失败。
+3. **部署链**：a2a/config.py parents[4] 容器越界导致 api 崩溃（合并残留）；pyproject.toml 未解决冲突阻断 pytest。
+
+## 修复（全部已入 canonical main，提交 427c8f0 等）
+- 后端：validating digest 透出为 validator_rejected finding；透镜失败记录模型原始输出；`_run_lens_stages` 落库后立即 `apply_validation_verdict(accepted=True)`；`_frozen_reference_sets` 裸 ID 规范化。
+- 透镜 prompt：共享 `lens_output_contract`（顶层字段 + references 结构 + 示例）；`load_lens_content_schema` 嵌入 content 分支 schema；porter/scenario/meadows 完整 content 示例；一致性/禁词/枚举映射规则。
+- 前端：AnalysisLaunchPanel 不再把 passed 的确定性门当卡点；QualityGatePanel 展示修正。
+- 环境：pyproject.toml 冲突按依赖并集解决；a2a/config.py 改为迭代 parents 定位 method-packs。
+
+## 验证
+- 后端测试：lens_lanes 130 + analyses 235 全绿（含新契约/verdict 断言）；前端 vitest 149 通过。
+- 第 12 轮真实 full（fb2503fd）：**5/5 透镜 ready + deterministic gate passed(0.7) + validator 诚实拒绝并透出完整理由**（决策依赖未验证的单点实验）——质量门机制端到端打通。
+- 第 13 轮（c3ae03ff）：**5/5 透镜 ready（连续第 2 轮确认）+ deterministic gate passed(0.56) + validator 透明拒绝**（一个月验证期可行性假设未验证，headline + 4 keyFindings + 3 openQuestions 完整透出）——两次连续验证证明链路稳定，拦截均为模型 validator 对决策内容的真实审查（设计内行为），非系统故障。
+
+## 待办
+- 归档本会话；HEAD 置 idle。
+- 探针脚本清理（output/*.py 多个验证脚本）。
+
+- Secret policy: do not record credentials here.
+
+## Remote push record 2026-08-01 (Asia/Shanghai) - PolyForm licensing sync to origin/main
+
+- Action: push origin main (product-owner authorized; pre-push hook main-guard bypassed via --no-verify with explicit product-owner approval).
+- Remote URL: https://github.com/Ludus-AdventureX/Ludus.git (canonical, confirmed before push).
+- Remote main before: ac8946e0b2c4efcc5027c6c1f2ce735967a5c893 (fresh ls-remote read).
+- Remote main after: 8fb738be81ea79daf70386992c16a40ca865297c (fresh ls-remote re-read, PUSH_VERIFIED_SYNC).
+- Pushed: main 8fb738b (fast-forward, no force, no history rewrite).
+- Carried: 14 commits - licensing PolyForm 1.0.0 (e8ff446/afb11a0/b7bd95e), A2A + QA teardown merge (96c371b), quality-gate fix (427c8f0), contract sync (2daf841), doc index (a84f807), lifecycle records, package.json license field fix (8fb738b).
+- Verification: live remote SHA == local SHA; no concurrent advance detected.
+- Remaining: remote visibility/branch-level review is product-owner action.
+- No credentials recorded.
+
