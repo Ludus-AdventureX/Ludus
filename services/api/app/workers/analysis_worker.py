@@ -185,7 +185,87 @@ _PACKET_FIELD_MAP: Mapping[str, str] = {
     "remaining_gaps": "remaining_gaps",
     "remainingGaps": "remaining_gaps",
     "disclaimer": "disclaimer",
+    "self_anchor": "self_anchor",
+    "selfAnchor": "self_anchor",
 }
+
+
+# Grey-goo Self-Anchor verification (v6-analysis-agent §8): the producing
+# agent must test its own inference against ALREADY-PERSISTED evidence before
+# the packet is admitted. Two checks that both conflict with known facts force
+# a confidence downgrade (the equivalent of §8 "两条全冲突→降两级"), never a
+# silent keep.
+def _admit_self_anchor(packet: dict[str, Any]) -> bool:
+    """Deterministic admission of the model's self-anchor verdicts.
+
+    ``packet["self_anchor"]`` is a list of {"verdict": "pass"|"uncertain"|
+    "conflict", "evidenceId": ...} entries (model-proposed). A packet whose
+    checks are ALL ``conflict`` is admitted with a capped score; a packet
+    whose checks are ALL ``pass`` keeps its score; anything malformed or
+    partially conflicting is left unchanged (the honest middle). Returns True
+    when a cap was applied so the caller can surface it.
+    """
+
+    raw = packet.get("self_anchor")
+    entries = raw if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes)) else ()
+    verdicts = [
+        str(entry.get("verdict") or "").strip().lower()
+        for entry in entries
+        if isinstance(entry, Mapping) and entry.get("verdict")
+    ]
+    if not verdicts:
+        return False
+    if all(verdict == "conflict" for verdict in verdicts):
+        packet["claim_support_score"] = min(
+            float(packet.get("claim_support_score", 0.5)), 0.5
+        )
+        return True
+    return False
+
+
+# Grey-goo logic spot-check (v6-analysis-agent §13): after round 1 the
+# orchestrator runs a SHALLOW structural check over each packet's reasoning
+# chain. This is deliberately heuristic - it catches obvious structural flaws
+# (circular reasoning / premise drift), never pursues depth. A flagged packet
+# keeps its row (the audit trail must show what was admitted) but the flag
+# travels into the deterministic gate's consistency dimension.
+def _logic_spot_check(packet: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return the list of spot-check findings for one packet (empty = clean).
+
+    - ``circular_reasoning``: the conclusion restates the factor/premise with
+      near-identical wording (token overlap above a heuristic threshold);
+    - ``premise_drift``: the conclusion's subject drifts from the factor's
+      subject (first token differs and neither is a generic pronoun).
+    """
+
+    findings: list[str] = []
+    factor = str(packet.get("factor") or "").strip().lower()
+    conclusion = str(packet.get("conclusion") or "").strip().lower()
+    if not factor or not conclusion:
+        return ()
+    factor_tokens = {tok for tok in factor.replace("?", " ").split() if len(tok) > 2}
+    conclusion_tokens = {tok for tok in conclusion.replace("?", " ").split() if len(tok) > 2}
+    if factor_tokens and conclusion_tokens:
+        overlap = len(factor_tokens & conclusion_tokens) / len(factor_tokens)
+        if overlap >= 0.6:
+            findings.append("circular_reasoning")
+    f_subject = factor.split()[0] if factor.split() else ""
+    c_subject = conclusion.split()[0] if conclusion.split() else ""
+    generic = {"the", "this", "that", "it", "its", "a", "an", "our", "we"}
+    # A drift only fires when NONE of the factor's core content words survives
+    # in the conclusion: "rescue robot certification timeline" -> "certification
+    # takes nine months" is a legitimate narrowing, not a subject swap.
+    factor_core = {tok for tok in factor.split() if len(tok) > 3 and tok not in generic}
+    if (
+        f_subject
+        and c_subject
+        and f_subject != c_subject
+        and f_subject not in generic
+        and c_subject not in generic
+        and not (factor_core & conclusion_tokens)
+    ):
+        findings.append("premise_drift")
+    return tuple(findings)
 
 
 def _sanitize_packet(raw: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -211,6 +291,21 @@ def _sanitize_packet(raw: Mapping[str, Any]) -> dict[str, Any] | None:
             out[list_field] = [str(item) for item in value] if isinstance(value, (list, tuple)) else [str(value)]
     if "disclaimer" in out:
         out["disclaimer"] = str(out["disclaimer"])
+    if isinstance(out.get("self_anchor"), Sequence) and not isinstance(
+        out.get("self_anchor"), (str, bytes)
+    ):
+        out["self_anchor"] = [
+            {
+                "verdict": str(entry.get("verdict") or "uncertain")[:16],
+                "evidenceId": str(entry.get("evidenceId") or entry.get("evidence_id") or "")[:200],
+            }
+            for entry in out["self_anchor"]
+            if isinstance(entry, Mapping)
+        ][:4]
+    else:
+        out.pop("self_anchor", None)
+    # Grey-goo §8: all-conflict self-anchors cap the packet's support score.
+    _admit_self_anchor(out)
     return out
 
 
@@ -443,12 +538,41 @@ class AnalysisWorker:
                     clean = _sanitize_packet(packet)
                     if clean is None:
                         continue
+                    # Grey-goo §13 logic spot-check: shallow structural guard
+                    # on the reasoning chain (analyzing/criticizing only).
+                    # A flagged packet is still persisted (the audit trail
+                    # shows exactly what was admitted) but the finding rides
+                    # into the deterministic gate's consistency dimension.
+                    spot_findings = (
+                        _logic_spot_check(clean)
+                        if stage in (AnalysisRunStatus.ANALYZING, AnalysisRunStatus.CRITICIZING)
+                        else ()
+                    )
+                    # Grey-goo §8 self-anchor: a packet whose self-anchors are
+                    # ALL conflicts was admitted with a capped score - surface
+                    # that honestly on the event so the audit trail shows the
+                    # downgrade instead of hiding it.
+                    self_anchor_entries = clean.get("self_anchor") or ()
+                    self_anchor_conflicts = [
+                        entry
+                        for entry in self_anchor_entries
+                        if isinstance(entry, Mapping) and entry.get("verdict") == "conflict"
+                    ]
+                    # self_anchor / logic_spot_check are audit-trail metadata,
+                    # NOT ResearchPacket columns: strip them before ORM insert
+                    # (the event below carries them; the packet row keeps the
+                    # capped score and the original text).
+                    orm_clean = {
+                        key: value
+                        for key, value in clean.items()
+                        if key not in ("self_anchor", "logic_spot_check")
+                    }
                     saved = await self._repo.add_research_packet(
                         workspace_id=workspace_id,
                         decision_case_id=run.decision_case_id,
                         analysis_run_id=run_id,
                         role=_STAGE_ROLE[stage],
-                        **clean,
+                        **orm_clean,
                     )
                     await self._repo.append_event(
                         await self._fresh(run),
@@ -458,6 +582,12 @@ class AnalysisWorker:
                             "packetId": str(saved.id),
                             "factor": saved.factor,
                             "claimSupportScore": saved.claim_support_score,
+                            "selfAnchorPassed": (
+                                not self_anchor_entries
+                                or len(self_anchor_conflicts) < len(self_anchor_entries)
+                            ),
+                            "selfAnchorConflictCount": len(self_anchor_conflicts),
+                            "logicSpotCheck": list(spot_findings),
                         },
                         origin_mode=self._origin_mode,
                     )
@@ -1330,12 +1460,21 @@ _STAGE_ASKS: Mapping[str, str] = {
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
         "is a causal claim with its strongest supporting factor, and set "
-        "output.whyNow to why this decision cannot wait."
+        "output.whyNow to why this decision cannot wait. Before finalizing, "
+        "SELF-ANCHOR each keyFinding (grey-goo §8): for the 2 strongest "
+        'findings, emit "selfAnchor": [{"verdict": "pass"|"uncertain"|'
+        '"conflict", "evidenceId": <an evidence id you actually cited>}] '
+        "testing your claim against the known evidence. Two conflicts mean "
+        "your conclusion is not evidence-backed - fix it or the score is "
+        "capped."
     ),
     "criticizing": (
         "Attack the emerging recommendation. Set output.strongestObjection to "
         "the single most dangerous objection, and every keyFinding names a "
-        "specific failure mode with its trigger condition."
+        "specific failure mode with its trigger condition. Self-anchor your "
+        'strongest objection the same way ("selfAnchor" verdicts against '
+        "cited evidence ids); a conflict with known facts means the objection "
+        "itself needs rework."
     ),
     "synthesizing": (
         "Commit. Set output.decision to one conditional commitment sentence "
@@ -1408,6 +1547,33 @@ def _admit_influences(
     return edges
 
 
+# Grey-goo complexity-adaptivity pre-check (framework-selector v6.9.5): a
+# downgrade proposal must be BLOCKED when the independent safety anchor has
+# already flagged ≥2 shared unexamined assumptions - convergence may be echo,
+# not simplicity. Wave-1 ships the pure decision function; the downgrade
+# state machine itself lands with P2-2 (wave 2).
+def _anchor_blocks_downgrade(stage_outputs: Mapping[str, Any]) -> tuple[bool, int]:
+    """Return (blocked, shared_blind_spot_count) from the safety-anchor digest.
+
+    The anchor's ``digest.keyFindings`` lists the shared unexamined
+    assumptions the whole analysis rests on. Two or more means a proposed
+    downgrade is refused: the convergence it would rely on is suspect.
+    """
+
+    anchor = stage_outputs.get("safety_anchor")
+    if not isinstance(anchor, Mapping):
+        return False, 0
+    digest = anchor.get("digest") if isinstance(anchor.get("digest"), Mapping) else None
+    if not digest:
+        return False, 0
+    findings = digest.get("keyFindings") if isinstance(digest.get("keyFindings"), Sequence) else ()
+    findings = [
+        str(item) for item in findings
+        if isinstance(item, (str,)) and str(item).strip()
+    ]
+    return (len(findings) >= 2, len(findings))
+
+
 def _deterministic_gate(
     stage_outputs: Mapping[str, Any],
     validator_findings: tuple[Mapping[str, Any], ...],
@@ -1449,6 +1615,22 @@ def _deterministic_gate(
         dims["adversarial"] = round(d2, 3)
 
     dims["consistency"] = 1.0 if not validator_findings else 0.8
+
+    # Grey-goo §13: packets that tripped the logic spot-check AND were never
+    # repaired (no later packet carries a repair marker) drag consistency
+    # down - the flaw is structural, not a one-off wording issue.
+    spot_flagged = 0
+    for stage in (AnalysisRunStatus.ANALYZING, AnalysisRunStatus.CRITICIZING):
+        output = stage_outputs.get(stage.value)
+        packets = output.get("packets") if isinstance(output, Mapping) else None
+        if isinstance(packets, Sequence) and not isinstance(packets, (str, bytes)):
+            spot_flagged += sum(
+                1
+                for packet in packets
+                if isinstance(packet, Mapping) and _logic_spot_check(packet)
+            )
+    if spot_flagged:
+        dims["consistency"] = round(dims["consistency"] * 0.7, 3)
 
     score = 1.0
     for value in dims.values():
