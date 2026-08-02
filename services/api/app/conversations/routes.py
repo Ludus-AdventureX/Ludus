@@ -14,6 +14,7 @@ one call chain and no persistence/logging path here could carry it.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from uuid import UUID
 
@@ -349,10 +350,13 @@ async def post_case_message(
 
     # Best-effort profile extraction in a SEPARATE session (the request session
     # closes when the response returns, so a fire-and-forget task cannot reuse it).
-    import asyncio
-    asyncio.ensure_future(_update_case_profiles(
+    # The task is tracked in _pending_profile_tasks so tests and graceful
+    # shutdown can drain it; production behaviour remains fire-and-forget.
+    task = asyncio.ensure_future(_update_case_profiles(
         provider, context.workspace_id, decision_case_id
     ))
+    _pending_profile_tasks.add(task)
+    task.add_done_callback(_pending_profile_tasks.discard)
 
     data = CaseMessageData(
         candidateRevisionId=candidate_id,
@@ -422,6 +426,10 @@ async def create_quick_analysis(
 # --- Profile extraction + read endpoint ----------------------------------------
 
 from .profile_extractor import extract_profiles  # noqa: E402
+
+# Fire-and-forget profile-extraction tasks are tracked so tests (and graceful
+# shutdown) can await them; production semantics stay fire-and-forget.
+_pending_profile_tasks: set[asyncio.Task] = set()
 
 
 async def _update_case_profiles(
