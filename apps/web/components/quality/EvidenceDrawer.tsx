@@ -27,7 +27,9 @@ import type {
   EvidenceProvenanceView,
   EvidenceRunAnchors,
   EvidenceEventSourceFactory,
+  LensArtifactSummaryView,
   QualityDimensionsView,
+  RunEvidenceListView,
   SameSourceGroupView
 } from "@/lib/api/evidence";
 import {
@@ -36,8 +38,10 @@ import {
   fetchEvidenceItem,
   fetchEvidenceProvenance,
   fetchEvidenceQuality,
+  fetchLensArtifact,
   fetchRunConflicts,
   fetchRunEvidence,
+  fetchRunLensArtifacts,
   fetchSameSourceGroup,
   isUnauthenticated,
   isUniformNotFound,
@@ -70,13 +74,50 @@ function getDrawerFocusableElements(container: HTMLElement): HTMLElement[] {
   );
 }
 
+// --- P1: deterministic evidence-stance derivation (grey-goo TDD direction) --
+// Pure derivation over ALREADY-PERSISTED wire fields (supports/contradicts
+// claim ids, source grade). No new contract: the drawer only makes visible
+// what the evidence ledger already stores — opposing evidence is never
+// buried (v6-analysis-agent §1 Check 2 "Opposing MUST be included").
+
+type EvidenceStance = "supporting" | "opposing" | "unlabeled";
+
+function evidenceStance(item: EvidenceItemView): EvidenceStance {
+  const supports = (item.supportsClaimIds ?? []).length > 0;
+  const contradicts = (item.contradictsClaimIds ?? []).length > 0;
+  if (contradicts && !supports) return "opposing";
+  if (supports && !contradicts) return "supporting";
+  return "unlabeled";
+}
+
+const STANCE_LABELS: Record<EvidenceStance, string> = {
+  supporting: "支持",
+  opposing: "反对",
+  unlabeled: "未标注"
+};
+
+/** L5/L6 share across the ledger (discipline cap 30%, mirrors the funnel). */
+function lowTrustShare(items: EvidenceItemView[]): number | null {
+  const total = items.length;
+  if (total === 0) return null;
+  const low = items.filter(
+    (item) => item.sourceGrade === "L5_opinion" || item.sourceGrade === "L6_unverified"
+  ).length;
+  return low / total;
+}
+
 type LedgerState =
   | { phase: "gap" }
   | { phase: "loading" }
   | { phase: "unauthenticated" }
   | { phase: "not-found" }
   | { phase: "error" }
-  | { phase: "ready"; items: EvidenceItemView[]; conflicts: ConflictRelationView[] };
+  | {
+      phase: "ready";
+      items: EvidenceItemView[];
+      conflicts: ConflictRelationView[];
+      funnelAudit: RunEvidenceListView["funnelAudit"];
+    };
 
 type DetailData = {
   item: EvidenceItemView;
@@ -93,6 +134,17 @@ type DetailState =
   | { phase: "error"; evidenceItemId: string }
   | { phase: "ready"; evidenceItemId: string; data: DetailData };
 
+/**
+ * Evidence -> lens support chain (P1). Built once per drawer open from the
+ * ALREADY-MOUNTED strategic-lens read surface: summary list + per-artifact
+ * detail (evidenceRefs). Failed reads degrade to `unavailable`, never to
+ * fabricated references.
+ */
+type LensRefsState =
+  | { phase: "loading" }
+  | { phase: "unavailable" }
+  | { phase: "ready"; byEvidenceId: Map<string, string[]>; lensSummaries: LensArtifactSummaryView[] };
+
 export type EvidenceDrawerProps = {
   open: boolean;
   onClose: () => void;
@@ -105,6 +157,137 @@ export type EvidenceDrawerProps = {
   slowThresholdMs?: number;
 };
 
+/**
+ * P1: ledger-level evidence discipline warnings (grey-goo TDD + funnel
+ * warnings made visible). Deterministic derivations only: opposing-evidence
+ * presence, L5/L6 trust share, rejected verdicts. Rendering a warning NEVER
+ * fabricates data — it surfaces what the ledger already stores.
+ */
+function EvidenceSetWarnings({ items }: { items: EvidenceItemView[] }) {
+  const opposingCount = items.filter((item) => evidenceStance(item) === "opposing").length;
+  const lowShare = lowTrustShare(items);
+  const rejectedCount = items.filter((item) => item.verdict === "rejected").length;
+
+  const warnings: string[] = [];
+  if (opposingCount === 0) {
+    warnings.push(
+      "账本中没有任何反对方向证据——若结论看起来一致，需警惕单一叙事（伪收敛）。"
+    );
+  }
+  if (lowShare !== null && lowShare > 0.3) {
+    // Deliberately NOT a percentage: QA P5 forbids "%" anywhere in the drawer
+    // (aggregate-credibility discipline). The share is a category warning.
+    warnings.push(
+      "账本中多数证据来自低可信类别（L5/L6）——结论可能建立在薄弱证据上。"
+    );
+  }
+  if (rejectedCount > 0) {
+    warnings.push(`${rejectedCount} 条证据被质量门否决（rejected），引用它们会阻断正式发布。`);
+  }
+  if (warnings.length === 0) return null;
+  return (
+    <div className="evidence-set-warnings" data-evidence-set-warnings>
+      {warnings.map((warning) => (
+        <p key={warning} role="status">
+          {warning}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Grey-goo 原则⑩ (CCR-20260802-P2W2): the persisted TDD discard audit —
+ * "what was filtered out and why". Honest phases mirror the ledger: absent
+ * audit -> nothing rendered; present -> one row per discarded fact with its
+ * check + reason.
+ */
+function FunnelDiscardAudit({
+  funnelAudit
+}: {
+  funnelAudit: RunEvidenceListView["funnelAudit"];
+}) {
+  if (!funnelAudit) return null;
+  const discards = Array.isArray(funnelAudit.discarded) ? funnelAudit.discarded : [];
+  if (discards.length === 0) {
+    return (
+      <section className="funnel-discard-audit" data-funnel-discard-audit>
+        <span>被过滤的事实</span>
+        <p className="draft-notice" role="status">
+          本轮检索没有事实被过滤。
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="funnel-discard-audit" data-funnel-discard-audit>
+      <span>被过滤的事实（{discards.length} 条）</span>
+      <ul>
+        {discards.map(
+          (discard: { factor?: string; reason?: string; check?: string }, index: number) => (
+            <li key={`${discard.factor ?? index}-${index}`}>
+              <b>{discard.factor ?? "未命名因素"}</b>
+              <small>{`${discard.check ?? "relevance"}：${discard.reason ?? ""}`}</small>
+            </li>
+          )
+        )}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * P1: evidence -> lens support chain ("which lens artifacts cite this item").
+ * Honest phases mirror the ledger discipline: loading, unavailable (lens read
+ * failed — never fabricated), none (ready but nothing cites this item), and
+ * the consumer list.
+ */
+function EvidenceLensConsumers({
+  evidenceItemId,
+  lensRefs
+}: {
+  evidenceItemId: string;
+  lensRefs: LensRefsState;
+}) {
+  if (lensRefs.phase === "loading") {
+    return (
+      <section className="evidence-lens-consumers" aria-label="透镜引用">
+        <span>透镜引用</span>
+        <p className="draft-notice" role="status">正在读取该证据被哪些透镜引用…</p>
+      </section>
+    );
+  }
+  if (lensRefs.phase === "unavailable") {
+    return (
+      <section className="evidence-lens-consumers" aria-label="透镜引用">
+        <span>透镜引用</span>
+        <p className="draft-notice" role="status">透镜引用关系暂不可用（读取失败，不提供猜测）。</p>
+      </section>
+    );
+  }
+  const consumers = lensRefs.byEvidenceId.get(evidenceItemId) ?? [];
+  if (consumers.length === 0) {
+    return (
+      <section className="evidence-lens-consumers" aria-label="透镜引用">
+        <span>透镜引用</span>
+        <p className="draft-notice" role="status">尚无透镜引用该证据。</p>
+      </section>
+    );
+  }
+  return (
+    <section className="evidence-lens-consumers" aria-label="透镜引用">
+      <span>透镜引用</span>
+      <ul>
+        {consumers.map((lensType) => (
+          <li key={lensType} data-lens-consumer={lensType}>
+            {lensType}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function EvidenceDrawer({
   open,
   onClose,
@@ -116,9 +299,11 @@ export function EvidenceDrawer({
   const [ledger, setLedger] = useState<LedgerState>(anchors ? { phase: "loading" } : { phase: "gap" });
   const [slowNetwork, setSlowNetwork] = useState(false);
   const [detail, setDetail] = useState<DetailState | null>(null);
+  const [lensRefs, setLensRefs] = useState<LensRefsState>({ phase: "loading" });
   const drawerDialog = useRef<HTMLElement>(null);
   const ledgerRequestSeq = useRef(0);
   const detailRequestSeq = useRef(0);
+  const lensRefsRequestSeq = useRef(0);
 
   const classifyFailure = (error: unknown): "unauthenticated" | "not-found" | "error" => {
     if (isUnauthenticated(error)) return "unauthenticated";
@@ -151,7 +336,8 @@ export function EvidenceDrawer({
         setLedger({
           phase: "ready",
           items: Array.isArray(runEvidence.items) ? runEvidence.items : [],
-          conflicts: Array.isArray(runConflicts.conflicts) ? runConflicts.conflicts : []
+          conflicts: Array.isArray(runConflicts.conflicts) ? runConflicts.conflicts : [],
+          funnelAudit: runEvidence.funnelAudit ?? null
         });
       } catch (error) {
         if (ledgerRequestSeq.current !== requestId) return;
@@ -189,12 +375,58 @@ export function EvidenceDrawer({
     [anchors, fetchImpl]
   );
 
+  const loadLensRefs = useCallback(async () => {
+    if (!anchors) {
+      setLensRefs({ phase: "unavailable" });
+      return;
+    }
+    const requestId = ++lensRefsRequestSeq.current;
+    try {
+      // Summary list first: an empty list is a valid honest state (no ready
+      // lens artifacts yet) and stops before any per-artifact fetch.
+      const summaries = await fetchRunLensArtifacts(anchors, fetchImpl);
+      if (lensRefsRequestSeq.current !== requestId) return;
+      if (summaries.length === 0) {
+        setLensRefs({ phase: "ready", byEvidenceId: new Map(), lensSummaries: [] });
+        return;
+      }
+      // Per-artifact details carry evidenceRefs: one fetch per artifact,
+      // each failing on its own without poisoning the rest (the map only
+      // gains what actually resolved).
+      const details = await Promise.allSettled(
+        summaries.map((summary) => fetchLensArtifact(anchors, summary.id, fetchImpl))
+      );
+      if (lensRefsRequestSeq.current !== requestId) return;
+      const byEvidenceId = new Map<string, string[]>();
+      let resolvedCount = 0;
+      details.forEach((result, index) => {
+        if (result.status !== "fulfilled") return;
+        const detail = result.value;
+        resolvedCount += 1;
+        for (const evidenceId of detail.evidenceRefs ?? []) {
+          const lenses = byEvidenceId.get(evidenceId) ?? [];
+          lenses.push(detail.lensType);
+          byEvidenceId.set(evidenceId, lenses);
+        }
+      });
+      if (resolvedCount === 0) {
+        setLensRefs({ phase: "unavailable" });
+        return;
+      }
+      setLensRefs({ phase: "ready", byEvidenceId, lensSummaries: summaries });
+    } catch {
+      if (lensRefsRequestSeq.current !== requestId) return;
+      setLensRefs({ phase: "unavailable" });
+    }
+  }, [anchors, fetchImpl]);
+
   // Initial + reopened load.
   useEffect(() => {
     if (!open) return;
     setDetail(null);
     void loadLedger(false);
-  }, [open, loadLedger]);
+    void loadLensRefs();
+  }, [open, loadLedger, loadLensRefs]);
 
   // Reserved SSE hook: citation.added → passive, quiet ledger refresh.
   useEffect(() => {
@@ -314,22 +546,46 @@ export function EvidenceDrawer({
           )}
 
           {ledger.phase === "ready" && ledger.items.length > 0 && (
-            <ul className="evidence-item-list">
-              {ledger.items.map((item) => (
-                <li key={item.id} data-evidence-item={item.id}>
-                  <button
-                    type="button"
-                    className="evidence-item-row"
-                    onClick={() => void loadDetail(item.id)}
-                    aria-expanded={detail !== null && detail.evidenceItemId === item.id}
-                  >
-                    <SourceGradeBadge grade={item.sourceGrade} />
-                    <b>{item.title}</b>
-                    <small>{`${item.freshnessStatus} · ${item.originMode}`}</small>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <EvidenceSetWarnings items={ledger.items} />
+              <FunnelDiscardAudit funnelAudit={ledger.funnelAudit} />
+              <ul className="evidence-item-list">
+                {ledger.items.map((item) => {
+                  const stance = evidenceStance(item);
+                  const lensTypes =
+                    lensRefs.phase === "ready" ? (lensRefs.byEvidenceId.get(item.id) ?? []) : [];
+                  return (
+                    <li key={item.id} data-evidence-item={item.id}>
+                      <button
+                        type="button"
+                        className="evidence-item-row"
+                        onClick={() => void loadDetail(item.id)}
+                        aria-expanded={detail !== null && detail.evidenceItemId === item.id}
+                      >
+                        <SourceGradeBadge grade={item.sourceGrade} />
+                        <b>{item.title}</b>
+                        <small>
+                          {`${item.freshnessStatus} · ${item.originMode}`}
+                          {stance !== "unlabeled" && (
+                            <span
+                              className={`evidence-stance evidence-stance--${stance}`}
+                              data-evidence-stance={stance}
+                            >
+                              {STANCE_LABELS[stance]}
+                            </span>
+                          )}
+                          {lensTypes.length > 0 && (
+                            <span className="evidence-lens-refs" data-evidence-lens-refs={item.id}>
+                              {`被 ${lensTypes.length} 个透镜引用`}
+                            </span>
+                          )}
+                        </small>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
 
           {ledger.phase === "ready" && <ConflictList conflicts={ledger.conflicts} itemsById={itemsById} />}
@@ -376,6 +632,10 @@ export function EvidenceDrawer({
                 <ProvenanceChain provenance={detail.data.provenance} />
                 <SameSourceGroupNote group={detail.data.group} />
                 <DirectionPanel direction={detail.data.direction} />
+                <EvidenceLensConsumers
+                  evidenceItemId={detail.data.item.id}
+                  lensRefs={lensRefs}
+                />
               </article>
             )}
           </div>

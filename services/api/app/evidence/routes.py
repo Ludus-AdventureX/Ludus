@@ -261,7 +261,48 @@ async def list_run_evidence(
         analysis_run_id=str(analysis_run_id),
         items=[_item_view(item) for item in items],
     )
-    return _envelope(view.model_dump(by_alias=True))
+    # Grey-goo 原则⑩ (CCR-20260802-P2W2): the persisted TDD funnel audit
+    # (discards with factor/reason/check, warnings, tier mix) rides the same
+    # response so the E page can show "what was filtered out and why".
+    # Latest stage wins; absent audit -> None (honest empty, never fabricated).
+    data = view.model_dump(by_alias=True)
+    funnel_audit = await _latest_funnel_audit(db, context.workspace_id, analysis_run_id)
+    if funnel_audit is not None:
+        data["funnelAudit"] = funnel_audit
+    return _envelope(data)
+
+
+async def _latest_funnel_audit(
+    db: AsyncSession, workspace_id: UUID, analysis_run_id: UUID
+) -> dict[str, object] | None:
+    """The most recent persisted funnel audit for this run (principle ⑩)."""
+
+    from sqlalchemy import select
+
+    from app.models import EvidenceFunnelAudit
+
+    row = (
+        await db.execute(
+            select(EvidenceFunnelAudit)
+            .where(
+                EvidenceFunnelAudit.workspace_id == workspace_id,
+                EvidenceFunnelAudit.analysis_run_id == analysis_run_id,
+            )
+            .order_by(EvidenceFunnelAudit.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    return {
+        "stage": row.stage,
+        "admitted": row.admitted,
+        "discarded": list(row.discarded),
+        "warnings": list(row.warnings),
+        "tierCounts": dict(row.tier_counts),
+        "opposingCount": row.opposing_count,
+        "lowTierShare": float(row.low_tier_share) if row.low_tier_share is not None else None,
+    }
 
 
 @router.get("/analyses/{analysisRunId}/evidence-conflicts")

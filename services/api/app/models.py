@@ -544,6 +544,13 @@ class AnalysisRun(Base):
     supersedes_analysis_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
     superseded_by_analysis_run_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
     cancellation_reason: Mapped[str | None] = mapped_column(String(80))
+    # Grey-goo 原则⑮ complexity adaptivity (CCR-20260802-P2W2): internal
+    # state only - a downgrade changes budget/iteration depth, never the
+    # five-lens artifact contract.
+    complexity_downgraded: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    downgrade_chain: Mapped[list[str]] = json_list_column()
     created_at: Mapped[datetime] = created_at_column()
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -2143,3 +2150,90 @@ class WorkspaceConnector(Base):
     created_at: Mapped[datetime] = created_at_column()
     config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RetrievalCoverage(Base):
+    """Per-run frozen search-coverage index (grey-goo §3; CCR-20260802-P2W2).
+
+    One row per distinct query executed for a run. A repeat query inside the
+    same run reuses the frozen row (idempotent) instead of re-hitting the
+    provider; the worker's ``_retrieve_once`` is the only writer.
+    """
+
+    __tablename__ = "retrieval_coverage"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "analysis_run_id",
+            "result_hash",
+            name="uq_retrieval_coverage_run_hash",
+        ),
+        Index("ix_retrieval_coverage_workspace_run", "workspace_id", "analysis_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_retrieval_coverage_workspace_case_run",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    analysis_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    keywords: Mapped[list[str]] = json_list_column()
+    queried_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    result_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    result_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    frozen: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    origin_mode: Mapped[OriginMode] = mapped_column(
+        ORIGIN_MODE_ENUM,
+        nullable=False,
+        default=OriginMode.LIVE,
+        server_default=OriginMode.LIVE.value,
+    )
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class EvidenceFunnelAudit(Base):
+    """Persisted TDD discard record (grey-goo 原则⑩; CCR-20260802-P2W2).
+
+    The evidence funnel's audit (admitted / discarded with factor+reason+check
+    / warnings / tier counts / opposing count / low-trust share) is written
+    per retrieving stage so the E page can show "what was filtered out and
+    why" instead of only the survivors.
+    """
+
+    __tablename__ = "evidence_funnel_audits"
+    __table_args__ = (
+        Index("ix_evidence_funnel_audits_workspace_run", "workspace_id", "analysis_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id", "analysis_run_id"],
+            [
+                "analysis_runs.workspace_id",
+                "analysis_runs.decision_case_id",
+                "analysis_runs.analysis_run_id",
+            ],
+            name="fk_evidence_funnel_audits_workspace_case_run",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    analysis_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    admitted: Mapped[int] = mapped_column(Integer, nullable=False)
+    discarded: Mapped[list[dict[str, Any]]] = json_list_column()
+    warnings: Mapped[list[str]] = json_list_column()
+    tier_counts: Mapped[dict[str, int]] = json_object_column()
+    opposing_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    low_tier_share: Mapped[float | None] = mapped_column(Float)
+    created_at: Mapped[datetime] = created_at_column()

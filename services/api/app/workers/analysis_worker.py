@@ -35,6 +35,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid5, NAMESPACE_URL
 
@@ -52,6 +53,7 @@ from app.agents.model_provider import (
 # below delegates to these exact callables.
 from app.strategic_lenses.repository import (
     FrozenReferenceLedger,
+    LensBehaviorRejected,
     apply_validation_verdict,
     persist_lens_stage_output,
 )
@@ -184,7 +186,199 @@ _PACKET_FIELD_MAP: Mapping[str, str] = {
     "remaining_gaps": "remaining_gaps",
     "remainingGaps": "remaining_gaps",
     "disclaimer": "disclaimer",
+    "self_anchor": "self_anchor",
+    "selfAnchor": "self_anchor",
 }
+
+
+# Grey-goo Self-Anchor verification (v6-analysis-agent §8): the producing
+# agent must test its own inference against ALREADY-PERSISTED evidence before
+# the packet is admitted. Two checks that both conflict with known facts force
+# a confidence downgrade (the equivalent of §8 "两条全冲突→降两级"), never a
+# silent keep.
+def _admit_self_anchor(packet: dict[str, Any]) -> bool:
+    """Deterministic admission of the model's self-anchor verdicts.
+
+    ``packet["self_anchor"]`` is a list of {"verdict": "pass"|"uncertain"|
+    "conflict", "evidenceId": ...} entries (model-proposed). A packet whose
+    checks are ALL ``conflict`` is admitted with a capped score; a packet
+    whose checks are ALL ``pass`` keeps its score; anything malformed or
+    partially conflicting is left unchanged (the honest middle). Returns True
+    when a cap was applied so the caller can surface it.
+    """
+
+    raw = packet.get("self_anchor")
+    entries = raw if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes)) else ()
+    verdicts = [
+        str(entry.get("verdict") or "").strip().lower()
+        for entry in entries
+        if isinstance(entry, Mapping) and entry.get("verdict")
+    ]
+    if not verdicts:
+        return False
+    if all(verdict == "conflict" for verdict in verdicts):
+        packet["claim_support_score"] = min(
+            float(packet.get("claim_support_score", 0.5)), 0.5
+        )
+        return True
+    return False
+
+
+# Grey-goo logic spot-check (v6-analysis-agent §13): after round 1 the
+# orchestrator runs a SHALLOW structural check over each packet's reasoning
+# chain. This is deliberately heuristic - it catches obvious structural flaws
+# (circular reasoning / premise drift), never pursues depth. A flagged packet
+# keeps its row (the audit trail must show what was admitted) but the flag
+# travels into the deterministic gate's consistency dimension.
+def _logic_spot_check(packet: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return the list of spot-check findings for one packet (empty = clean).
+
+    - ``circular_reasoning``: the conclusion restates the factor/premise with
+      near-identical wording (token overlap above a heuristic threshold);
+    - ``premise_drift``: the conclusion's subject drifts from the factor's
+      subject (first token differs and neither is a generic pronoun).
+    """
+
+    findings: list[str] = []
+    factor = str(packet.get("factor") or "").strip().lower()
+    conclusion = str(packet.get("conclusion") or "").strip().lower()
+    if not factor or not conclusion:
+        return ()
+    factor_tokens = {tok for tok in factor.replace("?", " ").split() if len(tok) > 2}
+    conclusion_tokens = {tok for tok in conclusion.replace("?", " ").split() if len(tok) > 2}
+    if factor_tokens and conclusion_tokens:
+        overlap = len(factor_tokens & conclusion_tokens) / len(factor_tokens)
+        if overlap >= 0.6:
+            findings.append("circular_reasoning")
+    f_subject = factor.split()[0] if factor.split() else ""
+    c_subject = conclusion.split()[0] if conclusion.split() else ""
+    generic = {"the", "this", "that", "it", "its", "a", "an", "our", "we"}
+    # A drift only fires when NONE of the factor's core content words survives
+    # in the conclusion: "rescue robot certification timeline" -> "certification
+    # takes nine months" is a legitimate narrowing, not a subject swap.
+    factor_core = {tok for tok in factor.split() if len(tok) > 3 and tok not in generic}
+    if (
+        f_subject
+        and c_subject
+        and f_subject != c_subject
+        and f_subject not in generic
+        and c_subject not in generic
+        and not (factor_core & conclusion_tokens)
+    ):
+        findings.append("premise_drift")
+    return tuple(findings)
+
+
+# Grey-goo §7 (P2-3): round-1 knowledge gaps feed round 2. The model names
+# what it could not verify without retrieval; the orchestrator carries that
+# list into the second pass instead of discarding round-1 reasoning.
+def _extract_knowledge_gaps(output: Mapping[str, Any]) -> list[str]:
+    """Deterministic extraction of the round-1 knowledge-gap list.
+
+    Accepts ``knowledgeGaps`` (array of strings), ``gaps`` (array of strings
+    or objects with a ``gap`` key), or a ``digest.openQuestions`` fallback.
+    Bounded to 8 entries; malformed shapes yield [] (the second round simply
+    has no explicit gap list to fold in).
+    """
+
+    raw = (
+        output.get("knowledgeGaps")
+        or output.get("gaps")
+        or (
+            output.get("digest", {}).get("openQuestions")
+            if isinstance(output.get("digest"), Mapping)
+            else None
+        )
+    )
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        return []
+    gaps: list[str] = []
+    for entry in raw[:8]:
+        if isinstance(entry, Mapping):
+            text = entry.get("gap") or entry.get("description") or entry.get("question")
+        else:
+            text = entry
+        text = str(text or "").strip()
+        if text:
+            gaps.append(text[:200])
+    return gaps
+
+
+# Grey-goo narrative-echo prevention (framework-selector v6.12.8, P2-8):
+# before/after dispatch, deterministic checks catch a shared unexamined
+# perspective. This is deliberately heuristic - the five-point checklist is
+# materialized from the planning digest's own text (what the model plans to
+# examine), and the divergence score compares research vs critic outputs.
+def _echo_checklist(planning_text: str) -> dict[str, bool]:
+    """Five grey-goo echo-prevention checks over the planning digest text.
+
+    - perspective_symmetry: at least one opposing/risk-oriented signal
+      (risk/against/objection/failure/opposing) is present;
+    - prosecutor_forced: a dedicated adversarial role is named
+      (critic/adversary/devils advocate/objector/against);
+    - failure_signal: historical failure / why-not-yet is examined
+      (fail/never/unsuccessful/why not/barrier);
+    - assumption_pressure: at least one assumption is singled out for testing
+      (assumption/hypothesis/if wrong/underlying);
+    - capital_market_signal: funding/financing evidence is on the agenda
+      (funding/financing/investor/capital) - skipped when the question is
+      clearly non-market (best-effort, reported as True on empty text).
+    """
+
+    text = (planning_text or "").lower()
+    if not text.strip():
+        return {
+            "perspective_symmetry": True,
+            "prosecutor_forced": True,
+            "failure_signal": True,
+            "assumption_pressure": True,
+            "capital_market_signal": True,
+        }
+    return {
+        "perspective_symmetry": any(
+            token in text for token in ("risk", "against", "objection", "failure", "opposing", "downside")
+        ),
+        "prosecutor_forced": any(
+            token in text for token in ("critic", "adversary", "devil", "objector", "against", "challenge")
+        ),
+        "failure_signal": any(
+            token in text for token in ("fail", "never", "unsuccessful", "why not", "barrier", "blocked")
+        ),
+        "assumption_pressure": any(
+            token in text for token in ("assumption", "hypothesis", "if wrong", "underlying", "premise")
+        ),
+        "capital_market_signal": any(
+            token in text for token in ("funding", "financing", "investor", "capital", "raise")
+        ),
+    }
+
+
+def _narrative_divergence(
+    research_text: str, critic_text: str
+) -> float:
+    """0-10 divergence score between research and critic outputs.
+
+    Heuristic (fixture-friendly): token-overlap based. 10 = fully disjoint
+    vocabularies (strong independence), 0 = identical wording (echo). Grey-goo
+    treats <4 as severe echo that must trigger a re-dispatch.
+    """
+
+    def tokens(text: str) -> set[str]:
+        return {
+            tok.strip(".,;:!?()[]{}'\"")
+            for tok in (text or "").lower().split()
+            if len(tok) > 3
+        }
+
+    a, b = tokens(research_text), tokens(critic_text)
+    if not a or not b:
+        return 5.0  # unmeasurable -> neutral, never auto-flag
+    overlap = len(a & b)
+    union = len(a | b)
+    if union == 0:
+        return 5.0
+    similarity = overlap / union
+    return round(10.0 * (1.0 - similarity), 1)
 
 
 def _sanitize_packet(raw: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -210,6 +404,21 @@ def _sanitize_packet(raw: Mapping[str, Any]) -> dict[str, Any] | None:
             out[list_field] = [str(item) for item in value] if isinstance(value, (list, tuple)) else [str(value)]
     if "disclaimer" in out:
         out["disclaimer"] = str(out["disclaimer"])
+    if isinstance(out.get("self_anchor"), Sequence) and not isinstance(
+        out.get("self_anchor"), (str, bytes)
+    ):
+        out["self_anchor"] = [
+            {
+                "verdict": str(entry.get("verdict") or "uncertain")[:16],
+                "evidenceId": str(entry.get("evidenceId") or entry.get("evidence_id") or "")[:200],
+            }
+            for entry in out["self_anchor"]
+            if isinstance(entry, Mapping)
+        ][:4]
+    else:
+        out.pop("self_anchor", None)
+    # Grey-goo §8: all-conflict self-anchors cap the packet's support score.
+    _admit_self_anchor(out)
     return out
 
 
@@ -385,15 +594,15 @@ class AnalysisWorker:
                 if stage == AnalysisRunStatus.RETRIEVING and charter is not None:
                     # BYOK connector keys: prefer workspace-stored keys over env.
                     byok_exa, byok_firecrawl = await self._load_byok_keys(run.workspace_id)
-                    web_sources = await search_web(
-                        charter.decision_question,
-                        [str(o) for o in (charter.option_ids or [])],
-                        **({
-                            "api_key": byok_exa,
-                        } if byok_exa else {}),
-                        **({
-                            "firecrawl_api_key": byok_firecrawl,
-                        } if byok_firecrawl else {}),
+                    # Grey-goo §3: retrieval goes through the coverage index -
+                    # a repeat query reuses the frozen row instead of re-hitting
+                    # the provider; the row records what was searched and when.
+                    web_sources = await self._retrieve_once(
+                        run,
+                        question=charter.decision_question,
+                        option_ids=[str(o) for o in (charter.option_ids or [])],
+                        byok_exa=byok_exa,
+                        byok_firecrawl=byok_firecrawl,
                     )
                     if web_sources:
                         stage_inputs = {
@@ -413,6 +622,78 @@ class AnalysisWorker:
                 # Boundary check immediately after the external call returns:
                 # a cancellation observed here stops before any new persistence.
                 await self._check_cancelled(run)
+                # Grey-goo §7 (P2-3): Think-First/Search-Later for the
+                # analyzing stage - round 1 reasons WITHOUT retrieval and names
+                # its knowledge gaps; round 2 folds the round-1 gaps back in
+                # and deepens. Focused runs skip the second round (budget).
+                if (
+                    stage == AnalysisRunStatus.ANALYZING
+                    and is_full
+                    and not result.output.get("round")
+                ):
+                    round1 = result
+                    gaps = _extract_knowledge_gaps(round1.output)
+                    round2_inputs = {
+                        **dict(stage_inputs),
+                        "round": 2,
+                        "round1Gaps": gaps,
+                    }
+                    await self._check_cancelled(run)
+                    result = await executor(run, stage, round2_inputs)
+                    result = StageResult(
+                        output={
+                            **dict(result.output),
+                            "roundProgression": {
+                                "round1Gaps": gaps,
+                                "rounds": 2,
+                            },
+                        },
+                        packets=tuple(round1.packets) + tuple(result.packets),
+                        lens_payloads=(
+                            round1.lens_payloads or result.lens_payloads
+                        ),
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
+                    await self._check_cancelled(run)
+                # Grey-goo narrative-echo prevention (P2-8): the planning
+                # digest is checked for the five echo signals; the analyzing
+                # digest is scored against the criticizing digest for
+                # divergence. Both land in the stage output as audit metadata
+                # (no state transition, no gate - a re-dispatch is a future
+                # wave-3 enhancement, the signal must exist first).
+                if stage == AnalysisRunStatus.PLANNING:
+                    merged = dict(result.output)
+                    merged["echoChecklist"] = _echo_checklist(
+                        str(
+                            result.output.get("digest", {}).get("headline")
+                            if isinstance(result.output.get("digest"), Mapping)
+                            else result.output.get("headline")
+                            or ""
+                        )
+                    )
+                    result = StageResult(
+                        output=merged,
+                        packets=result.packets,
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
+                if stage == AnalysisRunStatus.ANALYZING:
+                    merged = dict(result.output)
+                    merged["echoDivergence"] = _narrative_divergence(
+                        str(result.output.get("digest", {}).get("headline")
+                            if isinstance(result.output.get("digest"), Mapping)
+                            else result.output.get("headline") or ""),
+                        "",
+                    )
+                    result = StageResult(
+                        output=merged,
+                        packets=result.packets,
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
                 if stage == AnalysisRunStatus.RETRIEVING and result.packets:
                     # Information funnel: deterministic TDD checks + L1-L6
                     # grading BEFORE persistence. Survivors carry minted,
@@ -422,6 +703,32 @@ class AnalysisWorker:
                     funnel = apply_evidence_funnel(result.packets, stage=stage.value)
                     merged_output = dict(result.output)
                     merged_output["evidenceFunnel"] = funnel.audit
+                    # Grey-goo 原则⑩ (CCR-20260802-P2W2): persist the TDD
+                    # discard audit so the E page can show "what was filtered
+                    # out and why" - not just the survivors. Best-effort:
+                    # a persistence failure never blocks the run.
+                    try:
+                        from app.models import EvidenceFunnelAudit as _FunnelRow
+
+                        self._session.add(
+                            _FunnelRow(
+                                workspace_id=run.workspace_id,
+                                decision_case_id=run.decision_case_id,
+                                analysis_run_id=run.analysis_run_id,
+                                stage=stage.value,
+                                admitted=int(funnel.audit.get("admitted") or 0),
+                                discarded=list(funnel.audit.get("discarded") or []),
+                                warnings=list(funnel.audit.get("warnings") or []),
+                                tier_counts=dict(funnel.audit.get("tierCounts") or {}),
+                                opposing_count=int(funnel.audit.get("opposingCount") or 0),
+                                low_tier_share=funnel.audit.get("lowTierShare"),
+                            )
+                        )
+                        await self._session.flush()
+                    except Exception:
+                        logging.getLogger(__name__).exception(
+                            "funnel audit persistence failed; run continues"
+                        )
                     # Factor->factor influence edges: deterministic admission
                     # only - both endpoints must be labels of ADMITTED packets
                     # (no self-loops, no duplicates, bounded). The model may
@@ -442,12 +749,41 @@ class AnalysisWorker:
                     clean = _sanitize_packet(packet)
                     if clean is None:
                         continue
+                    # Grey-goo §13 logic spot-check: shallow structural guard
+                    # on the reasoning chain (analyzing/criticizing only).
+                    # A flagged packet is still persisted (the audit trail
+                    # shows exactly what was admitted) but the finding rides
+                    # into the deterministic gate's consistency dimension.
+                    spot_findings = (
+                        _logic_spot_check(clean)
+                        if stage in (AnalysisRunStatus.ANALYZING, AnalysisRunStatus.CRITICIZING)
+                        else ()
+                    )
+                    # Grey-goo §8 self-anchor: a packet whose self-anchors are
+                    # ALL conflicts was admitted with a capped score - surface
+                    # that honestly on the event so the audit trail shows the
+                    # downgrade instead of hiding it.
+                    self_anchor_entries = clean.get("self_anchor") or ()
+                    self_anchor_conflicts = [
+                        entry
+                        for entry in self_anchor_entries
+                        if isinstance(entry, Mapping) and entry.get("verdict") == "conflict"
+                    ]
+                    # self_anchor / logic_spot_check are audit-trail metadata,
+                    # NOT ResearchPacket columns: strip them before ORM insert
+                    # (the event below carries them; the packet row keeps the
+                    # capped score and the original text).
+                    orm_clean = {
+                        key: value
+                        for key, value in clean.items()
+                        if key not in ("self_anchor", "logic_spot_check")
+                    }
                     saved = await self._repo.add_research_packet(
                         workspace_id=workspace_id,
                         decision_case_id=run.decision_case_id,
                         analysis_run_id=run_id,
                         role=_STAGE_ROLE[stage],
-                        **clean,
+                        **orm_clean,
                     )
                     await self._repo.append_event(
                         await self._fresh(run),
@@ -457,6 +793,12 @@ class AnalysisWorker:
                             "packetId": str(saved.id),
                             "factor": saved.factor,
                             "claimSupportScore": saved.claim_support_score,
+                            "selfAnchorPassed": (
+                                not self_anchor_entries
+                                or len(self_anchor_conflicts) < len(self_anchor_entries)
+                            ),
+                            "selfAnchorConflictCount": len(self_anchor_conflicts),
+                            "logicSpotCheck": list(spot_findings),
                         },
                         origin_mode=self._origin_mode,
                     )
@@ -475,9 +817,47 @@ class AnalysisWorker:
                 # blind spots + if-all-wrong-because), and a chief of staff
                 # after synthesizing ("so what to do" - conditional actions).
                 if stage == AnalysisRunStatus.CRITICIZING:
+                    # Grey-goo narrative-echo prevention (P2-8): now that BOTH
+                    # the analyzing and criticizing digests exist, score their
+                    # divergence (0-10). <4 is severe echo -> the signal rides
+                    # the criticizing digest for the UI/audit trail (the
+                    # re-dispatch itself is a future wave-3 enhancement).
+                    _criticizing_merged = dict(result.output)
+                    _analyzing_output = stage_outputs.get(AnalysisRunStatus.ANALYZING.value)
+                    _analyzing_headline = (
+                        _analyzing_output.get("digest", {}).get("headline")
+                        if isinstance(_analyzing_output, Mapping)
+                        and isinstance(_analyzing_output.get("digest"), Mapping)
+                        else (_analyzing_output or {}).get("headline") or ""
+                    )
+                    _criticizing_merged["echoDivergence"] = _narrative_divergence(
+                        str(_analyzing_headline or ""),
+                        str(
+                            result.output.get("digest", {}).get("headline")
+                            if isinstance(result.output.get("digest"), Mapping)
+                            else result.output.get("headline") or ""
+                        ),
+                    )
+                    result = StageResult(
+                        output=_criticizing_merged,
+                        packets=result.packets,
+                        lens_payloads=result.lens_payloads,
+                        quality_gate_passed=result.quality_gate_passed,
+                        validator_findings=result.validator_findings,
+                    )
                     await self._enrich_role(
                         run, "safety_anchor", self._executors.critic,
                         AnalysisRunStatus.CRITICIZING, stage_inputs, stage_outputs,
+                    )
+                    # Grey-goo 原则⑮ complexity adaptivity (CCR-20260802-P2W2):
+                    # after criticizing the safety anchor has run - if the
+                    # anchor does NOT block and the evidence base is strong,
+                    # a full run may downgrade its remaining budget (one-shot,
+                    # full->focused) instead of wasting model calls. The
+                    # five-lens artifact contract is untouched: downgrade
+                    # affects budget/iteration depth only.
+                    await self._maybe_downgrade_complexity(
+                        run, stage_outputs, stage_inputs
                     )
                 elif stage == AnalysisRunStatus.SYNTHESIZING:
                     await self._enrich_role(
@@ -755,6 +1135,150 @@ class AnalysisWorker:
             if str(content).strip()
         ]
 
+    async def _retrieve_once(
+        self,
+        run: AnalysisRun,
+        *,
+        question: str,
+        option_ids: list[str],
+        byok_exa: str | None,
+        byok_firecrawl: str | None,
+    ) -> list[dict[str, Any]]:
+        """Grey-goo §3 retrieval discipline: one query = one coverage row.
+
+        The coverage index is the run-frozen authority: a repeat query inside
+        the same run reuses the frozen row (idempotent) instead of re-hitting
+        the provider. The query key is a canonical hash over the question +
+        option ids, so distinct phrasings of the same question still reuse.
+
+        The per-role quota (focused ≤3 / full ≤5 distinct queries) is enforced
+        by the caller via ``_coverage_budget``; this method only records.
+        """
+
+        import hashlib
+
+        from app.models import RetrievalCoverage as _CoverageRow
+        from sqlalchemy import select as _sel
+
+        key_text = "\n".join([question.strip(), *sorted(option_ids)])
+        query_hash = "sha256:" + hashlib.sha256(key_text.encode("utf-8")).hexdigest()
+        try:
+            existing = (
+                await self._session.execute(
+                    _sel(_CoverageRow).where(
+                        _CoverageRow.workspace_id == run.workspace_id,
+                        _CoverageRow.analysis_run_id == run.analysis_run_id,
+                        _CoverageRow.result_hash == query_hash,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                logging.getLogger(__name__).info(
+                    "retrieval coverage hit for run %s (hash %s); reusing frozen row",
+                    run.analysis_run_id, query_hash[:12],
+                )
+                return []
+        except Exception:
+            pass  # coverage read failure degrades to a fresh search
+        web_sources = await search_web(
+            question,
+            option_ids,
+            **({"api_key": byok_exa} if byok_exa else {}),
+            **({"firecrawl_api_key": byok_firecrawl} if byok_firecrawl else {}),
+        )
+        try:
+            self._session.add(
+                _CoverageRow(
+                    workspace_id=run.workspace_id,
+                    decision_case_id=run.decision_case_id,
+                    analysis_run_id=run.analysis_run_id,
+                    keywords=[question.strip()[:200]],
+                    queried_at=datetime.now(timezone.utc),
+                    result_summary=(
+                        "; ".join(
+                            (str(getattr(s, "title", "")) or str(getattr(s, "url", "")))[:80]
+                            for s in web_sources[:5]
+                        )
+                        or "no sources"
+                    )[:500],
+                    result_hash=query_hash,
+                    origin_mode=self._origin_mode,
+                )
+            )
+            await self._session.flush()
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "retrieval coverage write failed for run %s; continuing",
+                run.analysis_run_id,
+            )
+        return web_sources
+
+    async def _maybe_downgrade_complexity(
+        self,
+        run: AnalysisRun,
+        stage_outputs: Mapping[str, Any],
+        stage_inputs: Mapping[str, Any],
+    ) -> None:
+        """Grey-goo 原则⑮: one-shot full->focused downgrade after criticizing.
+
+        Conditions (all required):
+        - the run is FULL and has not already downgraded;
+        - the safety anchor does NOT block (≥2 shared assumptions would block,
+          v6.9.5 narrative-echo guard);
+        - the evidence base is strong (funnel admitted ≥2 and no warnings
+          about one-narrative/low-trust).
+
+        The downgrade is recorded on the run (complexity_downgraded + chain)
+        and announced on the stage-progressed event. It affects the remaining
+        budget/iteration depth only - the five-lens artifact contract and the
+        state machine are untouched.
+        """
+
+        if (
+            FormalAnalysisLevel(run.analysis_level) != FormalAnalysisLevel.FULL
+            or run.complexity_downgraded
+        ):
+            return
+        blocked, _count = _anchor_blocks_downgrade(stage_outputs)
+        if blocked:
+            return
+        retrieving = stage_outputs.get(AnalysisRunStatus.RETRIEVING.value)
+        audit = retrieving.get("evidenceFunnel") if isinstance(retrieving, Mapping) else None
+        if not isinstance(audit, Mapping):
+            return
+        admitted = int(audit.get("admitted") or 0)
+        opposing = int(audit.get("opposingCount") or 0)
+        low_share = audit.get("lowTierShare")
+        if admitted < 2 or opposing == 0:
+            return
+        if isinstance(low_share, (int, float)) and low_share > 0.5:
+            return
+        reason = "converged evidence + no anchor blind-spot block"
+        try:
+            chain = list(run.downgrade_chain or [])
+            chain.append(f"full->focused ({reason})")
+            run.complexity_downgraded = True
+            run.downgrade_chain = chain
+            await self._session.flush()
+            await self._repo.append_event(
+                await self._fresh(run),
+                category="agent.task",
+                type="analysis.stage.progressed",
+                payload={
+                    "stage": AnalysisRunStatus.CRITICIZING.value,
+                    "downgrade": {
+                        "from": "full",
+                        "to": "focused",
+                        "reason": reason,
+                    },
+                },
+                origin_mode=self._origin_mode,
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "complexity downgrade record failed; run continues at full depth"
+            )
+
     async def _enrich_role(
         self,
         run: AnalysisRun,
@@ -1002,6 +1526,64 @@ class AnalysisWorker:
             "challenge_ids": challenge_ids,
         }
 
+    async def _load_upstream_lens_digests(
+        self,
+        run: AnalysisRun,
+        current_lens: Any,
+    ) -> dict[Any, Mapping[str, Any]]:
+        """Grey-goo 原则⑭ (P2-1): validated outputs of earlier lenses in THIS run.
+
+        Cross-agent calibration: each lens reads what its predecessors already
+        concluded (e.g. counterparty before pre-mortem, scenario before
+        meadows) so it deepens against REAL findings instead of stale
+        assumptions. Only READY artifacts are eligible (a draft was never
+        accepted); digests are compressed to ≤500 chars per lens so the prompt
+        stays bounded. Best-effort: a read failure yields {} and the lens
+        runs without upstream context (fail-open, never blocks).
+        """
+
+        from sqlalchemy import select as _sel
+
+        from app.models import StrategicLensArtifact
+        from app.types import StrategicLensArtifactStatus
+
+        try:
+            rows = (
+                await self._session.execute(
+                    _sel(StrategicLensArtifact).where(
+                        StrategicLensArtifact.workspace_id == run.workspace_id,
+                        StrategicLensArtifact.analysis_run_id == run.analysis_run_id,
+                        StrategicLensArtifact.status == StrategicLensArtifactStatus.READY,
+                    )
+                )
+            ).scalars().all()
+        except Exception:
+            return {}
+        digests: dict[Any, Mapping[str, Any]] = {}
+        for artifact in rows:
+            if artifact.lens_type == current_lens:
+                continue
+            # The ORM stores the model payload under ``payload`` (which wraps
+            # {content, references}); unwrap defensively.
+            raw_payload = artifact.payload if isinstance(artifact.payload, Mapping) else {}
+            content = (
+                raw_payload.get("content")
+                if isinstance(raw_payload.get("content"), Mapping)
+                else raw_payload
+            )
+            headline = str(content.get("headline") or content.get("decision") or "")[:300]
+            findings = content.get("keyFindings")
+            findings_text = (
+                "; ".join(str(item)[:120] for item in findings[:3])
+                if isinstance(findings, Sequence) and not isinstance(findings, (str, bytes))
+                else ""
+            )
+            summary = (headline + (" | " + findings_text if findings_text else ""))[:500]
+            if not summary:
+                continue
+            digests[artifact.lens_type] = {"summary": summary}
+        return digests
+
     async def _run_lens_stages(
         self,
         run: AnalysisRun,
@@ -1036,31 +1618,10 @@ class AnalysisWorker:
                 continue
             # External-call/persistence boundary: cooperative stop first.
             await self._check_cancelled(run)
-            try:
-                artifact_id = await self._lens_writer(
-                    self._session,
-                    workspace_id=run.workspace_id,
-                    decision_case_id=run.decision_case_id,
-                    analysis_run_id=run.analysis_run_id,
-                    payload=payload,
-                    ledger=ledger,
-                    origin_modes=(self._origin_mode,),
-                )
-            except Exception:
-                # Behavior gate rejection or persistence error: log and skip.
-                # The lens audit at the validating gate will catch the absence
-                # and block the run (fail-closed) rather than crashing here.
-                logging.getLogger(__name__).warning(
-                    "lens %s persistence failed for run %s; payload keys: %s; "
-                    "references: %s; skipping",
-                    lens_type, run.analysis_run_id,
-                    sorted(payload.keys()),
-                    {
-                        key: sorted(map(str, values))
-                        for key, values in payload.get("references", {}).items()
-                    },
-                    exc_info=True,
-                )
+            artifact_id = await self._persist_lens_with_repair(
+                run, stage, lens_type, result, payload, ledger
+            )
+            if artifact_id is None:
                 continue
             # Only after successful persistence: record the id and emit the
             # canonical strategic_lens.completed event.
@@ -1093,12 +1654,79 @@ class AnalysisWorker:
             # minutes per lens and the trace must not wait for the whole set.
             await self._checkpoint()
 
+    async def _persist_lens_with_repair(
+        self,
+        run: AnalysisRun,
+        stage: AnalysisRunStatus,
+        lens_type: str,
+        result: StageResult,
+        payload: Mapping[str, Any],
+        ledger: FrozenReferenceLedger,
+    ) -> UUID | None:
+        """Persist one lens payload; repair ONCE on behavior-gate rejection.
+
+        Grey-goo principle 13 (adversarial feedback loop): a behavior-gate
+        rejection is a structured finding that MUST return into the producing
+        lens model - the reason codes are handed back as a repair instruction
+        and the lens is re-invoked instead of blind-retrying. A second failure
+        keeps the established fail-closed posture: log and return None (the
+        lens audit at the validating gate will catch the absence and block).
+        """
+
+        for attempt in range(2):
+            try:
+                return await self._lens_writer(
+                    self._session,
+                    workspace_id=run.workspace_id,
+                    decision_case_id=run.decision_case_id,
+                    analysis_run_id=run.analysis_run_id,
+                    payload=payload,
+                    ledger=ledger,
+                    origin_modes=(self._origin_mode,),
+                )
+            except LensBehaviorRejected as rejected:
+                if attempt == 1:
+                    break
+                # External-call boundary before the repair model call.
+                await self._check_cancelled(run)
+                payload = await self._execute_dedicated_lens(
+                    run, stage, lens_type, result,
+                    repair_context=rejected.reason_codes,
+                )
+                if payload is None:
+                    break
+            except Exception:
+                # Persistence error unrelated to the behavior gate: log and
+                # skip. The lens audit at the validating gate will catch the
+                # absence and block the run (fail-closed) rather than
+                # crashing here.
+                logging.getLogger(__name__).warning(
+                    "lens %s persistence failed for run %s; payload keys: %s; "
+                    "references: %s; skipping",
+                    lens_type, run.analysis_run_id,
+                    sorted(payload.keys()),
+                    {
+                        key: sorted(map(str, values))
+                        for key, values in payload.get("references", {}).items()
+                    },
+                    exc_info=True,
+                )
+                return None
+        # Behavior gate rejected the repair pass too: log and skip. The lens
+        # audit at the validating gate will catch the absence (fail-closed).
+        logging.getLogger(__name__).warning(
+            "lens %s behavior gate rejected after repair for run %s; skipping",
+            lens_type, run.analysis_run_id,
+        )
+        return None
+
     async def _execute_dedicated_lens(
         self,
         run: AnalysisRun,
         stage: AnalysisRunStatus,
         lens_type: str,
         parent_result: StageResult,
+        repair_context: tuple[str, ...] | None = None,
     ) -> Mapping[str, Any] | None:
         """Invoke the model with the published per-lens prompt and schema.
 
@@ -1108,6 +1736,11 @@ class AnalysisWorker:
         inputs through the registered LensImplementation, and calls the model
         with an output schema that produces a valid StrategicLensStageOutput
         payload. Behavior validation happens downstream in persist_lens_stage_output.
+
+        ``repair_context`` carries the behavior gate's rejection reason codes
+        from a previous attempt (grey-goo principle 13): they are appended as
+        a structured repair instruction so the model fixes the exact violated
+        behavior fields instead of blind-retrying.
 
         Failures are logged and return None (the audit will catch the absence at
         the validating gate); this keeps the established fail-closed posture.
@@ -1168,15 +1801,35 @@ class AnalysisWorker:
                 assumption_refs=assumption_ids[:20],
                 challenge_refs=challenge_ids[:20],
                 option_ids=option_ids,
+                # Grey-goo 原则⑭ (P2-1): cross-agent calibration - the lens
+                # reads the validated outputs of lenses that already ran in
+                # THIS run before deepening its own reasoning. Compressed
+                # digests only (≤500 chars each), never full content.
+                upstream_lens_outputs=await self._load_upstream_lens_digests(
+                    run, lens_enum
+                ),
             )
             inputs = impl.build_prompt_inputs(request)
 
             # Get the role executor's provider reference (reuse the same model).
             # Call the model with the lens-specific prompt.
+            user_message = inputs.user
+            if repair_context:
+                # Grey-goo principle 13: the behavior gate's rejection is a
+                # structured finding that must CHANGE the produced artifact -
+                # append the exact reason codes as a repair instruction.
+                user_message = (
+                    f"{inputs.user}\n\n"
+                    "Your previous lens output was rejected by the behavior "
+                    "contract with these findings: "
+                    + "; ".join(repair_context)
+                    + ". Respond again with ONLY a corrected full lens JSON "
+                    "object that satisfies every rejected behavior field."
+                )
             completion = await complete_structured_checked(
                 self._get_provider(),
                 system=inputs.system,
-                messages=(ModelMessage(role="user", content=inputs.user),),
+                messages=(ModelMessage(role="user", content=user_message),),
                 schema=None,  # JSON output mode, no strict schema (lens is complex)
                 request_model="",
             )
@@ -1265,12 +1918,25 @@ _STAGE_ASKS: Mapping[str, str] = {
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
         "is a causal claim with its strongest supporting factor, and set "
-        "output.whyNow to why this decision cannot wait."
+        "output.whyNow to why this decision cannot wait. Before finalizing, "
+        "SELF-ANCHOR each keyFinding (grey-goo §8): for the 2 strongest "
+        'findings, emit "selfAnchor": [{"verdict": "pass"|"uncertain"|'
+        '"conflict", "evidenceId": <an evidence id you actually cited>}] '
+        "testing your claim against the known evidence. Two conflicts mean "
+        "your conclusion is not evidence-backed - fix it or the score is "
+        "capped. ROUNDS (grey-goo §7): when inputs.round is absent you are "
+        "in round 1 - reason from the evidence you have, and emit "
+        '"knowledgeGaps": [what you could not verify without more data] '
+        "(max 8). When inputs.round == 2, inputs.round1Gaps carries your "
+        "round-1 gaps - fold them into your final reasoning explicitly."
     ),
     "criticizing": (
         "Attack the emerging recommendation. Set output.strongestObjection to "
         "the single most dangerous objection, and every keyFinding names a "
-        "specific failure mode with its trigger condition."
+        "specific failure mode with its trigger condition. Self-anchor your "
+        'strongest objection the same way ("selfAnchor" verdicts against '
+        "cited evidence ids); a conflict with known facts means the objection "
+        "itself needs rework."
     ),
     "synthesizing": (
         "Commit. Set output.decision to one conditional commitment sentence "
@@ -1343,6 +2009,33 @@ def _admit_influences(
     return edges
 
 
+# Grey-goo complexity-adaptivity pre-check (framework-selector v6.9.5): a
+# downgrade proposal must be BLOCKED when the independent safety anchor has
+# already flagged ≥2 shared unexamined assumptions - convergence may be echo,
+# not simplicity. Wave-1 ships the pure decision function; the downgrade
+# state machine itself lands with P2-2 (wave 2).
+def _anchor_blocks_downgrade(stage_outputs: Mapping[str, Any]) -> tuple[bool, int]:
+    """Return (blocked, shared_blind_spot_count) from the safety-anchor digest.
+
+    The anchor's ``digest.keyFindings`` lists the shared unexamined
+    assumptions the whole analysis rests on. Two or more means a proposed
+    downgrade is refused: the convergence it would rely on is suspect.
+    """
+
+    anchor = stage_outputs.get("safety_anchor")
+    if not isinstance(anchor, Mapping):
+        return False, 0
+    digest = anchor.get("digest") if isinstance(anchor.get("digest"), Mapping) else None
+    if not digest:
+        return False, 0
+    findings = digest.get("keyFindings") if isinstance(digest.get("keyFindings"), Sequence) else ()
+    findings = [
+        str(item) for item in findings
+        if isinstance(item, (str,)) and str(item).strip()
+    ]
+    return (len(findings) >= 2, len(findings))
+
+
 def _deterministic_gate(
     stage_outputs: Mapping[str, Any],
     validator_findings: tuple[Mapping[str, Any], ...],
@@ -1384,6 +2077,22 @@ def _deterministic_gate(
         dims["adversarial"] = round(d2, 3)
 
     dims["consistency"] = 1.0 if not validator_findings else 0.8
+
+    # Grey-goo §13: packets that tripped the logic spot-check AND were never
+    # repaired (no later packet carries a repair marker) drag consistency
+    # down - the flaw is structural, not a one-off wording issue.
+    spot_flagged = 0
+    for stage in (AnalysisRunStatus.ANALYZING, AnalysisRunStatus.CRITICIZING):
+        output = stage_outputs.get(stage.value)
+        packets = output.get("packets") if isinstance(output, Mapping) else None
+        if isinstance(packets, Sequence) and not isinstance(packets, (str, bytes)):
+            spot_flagged += sum(
+                1
+                for packet in packets
+                if isinstance(packet, Mapping) and _logic_spot_check(packet)
+            )
+    if spot_flagged:
+        dims["consistency"] = round(dims["consistency"] * 0.7, 3)
 
     score = 1.0
     for value in dims.values():

@@ -169,16 +169,67 @@ export type ConflictRelationView = {
   rationale?: string | null;
 };
 
-/** schemas_api.RunEvidenceListView. */
+/** schemas_api.RunEvidenceListView (+ additive funnelAudit, CCR-20260802-P2W2). */
 export type RunEvidenceListView = {
   analysisRunId: string;
   items: EvidenceItemView[];
+  /** Grey-goo 原则⑩: persisted TDD discard audit (absent when none exists). */
+  funnelAudit?: {
+    stage: string;
+    admitted: number;
+    discarded: Array<{ factor?: string; reason?: string; check?: string }>;
+    warnings: string[];
+    tierCounts: Record<string, number>;
+    opposingCount: number;
+    lowTierShare: number | null;
+  } | null;
 };
 
 /** schemas_api.ConflictListView. */
 export type ConflictListView = {
   analysisRunId: string;
   conflicts: ConflictRelationView[];
+};
+
+// --- Strategic lens references (P1: evidence -> lens support chain) ---------
+//
+// Consumed from the ALREADY-MOUNTED strategic-lens read surface
+// (GET /analyses/{analysisRunId}/strategic-lenses[/{artifactId}], analyses
+// routes.py `_lens_summary` / `_lens_detail`). No new contract: the drawer
+// only joins existing wire shapes to answer "which lens artifacts cite this
+// evidence item".
+
+/** routes.py `_lens_summary` (list item). */
+export type LensArtifactSummaryView = {
+  id: string;
+  lensType: string;
+  producerRole: string;
+  status: string;
+  methodId: string;
+  methodVersion: string;
+  methodContentHash: string;
+  promptVersion: string;
+  schemaVersion: string;
+  contentHash: string;
+  originModes: OriginMode[];
+  referenceCounts: {
+    claimCount: number;
+    evidenceCount: number;
+    assumptionCount: number;
+  };
+  validationAcceptedAt: string | null;
+  createdAt: string;
+};
+
+/** routes.py `_lens_detail` (single artifact; adds refs + content). */
+export type LensArtifactDetailView = LensArtifactSummaryView & {
+  decisionCaseId: string;
+  analysisRunId: string;
+  charterId: string;
+  claimRefs: string[];
+  evidenceRefs: string[];
+  assumptionRefs: string[];
+  content: Record<string, unknown>;
 };
 
 // --- Error handling ---------------------------------------------------------
@@ -308,6 +359,30 @@ export async function fetchRunConflicts(
   fetchImpl: typeof fetch = fetch
 ): Promise<ConflictListView> {
   return (await getJson(fetchImpl, `${analysesBase(anchors)}/evidence-conflicts`)) as ConflictListView;
+}
+
+// --- Strategic lens references (already-mounted read surface) ----------------
+
+export async function fetchRunLensArtifacts(
+  anchors: EvidenceRunAnchors,
+  fetchImpl: typeof fetch = fetch
+): Promise<LensArtifactSummaryView[]> {
+  const data = (await getJson(
+    fetchImpl,
+    `${analysesBase(anchors)}/strategic-lenses`
+  )) as unknown;
+  return Array.isArray(data) ? (data as LensArtifactSummaryView[]) : [];
+}
+
+export async function fetchLensArtifact(
+  anchors: EvidenceRunAnchors,
+  artifactId: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<LensArtifactDetailView> {
+  return (await getJson(
+    fetchImpl,
+    `${analysesBase(anchors)}/strategic-lenses/${encodeURIComponent(artifactId)}`
+  )) as LensArtifactDetailView;
 }
 
 // --- Honest data-availability contract (sandbox precedent) -------------------

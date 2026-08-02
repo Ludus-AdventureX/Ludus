@@ -363,11 +363,25 @@ class CounterpartyResponseMatrixLens:
                 ("challengeIds", request.challenge_refs),
             )
         )
+        # Grey-goo 原则⑭ (P2-1): cross-agent calibration - read the validated
+        # outputs of lenses that already ran in this run (Porter before
+        # Counterparty) so the response matrix is built against REAL findings.
+        upstream_lines = "\n".join(
+            f"- {str(lens)}: {content.get('summary', '')}"
+            for lens, content in sorted(
+                request.upstream_lens_outputs.items(), key=lambda kv: str(kv[0])
+            )
+        )
+        upstream_section = (
+            "\n\n## Upstream lens findings (already validated in this run)\n"
+            + (upstream_lines or "(none yet)")
+        )
         user = (
             "## Frozen decision options\n"
             + "\n".join(f"- {option_id}" for option_id in option_ids)
             + "\n\n## Run-scoped reference IDs (cite only these)\n"
             + reference_lines
+            + upstream_section
             + "\n\n"
             + lens_output_contract(
                 lens_type=LENS_TYPE.value,

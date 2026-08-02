@@ -176,7 +176,9 @@ async def test_full_run_pipeline_reaches_ready_with_five_lenses(
         if event.type == "strategic_lens.completed":
             assert event.payload["lensArtifactId"]
             assert event.payload["lensType"] in written
-    # Research packet persisted and announced.
+    # Research packets persisted and announced. The full analyzing stage now
+    # runs TWO rounds (grey-goo §7 Think-First/Search-Later): round 1 emits
+    # its packet, round 2 folds round-1 gaps back in and emits a second one.
     packets = (
         await session.scalars(
             select(ResearchPacketRow).where(
@@ -184,7 +186,7 @@ async def test_full_run_pipeline_reaches_ready_with_five_lenses(
             )
         )
     ).all()
-    assert len(packets) == 1
+    assert len(packets) == 2  # analyzing round 1 + round 2
     assert "research.packet.completed" in types
 
 
@@ -339,6 +341,106 @@ async def test_real_audit_blocks_full_run_when_persisted_set_is_corrupt(
         if finding.get("source") == "lens_set_audit"
     }
     assert "strategic_lens_incomplete" in codes
+
+
+async def test_lens_behavior_rejection_repairs_with_reason_codes(
+    session, world, noop_lens_verdict
+) -> None:
+    """Grey-goo principle 13 (adversarial feedback loop): a lens behavior gate
+    rejection MUST return INTO the producing lens model with its reason codes.
+    The worker re-invokes the dedicated lens with a repair instruction and
+    persists the repaired payload; one repair pass max, then fail-closed."""
+
+    from app.strategic_lenses.repository import LensBehaviorRejected
+    from app.types import StrategicLensType
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    rejected_lens = "porter_five_forces"
+    rejection_codes = ("forces_missing", "changing_trend_missing")
+    repair_requests: list[tuple[str, tuple[str, ...]]] = []
+    first_attempt_done = {"done": False}
+
+    async def writer(session, **kwargs) -> UUID:
+        lens_type = kwargs["payload"]["lensType"]
+        if lens_type == rejected_lens and not first_attempt_done["done"]:
+            first_attempt_done["done"] = True
+            raise LensBehaviorRejected(
+                StrategicLensType(rejected_lens), rejection_codes
+            )
+        return uuid4()
+
+    async def fake_dedicated(
+        run_row, stage, lens_type, parent_result, repair_context=None
+    ):
+        repair_requests.append((lens_type, repair_context or ()))
+        return {
+            "lensType": lens_type,
+            "sourceSkillVersion": "1.0.0",
+            "phase": "analyzing",
+            "references": {},
+            "researchRequests": [],
+            "content": {"repaired": True},
+        }
+
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+    worker._execute_dedicated_lens = fake_dedicated  # type: ignore[method-assign]
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    # The rejected lens was repaired WITH the exact behavior-gate reason codes
+    # (structured feedback, not a blind retry) and the run still lands ready.
+    assert (rejected_lens, rejection_codes) in repair_requests
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert AnalysisRunStatus(refreshed.status) == S.READY
+    events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
+    assert [e.type for e in events].count("strategic_lens.completed") == 5
+
+
+async def test_lens_behavior_rejection_second_failure_stays_fail_closed(
+    session, world, noop_lens_verdict
+) -> None:
+    """A second behavior rejection after the repair pass keeps the established
+    fail-closed posture: the lens is skipped (no unbounded retry loop) and the
+    validating-gate lens audit blocks the run."""
+
+    from app.strategic_lenses.repository import LensBehaviorRejected
+    from app.types import StrategicLensType
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    repair_calls: list[str] = []
+
+    async def writer(session, **kwargs) -> UUID:
+        lens_type = kwargs["payload"]["lensType"]
+        if lens_type == "porter_five_forces":
+            raise LensBehaviorRejected(
+                StrategicLensType(lens_type), ("forces_missing",)
+            )
+        return uuid4()
+
+    async def fake_dedicated(
+        run_row, stage, lens_type, parent_result, repair_context=None
+    ):
+        repair_calls.append(lens_type)
+        # The repaired payload still fails the gate on the second attempt.
+        return {"lensType": lens_type, "content": {"stub": True}}
+
+    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+    worker._execute_dedicated_lens = fake_dedicated  # type: ignore[method-assign]
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    # Exactly ONE repair pass was attempted (bounded retry), then skipped.
+    assert repair_calls == ["porter_five_forces"]
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    # The missing lens blocks readiness via the DEFAULT (real) audit.
+    assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
 
 
 async def test_cooperative_cancellation_stops_at_next_boundary(session, world) -> None:
@@ -501,3 +603,502 @@ async def test_lens_ledger_without_dossier_assumptions_stays_empty(
 
     assert ledgers, "lens writer must have been called for a full run"
     assert all(not ledger.assumption_ids for ledger in ledgers)
+
+
+# --- P2 wave 1: grey-goo Self-Anchor (§8) / logic spot-check (§13) / anchor
+# --- downgrade pre-check (v6.9.5) — pure functions, no DB required ----------
+
+
+def test_self_anchor_all_conflict_caps_score() -> None:
+    packet = {
+        "factor": "rescue demand",
+        "conclusion": "rescue demand is confirmed by procurement data",
+        "claim_support_score": 0.9,
+        "self_anchor": [
+            {"verdict": "conflict", "evidenceId": "ev-1"},
+            {"verdict": "conflict", "evidenceId": "ev-2"},
+        ],
+    }
+    sanitized = worker_module._sanitize_packet(packet)
+    assert sanitized is not None
+    assert sanitized["claim_support_score"] == 0.5  # capped, not kept at 0.9
+    assert sanitized["self_anchor"][0]["verdict"] == "conflict"
+
+
+def test_self_anchor_pass_or_mixed_keeps_score() -> None:
+    for verdicts in (
+        [{"verdict": "pass", "evidenceId": "ev-1"}],
+        [{"verdict": "conflict", "evidenceId": "ev-1"}, {"verdict": "pass", "evidenceId": "ev-2"}],
+        [],
+    ):
+        packet = {
+            "factor": "rescue demand",
+            "conclusion": "procurement cycles run ~9 months",
+            "claim_support_score": 0.8,
+            "self_anchor": verdicts,
+        }
+        sanitized = worker_module._sanitize_packet(packet)
+        assert sanitized["claim_support_score"] == 0.8
+
+
+def test_self_anchor_malformed_dropped_not_crashing() -> None:
+    packet = {
+        "factor": "rescue demand",
+        "conclusion": "procurement cycles run ~9 months",
+        "self_anchor": "not-a-list",
+    }
+    sanitized = worker_module._sanitize_packet(packet)
+    assert "self_anchor" not in sanitized
+    assert sanitized["claim_support_score"] == 0.5
+
+
+def test_logic_spot_check_catches_circular_reasoning_and_premise_drift() -> None:
+    circular = {
+        "factor": "market demand is growing strongly",
+        "conclusion": "the market is growing strongly, so demand is strong",
+    }
+    findings = worker_module._logic_spot_check(circular)
+    assert "circular_reasoning" in findings
+
+    drift = {
+        "factor": "rescue robot certification",
+        "conclusion": "supply chain delays push the timeline",
+    }
+    findings = worker_module._logic_spot_check(drift)
+    assert "premise_drift" in findings
+
+
+def test_logic_spot_check_clean_packet_returns_empty() -> None:
+    clean = {
+        "factor": "rescue robot certification timeline",
+        "conclusion": "certification takes nine months on average",
+    }
+    assert worker_module._logic_spot_check(clean) == ()
+
+
+def test_anchor_blocks_downgrade_when_two_shared_assumptions() -> None:
+    blocked, count = worker_module._anchor_blocks_downgrade(
+        {
+            "safety_anchor": {
+                "digest": {
+                    "keyFindings": [
+                        "all agents assume the LOI converts",
+                        "all agents assume buyer funding is committed",
+                    ]
+                }
+            }
+        }
+    )
+    assert blocked is True
+    assert count == 2
+
+
+def test_anchor_does_not_block_with_zero_or_one_finding() -> None:
+    for findings in ([], ["single shared assumption"]):
+        blocked, count = worker_module._anchor_blocks_downgrade(
+            {"safety_anchor": {"digest": {"keyFindings": findings}}}
+        )
+        assert blocked is False
+        assert count == len(findings)
+    # Missing anchor / missing digest must never block.
+    assert worker_module._anchor_blocks_downgrade({}) == (False, 0)
+    assert worker_module._anchor_blocks_downgrade({"safety_anchor": {}}) == (False, 0)
+
+
+# --- P2 wave 2: retrieval coverage (§3) / funnel audit persistence (原则⑩) /
+# --- complexity downgrade (原则⑮) ---------------------------------------------
+
+
+async def test_retrieve_once_writes_coverage_and_reuses_frozen_row(
+    session, world, monkeypatch
+) -> None:
+    """A repeat query inside the same run reuses the coverage row instead of
+    re-hitting the provider (grey-goo §3 idempotency)."""
+
+    from app.workers.analysis_worker import AnalysisWorker as _W
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    calls = {"n": 0}
+
+    async def fake_search(question, option_ids, **kwargs):
+        calls["n"] += 1
+        return [{"title": "source-a", "url": "https://a.test", "tier": "L2"}]
+
+    monkeypatch.setattr(worker_module, "search_web", fake_search)
+    worker = _W(session, executors=_stub_executors()[0])
+
+    first = await worker._retrieve_once(
+        run, question="enter rescue market?", option_ids=["opt_a"], byok_exa=None, byok_firecrawl=None
+    )
+    second = await worker._retrieve_once(
+        run, question="enter rescue market?", option_ids=["opt_a"], byok_exa=None, byok_firecrawl=None
+    )
+    assert calls["n"] == 1, "coverage hit must not re-hit the provider"
+    assert first and not second  # first returns sources, second reuses frozen row
+    from app.models import RetrievalCoverage as _Cov
+
+    rows = (
+        await session.execute(
+            select(_Cov).where(_Cov.analysis_run_id == run.analysis_run_id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].result_hash.startswith("sha256:")
+
+
+async def test_funnel_audit_persisted_on_retrieving(session, world, noop_lens_verdict) -> None:
+    """The TDD discard audit lands in evidence_funnel_audits (原则⑩), so the
+    E page can show what was filtered out and why."""
+
+    from app.models import EvidenceFunnelAudit as _Funnel
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+
+    # The stub must produce packets in RETRIEVING (the default stub only
+    # produces them in ANALYZING), otherwise the funnel never runs.
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {
+                        "lensType": lens,
+                        "sourceSkillVersion": "1.0.0",
+                        "phase": stage.value,
+                        "references": {},
+                        "researchRequests": [],
+                        "content": {"stub": True},
+                    }
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            packets = ()
+            if stage == S.RETRIEVING:
+                packets = (
+                    {"factor": "rescue demand", "conclusion": "demand is confirmed by data"},
+                    {"factor": "home market", "conclusion": "home market is smaller"},
+                    {"factor": "opposing view", "conclusion": "regulation may block entry"},
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                packets=packets,
+                lens_payloads=lens_payloads,
+                quality_gate_passed=True if stage == S.VALIDATING else None,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _ = _recording_lens_writer()
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    rows = (
+        await session.execute(
+            select(_Funnel).where(_Funnel.analysis_run_id == run.analysis_run_id)
+        )
+    ).scalars().all()
+    assert rows, "retrieving stage must persist a funnel audit row"
+    assert rows[0].admitted >= 1
+    assert rows[0].stage == "retrieving"
+
+
+async def test_complexity_downgrade_fires_on_strong_evidence(session, world, noop_lens_verdict) -> None:
+    """A full run with admitted>=2, opposing>=1, low-trust<=50% and an anchor
+    that does NOT block gets downgraded once (full->focused), with the chain
+    recorded on the run and the event carrying the downgrade marker."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {
+                        "lensType": lens,
+                        "sourceSkillVersion": "1.0.0",
+                        "phase": stage.value,
+                        "references": {},
+                        "researchRequests": [],
+                        "content": {"stub": True},
+                    }
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            if inputs.get("substage") == "safety_anchor":
+                return StageResult(
+                    output={"digest": {"keyFindings": ["only one shared assumption"]}}
+                )
+            if stage == S.RETRIEVING:
+                return StageResult(
+                    output={"role": role, "stage": stage.value},
+                    packets=(
+                        {
+                            "factor": "rescue demand",
+                            "conclusion": "demand is confirmed by procurement data",
+                            "sources": [{"name": "procurement report", "url": "https://www.gov.uk/1", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "home market",
+                            "conclusion": "home market is smaller than rescue",
+                            "sources": [{"name": "market study", "url": "https://www.gov.uk/2", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "opposing view",
+                            "conclusion": "regulation may block entry in some states",
+                            "direction": "opposing",
+                            "sources": [{"name": "regulator notice", "url": "https://www.gartner.com/1", "tier": "L3"}],
+                        },
+                    ),
+                    lens_payloads=lens_payloads,
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                lens_payloads=lens_payloads,
+                quality_gate_passed=True if stage == S.VALIDATING else None,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _ = _recording_lens_writer()
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert refreshed.complexity_downgraded is True
+    assert refreshed.downgrade_chain and "full->focused" in refreshed.downgrade_chain[0]
+    events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
+    downgrade_events = [
+        e for e in events
+        if isinstance(e.payload, dict) and e.payload.get("downgrade")
+    ]
+    assert downgrade_events, "downgrade must be announced on the event stream"
+    assert downgrade_events[0].payload["downgrade"]["from"] == "full"
+
+
+async def test_complexity_downgrade_blocked_by_anchor(session, world, noop_lens_verdict) -> None:
+    """Two shared unexamined assumptions block the downgrade (v6.9.5 guard):
+    convergence may be echo, not simplicity."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {
+                        "lensType": lens,
+                        "sourceSkillVersion": "1.0.0",
+                        "phase": stage.value,
+                        "references": {},
+                        "researchRequests": [],
+                        "content": {"stub": True},
+                    }
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            if inputs.get("substage") == "safety_anchor":
+                return StageResult(
+                    output={
+                        "digest": {
+                            "keyFindings": [
+                                "all agents assume the LOI converts",
+                                "all agents assume buyer funding is committed",
+                            ]
+                        }
+                    }
+                )
+            if stage == S.RETRIEVING:
+                return StageResult(
+                    output={"role": role, "stage": stage.value},
+                    packets=(
+                        {
+                            "factor": "rescue demand",
+                            "conclusion": "demand is confirmed by procurement data",
+                            "sources": [{"name": "procurement report", "url": "https://www.gov.uk/1", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "home market",
+                            "conclusion": "home market is smaller than rescue",
+                            "sources": [{"name": "market study", "url": "https://www.gov.uk/2", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "opposing view",
+                            "conclusion": "regulation may block entry in some states",
+                            "direction": "opposing",
+                            "sources": [{"name": "regulator notice", "url": "https://www.gartner.com/1", "tier": "L3"}],
+                        },
+                    ),
+                    lens_payloads=lens_payloads,
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                lens_payloads=lens_payloads,
+                quality_gate_passed=True if stage == S.VALIDATING else None,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _ = _recording_lens_writer()
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert refreshed.complexity_downgraded is False
+    assert refreshed.downgrade_chain == []
+
+
+# --- P2 wave 3: cross-agent calibration (原则⑭ / P2-1) -------------------------
+
+
+async def test_upstream_lens_digests_exclude_current_and_compress(
+    session, world, noop_lens_verdict
+) -> None:
+    """A later lens sees compressed digests of READY earlier lenses in the SAME
+    run, never its own output, never drafts (grey-goo 原则⑭ cross-calibration)."""
+
+    from app.models import StrategicLensArtifact
+    from app.types import StrategicLensType, StrategicLensArtifactStatus
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+
+    def make_artifact(lens_type: StrategicLensType, status, content) -> StrategicLensArtifact:
+        from datetime import datetime, timezone
+
+        return StrategicLensArtifact(
+            workspace_id=world.workspace_id,
+            decision_case_id=world.case_id,
+            analysis_run_id=run.analysis_run_id,
+            charter_id=run.charter_id,
+            lens_type=lens_type,
+            producer_role="research",
+            status=status,
+            method_id="hardtech-market-direction",
+            method_version="1.1.0",
+            method_content_hash="sha256:m",
+            prompt_version="1.0.0",
+            schema_version="1.0.0",
+            origin_modes=["live"],
+            content_hash="sha256:c",
+            payload={"content": content, "references": {}},
+            claim_refs=[],
+            evidence_refs=[],
+            assumption_refs=[],
+            # The ready-requires-validation check constraint demands a witness.
+            validation_accepted_at=(
+                datetime.now(timezone.utc)
+                if status == StrategicLensArtifactStatus.READY
+                else None
+            ),
+        )
+
+    session.add(
+        make_artifact(
+            StrategicLensType.PORTER_FIVE_FORCES,
+            StrategicLensArtifactStatus.READY,
+            {"headline": "rescue market is competitive", "keyFindings": ["low barriers"]},
+        )
+    )
+    session.add(
+        make_artifact(
+            StrategicLensType.PRE_MORTEM,
+            StrategicLensArtifactStatus.DRAFT,
+            {"headline": "draft must not be seen"},
+        )
+    )
+    await session.flush()
+
+    executors, _ = _stub_executors()
+    worker = AnalysisWorker(session, executors=executors)
+    digests = await worker._load_upstream_lens_digests(
+        run, StrategicLensType.COUNTERPARTY_RESPONSE_MATRIX
+    )
+
+    assert StrategicLensType.PORTER_FIVE_FORCES in digests
+    assert "rescue market is competitive" in digests[StrategicLensType.PORTER_FIVE_FORCES]["summary"]
+    assert "low barriers" in digests[StrategicLensType.PORTER_FIVE_FORCES]["summary"]
+    # Own lens type and drafts are excluded.
+    assert StrategicLensType.COUNTERPARTY_RESPONSE_MATRIX not in digests
+    assert StrategicLensType.PRE_MORTEM not in digests
+
+
+# --- P2 wave 3: narrative-echo prevention (P2-8) ------------------------------
+
+
+def test_echo_checklist_flags_one_narrative_planning() -> None:
+    one_sided = "We will confirm our market opportunity and our product fit."
+    checks = worker_module._echo_checklist(one_sided)
+    assert checks["perspective_symmetry"] is False  # no risk/against/opposing
+    assert checks["prosecutor_forced"] is False
+    assert checks["failure_signal"] is False
+    assert checks["assumption_pressure"] is False
+
+
+def test_echo_checklist_passes_adversarial_planning() -> None:
+    adversarial = (
+        "Stress the risk of failure, examine the assumption that demand "
+        "exists, check why competitors never succeeded, and challenge the "
+        "funding story."
+    )
+    checks = worker_module._echo_checklist(adversarial)
+    assert checks["perspective_symmetry"] is True
+    assert checks["prosecutor_forced"] is True
+    assert checks["failure_signal"] is True
+    assert checks["assumption_pressure"] is True
+    assert checks["capital_market_signal"] is True
+
+
+def test_echo_checklist_empty_text_is_neutral() -> None:
+    checks = worker_module._echo_checklist("")
+    assert all(checks.values())
+
+
+def test_narrative_divergence_scores_independence_and_echo() -> None:
+    # Fully disjoint vocabularies -> high divergence (independence).
+    high = worker_module._narrative_divergence(
+        "rescue robots face certification timelines",
+        "marketing budgets depend on investor appetite",
+    )
+    assert high >= 8.0
+    # Near-identical wording -> low divergence (echo). Grey-goo treats
+    # <4 as severe echo; the fixture lands just under the flag line.
+    low = worker_module._narrative_divergence(
+        "rescue market demand is confirmed by procurement data",
+        "procurement data confirms rescue market demand is strong",
+    )
+    assert low < 4.0
+    # Empty side -> neutral, never auto-flagged.
+    assert worker_module._narrative_divergence("", "anything at all") == 5.0
