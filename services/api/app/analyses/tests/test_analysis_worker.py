@@ -176,7 +176,9 @@ async def test_full_run_pipeline_reaches_ready_with_five_lenses(
         if event.type == "strategic_lens.completed":
             assert event.payload["lensArtifactId"]
             assert event.payload["lensType"] in written
-    # Research packet persisted and announced.
+    # Research packets persisted and announced. The full analyzing stage now
+    # runs TWO rounds (grey-goo §7 Think-First/Search-Later): round 1 emits
+    # its packet, round 2 folds round-1 gaps back in and emits a second one.
     packets = (
         await session.scalars(
             select(ResearchPacketRow).where(
@@ -184,7 +186,7 @@ async def test_full_run_pipeline_reaches_ready_with_five_lenses(
             )
         )
     ).all()
-    assert len(packets) == 1
+    assert len(packets) == 2  # analyzing round 1 + round 2
     assert "research.packet.completed" in types
 
 
@@ -977,3 +979,126 @@ async def test_complexity_downgrade_blocked_by_anchor(session, world, noop_lens_
     refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
     assert refreshed.complexity_downgraded is False
     assert refreshed.downgrade_chain == []
+
+
+# --- P2 wave 3: cross-agent calibration (原则⑭ / P2-1) -------------------------
+
+
+async def test_upstream_lens_digests_exclude_current_and_compress(
+    session, world, noop_lens_verdict
+) -> None:
+    """A later lens sees compressed digests of READY earlier lenses in the SAME
+    run, never its own output, never drafts (grey-goo 原则⑭ cross-calibration)."""
+
+    from app.models import StrategicLensArtifact
+    from app.types import StrategicLensType, StrategicLensArtifactStatus
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+
+    def make_artifact(lens_type: StrategicLensType, status, content) -> StrategicLensArtifact:
+        from datetime import datetime, timezone
+
+        return StrategicLensArtifact(
+            workspace_id=world.workspace_id,
+            decision_case_id=world.case_id,
+            analysis_run_id=run.analysis_run_id,
+            charter_id=run.charter_id,
+            lens_type=lens_type,
+            producer_role="research",
+            status=status,
+            method_id="hardtech-market-direction",
+            method_version="1.1.0",
+            method_content_hash="sha256:m",
+            prompt_version="1.0.0",
+            schema_version="1.0.0",
+            origin_modes=["live"],
+            content_hash="sha256:c",
+            payload={"content": content, "references": {}},
+            claim_refs=[],
+            evidence_refs=[],
+            assumption_refs=[],
+            # The ready-requires-validation check constraint demands a witness.
+            validation_accepted_at=(
+                datetime.now(timezone.utc)
+                if status == StrategicLensArtifactStatus.READY
+                else None
+            ),
+        )
+
+    session.add(
+        make_artifact(
+            StrategicLensType.PORTER_FIVE_FORCES,
+            StrategicLensArtifactStatus.READY,
+            {"headline": "rescue market is competitive", "keyFindings": ["low barriers"]},
+        )
+    )
+    session.add(
+        make_artifact(
+            StrategicLensType.PRE_MORTEM,
+            StrategicLensArtifactStatus.DRAFT,
+            {"headline": "draft must not be seen"},
+        )
+    )
+    await session.flush()
+
+    executors, _ = _stub_executors()
+    worker = AnalysisWorker(session, executors=executors)
+    digests = await worker._load_upstream_lens_digests(
+        run, StrategicLensType.COUNTERPARTY_RESPONSE_MATRIX
+    )
+
+    assert StrategicLensType.PORTER_FIVE_FORCES in digests
+    assert "rescue market is competitive" in digests[StrategicLensType.PORTER_FIVE_FORCES]["summary"]
+    assert "low barriers" in digests[StrategicLensType.PORTER_FIVE_FORCES]["summary"]
+    # Own lens type and drafts are excluded.
+    assert StrategicLensType.COUNTERPARTY_RESPONSE_MATRIX not in digests
+    assert StrategicLensType.PRE_MORTEM not in digests
+
+
+# --- P2 wave 3: narrative-echo prevention (P2-8) ------------------------------
+
+
+def test_echo_checklist_flags_one_narrative_planning() -> None:
+    one_sided = "We will confirm our market opportunity and our product fit."
+    checks = worker_module._echo_checklist(one_sided)
+    assert checks["perspective_symmetry"] is False  # no risk/against/opposing
+    assert checks["prosecutor_forced"] is False
+    assert checks["failure_signal"] is False
+    assert checks["assumption_pressure"] is False
+
+
+def test_echo_checklist_passes_adversarial_planning() -> None:
+    adversarial = (
+        "Stress the risk of failure, examine the assumption that demand "
+        "exists, check why competitors never succeeded, and challenge the "
+        "funding story."
+    )
+    checks = worker_module._echo_checklist(adversarial)
+    assert checks["perspective_symmetry"] is True
+    assert checks["prosecutor_forced"] is True
+    assert checks["failure_signal"] is True
+    assert checks["assumption_pressure"] is True
+    assert checks["capital_market_signal"] is True
+
+
+def test_echo_checklist_empty_text_is_neutral() -> None:
+    checks = worker_module._echo_checklist("")
+    assert all(checks.values())
+
+
+def test_narrative_divergence_scores_independence_and_echo() -> None:
+    # Fully disjoint vocabularies -> high divergence (independence).
+    high = worker_module._narrative_divergence(
+        "rescue robots face certification timelines",
+        "marketing budgets depend on investor appetite",
+    )
+    assert high >= 8.0
+    # Near-identical wording -> low divergence (echo). Grey-goo treats
+    # <4 as severe echo; the fixture lands just under the flag line.
+    low = worker_module._narrative_divergence(
+        "rescue market demand is confirmed by procurement data",
+        "procurement data confirms rescue market demand is strong",
+    )
+    assert low < 4.0
+    # Empty side -> neutral, never auto-flagged.
+    assert worker_module._narrative_divergence("", "anything at all") == 5.0
