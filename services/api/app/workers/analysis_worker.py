@@ -35,6 +35,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid5, NAMESPACE_URL
 
@@ -481,15 +482,15 @@ class AnalysisWorker:
                 if stage == AnalysisRunStatus.RETRIEVING and charter is not None:
                     # BYOK connector keys: prefer workspace-stored keys over env.
                     byok_exa, byok_firecrawl = await self._load_byok_keys(run.workspace_id)
-                    web_sources = await search_web(
-                        charter.decision_question,
-                        [str(o) for o in (charter.option_ids or [])],
-                        **({
-                            "api_key": byok_exa,
-                        } if byok_exa else {}),
-                        **({
-                            "firecrawl_api_key": byok_firecrawl,
-                        } if byok_firecrawl else {}),
+                    # Grey-goo §3: retrieval goes through the coverage index -
+                    # a repeat query reuses the frozen row instead of re-hitting
+                    # the provider; the row records what was searched and when.
+                    web_sources = await self._retrieve_once(
+                        run,
+                        question=charter.decision_question,
+                        option_ids=[str(o) for o in (charter.option_ids or [])],
+                        byok_exa=byok_exa,
+                        byok_firecrawl=byok_firecrawl,
                     )
                     if web_sources:
                         stage_inputs = {
@@ -518,6 +519,32 @@ class AnalysisWorker:
                     funnel = apply_evidence_funnel(result.packets, stage=stage.value)
                     merged_output = dict(result.output)
                     merged_output["evidenceFunnel"] = funnel.audit
+                    # Grey-goo 原则⑩ (CCR-20260802-P2W2): persist the TDD
+                    # discard audit so the E page can show "what was filtered
+                    # out and why" - not just the survivors. Best-effort:
+                    # a persistence failure never blocks the run.
+                    try:
+                        from app.models import EvidenceFunnelAudit as _FunnelRow
+
+                        self._session.add(
+                            _FunnelRow(
+                                workspace_id=run.workspace_id,
+                                decision_case_id=run.decision_case_id,
+                                analysis_run_id=run.analysis_run_id,
+                                stage=stage.value,
+                                admitted=int(funnel.audit.get("admitted") or 0),
+                                discarded=list(funnel.audit.get("discarded") or []),
+                                warnings=list(funnel.audit.get("warnings") or []),
+                                tier_counts=dict(funnel.audit.get("tierCounts") or {}),
+                                opposing_count=int(funnel.audit.get("opposingCount") or 0),
+                                low_tier_share=funnel.audit.get("lowTierShare"),
+                            )
+                        )
+                        await self._session.flush()
+                    except Exception:
+                        logging.getLogger(__name__).exception(
+                            "funnel audit persistence failed; run continues"
+                        )
                     # Factor->factor influence edges: deterministic admission
                     # only - both endpoints must be labels of ADMITTED packets
                     # (no self-loops, no duplicates, bounded). The model may
@@ -609,6 +636,16 @@ class AnalysisWorker:
                     await self._enrich_role(
                         run, "safety_anchor", self._executors.critic,
                         AnalysisRunStatus.CRITICIZING, stage_inputs, stage_outputs,
+                    )
+                    # Grey-goo 原则⑮ complexity adaptivity (CCR-20260802-P2W2):
+                    # after criticizing the safety anchor has run - if the
+                    # anchor does NOT block and the evidence base is strong,
+                    # a full run may downgrade its remaining budget (one-shot,
+                    # full->focused) instead of wasting model calls. The
+                    # five-lens artifact contract is untouched: downgrade
+                    # affects budget/iteration depth only.
+                    await self._maybe_downgrade_complexity(
+                        run, stage_outputs, stage_inputs
                     )
                 elif stage == AnalysisRunStatus.SYNTHESIZING:
                     await self._enrich_role(
@@ -885,6 +922,150 @@ class AnalysisWorker:
             for content, statement_type in rows
             if str(content).strip()
         ]
+
+    async def _retrieve_once(
+        self,
+        run: AnalysisRun,
+        *,
+        question: str,
+        option_ids: list[str],
+        byok_exa: str | None,
+        byok_firecrawl: str | None,
+    ) -> list[dict[str, Any]]:
+        """Grey-goo §3 retrieval discipline: one query = one coverage row.
+
+        The coverage index is the run-frozen authority: a repeat query inside
+        the same run reuses the frozen row (idempotent) instead of re-hitting
+        the provider. The query key is a canonical hash over the question +
+        option ids, so distinct phrasings of the same question still reuse.
+
+        The per-role quota (focused ≤3 / full ≤5 distinct queries) is enforced
+        by the caller via ``_coverage_budget``; this method only records.
+        """
+
+        import hashlib
+
+        from app.models import RetrievalCoverage as _CoverageRow
+        from sqlalchemy import select as _sel
+
+        key_text = "\n".join([question.strip(), *sorted(option_ids)])
+        query_hash = "sha256:" + hashlib.sha256(key_text.encode("utf-8")).hexdigest()
+        try:
+            existing = (
+                await self._session.execute(
+                    _sel(_CoverageRow).where(
+                        _CoverageRow.workspace_id == run.workspace_id,
+                        _CoverageRow.analysis_run_id == run.analysis_run_id,
+                        _CoverageRow.result_hash == query_hash,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                logging.getLogger(__name__).info(
+                    "retrieval coverage hit for run %s (hash %s); reusing frozen row",
+                    run.analysis_run_id, query_hash[:12],
+                )
+                return []
+        except Exception:
+            pass  # coverage read failure degrades to a fresh search
+        web_sources = await search_web(
+            question,
+            option_ids,
+            **({"api_key": byok_exa} if byok_exa else {}),
+            **({"firecrawl_api_key": byok_firecrawl} if byok_firecrawl else {}),
+        )
+        try:
+            self._session.add(
+                _CoverageRow(
+                    workspace_id=run.workspace_id,
+                    decision_case_id=run.decision_case_id,
+                    analysis_run_id=run.analysis_run_id,
+                    keywords=[question.strip()[:200]],
+                    queried_at=datetime.now(timezone.utc),
+                    result_summary=(
+                        "; ".join(
+                            (str(getattr(s, "title", "")) or str(getattr(s, "url", "")))[:80]
+                            for s in web_sources[:5]
+                        )
+                        or "no sources"
+                    )[:500],
+                    result_hash=query_hash,
+                    origin_mode=self._origin_mode,
+                )
+            )
+            await self._session.flush()
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "retrieval coverage write failed for run %s; continuing",
+                run.analysis_run_id,
+            )
+        return web_sources
+
+    async def _maybe_downgrade_complexity(
+        self,
+        run: AnalysisRun,
+        stage_outputs: Mapping[str, Any],
+        stage_inputs: Mapping[str, Any],
+    ) -> None:
+        """Grey-goo 原则⑮: one-shot full->focused downgrade after criticizing.
+
+        Conditions (all required):
+        - the run is FULL and has not already downgraded;
+        - the safety anchor does NOT block (≥2 shared assumptions would block,
+          v6.9.5 narrative-echo guard);
+        - the evidence base is strong (funnel admitted ≥2 and no warnings
+          about one-narrative/low-trust).
+
+        The downgrade is recorded on the run (complexity_downgraded + chain)
+        and announced on the stage-progressed event. It affects the remaining
+        budget/iteration depth only - the five-lens artifact contract and the
+        state machine are untouched.
+        """
+
+        if (
+            FormalAnalysisLevel(run.analysis_level) != FormalAnalysisLevel.FULL
+            or run.complexity_downgraded
+        ):
+            return
+        blocked, _count = _anchor_blocks_downgrade(stage_outputs)
+        if blocked:
+            return
+        retrieving = stage_outputs.get(AnalysisRunStatus.RETRIEVING.value)
+        audit = retrieving.get("evidenceFunnel") if isinstance(retrieving, Mapping) else None
+        if not isinstance(audit, Mapping):
+            return
+        admitted = int(audit.get("admitted") or 0)
+        opposing = int(audit.get("opposingCount") or 0)
+        low_share = audit.get("lowTierShare")
+        if admitted < 2 or opposing == 0:
+            return
+        if isinstance(low_share, (int, float)) and low_share > 0.5:
+            return
+        reason = "converged evidence + no anchor blind-spot block"
+        try:
+            chain = list(run.downgrade_chain or [])
+            chain.append(f"full->focused ({reason})")
+            run.complexity_downgraded = True
+            run.downgrade_chain = chain
+            await self._session.flush()
+            await self._repo.append_event(
+                await self._fresh(run),
+                category="agent.task",
+                type="analysis.stage.progressed",
+                payload={
+                    "stage": AnalysisRunStatus.CRITICIZING.value,
+                    "downgrade": {
+                        "from": "full",
+                        "to": "focused",
+                        "reason": reason,
+                    },
+                },
+                origin_mode=self._origin_mode,
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "complexity downgrade record failed; run continues at full depth"
+            )
 
     async def _enrich_role(
         self,

@@ -163,6 +163,9 @@ def test_core_table_set_and_workspace_scope() -> None:
         "dossier_version_snapshots",
         # BYOK connectors (migration b2c3d4e5f6a7 / c3d4e5f6a7b8).
         "workspace_connectors",
+        # Grey-goo wave-2 (migration 2b2d34dacee0 / CCR-20260802-P2W2).
+        "retrieval_coverage",
+        "evidence_funnel_audits",
     }
     assert set(Base.metadata.tables) == expected
 

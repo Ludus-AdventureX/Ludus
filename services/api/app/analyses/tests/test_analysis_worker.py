@@ -701,3 +701,279 @@ def test_anchor_does_not_block_with_zero_or_one_finding() -> None:
     # Missing anchor / missing digest must never block.
     assert worker_module._anchor_blocks_downgrade({}) == (False, 0)
     assert worker_module._anchor_blocks_downgrade({"safety_anchor": {}}) == (False, 0)
+
+
+# --- P2 wave 2: retrieval coverage (§3) / funnel audit persistence (原则⑩) /
+# --- complexity downgrade (原则⑮) ---------------------------------------------
+
+
+async def test_retrieve_once_writes_coverage_and_reuses_frozen_row(
+    session, world, monkeypatch
+) -> None:
+    """A repeat query inside the same run reuses the coverage row instead of
+    re-hitting the provider (grey-goo §3 idempotency)."""
+
+    from app.workers.analysis_worker import AnalysisWorker as _W
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    calls = {"n": 0}
+
+    async def fake_search(question, option_ids, **kwargs):
+        calls["n"] += 1
+        return [{"title": "source-a", "url": "https://a.test", "tier": "L2"}]
+
+    monkeypatch.setattr(worker_module, "search_web", fake_search)
+    worker = _W(session, executors=_stub_executors()[0])
+
+    first = await worker._retrieve_once(
+        run, question="enter rescue market?", option_ids=["opt_a"], byok_exa=None, byok_firecrawl=None
+    )
+    second = await worker._retrieve_once(
+        run, question="enter rescue market?", option_ids=["opt_a"], byok_exa=None, byok_firecrawl=None
+    )
+    assert calls["n"] == 1, "coverage hit must not re-hit the provider"
+    assert first and not second  # first returns sources, second reuses frozen row
+    from app.models import RetrievalCoverage as _Cov
+
+    rows = (
+        await session.execute(
+            select(_Cov).where(_Cov.analysis_run_id == run.analysis_run_id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].result_hash.startswith("sha256:")
+
+
+async def test_funnel_audit_persisted_on_retrieving(session, world, noop_lens_verdict) -> None:
+    """The TDD discard audit lands in evidence_funnel_audits (原则⑩), so the
+    E page can show what was filtered out and why."""
+
+    from app.models import EvidenceFunnelAudit as _Funnel
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+
+    # The stub must produce packets in RETRIEVING (the default stub only
+    # produces them in ANALYZING), otherwise the funnel never runs.
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {
+                        "lensType": lens,
+                        "sourceSkillVersion": "1.0.0",
+                        "phase": stage.value,
+                        "references": {},
+                        "researchRequests": [],
+                        "content": {"stub": True},
+                    }
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            packets = ()
+            if stage == S.RETRIEVING:
+                packets = (
+                    {"factor": "rescue demand", "conclusion": "demand is confirmed by data"},
+                    {"factor": "home market", "conclusion": "home market is smaller"},
+                    {"factor": "opposing view", "conclusion": "regulation may block entry"},
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                packets=packets,
+                lens_payloads=lens_payloads,
+                quality_gate_passed=True if stage == S.VALIDATING else None,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _ = _recording_lens_writer()
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    rows = (
+        await session.execute(
+            select(_Funnel).where(_Funnel.analysis_run_id == run.analysis_run_id)
+        )
+    ).scalars().all()
+    assert rows, "retrieving stage must persist a funnel audit row"
+    assert rows[0].admitted >= 1
+    assert rows[0].stage == "retrieving"
+
+
+async def test_complexity_downgrade_fires_on_strong_evidence(session, world, noop_lens_verdict) -> None:
+    """A full run with admitted>=2, opposing>=1, low-trust<=50% and an anchor
+    that does NOT block gets downgraded once (full->focused), with the chain
+    recorded on the run and the event carrying the downgrade marker."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {
+                        "lensType": lens,
+                        "sourceSkillVersion": "1.0.0",
+                        "phase": stage.value,
+                        "references": {},
+                        "researchRequests": [],
+                        "content": {"stub": True},
+                    }
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            if inputs.get("substage") == "safety_anchor":
+                return StageResult(
+                    output={"digest": {"keyFindings": ["only one shared assumption"]}}
+                )
+            if stage == S.RETRIEVING:
+                return StageResult(
+                    output={"role": role, "stage": stage.value},
+                    packets=(
+                        {
+                            "factor": "rescue demand",
+                            "conclusion": "demand is confirmed by procurement data",
+                            "sources": [{"name": "procurement report", "url": "https://www.gov.uk/1", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "home market",
+                            "conclusion": "home market is smaller than rescue",
+                            "sources": [{"name": "market study", "url": "https://www.gov.uk/2", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "opposing view",
+                            "conclusion": "regulation may block entry in some states",
+                            "direction": "opposing",
+                            "sources": [{"name": "regulator notice", "url": "https://www.gartner.com/1", "tier": "L3"}],
+                        },
+                    ),
+                    lens_payloads=lens_payloads,
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                lens_payloads=lens_payloads,
+                quality_gate_passed=True if stage == S.VALIDATING else None,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _ = _recording_lens_writer()
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert refreshed.complexity_downgraded is True
+    assert refreshed.downgrade_chain and "full->focused" in refreshed.downgrade_chain[0]
+    events = await repo.list_events_after(world.workspace_id, run.analysis_run_id, 0)
+    downgrade_events = [
+        e for e in events
+        if isinstance(e.payload, dict) and e.payload.get("downgrade")
+    ]
+    assert downgrade_events, "downgrade must be announced on the event stream"
+    assert downgrade_events[0].payload["downgrade"]["from"] == "full"
+
+
+async def test_complexity_downgrade_blocked_by_anchor(session, world, noop_lens_verdict) -> None:
+    """Two shared unexamined assumptions block the downgrade (v6.9.5 guard):
+    convergence may be echo, not simplicity."""
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+
+    def make(role: str):
+        async def executor(run_row, stage, inputs) -> StageResult:
+            lens_payloads = {}
+            if stage in FULL_LENS_SCHEDULE:
+                lens_payloads = {
+                    lens: {
+                        "lensType": lens,
+                        "sourceSkillVersion": "1.0.0",
+                        "phase": stage.value,
+                        "references": {},
+                        "researchRequests": [],
+                        "content": {"stub": True},
+                    }
+                    for lens in FULL_LENS_SCHEDULE[stage]
+                }
+            if inputs.get("substage") == "safety_anchor":
+                return StageResult(
+                    output={
+                        "digest": {
+                            "keyFindings": [
+                                "all agents assume the LOI converts",
+                                "all agents assume buyer funding is committed",
+                            ]
+                        }
+                    }
+                )
+            if stage == S.RETRIEVING:
+                return StageResult(
+                    output={"role": role, "stage": stage.value},
+                    packets=(
+                        {
+                            "factor": "rescue demand",
+                            "conclusion": "demand is confirmed by procurement data",
+                            "sources": [{"name": "procurement report", "url": "https://www.gov.uk/1", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "home market",
+                            "conclusion": "home market is smaller than rescue",
+                            "sources": [{"name": "market study", "url": "https://www.gov.uk/2", "tier": "L2"}],
+                        },
+                        {
+                            "factor": "opposing view",
+                            "conclusion": "regulation may block entry in some states",
+                            "direction": "opposing",
+                            "sources": [{"name": "regulator notice", "url": "https://www.gartner.com/1", "tier": "L3"}],
+                        },
+                    ),
+                    lens_payloads=lens_payloads,
+                )
+            return StageResult(
+                output={"role": role, "stage": stage.value},
+                lens_payloads=lens_payloads,
+                quality_gate_passed=True if stage == S.VALIDATING else None,
+            )
+
+        return executor
+
+    executors = RoleExecutors(
+        research=make("research"),
+        critic=make("critic"),
+        synthesis=make("synthesis"),
+        validation=make("validation"),
+    )
+    writer, _ = _recording_lens_writer()
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert refreshed.complexity_downgraded is False
+    assert refreshed.downgrade_chain == []

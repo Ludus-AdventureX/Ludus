@@ -772,3 +772,80 @@ describe("P1: evidence discipline visibility (grey-goo TDD direction)", () => {
     expect(await screen.findByText(/透镜引用关系暂不可用/)).toBeInTheDocument();
   });
 });
+
+// --- P2 wave 2: persisted TDD funnel audit (原则⑩ / CCR-20260802-P2W2) --------
+
+describe("P2: funnel discard audit (what was filtered out and why)", () => {
+  test("renders one row per discarded fact with its check and reason", async () => {
+    const withAudit: RunEvidenceListView = {
+      ...runEvidence,
+      funnelAudit: {
+        stage: "retrieving",
+        admitted: 2,
+        discarded: [
+          { factor: "market size", reason: "conclusion too thin to be a checkable fact", check: "relevance" },
+          { factor: "timing", reason: "filler phrase ('more research needed')", check: "relevance" }
+        ],
+        warnings: ["low-trust sources make up 100% of the evidence set"],
+        tierCounts: { L6: 3 },
+        opposingCount: 0,
+        lowTierShare: 1.0
+      }
+    };
+    const fetchImpl = makeRouteFetch({
+      ...happyRoutes,
+      "/api/workspaces/ws_1/analyses/run_1/evidence": () =>
+        jsonResponse(200, { ok: true, data: withAudit })
+    });
+    render(
+      <EvidenceDrawer
+        open
+        onClose={vi.fn()}
+        anchors={anchors}
+        fetchImpl={fetchImpl as unknown as typeof fetch}
+        eventSourceFactory={null}
+      />
+    );
+
+    expect(await screen.findByText("被过滤的事实（2 条）")).toBeInTheDocument();
+    expect(screen.getByText("market size")).toBeInTheDocument();
+    expect(screen.getByText(/relevance：conclusion too thin/)).toBeInTheDocument();
+  });
+
+  test("zero discards renders the honest empty state", async () => {
+    const withEmptyAudit: RunEvidenceListView = {
+      ...runEvidence,
+      funnelAudit: {
+        stage: "retrieving",
+        admitted: 2,
+        discarded: [],
+        warnings: [],
+        tierCounts: { L2: 2 },
+        opposingCount: 1,
+        lowTierShare: 0
+      }
+    };
+    const fetchImpl = makeRouteFetch({
+      ...happyRoutes,
+      "/api/workspaces/ws_1/analyses/run_1/evidence": () =>
+        jsonResponse(200, { ok: true, data: withEmptyAudit })
+    });
+    render(
+      <EvidenceDrawer
+        open
+        onClose={vi.fn()}
+        anchors={anchors}
+        fetchImpl={fetchImpl as unknown as typeof fetch}
+        eventSourceFactory={null}
+      />
+    );
+
+    expect(await screen.findByText("本轮检索没有事实被过滤。")).toBeInTheDocument();
+  });
+
+  test("absent audit renders nothing (no fabricated filter section)", async () => {
+    renderDrawer();
+    await screen.findByRole("button", { name: /行业访谈纪要：远程侦察需求/ });
+    expect(screen.queryByText(/被过滤的事实/)).not.toBeInTheDocument();
+  });
+});

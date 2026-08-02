@@ -169,10 +169,20 @@ export type ConflictRelationView = {
   rationale?: string | null;
 };
 
-/** schemas_api.RunEvidenceListView. */
+/** schemas_api.RunEvidenceListView (+ additive funnelAudit, CCR-20260802-P2W2). */
 export type RunEvidenceListView = {
   analysisRunId: string;
   items: EvidenceItemView[];
+  /** Grey-goo 原则⑩: persisted TDD discard audit (absent when none exists). */
+  funnelAudit?: {
+    stage: string;
+    admitted: number;
+    discarded: Array<{ factor?: string; reason?: string; check?: string }>;
+    warnings: string[];
+    tierCounts: Record<string, number>;
+    opposingCount: number;
+    lowTierShare: number | null;
+  } | null;
 };
 
 /** schemas_api.ConflictListView. */
