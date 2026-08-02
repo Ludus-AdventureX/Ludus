@@ -116,7 +116,9 @@ describe("WorkspaceView live Q workspace", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1, name: "先验证哪一个市场方向？" })).toBeVisible()
     );
-    expect(screen.getByText("CaseVersion v1 · Dossier v1")).toBeVisible();
+    // The version string appears in the Q coordinate AND in the live
+    // decision-health version segment, so match all occurrences.
+    expect(screen.getAllByText("CaseVersion v1 · Dossier v1").length).toBeGreaterThan(0);
     expect(screen.getByText(/已确认条目 \/ 1/)).toBeVisible();
     expect(screen.getByText(/现金窗口只有 12 个月/)).toBeVisible();
   });

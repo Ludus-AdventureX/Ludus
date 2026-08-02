@@ -273,6 +273,25 @@ async def complete_structured_checked(
                 ),
             ]
             continue
+        except SchemaValidationError:
+            # Malformed JSON (truncation, missing delimiter) from a live model
+            # is transient: repair once with a corrective instruction instead
+            # of failing the whole run into needs_attention. A second failure
+            # still raises - the run parks honestly rather than looping.
+            if attempt == 1:
+                raise
+            attempt_messages = [
+                *messages,
+                ModelMessage(
+                    role="user",
+                    content=(
+                        "Your previous reply was not valid JSON. Respond again with"
+                        " ONLY a single well-formed JSON object (no markdown"
+                        " fences, no trailing text) matching the schema."
+                    ),
+                ),
+            ]
+            continue
         findings = validate_canonical_schema(completion.content, schema)
         if not findings:
             return completion

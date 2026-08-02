@@ -3,6 +3,8 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { DecisionHealthBar } from "@/components/shell/DecisionHealthBar";
+import { useDecisionHealth } from "@/lib/shell/decisionHealth";
+import { fetchBlockedRemediation, type BlockedRemediation } from "@/lib/shell/remediation";
 import { ProfilePanel } from "@/components/shell/views/ProfilePanel";
 import {
   CaseApiError,
@@ -57,6 +59,11 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
   const [candidates, setCandidates] = useState<CandidateView[]>([]);
   const [busyCandidateId, setBusyCandidateId] = useState<string | null>(null);
   const [candidateNotice, setCandidateNotice] = useState("");
+  const healthSegments = useDecisionHealth(workspaceId, decisionCaseId);
+  const [remediation, setRemediation] = useState<BlockedRemediation | null>(null);
+  const [customOpenId, setCustomOpenId] = useState<string | null>(null);
+  const [customDraft, setCustomDraft] = useState("");
+  const [remediationNotice, setRemediationNotice] = useState("");
   const noteInput = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -102,6 +109,34 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
       }).catch(() => { /* graceful: notes stay empty if fetch fails */ });
     }
   }, [refreshCase, refreshCandidates, workspaceId, decisionCaseId]);
+
+  // Remediation checklist from the latest blocked run's validator reasons.
+  // Derived from canonical read surfaces only; null keeps the card hidden.
+  useEffect(() => {
+    if (!workspaceId) return;
+    let cancelled = false;
+    void fetchBlockedRemediation(workspaceId, decisionCaseId).then((result) => {
+      if (cancelled) return;
+      setRemediation(result);
+      setCustomOpenId(null);
+      setCustomDraft("");
+      setRemediationNotice("");
+    });
+    return () => { cancelled = true; };
+  }, [workspaceId, decisionCaseId]);
+
+  const adoptRemediation = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setRemediationNotice("内容为空，先写点什么再采纳。");
+      return;
+    }
+    setDraft(trimmed);
+    setRemediationNotice("已填入推演台：确认内容后发送，系统会提炼为候选，确认后进入正式档案。");
+    noteInput.current?.focus();
+    setCustomOpenId(null);
+    setCustomDraft("");
+  };
 
   const submitNote = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -217,9 +252,51 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
             <p><i className="human-dot" /> 只有你确认的内容才会进入正式档案</p>
           </header>
 
+          {remediation && (
+            <section className="remediation-card" data-remediation-card aria-labelledby="remediation-title">
+              <header className="remediation-head">
+                <span className="remediation-kicker">拦截待办</span>
+                <h3 id="remediation-title">上次分析被验证审查拦下</h3>
+                <p>{remediation.headline}</p>
+              </header>
+              <ol className="remediation-list">
+                {remediation.gaps.map((gap, index) => (
+                  <RemediationItem
+                    key={`gap-${index}`}
+                    id={`gap-${index}`}
+                    kind="缺口"
+                    text={gap}
+                    open={customOpenId === `gap-${index}`}
+                    onToggle={() => setCustomOpenId(customOpenId === `gap-${index}` ? null : `gap-${index}`)}
+                    customDraft={customDraft}
+                    onCustomDraft={setCustomDraft}
+                    onAdopt={adoptRemediation}
+                  />
+                ))}
+                {remediation.openQuestions.map((question, index) => (
+                  <RemediationItem
+                    key={`q-${index}`}
+                    id={`q-${index}`}
+                    kind="待确认问题"
+                    text={question}
+                    open={customOpenId === `q-${index}`}
+                    onToggle={() => setCustomOpenId(customOpenId === `q-${index}` ? null : `q-${index}`)}
+                    customDraft={customDraft}
+                    onCustomDraft={setCustomDraft}
+                    onAdopt={adoptRemediation}
+                  />
+                ))}
+              </ol>
+              {remediationNotice && <p className="remediation-notice" role="status">{remediationNotice}</p>}
+              <p className="remediation-hint">
+                采纳条目会填入下方推演台；发送后系统提炼为候选，你在右侧确认后进入正式档案，即可重新发起分析。
+              </p>
+            </section>
+          )}
+
           <div className="ledger-body" id="ledgerBody">
             {notes.length === 0 && (
-              <DecisionHealthBar />
+              <DecisionHealthBar segments={healthSegments} />
             )}
             {notes.map((note, index) =>
               note.kind === "human" ? (
@@ -364,5 +441,40 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
         </aside>
       </div>
     </section>
+  );
+}
+
+type RemediationItemProps = {
+  id: string;
+  kind: string;
+  text: string;
+  open: boolean;
+  onToggle: () => void;
+  customDraft: string;
+  onCustomDraft: (value: string) => void;
+  onAdopt: (text: string) => void;
+};
+
+function RemediationItem({ id, kind, text, open, onToggle, customDraft, onCustomDraft, onAdopt }: RemediationItemProps) {
+  return (
+    <li className="remediation-item" data-remediation-item={id}>
+      <span className="remediation-kind">{kind}</span>
+      <p>{text}</p>
+      <div className="remediation-actions">
+        <button type="button" className="secondary-action" onClick={() => onAdopt(text)}>采纳此条</button>
+        <button type="button" className="text-action" aria-expanded={open} onClick={onToggle}>其它</button>
+      </div>
+      {open && (
+        <div className="remediation-custom">
+          <textarea
+            rows={3}
+            value={customDraft}
+            onChange={(event) => onCustomDraft(event.target.value)}
+            placeholder="上面选项都不是？在这里写下你自己的补充…"
+          />
+          <button type="button" className="secondary-action" onClick={() => onAdopt(customDraft)}>填入推演台</button>
+        </div>
+      )}
+    </li>
   );
 }

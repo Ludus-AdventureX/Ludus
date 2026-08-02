@@ -18,6 +18,7 @@ import {
 import {
   replayRunTrace,
   watchRunUntilTerminal,
+  cancelRun,
   type RunTraceEvent,
 } from "@/lib/shell/decisionLoop";
 import {
@@ -236,6 +237,27 @@ export function AnalysisView({ workspaceId = null, decisionCaseId }: AnalysisVie
                 </details>
               )}
             </div>
+          ) : phase === "ready" && status === "needs_attention" ? (
+            <>
+              <RunParkedNotice workspaceId={workspaceId} run={run} />
+              <ol className="trace-list" aria-label="研究阶段轨迹">
+                {ANALYSIS_STAGES.map((stage, index) => {
+                  const state = states[stage.id];
+                  const entry = byStage.get(stage.id);
+                  const className =
+                    state === "done" ? "is-complete" : state === "active" ? "is-active" : "";
+                  return (
+                    <li key={stage.id} className={className} data-trace-stage={stage.id}>
+                      <span className="trace-node">{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <b>{stage.label} · {stage.hint}</b>
+                        <p>{entry?.headline ?? (state === "pending" ? "等待前序阶段完成。" : "本次运行未执行到该阶段。")}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
           ) : (
             <ol className="trace-list" aria-label="研究阶段轨迹">
               {ANALYSIS_STAGES.map((stage, index) => {
@@ -276,5 +298,43 @@ export function AnalysisView({ workspaceId = null, decisionCaseId }: AnalysisVie
         />
       </section>
     </section>
+  );
+}
+
+type RunParkedNoticeProps = {
+  workspaceId?: string | null;
+  run: RunAnchor | null;
+};
+
+function RunParkedNotice({ workspaceId, run }: RunParkedNoticeProps) {
+  const [cancelling, setCancelling] = useState(false);
+  const [notice, setNotice] = useState("");
+  if (!run || !workspaceId) return null;
+  return (
+    <div className="run-parked-note" data-run-parked>
+      <p>
+        本次分析已暂停（worker 执行失败，例如模型返回了无法解析的输出）。
+        你可以取消本次分析后重新发起；数据不会丢失，已完成的阶段产物会保留在下方轨迹中。
+      </p>
+      {notice && <p className="remediation-notice" role="status">{notice}</p>}
+      <button
+        type="button"
+        className="secondary-action"
+        disabled={cancelling}
+        onClick={async () => {
+          setCancelling(true);
+          setNotice("");
+          try {
+            await cancelRun(workspaceId, run.analysisRunId);
+            window.location.reload();
+          } catch {
+            setCancelling(false);
+            setNotice("取消失败，请稍后重试。");
+          }
+        }}
+      >
+        {cancelling ? "取消中…" : "取消本次分析"}
+      </button>
+    </div>
   );
 }

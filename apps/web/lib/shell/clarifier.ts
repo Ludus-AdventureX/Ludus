@@ -7,6 +7,8 @@
 
 export type ClarifierCard = {
   available: boolean;
+  /** Human-readable reason when the card is unavailable (e.g. 422 too-short). */
+  reason?: string;
   pseudoDecision?: { verdict: boolean; reason: string };
   falseDilemma?: { verdict: boolean; thirdOption: string };
   reversibility?: { type: "type1" | "type2"; advice: string };
@@ -51,7 +53,17 @@ export async function clarifyCaseQuestion(
   } catch {
     return { available: false };
   }
-  if (!response.ok) return { available: false };
+  if (!response.ok) {
+    // 422 CLARIFIER_QUESTION_TOO_SHORT: tell the human to refine the
+    // question in Q instead of a generic "unavailable" dead end.
+    if (response.status === 422) {
+      return {
+        available: false,
+        reason: "决策问题过短，请先在 Q 区完善决策问题后再质检。",
+      };
+    }
+    return { available: false };
+  }
   const body = (await response.json().catch(() => null)) as { data?: ClarifierCard } | null;
   return body?.data ?? { available: false };
 }

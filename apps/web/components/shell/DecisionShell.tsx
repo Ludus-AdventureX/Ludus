@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   CaseCreateFlowError,
@@ -10,6 +10,7 @@ import {
   navigateToCreatedCase,
   navigateToEnter
 } from "@/lib/shell/createCase";
+import { caseListRouteAvailable, fetchProjectDirectory, type ProjectDirectory } from "@/lib/shell/projects";
 
 const copy = {
   "currentIssue": "当前议题",
@@ -54,7 +55,7 @@ const copy = {
   "emptySubmitNotice": "决策项目已建立，正在打开工作台…",
   "emptyNoQuestionNotice": "先写下一个需要承担后果的问题。",
   "emptyCreateFailedFallback": "建立决策项目失败，请稍后重试。",
-  "emptyImportNotice": "静态原型：正式版本会先建立项目草稿，再把材料写入项目级 RawArtifact。",
+  "emptyImportNotice": "材料导入即将上线：届时会把已有材料写入项目级档案，再开始边界确认。",
   "methodRows": [
     [
       "01",
@@ -266,6 +267,8 @@ export function DecisionShell() {
   const [isDrafted, setIsDrafted] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [ready, setReady] = useState(false);
+  const [projectDirectory, setProjectDirectory] = useState<ProjectDirectory | null>(null);
+  const [projectCases, setProjectCases] = useState<Array<{ decisionCaseId: string; title: string; status: string }>>([]);
   const projectTrigger = useRef<HTMLButtonElement>(null);
   const themeTrigger = useRef<HTMLButtonElement>(null);
   const questionInput = useRef<HTMLTextAreaElement>(null);
@@ -304,6 +307,35 @@ export function DecisionShell() {
     drawerTrigger.current = trigger;
     setDrawer(nextDrawer);
   }, []);
+
+  // Live case directory for the project drawer: same canonical read surface
+  // the case shell's ProjectDrawer consumes. The drawer previously rendered
+  // only the static "empty project" demo because the list route did not exist
+  // when this shell shipped; it does now, so the drawer lists real projects.
+  useEffect(() => {
+    if (drawer !== "project") return;
+    let cancelled = false;
+    (async () => {
+      setProjectDirectory(null);
+      const dir = await fetchProjectDirectory();
+      if (cancelled) return;
+      setProjectDirectory(dir);
+      if (caseListRouteAvailable && dir.status === "ready" && dir.workspaces.length > 0) {
+        const ws = dir.workspaces[0]!;
+        try {
+          const res = await fetch(
+            `/api/workspaces/${encodeURIComponent(ws.workspaceId)}/cases`,
+            { credentials: "include" },
+          );
+          if (!cancelled && res.ok) {
+            const body = (await res.json()) as { data?: { items?: Array<{ decisionCaseId: string; title: string; status: string }> } };
+            setProjectCases(body?.data?.items ?? []);
+          }
+        } catch { /* graceful: empty list keeps the honest new-project entry */ }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [drawer]);
 
   const closeDrawer = useCallback(() => {
     if (!drawer) return;
@@ -506,13 +538,51 @@ export function DecisionShell() {
             {drawer === "project" ? (
               <>
                 <div className="case-list" role="radiogroup" aria-label="Choose project">
+                  {projectCases.length > 0 && (
+                    <>
+                      {projectCases.map((c) => {
+                        const href = `/cases/${encodeURIComponent(c.decisionCaseId)}?ws=${encodeURIComponent(projectDirectory?.status === "ready" ? projectDirectory.workspaces[0]?.workspaceId ?? "" : "")}`;
+                        return (
+                          <a
+                            key={c.decisionCaseId}
+                            className="case-choice"
+                            href={href}
+                            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                              // Full-page navigation: this shell's drawer
+                              // effect rewrites the URL from the stale
+                              // pathname and would cancel a client-side router
+                              // push (same live finding as ProjectDrawer).
+                              event.preventDefault();
+                              window.location.assign(href);
+                            }}
+                          >
+                            <span className="case-glyph">Q</span>
+                            <span><b>{c.title || c.decisionCaseId.slice(0, 8)}</b><small>{c.status}</small></span>
+                          </a>
+                        );
+                      })}
+                    </>
+                  )}
                   <button className="case-choice" type="button" role="radio" aria-checked="true" onClick={() => { setActiveWorkspace("workspace"); closeDrawer(); }}>
                     <span className="case-glyph empty">{"\uff0b"}</span>
                     <span><b>{copy.caseEmptyTitle}</b><small>{copy.caseEmptyStatus}</small><em>{copy.caseEmptyDescription}</em></span>
                   </button>
                 </div>
                 <section className="case-drawer-note"><span>{copy.caseRuleLabel}</span><p>{copy.caseRuleText}</p></section>
-                <footer><button className="secondary-action" type="button" onClick={closeDrawer}>{copy.caseStay}</button><button className="primary-action small" type="button" onClick={closeDrawer}><span>{copy.caseOpen}</span></button></footer>
+                <footer>
+                  <button className="secondary-action" type="button" onClick={closeDrawer}>{copy.caseStay}</button>
+                  <button
+                    className="primary-action small"
+                    type="button"
+                    onClick={(event: MouseEvent<HTMLButtonElement>) => {
+                      // Same full-page navigation rationale as the case links.
+                      event.preventDefault();
+                      window.location.assign("/");
+                    }}
+                  >
+                    <span>新建项目</span>
+                  </button>
+                </footer>
               </>
             ) : (
               <>

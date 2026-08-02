@@ -29,11 +29,11 @@ export type QualityGateProjection = {
 /** Repair action per stable reason code — concrete, not "try again". */
 const REPAIR_ACTIONS: Record<string, string> = {
   strategic_lens_incomplete:
-    "完整战略分析需要五个战略透镜全部产出并通过行为校验；当前部署的透镜执行尚未完全接通，请先使用聚焦研究，或等待透镜管线修复。",
+    "本次运行有战略透镜未产出或未通过行为校验（N/5）。补档案不能解决它；请重新发起分析，若持续失败可更换模型。",
   strategic_lens_reference_mismatch:
-    "报告引用与实际产物不一致属于系统侧缺陷，无需补充档案；请重新发起一次分析。",
+    "报告引用与透镜产物不一致属于执行侧缺陷，无需补充档案；请重新发起一次分析。",
   validator_rejected:
-    "验证审查发现论证链缺口（推测性前提、退出机制不足等）。把缺口对应的证据补进 Q 区档案（确认候选）后重新发起；若缺口为系统侧（透镜/引用），见对应修复动作。",
+    "验证审查发现论证链缺口（理由见验证阶段审查产物）。回 Q 区完善档案：采纳清单条目或自行补充，确认候选后重新发起。",
 };
 
 export function QualityGatePanel({ projection }: { projection: QualityGateProjection }) {
@@ -57,7 +57,11 @@ export function QualityGatePanel({ projection }: { projection: QualityGateProjec
         ? fixtureRun
           ? "本次运行处于演示占位模式，质量门按设计拦截正式产物。"
           : "证据链还支撑不起结论；下方是具体卡点与修复动作。"
-        : "研究仍在推进，质量门在验证阶段给出裁决。";
+        : runStatus === "needs_attention"
+          ? "研究已暂停，待人工处置；处置后重新发起，质量门在验证阶段给出裁决。"
+          : runStatus === "cancelled"
+            ? "研究已取消，未进入验证阶段；重新发起后质量门给出裁决。"
+            : "研究仍在推进，质量门在验证阶段给出裁决。";
 
   return (
     <div className="quality-margin" data-quality-gate-panel data-gate-status={runStatus ?? "none"}>

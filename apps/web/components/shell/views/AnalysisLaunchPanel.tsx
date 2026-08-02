@@ -101,6 +101,13 @@ const FINDING_LABELS: Record<string, string> = {
   strategic_lens_outside_charter: "出现了章程冻结集合之外的透镜产物",
 };
 
+const LENS_BLOCK_CODES = new Set([
+  "strategic_lens_incomplete",
+  "strategic_lens_reference_mismatch",
+  "strategic_lens_duplicate_type",
+  "strategic_lens_outside_charter",
+]);
+
 function humanizeFinding(text: string): string {
   const label = FINDING_LABELS[text];
   return label ? `${label}（${text}）` : text;
@@ -130,6 +137,31 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
   useEffect(() => {
     return () => abortRef.current?.abort();
   }, []);
+
+  // The Q-side refined question (profile extraction) is the question the
+  // human actually converged on. A direct launch MUST use it as the charter
+  // decision question - otherwise the run reasons about the one-word case
+  // title ("戒指闹钟") while the refined question sits unused in the profile.
+  const [profileRefinedQuestion, setProfileRefinedQuestion] = useState<string | null>(null);
+  useEffect(() => {
+    if (!workspaceId || !decisionCaseId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(decisionCaseId)}/profiles`,
+          { credentials: "include" },
+        );
+        if (!res.ok || cancelled) return;
+        const body = (await res.json()) as {
+          data?: { question?: { content?: { refinedQuestion?: string } } } | null;
+        };
+        const refined = body?.data?.question?.content?.refinedQuestion?.trim();
+        if (!cancelled && refined) setProfileRefinedQuestion(refined);
+      } catch { /* graceful: fall back to the case title */ }
+    })();
+    return () => { cancelled = true; };
+  }, [workspaceId, decisionCaseId]);
 
   // Check for an existing active run on mount (user may have left and returned).
   useEffect(() => {
@@ -163,10 +195,16 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     try {
       const launched = await launchAnalysisForCase(workspaceId, decisionCaseId, {
         level,
-        // R2: an adopted clarifier rewrite becomes the charter's question,
-        // and the clarifier verdicts are archived as charter constraints so
-        // the run (and the provenance chain) remembers WHY it was reframed.
-        questionOverride: adopted && clarifier?.refinedQuestion ? clarifier.refinedQuestion : undefined,
+        // The charter question resolves in this order:
+        //   1. an ADOPTED clarifier rewrite (explicit human choice);
+        //   2. the Q-side refined question (profile extraction) - a direct
+        //      launch without clarifier adoption still reasons about the
+        //      question the human converged on, never the one-word title;
+        //   3. undefined -> the seed's case question as the last resort.
+        questionOverride:
+          adopted && clarifier?.refinedQuestion
+            ? clarifier.refinedQuestion
+            : profileRefinedQuestion ?? undefined,
         extraAssumptions:
           adopted && clarifier?.available
             ? [
@@ -274,7 +312,24 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
     setAdopted(false);
     try {
       const seed = await getCaseAnalysisSeed(workspaceId, decisionCaseId);
-      const card = await clarifyCaseQuestion(workspaceId, decisionCaseId, seed.decisionQuestion);
+      // Prefer the Q-side refined question (profile extraction) over the raw
+      // case title: the clarifier must audit the question the human actually
+      // converged on in Q, not the short case name from creation time.
+      let question = seed.decisionQuestion;
+      try {
+        const res = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(decisionCaseId)}/profiles`,
+          { credentials: "include" },
+        );
+        if (res.ok) {
+          const body = (await res.json()) as {
+            data?: { question?: { content?: { refinedQuestion?: string } } } | null;
+          };
+          const refined = body?.data?.question?.content?.refinedQuestion?.trim();
+          if (refined) question = refined;
+        }
+      } catch { /* fall back to the seed question */ }
+      const card = await clarifyCaseQuestion(workspaceId, decisionCaseId, question);
       setClarifier(card);
     } catch {
       setClarifier({ available: false });
@@ -308,7 +363,9 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
           {clarifying ? "质检中…" : "先做问题质检"} <span>↗</span>
         </button>
         {clarifier && !clarifier.available && (
-          <p className="phase-slot-note">问题质检暂不可用——可直接发起分析。</p>
+          <p className="phase-slot-note">
+            {clarifier.reason ?? "问题质检暂不可用——可直接发起分析。"}
+          </p>
         )}
         {clarifier?.available && (
           <div className="clarifier-card" data-clarifier-card role="note">
@@ -443,8 +500,16 @@ export function AnalysisLaunchPanel({ workspaceId = null, decisionCaseId }: Anal
                 本次运行处于演示占位模式（未接入真实模型）：完整战略分析在该模式下必然被质量门拦截，
                 这不是你的档案缺口。接入真实模型后再发起 full，或先用聚焦研究（focused）验证流程。
               </p>
+            ) : findings.some((code) => LENS_BLOCK_CODES.has(code)) ? (
+              <p>
+                透镜产物不完整属于模型/系统侧执行问题，补档案不能解决它。请重新发起一次分析；
+                若持续失败，可尝试更换模型或在系统修复后重试。
+              </p>
             ) : (
-              <p>建议：回到 Q 区把上面缺口对应的事实补进档案（确认候选），再发起一次分析。</p>
+              <p>
+                建议：回到 Q 区完善档案——下方每条缺口/待确认问题可「采纳此条」填入推演台，
+                确认候选后即可重新发起分析。
+              </p>
             )}
           </div>
         );
