@@ -30,6 +30,7 @@ from app.types import (
     CandidateRevisionStatus,
     CandidateSourceType,
     CaseOperationalStatus,
+    ConnectorStatus,
     DecisionLifecycleStage,
     DecisionType,
     DomainEventActor,
@@ -2133,8 +2134,11 @@ class WorkspaceConnector(Base):
     nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     key_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     mask: Mapped[str] = mapped_column(String(24), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="available", server_default="available"
+    status: Mapped[ConnectorStatus] = mapped_column(
+        enum_type(ConnectorStatus, "connector_status"),
+        nullable=False,
+        default=ConnectorStatus.AVAILABLE,
+        server_default=ConnectorStatus.AVAILABLE.value,
     )
     created_at: Mapped[datetime] = created_at_column()
     config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

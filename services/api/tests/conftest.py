@@ -12,6 +12,7 @@ Two layers:
 
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
@@ -62,6 +63,49 @@ def _qa_signup_invite_code() -> Iterator[None]:
             os.environ.pop(SIGNUP_INVITE_HASHES_ENV, None)
         else:
             os.environ[SIGNUP_INVITE_HASHES_ENV] = previous
+
+
+@pytest.fixture(autouse=True)
+def _qa_null_pool_module_factory(monkeypatch) -> None:
+    """Replace the module-level async_session_factory with a NullPool variant.
+
+    pytest-asyncio runs every test in its own event loop. Product code that
+    opens its own session from the module-level factory (e.g. the fire-and-
+    forget profile extraction in conversations routes) would pool asyncpg
+    connections across loops; a connection created in loop A but returned to
+    the default pool is never closed on loop A, and -W error turns the
+    resulting ResourceWarning (unclosed connection/socket/transport) into a
+    failure. NullPool keeps every connection scoped to the loop that opened
+    it (same rationale as ``build_qa_app``'s per-request NullPool session).
+    """
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+    from sqlalchemy.pool import NullPool
+
+    import app.db as db_module
+
+    engine = create_async_engine(get_database_url(), poolclass=NullPool)
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(db_module, "async_session_factory", factory)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _qa_drain_profile_tasks() -> AsyncIterator[None]:
+    """Drain fire-and-forget profile-extraction tasks before the loop closes.
+
+    conversations routes launch ``_update_case_profiles`` via
+    ``asyncio.ensure_future`` (tracked in ``_pending_profile_tasks``). In the
+    product the task outlives the request by design; in pytest-asyncio the
+    test loop closes right after the test body, destroying a still-pending
+    task mid-connection (ResourceWarning under -W error). Awaiting the
+    tracked tasks keeps the loop clean without changing production semantics.
+    """
+
+    from app.conversations.routes import _pending_profile_tasks
+
+    yield
+    if _pending_profile_tasks:
+        await asyncio.gather(*tuple(_pending_profile_tasks), return_exceptions=True)
 
 
 @pytest_asyncio.fixture
