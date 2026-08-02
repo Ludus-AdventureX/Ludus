@@ -1,8 +1,10 @@
 # Ludus × Grey-Goo P2 实现方案（原则⑭⑮ 与深度管线升级）
 
-> 状态：**方案记录（未实施）**。P0（审查闭环重试）与 P1（E 页成熟化）已在
-> `codex/lens-behavior-closed-loop` 实施；本文件记录后续更大工程的实现路径，
-> 供单独排期时逐项执行。参照 Grey-Goo 方法论 v5.1（探讨/skills/research/
+> 状态：**✅ 九项全部实现（2026-08-02）**。波次 1（A 级）→ 波次 2（B 级，
+> CCR-20260802-P2W2 + migration 2b2d34dacee0）→ 波次 3（C 级）已全部落地于
+> `codex/lens-behavior-closed-loop`（commits edb36ab / 66d5aff / 3875cc1）。
+> 本文件保留为历史方案记录；实现细节以代码与提交信息为准。
+> 参照 Grey-Goo 方法论 v5.1（探讨/skills/research/
 > framework-selector/references/grey-goo-methodology-v5.1.md）原则⑭⑮ 与
 > v6-analysis-agent（§3 检索纪律 / §8 Self-Anchor / §12 交叉阅读 / §13 逻辑抽查）。
 
