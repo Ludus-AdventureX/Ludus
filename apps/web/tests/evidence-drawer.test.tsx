@@ -188,7 +188,100 @@ const happyRoutes: Record<string, () => Response> = {
   "/api/workspaces/ws_1/evidence/ev_1/provenance": () => jsonResponse(200, { ok: true, data: provenance }),
   "/api/workspaces/ws_1/evidence/ev_1/direction": () => jsonResponse(200, { ok: true, data: direction }),
   "/api/workspaces/ws_1/evidence/ev_1/same-source-group": () =>
-    jsonResponse(200, { ok: true, data: sameSourceGroup })
+    jsonResponse(200, { ok: true, data: sameSourceGroup }),
+  // P1: strategic-lens read surface (routes.py _lens_summary / _lens_detail).
+  "/api/workspaces/ws_1/analyses/run_1/strategic-lenses": () =>
+    jsonResponse(200, {
+      ok: true,
+      data: [
+        {
+          id: "lens_porter",
+          lensType: "porter_five_forces",
+          producerRole: "research",
+          status: "ready",
+          methodId: "hardtech-market-direction",
+          methodVersion: "1.1.0",
+          methodContentHash: "hash_m",
+          promptVersion: "1.0.0",
+          schemaVersion: "1.0.0",
+          contentHash: "hash_p",
+          originModes: ["live"],
+          referenceCounts: { claimCount: 1, evidenceCount: 1, assumptionCount: 0 },
+          validationAcceptedAt: "2026-07-25T11:00:00+08:00",
+          createdAt: "2026-07-25T10:30:00+08:00"
+        },
+        {
+          id: "lens_scenario",
+          lensType: "scenario_planning",
+          producerRole: "synthesis",
+          status: "ready",
+          methodId: "hardtech-market-direction",
+          methodVersion: "1.1.0",
+          methodContentHash: "hash_m",
+          promptVersion: "1.0.0",
+          schemaVersion: "1.0.0",
+          contentHash: "hash_s",
+          originModes: ["live"],
+          referenceCounts: { claimCount: 0, evidenceCount: 0, assumptionCount: 0 },
+          validationAcceptedAt: "2026-07-25T11:00:00+08:00",
+          createdAt: "2026-07-25T10:30:00+08:00"
+        }
+      ]
+    }),
+  "/api/workspaces/ws_1/analyses/run_1/strategic-lenses/lens_porter": () =>
+    jsonResponse(200, {
+      ok: true,
+      data: {
+        id: "lens_porter",
+        lensType: "porter_five_forces",
+        producerRole: "research",
+        status: "ready",
+        methodId: "hardtech-market-direction",
+        methodVersion: "1.1.0",
+        methodContentHash: "hash_m",
+        promptVersion: "1.0.0",
+        schemaVersion: "1.0.0",
+        contentHash: "hash_p",
+        originModes: ["live"],
+        referenceCounts: { claimCount: 1, evidenceCount: 1, assumptionCount: 0 },
+        validationAcceptedAt: "2026-07-25T11:00:00+08:00",
+        createdAt: "2026-07-25T10:30:00+08:00",
+        decisionCaseId: "case_1",
+        analysisRunId: "run_1",
+        charterId: "ch_1",
+        claimRefs: ["claim_a"],
+        evidenceRefs: ["ev_1"],
+        assumptionRefs: [],
+        content: {}
+      }
+    }),
+  "/api/workspaces/ws_1/analyses/run_1/strategic-lenses/lens_scenario": () =>
+    jsonResponse(200, {
+      ok: true,
+      data: {
+        id: "lens_scenario",
+        lensType: "scenario_planning",
+        producerRole: "synthesis",
+        status: "ready",
+        methodId: "hardtech-market-direction",
+        methodVersion: "1.1.0",
+        methodContentHash: "hash_m",
+        promptVersion: "1.0.0",
+        schemaVersion: "1.0.0",
+        contentHash: "hash_s",
+        originModes: ["live"],
+        referenceCounts: { claimCount: 0, evidenceCount: 0, assumptionCount: 0 },
+        validationAcceptedAt: "2026-07-25T11:00:00+08:00",
+        createdAt: "2026-07-25T10:30:00+08:00",
+        decisionCaseId: "case_1",
+        analysisRunId: "run_1",
+        charterId: "ch_1",
+        claimRefs: [],
+        evidenceRefs: [],
+        assumptionRefs: [],
+        content: {}
+      }
+    })
 };
 
 type FakeSource = {
@@ -567,5 +660,115 @@ describe("evidence drawer accessibility", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(trigger);
     });
+  });
+});
+
+// --- P1: evidence-stance + low-trust warnings + lens support chain --------------
+
+describe("P1: evidence discipline visibility (grey-goo TDD direction)", () => {
+  test("opposing and supporting stances are derived and labeled, never guessed", async () => {
+    renderDrawer();
+
+    const opposing = await screen.findByText("反对");
+    const supporting = screen.getByText("支持");
+    expect(opposing).toHaveAttribute("data-evidence-stance", "opposing");
+    expect(supporting).toHaveAttribute("data-evidence-stance", "supporting");
+  });
+
+  test("zero opposing evidence raises the single-narrative warning; none when both sides exist", async () => {
+    // itemOne supports, itemTwo contradicts → balanced set, no warning.
+    renderDrawer();
+    await screen.findByRole("button", { name: /行业访谈纪要：远程侦察需求/ });
+    expect(screen.queryByText(/没有任何反对方向证据/)).not.toBeInTheDocument();
+
+    cleanup();
+    // All-supporting set → the pseudo-convergence warning appears.
+    const oneSided = makeRouteFetch({
+      ...happyRoutes,
+      "/api/workspaces/ws_1/analyses/run_1/evidence": () =>
+        jsonResponse(200, {
+          ok: true,
+          data: {
+            analysisRunId: "run_1",
+            items: [itemOne]
+          }
+        })
+    });
+    render(
+      <EvidenceDrawer
+        open
+        onClose={vi.fn()}
+        anchors={anchors}
+        fetchImpl={oneSided as unknown as typeof fetch}
+        eventSourceFactory={null}
+      />
+    );
+    expect(await screen.findByText(/没有任何反对方向证据——若结论看起来一致/)).toBeInTheDocument();
+  });
+
+  test("L5/L6-heavy ledger raises the low-trust category warning without percentages", async () => {
+    const lowTrustItems = [
+      makeItem({ id: "ev_l5", sourceGrade: "L5_opinion" }),
+      makeItem({ id: "ev_l6", sourceGrade: "L6_unverified" })
+    ];
+    const fetchImpl = makeRouteFetch({
+      ...happyRoutes,
+      "/api/workspaces/ws_1/analyses/run_1/evidence": () =>
+        jsonResponse(200, { ok: true, data: { analysisRunId: "run_1", items: lowTrustItems } })
+    });
+    render(
+      <EvidenceDrawer
+        open
+        onClose={vi.fn()}
+        anchors={anchors}
+        fetchImpl={fetchImpl as unknown as typeof fetch}
+        eventSourceFactory={null}
+      />
+    );
+    expect(await screen.findByText(/多数证据来自低可信类别（L5\/L6）/)).toBeInTheDocument();
+    // QA P5 aggregate-credibility discipline: no "%" anywhere in the drawer.
+    expect(document.body.textContent).not.toContain("%");
+  });
+
+  test("lens consumers are listed on the item and inside the detail (support chain)", async () => {
+    const user = userEvent.setup();
+    renderDrawer();
+
+    // Ledger row: ev_1 is cited by porter_five_forces (from evidenceRefs).
+    await waitFor(() => {
+      expect(screen.getByText("被 1 个透镜引用")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /行业访谈纪要：远程侦察需求/ }));
+    // Detail shows ONLY the lenses that actually cite this item (ev_1 is
+    // referenced by porter, never by scenario_planning).
+    expect(await screen.findByText("porter_five_forces")).toBeInTheDocument();
+    expect(screen.queryByText("scenario_planning")).not.toBeInTheDocument();
+  });
+
+  test("lens reads failing degrade to unavailable — no fabricated references", async () => {
+    const user = userEvent.setup();
+    // Detail reads succeed (from happyRoutes); ONLY the lens surface fails.
+    const fetchImpl = makeRouteFetch({
+      ...happyRoutes,
+      "/api/workspaces/ws_1/analyses/run_1/strategic-lenses": () =>
+        jsonResponse(500, { ok: false, error: { code: "INTERNAL", message: "boom" } })
+    });
+    render(
+      <EvidenceDrawer
+        open
+        onClose={vi.fn()}
+        anchors={anchors}
+        fetchImpl={fetchImpl as unknown as typeof fetch}
+        eventSourceFactory={null}
+      />
+    );
+    const row = await screen.findByRole("button", { name: /行业访谈纪要：远程侦察需求/ });
+    // The ledger row itself carries NO fabricated lens-count badge.
+    expect(screen.queryByText(/被 \d+ 个透镜引用/)).not.toBeInTheDocument();
+
+    // Open the detail: the lens-consumer section honestly reports unavailability.
+    await user.click(row);
+    expect(await screen.findByText(/透镜引用关系暂不可用/)).toBeInTheDocument();
   });
 });

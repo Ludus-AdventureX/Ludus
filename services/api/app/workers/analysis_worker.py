@@ -52,6 +52,7 @@ from app.agents.model_provider import (
 # below delegates to these exact callables.
 from app.strategic_lenses.repository import (
     FrozenReferenceLedger,
+    LensBehaviorRejected,
     apply_validation_verdict,
     persist_lens_stage_output,
 )
@@ -1036,31 +1037,10 @@ class AnalysisWorker:
                 continue
             # External-call/persistence boundary: cooperative stop first.
             await self._check_cancelled(run)
-            try:
-                artifact_id = await self._lens_writer(
-                    self._session,
-                    workspace_id=run.workspace_id,
-                    decision_case_id=run.decision_case_id,
-                    analysis_run_id=run.analysis_run_id,
-                    payload=payload,
-                    ledger=ledger,
-                    origin_modes=(self._origin_mode,),
-                )
-            except Exception:
-                # Behavior gate rejection or persistence error: log and skip.
-                # The lens audit at the validating gate will catch the absence
-                # and block the run (fail-closed) rather than crashing here.
-                logging.getLogger(__name__).warning(
-                    "lens %s persistence failed for run %s; payload keys: %s; "
-                    "references: %s; skipping",
-                    lens_type, run.analysis_run_id,
-                    sorted(payload.keys()),
-                    {
-                        key: sorted(map(str, values))
-                        for key, values in payload.get("references", {}).items()
-                    },
-                    exc_info=True,
-                )
+            artifact_id = await self._persist_lens_with_repair(
+                run, stage, lens_type, result, payload, ledger
+            )
+            if artifact_id is None:
                 continue
             # Only after successful persistence: record the id and emit the
             # canonical strategic_lens.completed event.
@@ -1093,12 +1073,79 @@ class AnalysisWorker:
             # minutes per lens and the trace must not wait for the whole set.
             await self._checkpoint()
 
+    async def _persist_lens_with_repair(
+        self,
+        run: AnalysisRun,
+        stage: AnalysisRunStatus,
+        lens_type: str,
+        result: StageResult,
+        payload: Mapping[str, Any],
+        ledger: FrozenReferenceLedger,
+    ) -> UUID | None:
+        """Persist one lens payload; repair ONCE on behavior-gate rejection.
+
+        Grey-goo principle 13 (adversarial feedback loop): a behavior-gate
+        rejection is a structured finding that MUST return into the producing
+        lens model - the reason codes are handed back as a repair instruction
+        and the lens is re-invoked instead of blind-retrying. A second failure
+        keeps the established fail-closed posture: log and return None (the
+        lens audit at the validating gate will catch the absence and block).
+        """
+
+        for attempt in range(2):
+            try:
+                return await self._lens_writer(
+                    self._session,
+                    workspace_id=run.workspace_id,
+                    decision_case_id=run.decision_case_id,
+                    analysis_run_id=run.analysis_run_id,
+                    payload=payload,
+                    ledger=ledger,
+                    origin_modes=(self._origin_mode,),
+                )
+            except LensBehaviorRejected as rejected:
+                if attempt == 1:
+                    break
+                # External-call boundary before the repair model call.
+                await self._check_cancelled(run)
+                payload = await self._execute_dedicated_lens(
+                    run, stage, lens_type, result,
+                    repair_context=rejected.reason_codes,
+                )
+                if payload is None:
+                    break
+            except Exception:
+                # Persistence error unrelated to the behavior gate: log and
+                # skip. The lens audit at the validating gate will catch the
+                # absence and block the run (fail-closed) rather than
+                # crashing here.
+                logging.getLogger(__name__).warning(
+                    "lens %s persistence failed for run %s; payload keys: %s; "
+                    "references: %s; skipping",
+                    lens_type, run.analysis_run_id,
+                    sorted(payload.keys()),
+                    {
+                        key: sorted(map(str, values))
+                        for key, values in payload.get("references", {}).items()
+                    },
+                    exc_info=True,
+                )
+                return None
+        # Behavior gate rejected the repair pass too: log and skip. The lens
+        # audit at the validating gate will catch the absence (fail-closed).
+        logging.getLogger(__name__).warning(
+            "lens %s behavior gate rejected after repair for run %s; skipping",
+            lens_type, run.analysis_run_id,
+        )
+        return None
+
     async def _execute_dedicated_lens(
         self,
         run: AnalysisRun,
         stage: AnalysisRunStatus,
         lens_type: str,
         parent_result: StageResult,
+        repair_context: tuple[str, ...] | None = None,
     ) -> Mapping[str, Any] | None:
         """Invoke the model with the published per-lens prompt and schema.
 
@@ -1108,6 +1155,11 @@ class AnalysisWorker:
         inputs through the registered LensImplementation, and calls the model
         with an output schema that produces a valid StrategicLensStageOutput
         payload. Behavior validation happens downstream in persist_lens_stage_output.
+
+        ``repair_context`` carries the behavior gate's rejection reason codes
+        from a previous attempt (grey-goo principle 13): they are appended as
+        a structured repair instruction so the model fixes the exact violated
+        behavior fields instead of blind-retrying.
 
         Failures are logged and return None (the audit will catch the absence at
         the validating gate); this keeps the established fail-closed posture.
@@ -1173,10 +1225,23 @@ class AnalysisWorker:
 
             # Get the role executor's provider reference (reuse the same model).
             # Call the model with the lens-specific prompt.
+            user_message = inputs.user
+            if repair_context:
+                # Grey-goo principle 13: the behavior gate's rejection is a
+                # structured finding that must CHANGE the produced artifact -
+                # append the exact reason codes as a repair instruction.
+                user_message = (
+                    f"{inputs.user}\n\n"
+                    "Your previous lens output was rejected by the behavior "
+                    "contract with these findings: "
+                    + "; ".join(repair_context)
+                    + ". Respond again with ONLY a corrected full lens JSON "
+                    "object that satisfies every rejected behavior field."
+                )
             completion = await complete_structured_checked(
                 self._get_provider(),
                 system=inputs.system,
-                messages=(ModelMessage(role="user", content=inputs.user),),
+                messages=(ModelMessage(role="user", content=user_message),),
                 schema=None,  # JSON output mode, no strict schema (lens is complex)
                 request_model="",
             )
