@@ -1239,3 +1239,116 @@ async def test_reference_resolution_failure_exhausts_budget_fail_closed(
     repo = AnalysisRuntimeRepository(session)
     refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
     assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
+
+
+# --- Wave C: decision chain propagation tests ---------------------------------
+
+def test_accumulate_chain_links_adds_new_links_and_deduplicates() -> None:
+    """Wave C: the chain accumulator appends new links, drops duplicate linkIds,
+    and removes refuted links from the chain."""
+    prior = {
+        "links": [
+            {"linkId": "pl-1", "kind": "premise", "text": "initial premise", "stage": "planning"},
+        ],
+        "confirmedIds": [],
+        "refutedIds": [],
+    }
+    updates = {
+        "added": [
+            {"linkId": "ev-1", "kind": "evidence", "text": "fact", "citesPacketIds": ["p1"], "stage": "retrieving"},
+            {"linkId": "pl-1", "kind": "premise", "text": "duplicate - must drop", "stage": "retrieving"},
+        ],
+        "confirmed": ["pl-1"],
+        "refuted": [],
+    }
+    result = worker_module._accumulate_chain_links(prior, updates)
+    ids = [link["linkId"] for link in result["links"]]
+    assert ids == ["pl-1", "ev-1"]
+    assert "pl-1" in result["confirmedIds"]
+
+
+def test_accumulate_chain_links_removes_refuted_links() -> None:
+    """Wave C: refuted links are removed from the chain (validator sees them
+    as broken); the refutedIds list preserves the audit trail."""
+    prior = {
+        "links": [
+            {"linkId": "pl-1", "kind": "premise", "text": "premise", "stage": "planning"},
+            {"linkId": "inf-1", "kind": "inference", "text": "inference", "stage": "analyzing"},
+        ],
+        "confirmedIds": [],
+        "refutedIds": [],
+    }
+    updates = {"added": [], "confirmed": [], "refuted": ["pl-1"]}
+    result = worker_module._accumulate_chain_links(prior, updates)
+    ids = [link["linkId"] for link in result["links"]]
+    assert ids == ["inf-1"]
+    assert result["refutedIds"] == ["pl-1"]
+
+
+def test_accumulate_chain_links_bounded_growth() -> None:
+    """Wave C: the accumulator is bounded (_MAX_CHAIN_LINKS); overflow drops
+    silently instead of crashing the stage."""
+    prior = {"links": [], "confirmedIds": [], "refutedIds": []}
+    updates = {
+        "added": [
+            {"linkId": f"link-{i}", "kind": "evidence", "text": f"t{i}", "stage": "retrieving"}
+            for i in range(100)
+        ],
+        "confirmed": [],
+        "refuted": [],
+    }
+    result = worker_module._accumulate_chain_links(prior, updates)
+    assert len(result["links"]) <= worker_module._MAX_CHAIN_LINKS
+
+
+def test_decision_chain_audit_extracts_integrity() -> None:
+    """Wave C: the report builder's decision chain audit block extracts the
+    accumulated chain from the validating stage and computes integrity."""
+    from app.workers.report_builder import _decision_chain_audit
+
+    stage_outputs = {
+        "validating": {
+            "decisionChain": {
+                "links": [
+                    {"linkId": "pl-1", "kind": "premise", "text": "premise", "stage": "planning"},
+                    {"linkId": "ev-1", "kind": "evidence", "text": "fact", "stage": "retrieving"},
+                ],
+                "confirmedIds": ["pl-1"],
+                "refutedIds": [],
+            }
+        }
+    }
+    audit = _decision_chain_audit(stage_outputs)
+    assert audit["integrity"] == "intact"
+    assert len(audit["links"]) == 2
+    assert audit["brokenLinkIds"] == []
+
+
+def test_decision_chain_audit_detects_broken_links() -> None:
+    """Wave C: a confirmed link that was refuted (removed from the chain) is
+    reported as broken - the validator's audit trail is honest."""
+    from app.workers.report_builder import _decision_chain_audit
+
+    stage_outputs = {
+        "validating": {
+            "decisionChain": {
+                "links": [
+                    {"linkId": "pl-1", "kind": "premise", "text": "premise", "stage": "planning"},
+                ],
+                "confirmedIds": ["pl-1", "ev-1"],
+                "refutedIds": ["ev-1"],
+            }
+        }
+    }
+    audit = _decision_chain_audit(stage_outputs)
+    assert audit["integrity"] == "weakened"
+    assert "ev-1" in audit["brokenLinkIds"]
+
+
+def test_decision_chain_audit_unknown_when_no_chain() -> None:
+    """Wave C: when the validating stage has no chain (legacy run or fixture),
+    the audit block degrades gracefully to 'unknown' integrity."""
+    from app.workers.report_builder import _decision_chain_audit
+
+    assert _decision_chain_audit({})["integrity"] == "unknown"
+    assert _decision_chain_audit({"validating": {}})["integrity"] == "unknown"

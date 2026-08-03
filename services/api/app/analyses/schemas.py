@@ -9,6 +9,45 @@ from app.contracts.schemas import CanonicalModel, ContentHash, Identifier, NonEm
 from app.types import FormalAnalysisLevel
 
 
+class ChainLinkKind(str):
+    """Decision-chain link kinds: the four canonical link types that the
+    validator audits against. Premise → Evidence → Inference → Decision.
+    """
+
+    PREMISE = "premise"
+    EVIDENCE = "evidence"
+    INFERENCE = "inference"
+    DECISION = "decision"
+
+
+class ChainLink(CanonicalModel):
+    """One decision-chain link. Produced by planning (initial draft) and
+    refined by each subsequent stage; the validator audits by link_id.
+    """
+
+    link_id: Identifier
+    kind: Literal["premise", "evidence", "inference", "decision"]
+    text: NonEmptyText
+    cites_evidence_ids: list[Identifier] = []
+    cites_packet_ids: list[Identifier] = []
+    supports_link_ids: list[Identifier] = []
+    stage: NonEmptyText  # stage that created/updated this link
+
+
+class ChainLinkUpdates(CanonicalModel):
+    """Per-stage output: which links were added/confirmed/refuted this round."""
+
+    added: list[ChainLink] = []
+    confirmed: list[Identifier] = []
+    refuted: list[Identifier] = []
+
+
+class DecisionChain(CanonicalModel):
+    """Accumulated decision chain across all stages (validator input)."""
+
+    links: list[ChainLink] = []
+
+
 class MethodVersionRef(CanonicalModel):
     id: Identifier
     version: NonEmptyText

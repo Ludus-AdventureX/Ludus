@@ -1010,6 +1010,13 @@ class AnalysisWorker:
                     # The charter must survive stage handoffs - each stage
                     # otherwise loses the confirmed question it is analysing.
                     stage_inputs["charter"] = charter_context
+                # Wave C: accumulate decision chain across stages
+                chain_updates = result.output.get("chainLinkUpdates")
+                if chain_updates and isinstance(chain_updates, Mapping):
+                    decision_chain = _accumulate_chain_links(
+                        stage_inputs.get("decisionChain"), chain_updates
+                    )
+                    stage_inputs["decisionChain"] = decision_chain
         except CooperativeStop:
             # Canonical cancelled terminal state was already written by the
             # cancel command; keep persisted events/artifacts, publish nothing.
@@ -2015,7 +2022,15 @@ def _provider_request_model(provider: ModelProvider, request_model: str | None) 
 _STAGE_ASKS: Mapping[str, str] = {
     "planning": (
         "Decompose the decision question into the decisive sub-questions and "
-        "name the single assumption that, if wrong, flips the recommendation."
+        "name the single assumption that, if wrong, flips the recommendation. "
+        "You MUST also emit top-level \"decisionChain\": an array of initial "
+        "decision-chain links that the validator will audit against. Each link: "
+        "{\"linkId\": \"pl-1\", \"kind\": \"premise\"|\"evidence\"|\"inference\"|\"decision\", "
+        "\"text\": short description, \"citesEvidenceIds\": [], \"citesPacketIds\": [], "
+        "\"supportsLinkIds\": []}. Start with 3-6 premise links (what must be true "
+        "for the recommendation to hold) and 1-2 decision links (the candidate "
+        "options). Subsequent stages will add evidence/inference links and "
+        "confirm/refute existing ones."
     ),
     "retrieving": (
         "Produce the FACT BASE. inputs.webEvidence (when present) holds REAL "
@@ -2039,7 +2054,13 @@ _STAGE_ASKS: Mapping[str, str] = {
         "retrieved fact supports the causal link}. Real decision factors are "
         "rarely independent - map how they push or dampen each other. Use "
         "ONLY the exact factor labels you produced above; emit [] ONLY if the "
-        "factors are genuinely independent. Never invent correlations."
+        "factors are genuinely independent. Never invent correlations. "
+        "You MUST also emit top-level \"chainLinkUpdates\": {\"added\": [new "
+        "evidence links citing your packet ids], \"confirmed\": [link ids from "
+        "inputs.decisionChain your facts support], \"refuted\": [link ids your "
+        "facts contradict]}. Each added link: {\"linkId\": \"ev-1\", \"kind\": "
+        "\"evidence\", \"text\": ..., \"citesEvidenceIds\": [your packet ids], "
+        "\"supportsLinkIds\": [premise link ids]}."
     ),
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
@@ -2054,7 +2075,12 @@ _STAGE_ASKS: Mapping[str, str] = {
         "in round 1 - reason from the evidence you have, and emit "
         '"knowledgeGaps": [what you could not verify without more data] '
         "(max 8). When inputs.round == 2, inputs.round1Gaps carries your "
-        "round-1 gaps - fold them into your final reasoning explicitly."
+        "round-1 gaps - fold them into your final reasoning explicitly. "
+        "You MUST also emit top-level \"chainLinkUpdates\": {\"added\": [new "
+        "inference links], \"confirmed\": [link ids your reasoning supports], "
+        "\"refuted\": [link ids your reasoning contradicts]}. Each added link: "
+        "{\"linkId\": \"inf-1\", \"kind\": \"inference\", \"text\": ..., "
+        "\"supportsLinkIds\": [premise/evidence link ids]}."
     ),
     "criticizing": (
         "Attack the emerging recommendation. Set output.strongestObjection to "
@@ -2062,23 +2088,72 @@ _STAGE_ASKS: Mapping[str, str] = {
         "specific failure mode with its trigger condition. Self-anchor your "
         'strongest objection the same way ("selfAnchor" verdicts against '
         "cited evidence ids); a conflict with known facts means the objection "
-        "itself needs rework."
+        "itself needs rework. You MUST also emit top-level \"chainLinkUpdates\": "
+        "{\"added\": [new inference links capturing failure modes], \"confirmed\": "
+        "[link ids your objection challenges], \"refuted\": [link ids your "
+        "objection invalidates]}."
     ),
     "synthesizing": (
         "Commit. Set output.decision to one conditional commitment sentence "
         "(what to do + under which conditions + exit rule). keyFindings carry "
-        "the 2-4 reasons that survived criticism."
+        "the 2-4 reasons that survived criticism. You MUST also emit top-level "
+        "\"chainLinkUpdates\": {\"added\": [decision links capturing your "
+        "commitment], \"confirmed\": [link ids your decision rests on], "
+        "\"refuted\": [link ids your decision rejects]}."
     ),
     "validating": (
-        "Audit the chain: does the decision follow from the evidence, and did "
-        "the strongest objection get a real answer? Fail the gate when the "
-        "chain has a hole, and say which link broke in validatorFindings."
+        "Audit the decision chain: inputs.decisionChain carries the accumulated "
+        "links (premise/evidence/inference/decision) from all prior stages. For "
+        "each validatorFinding, cite the broken link's linkId in a \"linkId\" "
+        "field. Does the decision follow from the evidence? Did the strongest "
+        "objection get a real answer? Fail the gate when the chain has a hole, "
+        "and say which link broke."
     ),
 }
 
 _DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
 
 _MAX_INFLUENCE_EDGES = 6
+_MAX_CHAIN_LINKS = 40  # bounded accumulator; prevents unbounded growth
+
+
+def _accumulate_chain_links(
+    prior_chain: Any, updates: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Wave C: merge per-stage chainLinkUpdates into the accumulated chain.
+
+    - added: new links appended (linkId must be unique; duplicates drop).
+    - confirmed: linkIds acknowledged (no structural change; tracked for audit).
+    - refuted: linkIds removed from the chain (validator sees them as broken).
+
+    The accumulator is deterministic and bounded; malformed payloads degrade
+    gracefully (drop the offending field, never crash the stage).
+    """
+
+    prior = prior_chain if isinstance(prior_chain, Mapping) else {}
+    links: list[dict[str, Any]] = list(prior.get("links") or [])
+    existing_ids = {str(link.get("linkId")) for link in links if isinstance(link, Mapping)}
+    added = updates.get("added") if isinstance(updates.get("added"), Sequence) else []
+    for link in added:
+        if not isinstance(link, Mapping):
+            continue
+        link_id = str(link.get("linkId") or "").strip()
+        if not link_id or link_id in existing_ids:
+            continue
+        if len(links) >= _MAX_CHAIN_LINKS:
+            break
+        links.append(dict(link))
+        existing_ids.add(link_id)
+    refuted = updates.get("refuted") if isinstance(updates.get("refuted"), Sequence) else []
+    refuted_ids = {str(r) for r in refuted if r}
+    if refuted_ids:
+        links = [link for link in links if str(link.get("linkId")) not in refuted_ids]
+    confirmed = updates.get("confirmed") if isinstance(updates.get("confirmed"), Sequence) else []
+    return {
+        "links": links,
+        "confirmedIds": [str(c) for c in confirmed if c],
+        "refutedIds": sorted(refuted_ids),
+    }
 
 
 def _admit_influences(
