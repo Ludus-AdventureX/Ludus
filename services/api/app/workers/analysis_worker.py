@@ -962,15 +962,23 @@ class AnalysisWorker:
                     target = (
                         AnalysisRunStatus.READY if passed else AnalysisRunStatus.BLOCKED
                     )
+                    transition_payload: dict[str, Any] = {
+                        "findings": [dict(f) for f in result.validator_findings]
+                        + audit_findings
+                    }
+                    if not passed:
+                        # Wave F3: a blocked run must tell the user WHICH part
+                        # of the dossier to fix - deterministic mapping, no
+                        # model call, unknown shapes degrade honestly.
+                        transition_payload["remediationGuide"] = _remediation_guide(
+                            transition_payload["findings"]
+                        )
                     await self._repo.transition(
                         workspace_id,
                         run_id,
                         target,
                         quality_gate_passed=passed,
-                        payload={
-                            "findings": [dict(f) for f in result.validator_findings]
-                            + audit_findings
-                        },
+                        payload=transition_payload,
                     )
                     # The verdict is durable before the report leg runs, so a
                     # report failure can never cost the terminal state.
@@ -1696,6 +1704,11 @@ class AnalysisWorker:
             "option_ids": option_ids,
             "refs": refs,
             "upstream_digests": upstream_digests,
+            # Wave F1 topic anchor: the confirmed charter question travels to
+            # every lens prompt so sub-agents reason about THIS decision.
+            "decision_question": (
+                str(charter.decision_question or "") if charter else ""
+            ),
         }
 
     async def _run_lens_stages(
@@ -1724,6 +1737,10 @@ class AnalysisWorker:
         # can cite them; without rows the gate still blocks honestly.
         await self._register_dossier_assumptions(run)
         ledger = FrozenReferenceLedger(**(await self._frozen_reference_sets(run)))
+        # Wave F1/F2: preload the lens context ONCE - it serves the parallel
+        # model-call phase AND the topic-drift repair leg (decision question).
+        preloaded = await self._prepare_lens_context(run)
+        decision_question = str(preloaded.get("decision_question") or "")
         # Wave D: structured parallel delegation - the MODEL-CALL phase of the
         # lenses scheduled in this stage runs concurrently (bounded semaphore,
         # session-free thanks to _prepare_lens_context preloading); the
@@ -1737,7 +1754,6 @@ class AnalysisWorker:
         }
         if len(pending) > 1:
             await self._check_cancelled(run)
-            preloaded = await self._prepare_lens_context(run)
             semaphore = asyncio.Semaphore(_MAX_PARALLEL_LENSES)
 
             async def _invoke(lt: str) -> Mapping[str, Any] | None:
@@ -1760,16 +1776,44 @@ class AnalysisWorker:
                     )
         elif pending:
             payloads[pending[0]] = await self._execute_dedicated_lens(
-                run, stage, pending[0], result
+                run, stage, pending[0], result, preloaded_context=preloaded
             )
         chain_fragment: list[dict[str, Any]] = []
         for lens_type in lens_types:
             payload = payloads.get(lens_type)
             if payload is None:
                 continue
+            chain_links = payload.get("chainLinks")
+            # Wave F2 topic-drift guard: a fragment whose links discuss NOTHING
+            # from the confirmed decision question gets ONE drift-corrected
+            # repair pass (structured feedback per grey-goo principle 13) -
+            # catching at construction time what the validator would otherwise
+            # reject after the whole stage budget was spent.
+            if chain_links is not None and _fragment_topic_drift(
+                chain_links, decision_question
+            ):
+                await self._check_cancelled(run)
+                logging.getLogger(__name__).info(
+                    "lens %s chain drifted off the decision topic for run %s; "
+                    "attempting one drift-corrected repair",
+                    lens_type, run.analysis_run_id,
+                )
+                repaired = await self._execute_dedicated_lens(
+                    run, stage, lens_type, result,
+                    repair_context=(
+                        "topic_drift: your chain links discuss topics other "
+                        "than the decision. The decision under analysis is: "
+                        f"{decision_question}. Rebuild every chain link around "
+                        "THIS decision and these options - retrieved evidence "
+                        "about other products/markets is context only."
+                    ),
+                    preloaded_context=preloaded,
+                )
+                if isinstance(repaired, Mapping):
+                    payload = repaired
+                    chain_links = payload.get("chainLinks")
             # Wave D: extract the sub-agent's chain handoff and strip it from
             # the persisted payload (the artifact schema stays untouched).
-            chain_links = payload.get("chainLinks")
             if "chainLinks" in payload:
                 payload = {k: v for k, v in payload.items() if k != "chainLinks"}
             # External-call/persistence boundary: cooperative stop first.
@@ -1974,6 +2018,7 @@ class AnalysisWorker:
             if preloaded_context is not None:
                 option_ids = tuple(preloaded_context.get("option_ids") or ())
                 refs = preloaded_context.get("refs") or await self._frozen_reference_sets(run)
+                decision_question = str(preloaded_context.get("decision_question") or "")
             else:
                 charter = await self._session.get(AnalysisCharter, run.charter_id)
                 option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
@@ -1983,6 +2028,7 @@ class AnalysisWorker:
                 # sets feed the FrozenReferenceLedger, so the model can only cite
                 # IDs the write path will resolve.
                 refs = await self._frozen_reference_sets(run)
+                decision_question = str(charter.decision_question or "") if charter else ""
             packet_ids = tuple(sorted(refs["source_packet_ids"]))
             evidence_ids = tuple(sorted(refs["evidence_ids"]))
             claim_ids = tuple(sorted(refs["claim_ids"]))
@@ -2000,6 +2046,7 @@ class AnalysisWorker:
                 assumption_refs=assumption_ids[:20],
                 challenge_refs=challenge_ids[:20],
                 option_ids=option_ids,
+                decision_question=decision_question,
                 # Grey-goo 原则⑭ (P2-1): cross-agent calibration - the lens
                 # reads the validated outputs of lenses that already ran in
                 # THIS run before deepening its own reasoning. Compressed
@@ -2339,6 +2386,162 @@ def _accumulate_chain_links(
 
 _CHAIN_LINK_KINDS = frozenset({"premise", "evidence", "inference", "decision"})
 _MAX_CHAIN_LINKS_PER_LENS = 5
+
+
+# Wave F3: blocked runs must tell the user WHAT to fix, not just that the
+# gate refused. Each validator finding type maps to one actionable dossier
+# remediation; unmapped findings degrade to a generic honest pointer.
+_REMEDIATION_BY_FINDING_TYPE: dict[str, tuple[str, str]] = {
+    "broken-link": (
+        "supplement_evidence",
+        "决策链 {linkId} 缺少支撑证据：回到 Q 区补录能直接支撑该环节的确认事实后重跑。",
+    ),
+    "unsubstantiated-claim": (
+        "supplement_reasoning",
+        "{linkId} 断言了结论但缺少可审计的推理过程：补充推理证据或修正该断言。",
+    ),
+    "topic-drift": (
+        "correct_topic",
+        "{linkId} 的链条偏离决策主题：修正档案中对决策问题的描述，或重跑以重新锚定。",
+    ),
+    "mismatched-premise": (
+        "correct_dossier",
+        "{linkId} 对用户前提的转述有误：回到 Q 区修正相关档案表述。",
+    ),
+}
+
+
+def _remediation_guide(findings: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Wave F3: turn blocked findings into a structured dossier remediation guide.
+
+    Answers the user's real question after a blocked run: WHICH part of the
+    case dossier to fix, and how. Deterministic mapping - no model call, so
+    the guide itself can never hallucinate; unknown finding shapes degrade to
+    an honest generic action instead of being dropped.
+    """
+
+    actions: list[dict[str, str]] = []
+    open_questions: list[str] = []
+    for finding in findings:
+        if not isinstance(finding, Mapping):
+            continue
+        ftype = str(finding.get("type") or "").strip()
+        link_id = str(finding.get("linkId") or "")
+        if ftype in _REMEDIATION_BY_FINDING_TYPE:
+            kind, template = _REMEDIATION_BY_FINDING_TYPE[ftype]
+            actions.append(
+                {
+                    "kind": kind,
+                    "linkId": link_id,
+                    "guidance": template.format(linkId=link_id or "(unknown)"),
+                    "detail": str(finding.get("message") or "")[:300],
+                }
+            )
+            continue
+        code = str(finding.get("code") or "")
+        if code == "validator_rejected":
+            for question in finding.get("openQuestions") or []:
+                text = str(question).strip()
+                if text and text not in open_questions:
+                    open_questions.append(text)
+                    actions.append(
+                        {
+                            "kind": "answer_question",
+                            "linkId": "",
+                            "guidance": f"在 Q 区档案中回答：{text[:200]}",
+                            "detail": "",
+                        }
+                    )
+        elif code in ("strategic_lens_incomplete", "strategic_lens_reference_mismatch"):
+            actions.append(
+                {
+                    "kind": "rerun",
+                    "linkId": "",
+                    "guidance": "透镜产物不完整（系统侧）：无需补档案，直接重新发起分析。",
+                    "detail": code,
+                }
+            )
+        elif code == "deterministic_gate" and finding.get("passed") is False:
+            dims = finding.get("dims") if isinstance(finding.get("dims"), Mapping) else {}
+            weakest = min(dims, key=lambda k: float(dims.get(k) or 0), default="evidence")
+            actions.append(
+                {
+                    "kind": "supplement_evidence",
+                    "linkId": "",
+                    "guidance": (
+                        f"证据基础薄弱（{weakest} 维度最低）：补录更高等级来源与反方证据后重跑。"
+                    ),
+                    "detail": str(dims),
+                }
+            )
+        elif ftype or link_id:
+            # Unknown structured finding: keep it visible rather than drop it.
+            actions.append(
+                {
+                    "kind": "review_finding",
+                    "linkId": link_id,
+                    "guidance": f"审查发现 {ftype or code or '(unknown)'}（{link_id or 'no link'}）：按详情修正档案。",
+                    "detail": str(finding.get("message") or finding.get("finding") or "")[:300],
+                }
+            )
+    # Deduplicate rerun/system actions (multiple lens codes map to one).
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for action in actions:
+        key = (action["kind"], action["linkId"] or action["guidance"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(action)
+    return {
+        "summary": (
+            "质量门拒绝了本次决策。按以下指引修正案例档案后重新发起分析；"
+            "系统侧问题（rerun）无需补档案。"
+            if deduped
+            else "质量门拒绝了本次决策，但未提取到可操作的修正指引。"
+        ),
+        "actions": deduped,
+        "openQuestions": open_questions,
+    }
+
+
+def _topic_tokens(text: str) -> set[str]:
+    """CJK character bigrams + latin word tokens for topic-overlap checks."""
+
+    cjk = [c for c in (text or "") if "\u4e00" <= c <= "\u9fff"]
+    bigrams = {cjk[i] + cjk[i + 1] for i in range(len(cjk) - 1)}
+    latin = {
+        tok.strip(".,;:!?()[]{}'\"")
+        for tok in (text or "").lower().split()
+        if len(tok.strip(".,;:!?()[]{}'\"")) > 3
+    }
+    return bigrams | latin
+
+
+def _fragment_topic_drift(fragment: Any, decision_question: str) -> bool:
+    """Wave F2: True when a lens chain fragment drifted off the decision topic.
+
+    Conservative by design (E2E run 641569f1: porter/scenario chains reasoned
+    about rescue-robot procurement instead of the RingBell decision): drift is
+    flagged ONLY when the fragment has >=2 valid links and NONE of them shares
+    any token with the confirmed decision question - a single on-topic link
+    keeps the fragment. Short anchors (<2 tokens) never flag (unmeasurable).
+    """
+
+    anchor = _topic_tokens(decision_question)
+    if len(anchor) < 2:
+        return False
+    if not isinstance(fragment, Sequence) or isinstance(fragment, (str, bytes)):
+        return False
+    texts = [
+        str(link.get("text") or "")
+        for link in fragment
+        if isinstance(link, Mapping) and str(link.get("text") or "").strip()
+    ]
+    if len(texts) < 2:
+        return False
+    touched = sum(1 for text in texts if _topic_tokens(text) & anchor)
+    return touched == 0
 
 
 def _audit_lens_chain_fragment(

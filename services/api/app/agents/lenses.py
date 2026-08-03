@@ -951,6 +951,11 @@ class LensRequest:
     assumption_refs: tuple[str, ...] = ()
     challenge_refs: tuple[str, ...] = ()
     option_ids: tuple[str, ...] = ()
+    # Wave F1 topic anchor: the confirmed charter decision question. Without
+    # it the lens only sees opaque option ids and drifts toward whatever the
+    # retrieved evidence happens to discuss (E2E run 641569f1: porter/scenario
+    # chains reasoned about rescue-robot procurement instead of the case).
+    decision_question: str = ""
     upstream_lens_outputs: Mapping[StrategicLensType, Mapping[str, Any]] = field(
         default_factory=dict
     )
