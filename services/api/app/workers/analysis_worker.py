@@ -55,6 +55,7 @@ from app.agents.model_provider import (
 from app.strategic_lenses.repository import (
     FrozenReferenceLedger,
     LensBehaviorRejected,
+    LensReferenceResolutionError,
     apply_validation_verdict,
     persist_lens_stage_output,
 )
@@ -1710,6 +1711,25 @@ class AnalysisWorker:
                 )
                 if payload is None:
                     break
+            except LensReferenceResolutionError as unresolved:
+                # Gap-fix wave B: the model cited ids outside the frozen
+                # ledger (hallucinated references). This is structural and
+                # repairable - the repair prompt re-lists the exact legal id
+                # lists, so a budgeted re-invocation can fix it instead of
+                # blind fail-closed (the flash meadows E2E failure mode).
+                if attempt == attempts - 1:
+                    break
+                await self._check_cancelled(run)
+                missing_summary = "; ".join(
+                    f"{key}: {', '.join(values)}"
+                    for key, values in sorted(unresolved.missing.items())
+                )
+                payload = await self._execute_dedicated_lens(
+                    run, stage, lens_type, result,
+                    repair_context=(f"unresolved_reference: {missing_summary}",),
+                )
+                if payload is None:
+                    break
             except Exception:
                 # Persistence error unrelated to the behavior gate: log and
                 # skip. The lens audit at the validating gate will catch the
@@ -1835,6 +1855,18 @@ class AnalysisWorker:
                 # append the exact reason codes as a repair instruction. The
                 # schema snippet for each violated field is attached so the
                 # model repairs the SHAPE, not just the names (B4).
+                reference_block = ""
+                if any(str(code).startswith("unresolved_reference") for code in repair_context):
+                    # Gap-fix wave B: hallucinated ids are repaired by re-listing
+                    # the COMPLETE legal sets - the model may only cite these.
+                    reference_block = (
+                        "\nLegal reference ids (cite ONLY these, nothing else):\n"
+                        f"- sourcePacketIds: {', '.join(packet_ids) or '(none)'}\n"
+                        f"- claimIds: {', '.join(claim_ids) or '(none)'}\n"
+                        f"- evidenceIds: {', '.join(evidence_ids) or '(none)'}\n"
+                        f"- assumptionIds: {', '.join(assumption_ids) or '(none)'}\n"
+                        f"- challengeIds: {', '.join(challenge_ids) or '(none)'}\n"
+                    )
                 user_message = (
                     f"{inputs.user}\n\n"
                     "Your previous lens output was rejected by the behavior "
@@ -1842,6 +1874,7 @@ class AnalysisWorker:
                     + "; ".join(repair_context)
                     + ".\n"
                     + _schema_fragments_for(repair_context, inputs.schema_content_def)
+                    + reference_block
                     + "Respond again with ONLY a corrected full lens JSON "
                     "object that satisfies every rejected behavior field."
                 )
