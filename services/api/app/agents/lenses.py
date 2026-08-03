@@ -780,6 +780,18 @@ def lens_output_contract(
         + ", markdown fences, hidden reasoning, or success probabilities.\n"
         + example_line
         + behavior_checklist
+        + (
+            "\n## Decision-chain handoff (Wave D, MANDATORY)\n"
+            "You are a specialist sub-agent: the orchestrator merges your "
+            "reasoning into the run's decision chain ONLY if you hand it over "
+            "as structured links. Emit top-level \"chainLinks\": an array of "
+            "2-5 links your lens established, each {\"linkId\": short-unique-id, "
+            "\"kind\": \"premise\"|\"evidence\"|\"inference\"|\"decision\", \"text\": "
+            "one falsifiable sentence, \"citesEvidenceIds\": [evidence ids from "
+            "the frozen lists you actually cited], \"supportsLinkIds\": []}. "
+            "Every cited evidence id must come from the frozen reference lists "
+            "above - the orchestrator audits resolvability before merging.\n"
+        )
     )
 
 

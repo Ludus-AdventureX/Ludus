@@ -179,6 +179,28 @@ class SimulationSeeds(CanonicalModel):
     candidate_edges: list[dict[str, Any]]
 
 
+class ChainLinkView(CanonicalModel):
+    """One decision-chain link in the report's chain audit block (Wave C)."""
+
+    link_id: Identifier
+    kind: Literal["premise", "evidence", "inference", "decision"]
+    text: NonEmptyText
+    cites_evidence_ids: list[Identifier] = []
+    cites_packet_ids: list[Identifier] = []
+    supports_link_ids: list[Identifier] = []
+    stage: NonEmptyText
+
+
+class DecisionChainAudit(CanonicalModel):
+    """Wave C: decision chain audit block — accumulated chain + integrity."""
+
+    links: list[ChainLinkView] = []
+    confirmed_ids: list[Identifier] = []
+    refuted_ids: list[Identifier] = []
+    broken_link_ids: list[Identifier] = []
+    integrity: Literal["intact", "weakened", "unknown"] = "unknown"
+
+
 class FocusedResearchResult(CanonicalModel):
     """Focused output: brief, recommendation, evidence, adversarial residue.
 
@@ -193,6 +215,7 @@ class FocusedResearchResult(CanonicalModel):
     executive_brief: BriefSection
     recommendation: Recommendation
     evidence_review: EvidenceReview
+    decision_chain_audit: DecisionChainAudit = Field(default_factory=DecisionChainAudit)
     counter_arguments: list[ChallengeEntry]
     residual_uncertainty: list[UnknownItemEntry]
     quality_gate: ReportValidation
@@ -211,6 +234,7 @@ class StructuredReport(CanonicalModel):
     sections: list[ReportSection]
     options: list[OptionAnalysis]
     evidence_review: EvidenceReview
+    decision_chain_audit: DecisionChainAudit = Field(default_factory=DecisionChainAudit)
     counter_arguments: list[ChallengeEntry]
     recommendation: Recommendation
     residual_uncertainty: list[UnknownItemEntry]

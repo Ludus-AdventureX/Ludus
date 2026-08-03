@@ -1239,3 +1239,170 @@ async def test_reference_resolution_failure_exhausts_budget_fail_closed(
     repo = AnalysisRuntimeRepository(session)
     refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
     assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
+
+
+# --- Wave C: decision chain propagation tests ---------------------------------
+
+def test_accumulate_chain_links_adds_new_links_and_deduplicates() -> None:
+    """Wave C: the chain accumulator appends new links, drops duplicate linkIds,
+    and removes refuted links from the chain."""
+    prior = {
+        "links": [
+            {"linkId": "pl-1", "kind": "premise", "text": "initial premise", "stage": "planning"},
+        ],
+        "confirmedIds": [],
+        "refutedIds": [],
+    }
+    updates = {
+        "added": [
+            {"linkId": "ev-1", "kind": "evidence", "text": "fact", "citesPacketIds": ["p1"], "stage": "retrieving"},
+            {"linkId": "pl-1", "kind": "premise", "text": "duplicate - must drop", "stage": "retrieving"},
+        ],
+        "confirmed": ["pl-1"],
+        "refuted": [],
+    }
+    result = worker_module._accumulate_chain_links(prior, updates)
+    ids = [link["linkId"] for link in result["links"]]
+    assert ids == ["pl-1", "ev-1"]
+    assert "pl-1" in result["confirmedIds"]
+
+
+def test_accumulate_chain_links_removes_refuted_links() -> None:
+    """Wave C: refuted links are removed from the chain (validator sees them
+    as broken); the refutedIds list preserves the audit trail."""
+    prior = {
+        "links": [
+            {"linkId": "pl-1", "kind": "premise", "text": "premise", "stage": "planning"},
+            {"linkId": "inf-1", "kind": "inference", "text": "inference", "stage": "analyzing"},
+        ],
+        "confirmedIds": [],
+        "refutedIds": [],
+    }
+    updates = {"added": [], "confirmed": [], "refuted": ["pl-1"]}
+    result = worker_module._accumulate_chain_links(prior, updates)
+    ids = [link["linkId"] for link in result["links"]]
+    assert ids == ["inf-1"]
+    assert result["refutedIds"] == ["pl-1"]
+
+
+def test_accumulate_chain_links_bounded_growth() -> None:
+    """Wave C: the accumulator is bounded (_MAX_CHAIN_LINKS); overflow drops
+    silently instead of crashing the stage."""
+    prior = {"links": [], "confirmedIds": [], "refutedIds": []}
+    updates = {
+        "added": [
+            {"linkId": f"link-{i}", "kind": "evidence", "text": f"t{i}", "stage": "retrieving"}
+            for i in range(100)
+        ],
+        "confirmed": [],
+        "refuted": [],
+    }
+    result = worker_module._accumulate_chain_links(prior, updates)
+    assert len(result["links"]) <= worker_module._MAX_CHAIN_LINKS
+
+
+def test_decision_chain_audit_extracts_integrity() -> None:
+    """Wave C: the report builder's decision chain audit block extracts the
+    accumulated chain from the validating stage and computes integrity."""
+    from app.workers.report_builder import _decision_chain_audit
+
+    stage_outputs = {
+        "validating": {
+            "decisionChain": {
+                "links": [
+                    {"linkId": "pl-1", "kind": "premise", "text": "premise", "stage": "planning"},
+                    {"linkId": "ev-1", "kind": "evidence", "text": "fact", "stage": "retrieving"},
+                ],
+                "confirmedIds": ["pl-1"],
+                "refutedIds": [],
+            }
+        }
+    }
+    audit = _decision_chain_audit(stage_outputs)
+    assert audit["integrity"] == "intact"
+    assert len(audit["links"]) == 2
+    assert audit["brokenLinkIds"] == []
+
+
+def test_decision_chain_audit_detects_broken_links() -> None:
+    """Wave C: a confirmed link that was refuted (removed from the chain) is
+    reported as broken - the validator's audit trail is honest."""
+    from app.workers.report_builder import _decision_chain_audit
+
+    stage_outputs = {
+        "validating": {
+            "decisionChain": {
+                "links": [
+                    {"linkId": "pl-1", "kind": "premise", "text": "premise", "stage": "planning"},
+                ],
+                "confirmedIds": ["pl-1", "ev-1"],
+                "refutedIds": ["ev-1"],
+            }
+        }
+    }
+    audit = _decision_chain_audit(stage_outputs)
+    assert audit["integrity"] == "weakened"
+    assert "ev-1" in audit["brokenLinkIds"]
+
+
+def test_decision_chain_audit_unknown_when_no_chain() -> None:
+    """Wave C: when the validating stage has no chain (legacy run or fixture),
+    the audit block degrades gracefully to 'unknown' integrity."""
+    from app.workers.report_builder import _decision_chain_audit
+
+    assert _decision_chain_audit({})["integrity"] == "unknown"
+    assert _decision_chain_audit({"validating": {}})["integrity"] == "unknown"
+
+
+# --- Wave D: convergence-audited parallel lens chain handoff -----------------
+
+def test_audit_lens_chain_fragment_namespaces_and_filters() -> None:
+    """Wave D: audited links get the lens namespace prefix; malformed links
+    (missing id/text/kind, unknown kind) drop silently."""
+    fragment = [
+        {"linkId": "l1", "kind": "inference", "text": "claim A", "citesEvidenceIds": []},
+        {"linkId": "", "kind": "inference", "text": "no id", "citesEvidenceIds": []},
+        {"linkId": "l2", "kind": "bogus_kind", "text": "bad kind", "citesEvidenceIds": []},
+        {"linkId": "l3", "kind": "premise", "text": "", "citesEvidenceIds": []},
+    ]
+    audited = worker_module._audit_lens_chain_fragment(
+        fragment, "porter_five_forces", frozenset()
+    )
+    assert [link["linkId"] for link in audited] == ["porter_five_forces:l1"]
+
+
+def test_audit_lens_chain_fragment_drops_hallucinated_citations() -> None:
+    """Wave D: a link whose evidence citations ALL fail ledger resolution is
+    dropped (fail-closed) - sub-agents cannot merge unfounded claims."""
+    legal = frozenset({"ev-retrieving-001"})
+    fragment = [
+        {"linkId": "l1", "kind": "evidence", "text": "cites ghost",
+         "citesEvidenceIds": ["ev-ghost-999"]},
+        {"linkId": "l2", "kind": "evidence", "text": "cites real",
+         "citesEvidenceIds": ["ev-retrieving-001", "ev-ghost-998"]},
+    ]
+    audited = worker_module._audit_lens_chain_fragment(fragment, "pre_mortem", legal)
+    ids = [link["linkId"] for link in audited]
+    assert ids == ["pre_mortem:l2"]
+    # Only the resolvable citation survives inside the merged link.
+    assert audited[0]["citesEvidenceIds"] == ["ev-retrieving-001"]
+
+
+def test_audit_lens_chain_fragment_bounded_and_deduped() -> None:
+    """Wave D: per-lens fragment is capped; duplicate link ids dedupe."""
+    fragment = [
+        {"linkId": f"l{i}", "kind": "inference", "text": f"t{i}", "citesEvidenceIds": []}
+        for i in range(20)
+    ] + [
+        {"linkId": "l0", "kind": "inference", "text": "dup", "citesEvidenceIds": []},
+    ]
+    audited = worker_module._audit_lens_chain_fragment(fragment, "scenario_planning", frozenset())
+    assert len(audited) <= worker_module._MAX_CHAIN_LINKS_PER_LENS
+
+
+def test_audit_lens_chain_fragment_rejects_non_sequences() -> None:
+    """Wave D: malformed fragments (None/string/dict) degrade to [] - the
+    artifact persists unaffected, the chain simply stays honest."""
+    assert worker_module._audit_lens_chain_fragment(None, "x", frozenset()) == []
+    assert worker_module._audit_lens_chain_fragment("nope", "x", frozenset()) == []
+    assert worker_module._audit_lens_chain_fragment({"a": 1}, "x", frozenset()) == []

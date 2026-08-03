@@ -31,6 +31,7 @@ the executor protocol mirrors what the Task 7 ``WorkerRunner`` produces.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -816,8 +817,11 @@ class AnalysisWorker:
                     # lens/enrichment legs, which add minutes of model time.
                     await self._checkpoint()
 
+                lens_chain_fragment: list[dict[str, Any]] = []
                 if is_full and stage in FULL_LENS_SCHEDULE:
-                    await self._run_lens_stages(run, stage, result)
+                    # Wave D: returns the convergence-audited chain fragments
+                    # handed off by the lens sub-agents (merged below).
+                    lens_chain_fragment = await self._run_lens_stages(run, stage, result)
 
                 # Grey-goo v6 roles that Ludus previously dropped, re-added as
                 # best-effort enrichment calls (no state transition, no gate):
@@ -1005,11 +1009,34 @@ class AnalysisWorker:
                 # Progress, output hash and the stage digest event become
                 # visible now - this is what the UI reads between stages.
                 await self._checkpoint()
+                # Wave C fix (wave D): the PRIOR stage's accumulated chain must
+                # be captured BEFORE stage_inputs is rebuilt from this stage's
+                # output, otherwise cross-stage accumulation silently resets.
+                prior_chain = (
+                    stage_inputs.get("decisionChain")
+                    if isinstance(stage_inputs, Mapping)
+                    else None
+                )
                 stage_inputs = {"previousStage": stage.value, **dict(result.output)}
                 if charter_context is not None:
                     # The charter must survive stage handoffs - each stage
                     # otherwise loses the confirmed question it is analysing.
                     stage_inputs["charter"] = charter_context
+                # Wave C: accumulate decision chain across stages
+                chain_updates = result.output.get("chainLinkUpdates")
+                if chain_updates and isinstance(chain_updates, Mapping):
+                    stage_inputs["decisionChain"] = _accumulate_chain_links(
+                        prior_chain, chain_updates
+                    )
+                elif isinstance(prior_chain, Mapping):
+                    stage_inputs["decisionChain"] = dict(prior_chain)
+                # Wave D: merge the audited lens sub-agent chain fragments
+                # (namespaced + resolvability-checked) into the same chain.
+                if lens_chain_fragment:
+                    stage_inputs["decisionChain"] = _accumulate_chain_links(
+                        stage_inputs.get("decisionChain"),
+                        {"added": lens_chain_fragment, "confirmed": [], "refuted": []},
+                    )
         except CooperativeStop:
             # Canonical cancelled terminal state was already written by the
             # cancel command; keep persisted events/artifacts, publish nothing.
@@ -1161,6 +1188,9 @@ class AnalysisWorker:
 
         The per-role quota (focused ≤3 / full ≤5 distinct queries) is enforced
         by the caller via ``_coverage_budget``; this method only records.
+
+        Wave E: MCP tools are invoked alongside exa/firecrawl; their results
+        enter the same evidence funnel (TDD triple filter) - no bypass.
         """
 
         import hashlib
@@ -1194,6 +1224,11 @@ class AnalysisWorker:
             **({"api_key": byok_exa} if byok_exa else {}),
             **({"firecrawl_api_key": byok_firecrawl} if byok_firecrawl else {}),
         )
+        # Wave E: invoke MCP tools alongside exa/firecrawl; results merge into
+        # the same evidence funnel (TDD triple filter) - no bypass.
+        mcp_sources = await self._retrieve_mcp(run, question=question)
+        if mcp_sources:
+            web_sources = list(web_sources) + mcp_sources
         try:
             self._session.add(
                 _CoverageRow(
@@ -1220,6 +1255,57 @@ class AnalysisWorker:
                 run.analysis_run_id,
             )
         return web_sources
+
+    async def _retrieve_mcp(
+        self, run: AnalysisRun, *, question: str
+    ) -> list[dict[str, Any]]:
+        """Wave E: invoke workspace MCP tools and return WebSource-compatible results.
+
+        MCP connectors are workspace-scoped BYOK (provider='mcp', config JSONB
+        carries command/args/env/timeout). Results are bounded and MUST pass
+        the evidence funnel - no bypass. Failures degrade gracefully (empty list).
+        """
+
+        from app.models import WorkspaceConnector as _ConnectorRow
+        from app.workers.mcp_retrieval import invoke_mcp_tools
+        from sqlalchemy import select as _sel
+
+        try:
+            connectors = (
+                await self._session.execute(
+                    _sel(_ConnectorRow).where(
+                        _ConnectorRow.workspace_id == run.workspace_id,
+                        _ConnectorRow.provider == "mcp",
+                        _ConnectorRow.status == "available",
+                    )
+                )
+            ).scalars().all()
+        except Exception:
+            logging.getLogger(__name__).debug("MCP connector query failed; skipping")
+            return []
+
+        results: list[dict[str, Any]] = []
+        for connector in connectors[:3]:  # bounded: max 3 MCP servers per run
+            config = connector.config or {}
+            if not isinstance(config, dict) or not config.get("command"):
+                continue
+            try:
+                mcp_results = await invoke_mcp_tools(config, query=question)
+                # Convert MCP results to WebSource-compatible format
+                for item in mcp_results:
+                    results.append({
+                        "title": str(item.get("title") or "MCP result"),
+                        "url": str(item.get("url") or ""),
+                        "snippet": str(item.get("snippet") or "")[:2000],
+                        "tier": str(item.get("tier") or "L6"),
+                        "source": str(item.get("source") or "mcp"),
+                    })
+            except Exception:
+                logging.getLogger(__name__).debug(
+                    "MCP tool invocation failed for connector %s; skipping",
+                    connector.id,
+                )
+        return results
 
     async def _maybe_downgrade_complexity(
         self,
@@ -1592,12 +1678,32 @@ class AnalysisWorker:
             digests[artifact.lens_type] = {"summary": summary}
         return digests
 
+    async def _prepare_lens_context(self, run: AnalysisRun) -> dict[str, Any]:
+        """Wave D: preload ALL database reads the dedicated lens calls need.
+
+        Parallel lens execution is only safe when the model-call phase touches
+        no AsyncSession. This method does every DB read ONCE, serially, before
+        the parallel gather: charter option ids, frozen reference sets, and the
+        upstream READY-lens digests (all types; each lens filters itself out
+        during prompt assembly).
+        """
+
+        charter = await self._session.get(AnalysisCharter, run.charter_id)
+        option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
+        refs = await self._frozen_reference_sets(run)
+        upstream_digests = await self._load_upstream_lens_digests(run, None)
+        return {
+            "option_ids": option_ids,
+            "refs": refs,
+            "upstream_digests": upstream_digests,
+        }
+
     async def _run_lens_stages(
         self,
         run: AnalysisRun,
         stage: AnalysisRunStatus,
         result: StageResult,
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         """Persist each scheduled lens through the shipped write path, then emit.
 
         When the generic stage executor returned no lens payload (the usual
@@ -1605,6 +1711,10 @@ class AnalysisWorker:
         a DEDICATED lens call through the registered implementation's prompt
         assembly + the same model provider. This is the missing wiring that
         caused every live full run to produce zero lens artifacts.
+
+        Wave D returns the convergence-audited chain fragments handed off by
+        the lens sub-agents (namespaced, resolvability-checked); the caller
+        merges them into the run's accumulated decision chain.
         """
 
         # Frozen-reference ledger for the whole lens set: built once from the
@@ -1614,16 +1724,54 @@ class AnalysisWorker:
         # can cite them; without rows the gate still blocks honestly.
         await self._register_dossier_assumptions(run)
         ledger = FrozenReferenceLedger(**(await self._frozen_reference_sets(run)))
-        for lens_type in FULL_LENS_SCHEDULE[stage]:
-            payload = result.lens_payloads.get(lens_type)
-            if payload is None:
-                # Dedicated lens execution fallback: use the published prompt
-                # and the registered implementation to invoke the model.
-                payload = await self._execute_dedicated_lens(
-                    run, stage, lens_type, result
-                )
+        # Wave D: structured parallel delegation - the MODEL-CALL phase of the
+        # lenses scheduled in this stage runs concurrently (bounded semaphore,
+        # session-free thanks to _prepare_lens_context preloading); the
+        # PERSISTENCE phase stays serial because the AsyncSession is not
+        # concurrency-safe. Sub-agents stay auditable: every lens payload is
+        # validated by the behavior gate + reference ledger before merge.
+        lens_types = FULL_LENS_SCHEDULE[stage]
+        pending = [lt for lt in lens_types if result.lens_payloads.get(lt) is None]
+        payloads: dict[str, Mapping[str, Any] | None] = {
+            lt: result.lens_payloads.get(lt) for lt in lens_types
+        }
+        if len(pending) > 1:
+            await self._check_cancelled(run)
+            preloaded = await self._prepare_lens_context(run)
+            semaphore = asyncio.Semaphore(_MAX_PARALLEL_LENSES)
+
+            async def _invoke(lt: str) -> Mapping[str, Any] | None:
+                async with semaphore:
+                    return await self._execute_dedicated_lens(
+                        run, stage, lt, result,
+                        preloaded_context=preloaded,
+                    )
+
+            gathered = await asyncio.gather(
+                *(_invoke(lt) for lt in pending), return_exceptions=True
+            )
+            for lt, outcome in zip(pending, gathered):
+                if isinstance(outcome, Mapping):
+                    payloads[lt] = outcome
+                elif isinstance(outcome, BaseException):
+                    logging.getLogger(__name__).warning(
+                        "parallel lens %s failed for run %s: %s",
+                        lt, run.analysis_run_id, outcome,
+                    )
+        elif pending:
+            payloads[pending[0]] = await self._execute_dedicated_lens(
+                run, stage, pending[0], result
+            )
+        chain_fragment: list[dict[str, Any]] = []
+        for lens_type in lens_types:
+            payload = payloads.get(lens_type)
             if payload is None:
                 continue
+            # Wave D: extract the sub-agent's chain handoff and strip it from
+            # the persisted payload (the artifact schema stays untouched).
+            chain_links = payload.get("chainLinks")
+            if "chainLinks" in payload:
+                payload = {k: v for k, v in payload.items() if k != "chainLinks"}
             # External-call/persistence boundary: cooperative stop first.
             await self._check_cancelled(run)
             artifact_id = await self._persist_lens_with_repair(
@@ -1631,6 +1779,12 @@ class AnalysisWorker:
             )
             if artifact_id is None:
                 continue
+            # Wave D convergence audit: a sub-agent's chain merges into the
+            # run's decision chain ONLY after its artifact passed the behavior
+            # gate AND every citation resolves against the frozen ledger.
+            chain_fragment.extend(
+                _audit_lens_chain_fragment(chain_links, lens_type, ledger.evidence_ids)
+            )
             # Only after successful persistence: record the id and emit the
             # canonical strategic_lens.completed event.
             await self._repo.record_lens_artifact_id(
@@ -1661,6 +1815,7 @@ class AnalysisWorker:
             # Each persisted lens is published on its own: a full run spends
             # minutes per lens and the trace must not wait for the whole set.
             await self._checkpoint()
+        return chain_fragment
 
     async def _persist_lens_with_repair(
         self,
@@ -1762,6 +1917,7 @@ class AnalysisWorker:
         lens_type: str,
         parent_result: StageResult,
         repair_context: tuple[str, ...] | None = None,
+        preloaded_context: Mapping[str, Any] | None = None,
     ) -> Mapping[str, Any] | None:
         """Invoke the model with the published per-lens prompt and schema.
 
@@ -1811,14 +1967,22 @@ class AnalysisWorker:
             prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.is_file() else ""
 
             # Assemble the LensRequest from the frozen run context.
-            charter = await self._session.get(AnalysisCharter, run.charter_id)
-            option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
-            # Frozen reference sets come from the DATABASE (prior stages
-            # already persisted them; parent_result only has the current
-            # stage's output which doesn't carry earlier artifacts). The same
-            # sets feed the FrozenReferenceLedger, so the model can only cite
-            # IDs the write path will resolve.
-            refs = await self._frozen_reference_sets(run)
+            # Wave D: when preloaded_context is provided (parallel lens phase),
+            # every database read already happened serially in
+            # _prepare_lens_context - this branch touches NO AsyncSession so
+            # the gather below stays session-safe.
+            if preloaded_context is not None:
+                option_ids = tuple(preloaded_context.get("option_ids") or ())
+                refs = preloaded_context.get("refs") or await self._frozen_reference_sets(run)
+            else:
+                charter = await self._session.get(AnalysisCharter, run.charter_id)
+                option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
+                # Frozen reference sets come from the DATABASE (prior stages
+                # already persisted them; parent_result only has the current
+                # stage's output which doesn't carry earlier artifacts). The same
+                # sets feed the FrozenReferenceLedger, so the model can only cite
+                # IDs the write path will resolve.
+                refs = await self._frozen_reference_sets(run)
             packet_ids = tuple(sorted(refs["source_packet_ids"]))
             evidence_ids = tuple(sorted(refs["evidence_ids"]))
             claim_ids = tuple(sorted(refs["claim_ids"]))
@@ -1840,8 +2004,18 @@ class AnalysisWorker:
                 # reads the validated outputs of lenses that already ran in
                 # THIS run before deepening its own reasoning. Compressed
                 # digests only (≤500 chars each), never full content.
-                upstream_lens_outputs=await self._load_upstream_lens_digests(
-                    run, lens_enum
+                # Wave D: parallel phase uses the preloaded digest map (each
+                # lens filters itself out here - no DB read inside gather).
+                upstream_lens_outputs=(
+                    {
+                        lens: digest
+                        for lens, digest in (
+                            preloaded_context.get("upstream_digests") or {}
+                        ).items()
+                        if lens != lens_enum
+                    }
+                    if preloaded_context is not None
+                    else await self._load_upstream_lens_digests(run, lens_enum)
                 ),
             )
             inputs = impl.build_prompt_inputs(request)
@@ -2015,7 +2189,15 @@ def _provider_request_model(provider: ModelProvider, request_model: str | None) 
 _STAGE_ASKS: Mapping[str, str] = {
     "planning": (
         "Decompose the decision question into the decisive sub-questions and "
-        "name the single assumption that, if wrong, flips the recommendation."
+        "name the single assumption that, if wrong, flips the recommendation. "
+        "You MUST also emit top-level \"decisionChain\": an array of initial "
+        "decision-chain links that the validator will audit against. Each link: "
+        "{\"linkId\": \"pl-1\", \"kind\": \"premise\"|\"evidence\"|\"inference\"|\"decision\", "
+        "\"text\": short description, \"citesEvidenceIds\": [], \"citesPacketIds\": [], "
+        "\"supportsLinkIds\": []}. Start with 3-6 premise links (what must be true "
+        "for the recommendation to hold) and 1-2 decision links (the candidate "
+        "options). Subsequent stages will add evidence/inference links and "
+        "confirm/refute existing ones."
     ),
     "retrieving": (
         "Produce the FACT BASE. inputs.webEvidence (when present) holds REAL "
@@ -2039,7 +2221,13 @@ _STAGE_ASKS: Mapping[str, str] = {
         "retrieved fact supports the causal link}. Real decision factors are "
         "rarely independent - map how they push or dampen each other. Use "
         "ONLY the exact factor labels you produced above; emit [] ONLY if the "
-        "factors are genuinely independent. Never invent correlations."
+        "factors are genuinely independent. Never invent correlations. "
+        "You MUST also emit top-level \"chainLinkUpdates\": {\"added\": [new "
+        "evidence links citing your packet ids], \"confirmed\": [link ids from "
+        "inputs.decisionChain your facts support], \"refuted\": [link ids your "
+        "facts contradict]}. Each added link: {\"linkId\": \"ev-1\", \"kind\": "
+        "\"evidence\", \"text\": ..., \"citesEvidenceIds\": [your packet ids], "
+        "\"supportsLinkIds\": [premise link ids]}."
     ),
     "analyzing": (
         "Weigh the options against the goals and constraints. Every keyFinding "
@@ -2054,7 +2242,12 @@ _STAGE_ASKS: Mapping[str, str] = {
         "in round 1 - reason from the evidence you have, and emit "
         '"knowledgeGaps": [what you could not verify without more data] '
         "(max 8). When inputs.round == 2, inputs.round1Gaps carries your "
-        "round-1 gaps - fold them into your final reasoning explicitly."
+        "round-1 gaps - fold them into your final reasoning explicitly. "
+        "You MUST also emit top-level \"chainLinkUpdates\": {\"added\": [new "
+        "inference links], \"confirmed\": [link ids your reasoning supports], "
+        "\"refuted\": [link ids your reasoning contradicts]}. Each added link: "
+        "{\"linkId\": \"inf-1\", \"kind\": \"inference\", \"text\": ..., "
+        "\"supportsLinkIds\": [premise/evidence link ids]}."
     ),
     "criticizing": (
         "Attack the emerging recommendation. Set output.strongestObjection to "
@@ -2062,23 +2255,137 @@ _STAGE_ASKS: Mapping[str, str] = {
         "specific failure mode with its trigger condition. Self-anchor your "
         'strongest objection the same way ("selfAnchor" verdicts against '
         "cited evidence ids); a conflict with known facts means the objection "
-        "itself needs rework."
+        "itself needs rework. You MUST also emit top-level \"chainLinkUpdates\": "
+        "{\"added\": [new inference links capturing failure modes], \"confirmed\": "
+        "[link ids your objection challenges], \"refuted\": [link ids your "
+        "objection invalidates]}."
     ),
     "synthesizing": (
         "Commit. Set output.decision to one conditional commitment sentence "
         "(what to do + under which conditions + exit rule). keyFindings carry "
-        "the 2-4 reasons that survived criticism."
+        "the 2-4 reasons that survived criticism. You MUST also emit top-level "
+        "\"chainLinkUpdates\": {\"added\": [decision links capturing your "
+        "commitment], \"confirmed\": [link ids your decision rests on], "
+        "\"refuted\": [link ids your decision rejects]}."
     ),
     "validating": (
-        "Audit the chain: does the decision follow from the evidence, and did "
-        "the strongest objection get a real answer? Fail the gate when the "
-        "chain has a hole, and say which link broke in validatorFindings."
+        "Audit the decision chain: inputs.decisionChain carries the accumulated "
+        "links (premise/evidence/inference/decision) from all prior stages. For "
+        "each validatorFinding, cite the broken link's linkId in a \"linkId\" "
+        "field. Does the decision follow from the evidence? Did the strongest "
+        "objection get a real answer? Fail the gate when the chain has a hole, "
+        "and say which link broke."
     ),
 }
 
 _DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
 
 _MAX_INFLUENCE_EDGES = 6
+_MAX_CHAIN_LINKS = 40  # bounded accumulator; prevents unbounded growth
+# Wave D: concurrent lens sub-agent cap (aligned with hermes' MAX_CONCURRENT_CHILDREN).
+_MAX_PARALLEL_LENSES = 2
+
+
+def _accumulate_chain_links(
+    prior_chain: Any, updates: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Wave C: merge per-stage chainLinkUpdates into the accumulated chain.
+
+    - added: new links appended (linkId must be unique; duplicates drop).
+    - confirmed: linkIds acknowledged (no structural change; tracked for audit).
+    - refuted: linkIds removed from the chain (validator sees them as broken).
+
+    The accumulator is deterministic and bounded; malformed payloads degrade
+    gracefully (drop the offending field, never crash the stage).
+    """
+
+    prior = prior_chain if isinstance(prior_chain, Mapping) else {}
+    links: list[dict[str, Any]] = list(prior.get("links") or [])
+    existing_ids = {str(link.get("linkId")) for link in links if isinstance(link, Mapping)}
+    added = updates.get("added") if isinstance(updates.get("added"), Sequence) else []
+    for link in added:
+        if not isinstance(link, Mapping):
+            continue
+        link_id = str(link.get("linkId") or "").strip()
+        if not link_id or link_id in existing_ids:
+            continue
+        if len(links) >= _MAX_CHAIN_LINKS:
+            break
+        links.append(dict(link))
+        existing_ids.add(link_id)
+    refuted = updates.get("refuted") if isinstance(updates.get("refuted"), Sequence) else []
+    refuted_ids = {str(r) for r in refuted if r}
+    if refuted_ids:
+        links = [link for link in links if str(link.get("linkId")) not in refuted_ids]
+    confirmed = updates.get("confirmed") if isinstance(updates.get("confirmed"), Sequence) else []
+    return {
+        "links": links,
+        "confirmedIds": [str(c) for c in confirmed if c],
+        "refutedIds": sorted(refuted_ids),
+    }
+
+
+_CHAIN_LINK_KINDS = frozenset({"premise", "evidence", "inference", "decision"})
+_MAX_CHAIN_LINKS_PER_LENS = 5
+
+
+def _audit_lens_chain_fragment(
+    fragment: Any, lens_type: str, legal_evidence_ids: frozenset[str]
+) -> list[dict[str, Any]]:
+    """Wave D convergence-audit gate: validate one lens sub-agent's chainLinks.
+
+    The orchestrator merges a sub-agent's reasoning into the run's decision
+    chain ONLY after this audit passes per-link (fail-closed at link level):
+    - linkId / text non-empty, kind in the canonical vocabulary;
+    - every citesEvidenceIds entry RESOLVES against the frozen ledger (the
+      same authority the lens artifact write path uses) - hallucinated
+      citations drop the link, mirroring the reference-resolution gate;
+    - link ids are namespaced (lens_type:linkId) so parallel sub-agents can
+      never collide or spoof another lens's links.
+
+    Audited links are returned ready for _accumulate_chain_links; a malformed
+    fragment yields [] (the artifact itself is unaffected - the chain is an
+    augmentation, and honest absence beats fabricated structure).
+    """
+
+    if not isinstance(fragment, Sequence) or isinstance(fragment, (str, bytes)):
+        return []
+    audited: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for link in list(fragment)[:_MAX_CHAIN_LINKS_PER_LENS]:
+        if not isinstance(link, Mapping):
+            continue
+        link_id = str(link.get("linkId") or "").strip()
+        text = str(link.get("text") or "").strip()
+        kind = str(link.get("kind") or "").strip()
+        if not link_id or not text or kind not in _CHAIN_LINK_KINDS:
+            continue
+        namespaced = f"{lens_type}:{link_id}"
+        if namespaced in seen:
+            continue
+        cites_raw = link.get("citesEvidenceIds")
+        cites = (
+            [str(c) for c in cites_raw if str(c).strip()]
+            if isinstance(cites_raw, Sequence) and not isinstance(cites_raw, (str, bytes))
+            else []
+        )
+        resolvable = [c for c in cites if c in legal_evidence_ids]
+        if cites and not resolvable:
+            # Every citation hallucinated: the link claims evidence it cannot
+            # show - drop it (fail-closed), never merge unfounded claims.
+            continue
+        seen.add(namespaced)
+        audited.append(
+            {
+                "linkId": namespaced,
+                "kind": kind,
+                "text": text[:500],
+                "citesEvidenceIds": resolvable,
+                "supportsLinkIds": [],
+                "stage": lens_type,
+            }
+        )
+    return audited
 
 
 def _admit_influences(
