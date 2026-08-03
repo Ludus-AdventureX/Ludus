@@ -1168,6 +1168,9 @@ class AnalysisWorker:
 
         The per-role quota (focused ≤3 / full ≤5 distinct queries) is enforced
         by the caller via ``_coverage_budget``; this method only records.
+
+        Wave E: MCP tools are invoked alongside exa/firecrawl; their results
+        enter the same evidence funnel (TDD triple filter) - no bypass.
         """
 
         import hashlib
@@ -1201,6 +1204,11 @@ class AnalysisWorker:
             **({"api_key": byok_exa} if byok_exa else {}),
             **({"firecrawl_api_key": byok_firecrawl} if byok_firecrawl else {}),
         )
+        # Wave E: invoke MCP tools alongside exa/firecrawl; results merge into
+        # the same evidence funnel (TDD triple filter) - no bypass.
+        mcp_sources = await self._retrieve_mcp(run, question=question)
+        if mcp_sources:
+            web_sources = list(web_sources) + mcp_sources
         try:
             self._session.add(
                 _CoverageRow(
@@ -1227,6 +1235,57 @@ class AnalysisWorker:
                 run.analysis_run_id,
             )
         return web_sources
+
+    async def _retrieve_mcp(
+        self, run: AnalysisRun, *, question: str
+    ) -> list[dict[str, Any]]:
+        """Wave E: invoke workspace MCP tools and return WebSource-compatible results.
+
+        MCP connectors are workspace-scoped BYOK (provider='mcp', config JSONB
+        carries command/args/env/timeout). Results are bounded and MUST pass
+        the evidence funnel - no bypass. Failures degrade gracefully (empty list).
+        """
+
+        from app.models import WorkspaceConnector as _ConnectorRow
+        from app.workers.mcp_retrieval import invoke_mcp_tools
+        from sqlalchemy import select as _sel
+
+        try:
+            connectors = (
+                await self._session.execute(
+                    _sel(_ConnectorRow).where(
+                        _ConnectorRow.workspace_id == run.workspace_id,
+                        _ConnectorRow.provider == "mcp",
+                        _ConnectorRow.status == "available",
+                    )
+                )
+            ).scalars().all()
+        except Exception:
+            logging.getLogger(__name__).debug("MCP connector query failed; skipping")
+            return []
+
+        results: list[dict[str, Any]] = []
+        for connector in connectors[:3]:  # bounded: max 3 MCP servers per run
+            config = connector.config or {}
+            if not isinstance(config, dict) or not config.get("command"):
+                continue
+            try:
+                mcp_results = await invoke_mcp_tools(config, query=question)
+                # Convert MCP results to WebSource-compatible format
+                for item in mcp_results:
+                    results.append({
+                        "title": str(item.get("title") or "MCP result"),
+                        "url": str(item.get("url") or ""),
+                        "snippet": str(item.get("snippet") or "")[:2000],
+                        "tier": str(item.get("tier") or "L6"),
+                        "source": str(item.get("source") or "mcp"),
+                    })
+            except Exception:
+                logging.getLogger(__name__).debug(
+                    "MCP tool invocation failed for connector %s; skipping",
+                    connector.id,
+                )
+        return results
 
     async def _maybe_downgrade_complexity(
         self,
