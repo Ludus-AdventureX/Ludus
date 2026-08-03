@@ -31,6 +31,7 @@ the executor protocol mirrors what the Task 7 ``WorkerRunner`` produces.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -816,8 +817,11 @@ class AnalysisWorker:
                     # lens/enrichment legs, which add minutes of model time.
                     await self._checkpoint()
 
+                lens_chain_fragment: list[dict[str, Any]] = []
                 if is_full and stage in FULL_LENS_SCHEDULE:
-                    await self._run_lens_stages(run, stage, result)
+                    # Wave D: returns the convergence-audited chain fragments
+                    # handed off by the lens sub-agents (merged below).
+                    lens_chain_fragment = await self._run_lens_stages(run, stage, result)
 
                 # Grey-goo v6 roles that Ludus previously dropped, re-added as
                 # best-effort enrichment calls (no state transition, no gate):
@@ -1005,6 +1009,14 @@ class AnalysisWorker:
                 # Progress, output hash and the stage digest event become
                 # visible now - this is what the UI reads between stages.
                 await self._checkpoint()
+                # Wave C fix (wave D): the PRIOR stage's accumulated chain must
+                # be captured BEFORE stage_inputs is rebuilt from this stage's
+                # output, otherwise cross-stage accumulation silently resets.
+                prior_chain = (
+                    stage_inputs.get("decisionChain")
+                    if isinstance(stage_inputs, Mapping)
+                    else None
+                )
                 stage_inputs = {"previousStage": stage.value, **dict(result.output)}
                 if charter_context is not None:
                     # The charter must survive stage handoffs - each stage
@@ -1013,10 +1025,18 @@ class AnalysisWorker:
                 # Wave C: accumulate decision chain across stages
                 chain_updates = result.output.get("chainLinkUpdates")
                 if chain_updates and isinstance(chain_updates, Mapping):
-                    decision_chain = _accumulate_chain_links(
-                        stage_inputs.get("decisionChain"), chain_updates
+                    stage_inputs["decisionChain"] = _accumulate_chain_links(
+                        prior_chain, chain_updates
                     )
-                    stage_inputs["decisionChain"] = decision_chain
+                elif isinstance(prior_chain, Mapping):
+                    stage_inputs["decisionChain"] = dict(prior_chain)
+                # Wave D: merge the audited lens sub-agent chain fragments
+                # (namespaced + resolvability-checked) into the same chain.
+                if lens_chain_fragment:
+                    stage_inputs["decisionChain"] = _accumulate_chain_links(
+                        stage_inputs.get("decisionChain"),
+                        {"added": lens_chain_fragment, "confirmed": [], "refuted": []},
+                    )
         except CooperativeStop:
             # Canonical cancelled terminal state was already written by the
             # cancel command; keep persisted events/artifacts, publish nothing.
@@ -1658,12 +1678,32 @@ class AnalysisWorker:
             digests[artifact.lens_type] = {"summary": summary}
         return digests
 
+    async def _prepare_lens_context(self, run: AnalysisRun) -> dict[str, Any]:
+        """Wave D: preload ALL database reads the dedicated lens calls need.
+
+        Parallel lens execution is only safe when the model-call phase touches
+        no AsyncSession. This method does every DB read ONCE, serially, before
+        the parallel gather: charter option ids, frozen reference sets, and the
+        upstream READY-lens digests (all types; each lens filters itself out
+        during prompt assembly).
+        """
+
+        charter = await self._session.get(AnalysisCharter, run.charter_id)
+        option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
+        refs = await self._frozen_reference_sets(run)
+        upstream_digests = await self._load_upstream_lens_digests(run, None)
+        return {
+            "option_ids": option_ids,
+            "refs": refs,
+            "upstream_digests": upstream_digests,
+        }
+
     async def _run_lens_stages(
         self,
         run: AnalysisRun,
         stage: AnalysisRunStatus,
         result: StageResult,
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         """Persist each scheduled lens through the shipped write path, then emit.
 
         When the generic stage executor returned no lens payload (the usual
@@ -1671,6 +1711,10 @@ class AnalysisWorker:
         a DEDICATED lens call through the registered implementation's prompt
         assembly + the same model provider. This is the missing wiring that
         caused every live full run to produce zero lens artifacts.
+
+        Wave D returns the convergence-audited chain fragments handed off by
+        the lens sub-agents (namespaced, resolvability-checked); the caller
+        merges them into the run's accumulated decision chain.
         """
 
         # Frozen-reference ledger for the whole lens set: built once from the
@@ -1680,16 +1724,54 @@ class AnalysisWorker:
         # can cite them; without rows the gate still blocks honestly.
         await self._register_dossier_assumptions(run)
         ledger = FrozenReferenceLedger(**(await self._frozen_reference_sets(run)))
-        for lens_type in FULL_LENS_SCHEDULE[stage]:
-            payload = result.lens_payloads.get(lens_type)
-            if payload is None:
-                # Dedicated lens execution fallback: use the published prompt
-                # and the registered implementation to invoke the model.
-                payload = await self._execute_dedicated_lens(
-                    run, stage, lens_type, result
-                )
+        # Wave D: structured parallel delegation - the MODEL-CALL phase of the
+        # lenses scheduled in this stage runs concurrently (bounded semaphore,
+        # session-free thanks to _prepare_lens_context preloading); the
+        # PERSISTENCE phase stays serial because the AsyncSession is not
+        # concurrency-safe. Sub-agents stay auditable: every lens payload is
+        # validated by the behavior gate + reference ledger before merge.
+        lens_types = FULL_LENS_SCHEDULE[stage]
+        pending = [lt for lt in lens_types if result.lens_payloads.get(lt) is None]
+        payloads: dict[str, Mapping[str, Any] | None] = {
+            lt: result.lens_payloads.get(lt) for lt in lens_types
+        }
+        if len(pending) > 1:
+            await self._check_cancelled(run)
+            preloaded = await self._prepare_lens_context(run)
+            semaphore = asyncio.Semaphore(_MAX_PARALLEL_LENSES)
+
+            async def _invoke(lt: str) -> Mapping[str, Any] | None:
+                async with semaphore:
+                    return await self._execute_dedicated_lens(
+                        run, stage, lt, result,
+                        preloaded_context=preloaded,
+                    )
+
+            gathered = await asyncio.gather(
+                *(_invoke(lt) for lt in pending), return_exceptions=True
+            )
+            for lt, outcome in zip(pending, gathered):
+                if isinstance(outcome, Mapping):
+                    payloads[lt] = outcome
+                elif isinstance(outcome, BaseException):
+                    logging.getLogger(__name__).warning(
+                        "parallel lens %s failed for run %s: %s",
+                        lt, run.analysis_run_id, outcome,
+                    )
+        elif pending:
+            payloads[pending[0]] = await self._execute_dedicated_lens(
+                run, stage, pending[0], result
+            )
+        chain_fragment: list[dict[str, Any]] = []
+        for lens_type in lens_types:
+            payload = payloads.get(lens_type)
             if payload is None:
                 continue
+            # Wave D: extract the sub-agent's chain handoff and strip it from
+            # the persisted payload (the artifact schema stays untouched).
+            chain_links = payload.get("chainLinks")
+            if "chainLinks" in payload:
+                payload = {k: v for k, v in payload.items() if k != "chainLinks"}
             # External-call/persistence boundary: cooperative stop first.
             await self._check_cancelled(run)
             artifact_id = await self._persist_lens_with_repair(
@@ -1697,6 +1779,12 @@ class AnalysisWorker:
             )
             if artifact_id is None:
                 continue
+            # Wave D convergence audit: a sub-agent's chain merges into the
+            # run's decision chain ONLY after its artifact passed the behavior
+            # gate AND every citation resolves against the frozen ledger.
+            chain_fragment.extend(
+                _audit_lens_chain_fragment(chain_links, lens_type, ledger.evidence_ids)
+            )
             # Only after successful persistence: record the id and emit the
             # canonical strategic_lens.completed event.
             await self._repo.record_lens_artifact_id(
@@ -1727,6 +1815,7 @@ class AnalysisWorker:
             # Each persisted lens is published on its own: a full run spends
             # minutes per lens and the trace must not wait for the whole set.
             await self._checkpoint()
+        return chain_fragment
 
     async def _persist_lens_with_repair(
         self,
@@ -1828,6 +1917,7 @@ class AnalysisWorker:
         lens_type: str,
         parent_result: StageResult,
         repair_context: tuple[str, ...] | None = None,
+        preloaded_context: Mapping[str, Any] | None = None,
     ) -> Mapping[str, Any] | None:
         """Invoke the model with the published per-lens prompt and schema.
 
@@ -1877,14 +1967,22 @@ class AnalysisWorker:
             prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.is_file() else ""
 
             # Assemble the LensRequest from the frozen run context.
-            charter = await self._session.get(AnalysisCharter, run.charter_id)
-            option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
-            # Frozen reference sets come from the DATABASE (prior stages
-            # already persisted them; parent_result only has the current
-            # stage's output which doesn't carry earlier artifacts). The same
-            # sets feed the FrozenReferenceLedger, so the model can only cite
-            # IDs the write path will resolve.
-            refs = await self._frozen_reference_sets(run)
+            # Wave D: when preloaded_context is provided (parallel lens phase),
+            # every database read already happened serially in
+            # _prepare_lens_context - this branch touches NO AsyncSession so
+            # the gather below stays session-safe.
+            if preloaded_context is not None:
+                option_ids = tuple(preloaded_context.get("option_ids") or ())
+                refs = preloaded_context.get("refs") or await self._frozen_reference_sets(run)
+            else:
+                charter = await self._session.get(AnalysisCharter, run.charter_id)
+                option_ids = tuple(str(o) for o in (charter.option_ids or [])) if charter else ()
+                # Frozen reference sets come from the DATABASE (prior stages
+                # already persisted them; parent_result only has the current
+                # stage's output which doesn't carry earlier artifacts). The same
+                # sets feed the FrozenReferenceLedger, so the model can only cite
+                # IDs the write path will resolve.
+                refs = await self._frozen_reference_sets(run)
             packet_ids = tuple(sorted(refs["source_packet_ids"]))
             evidence_ids = tuple(sorted(refs["evidence_ids"]))
             claim_ids = tuple(sorted(refs["claim_ids"]))
@@ -1906,8 +2004,18 @@ class AnalysisWorker:
                 # reads the validated outputs of lenses that already ran in
                 # THIS run before deepening its own reasoning. Compressed
                 # digests only (≤500 chars each), never full content.
-                upstream_lens_outputs=await self._load_upstream_lens_digests(
-                    run, lens_enum
+                # Wave D: parallel phase uses the preloaded digest map (each
+                # lens filters itself out here - no DB read inside gather).
+                upstream_lens_outputs=(
+                    {
+                        lens: digest
+                        for lens, digest in (
+                            preloaded_context.get("upstream_digests") or {}
+                        ).items()
+                        if lens != lens_enum
+                    }
+                    if preloaded_context is not None
+                    else await self._load_upstream_lens_digests(run, lens_enum)
                 ),
             )
             inputs = impl.build_prompt_inputs(request)
@@ -2174,6 +2282,8 @@ _DIGEST_LIST_KEYS = ("keyFindings", "risks", "openQuestions")
 
 _MAX_INFLUENCE_EDGES = 6
 _MAX_CHAIN_LINKS = 40  # bounded accumulator; prevents unbounded growth
+# Wave D: concurrent lens sub-agent cap (aligned with hermes' MAX_CONCURRENT_CHILDREN).
+_MAX_PARALLEL_LENSES = 2
 
 
 def _accumulate_chain_links(
@@ -2213,6 +2323,69 @@ def _accumulate_chain_links(
         "confirmedIds": [str(c) for c in confirmed if c],
         "refutedIds": sorted(refuted_ids),
     }
+
+
+_CHAIN_LINK_KINDS = frozenset({"premise", "evidence", "inference", "decision"})
+_MAX_CHAIN_LINKS_PER_LENS = 5
+
+
+def _audit_lens_chain_fragment(
+    fragment: Any, lens_type: str, legal_evidence_ids: frozenset[str]
+) -> list[dict[str, Any]]:
+    """Wave D convergence-audit gate: validate one lens sub-agent's chainLinks.
+
+    The orchestrator merges a sub-agent's reasoning into the run's decision
+    chain ONLY after this audit passes per-link (fail-closed at link level):
+    - linkId / text non-empty, kind in the canonical vocabulary;
+    - every citesEvidenceIds entry RESOLVES against the frozen ledger (the
+      same authority the lens artifact write path uses) - hallucinated
+      citations drop the link, mirroring the reference-resolution gate;
+    - link ids are namespaced (lens_type:linkId) so parallel sub-agents can
+      never collide or spoof another lens's links.
+
+    Audited links are returned ready for _accumulate_chain_links; a malformed
+    fragment yields [] (the artifact itself is unaffected - the chain is an
+    augmentation, and honest absence beats fabricated structure).
+    """
+
+    if not isinstance(fragment, Sequence) or isinstance(fragment, (str, bytes)):
+        return []
+    audited: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for link in list(fragment)[:_MAX_CHAIN_LINKS_PER_LENS]:
+        if not isinstance(link, Mapping):
+            continue
+        link_id = str(link.get("linkId") or "").strip()
+        text = str(link.get("text") or "").strip()
+        kind = str(link.get("kind") or "").strip()
+        if not link_id or not text or kind not in _CHAIN_LINK_KINDS:
+            continue
+        namespaced = f"{lens_type}:{link_id}"
+        if namespaced in seen:
+            continue
+        cites_raw = link.get("citesEvidenceIds")
+        cites = (
+            [str(c) for c in cites_raw if str(c).strip()]
+            if isinstance(cites_raw, Sequence) and not isinstance(cites_raw, (str, bytes))
+            else []
+        )
+        resolvable = [c for c in cites if c in legal_evidence_ids]
+        if cites and not resolvable:
+            # Every citation hallucinated: the link claims evidence it cannot
+            # show - drop it (fail-closed), never merge unfounded claims.
+            continue
+        seen.add(namespaced)
+        audited.append(
+            {
+                "linkId": namespaced,
+                "kind": kind,
+                "text": text[:500],
+                "citesEvidenceIds": resolvable,
+                "supportsLinkIds": [],
+                "stage": lens_type,
+            }
+        )
+    return audited
 
 
 def _admit_influences(

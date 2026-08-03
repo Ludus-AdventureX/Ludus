@@ -1352,3 +1352,57 @@ def test_decision_chain_audit_unknown_when_no_chain() -> None:
 
     assert _decision_chain_audit({})["integrity"] == "unknown"
     assert _decision_chain_audit({"validating": {}})["integrity"] == "unknown"
+
+
+# --- Wave D: convergence-audited parallel lens chain handoff -----------------
+
+def test_audit_lens_chain_fragment_namespaces_and_filters() -> None:
+    """Wave D: audited links get the lens namespace prefix; malformed links
+    (missing id/text/kind, unknown kind) drop silently."""
+    fragment = [
+        {"linkId": "l1", "kind": "inference", "text": "claim A", "citesEvidenceIds": []},
+        {"linkId": "", "kind": "inference", "text": "no id", "citesEvidenceIds": []},
+        {"linkId": "l2", "kind": "bogus_kind", "text": "bad kind", "citesEvidenceIds": []},
+        {"linkId": "l3", "kind": "premise", "text": "", "citesEvidenceIds": []},
+    ]
+    audited = worker_module._audit_lens_chain_fragment(
+        fragment, "porter_five_forces", frozenset()
+    )
+    assert [link["linkId"] for link in audited] == ["porter_five_forces:l1"]
+
+
+def test_audit_lens_chain_fragment_drops_hallucinated_citations() -> None:
+    """Wave D: a link whose evidence citations ALL fail ledger resolution is
+    dropped (fail-closed) - sub-agents cannot merge unfounded claims."""
+    legal = frozenset({"ev-retrieving-001"})
+    fragment = [
+        {"linkId": "l1", "kind": "evidence", "text": "cites ghost",
+         "citesEvidenceIds": ["ev-ghost-999"]},
+        {"linkId": "l2", "kind": "evidence", "text": "cites real",
+         "citesEvidenceIds": ["ev-retrieving-001", "ev-ghost-998"]},
+    ]
+    audited = worker_module._audit_lens_chain_fragment(fragment, "pre_mortem", legal)
+    ids = [link["linkId"] for link in audited]
+    assert ids == ["pre_mortem:l2"]
+    # Only the resolvable citation survives inside the merged link.
+    assert audited[0]["citesEvidenceIds"] == ["ev-retrieving-001"]
+
+
+def test_audit_lens_chain_fragment_bounded_and_deduped() -> None:
+    """Wave D: per-lens fragment is capped; duplicate link ids dedupe."""
+    fragment = [
+        {"linkId": f"l{i}", "kind": "inference", "text": f"t{i}", "citesEvidenceIds": []}
+        for i in range(20)
+    ] + [
+        {"linkId": "l0", "kind": "inference", "text": "dup", "citesEvidenceIds": []},
+    ]
+    audited = worker_module._audit_lens_chain_fragment(fragment, "scenario_planning", frozenset())
+    assert len(audited) <= worker_module._MAX_CHAIN_LINKS_PER_LENS
+
+
+def test_audit_lens_chain_fragment_rejects_non_sequences() -> None:
+    """Wave D: malformed fragments (None/string/dict) degrade to [] - the
+    artifact persists unaffected, the chain simply stays honest."""
+    assert worker_module._audit_lens_chain_fragment(None, "x", frozenset()) == []
+    assert worker_module._audit_lens_chain_fragment("nope", "x", frozenset()) == []
+    assert worker_module._audit_lens_chain_fragment({"a": 1}, "x", frozenset()) == []
