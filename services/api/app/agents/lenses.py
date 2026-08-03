@@ -420,6 +420,87 @@ _SCENARIO_CONTENT_EXAMPLE: dict[str, Any] = {
 }
 
 
+_COUNTERPARTY_CONTENT_EXAMPLE: dict[str, Any] = {
+    "maxResponseDepth": 1,
+    "counterparties": [
+        {
+            "counterpartyId": "cp-1",
+            "identity": "示例：对手方身份",
+            "coreInterest": "示例：核心利益",
+            "responseTools": ["示例：可动用的响应工具"],
+            "constraints": ["示例：约束条件"],
+        }
+    ],
+    "ourActions": [
+        {
+            "actionId": "act-1",
+            "actionType": "active",
+            "description": "示例：主动行动描述",
+            "observability": "high",
+            "irreversibility": "medium",
+            "coreAssumptionIds": ["asm-sample-1"],
+        },
+        {
+            "actionId": "act-2",
+            "actionType": "no_action",
+            "description": "示例：按兵不动基线",
+            "observability": "low",
+            "irreversibility": "low",
+            "coreAssumptionIds": ["asm-sample-2"],
+        },
+    ],
+    "responseMatrix": [
+        {
+            "counterpartyId": "cp-1",
+            "actionId": "act-1",
+            "optimalResponse": "示例：最有利于对手的响应",
+            "worstResponseForUs": "示例：对我们最不利的响应",
+            "mostLikelyResponse": "示例：最可能发生的响应",
+            "responseWindow": "示例：响应窗口",
+            "optimalLikelyGap": "示例：最优与最可能的差距",
+            "ourCounterResponse": "示例：我们的反制",
+            "fallbackCost": "示例：备用方案的代价",
+            "strategyInvalidated": False,
+        },
+        {
+            "counterpartyId": "cp-1",
+            "actionId": "act-2",
+            "optimalResponse": "示例：对手方反应",
+            "worstResponseForUs": "示例：对手方最不利反应",
+            "mostLikelyResponse": "示例：对手方最可能反应",
+            "responseWindow": "示例：响应窗口",
+            "optimalLikelyGap": "示例：差距",
+            "ourCounterResponse": "示例：反制",
+            "fallbackCost": "示例：代价",
+            "strategyInvalidated": False,
+        },
+    ],
+    "publicationTest": {
+        "responseChangesIfPublished": True,
+        "newInformationRevealed": "示例：公布后将暴露的新信息",
+        "informationAsymmetryVulnerability": "medium",
+        "mitigation": "示例：缓解措施",
+    },
+    "downsideAsymmetry": [
+        {
+            "actionId": "act-1",
+            "worstCase": "示例：最坏情形",
+            "downsideFloor": "bounded",
+            "exitPath": "示例：退出路径",
+            "exitCost": "示例：退出成本",
+        },
+        {
+            "actionId": "act-2",
+            "worstCase": "示例：最坏情形",
+            "downsideFloor": "unknown",
+            "exitPath": "示例：退出路径",
+            "exitCost": "示例：退出成本",
+        },
+    ],
+    "reflexivityWarning": "示例：反身性警示",
+}
+
+
 _MEADOWS_CONTENT_EXAMPLE: dict[str, Any] = {
     "systemMap": {
         "boundary": "示例：系统边界",
@@ -557,6 +638,7 @@ _CONTENT_EXAMPLES: dict[str, dict[str, Any]] = {
     "porterContent": _PORTER_CONTENT_EXAMPLE,
     "scenarioPlanningContent": _SCENARIO_CONTENT_EXAMPLE,
     "meadowsContent": _MEADOWS_CONTENT_EXAMPLE,
+    "counterpartyContent": _COUNTERPARTY_CONTENT_EXAMPLE,
 }
 
 
@@ -570,6 +652,55 @@ def lens_content_example(content_def: str) -> str:
     return json.dumps(example, ensure_ascii=False) if example is not None else ""
 
 
+# Per-lens behavior checklist: the SAME deterministic checks the behavior gate
+# runs after the call, written as a model-executable self-audit list. Front-
+# loading these constraints (grey-goo style "skill" handoff) makes the model
+# self-check before emitting instead of discovering violations only when the
+# gate rejects. Keep every line a hard requirement - the gate will enforce it.
+_BEHAVIOR_CHECKLISTS: dict[str, tuple[str, ...]] = {
+    "counterpartyContent": (
+        "counterparties: exactly 1-2, each with counterpartyId/identity/coreInterest/responseTools/constraints",
+        "ourActions: exactly 2-3, with EXACTLY ONE actionType='no_action' and the rest 'active'",
+        "each ourAction needs actionId/description/observability/irreversibility/coreAssumptionIds",
+        "coreAssumptionIds must cite ids from references.assumptionIds only",
+        "responseMatrix: one row per (counterpartyId x actionId) pair, every row complete, no extra pairs",
+        "each matrix row: optimalResponse/worstResponseForUs/mostLikelyResponse/responseWindow/optimalLikelyGap/ourCounterResponse/fallbackCost/strategyInvalidated",
+        "publicationTest: responseChangesIfPublished boolean + newInformationRevealed + informationAsymmetryVulnerability(one of none/low/medium/high/critical) + mitigation",
+        "downsideAsymmetry: one entry PER actionId with worstCase/downsideFloor(bounded|unbounded|unknown)/exitPath/exitCost",
+        "reflexivityWarning: non-empty; maxResponseDepth MUST be 1",
+    ),
+    "meadowsContent": (
+        "systemMap: boundary/statedGoal/actualGoal/stocks/flows/reinforcingLoops/balancingLoops/delays/actors/rulesAndIncentives all non-empty",
+        "levelsCovered: integers 1-12, unique, EXACTLY the distinct levels used across currentInterventions and highLeverageGaps",
+        "currentInterventions: each with interventionId/level/levelName/strengthBand/target/action/feasibility/expectedEffect/failureSignal",
+        "level/levelName/strengthBand triplets must match the canonical map (1=transcend_paradigms/high ... 12=parameters/low)",
+        "highLeverageGaps: each with interventionId/level(1-4)/levelName/strengthBand=high/target/action/feasibility/expectedEffect/failureSignal/whyAvoided/disruptionRisk",
+        "runawayPositiveLoops: each with loop/runawaySignal/brake",
+        "interventionSequence: at least 2 entries, each with order/interventionId/purpose(one of trust_building/information_gain/system_change/risk_control)/precondition/failureSignal",
+        "riskTradeoffs: non-empty array; interventionId must reference an existing currentInterventions or highLeverageGaps id",
+    ),
+}
+
+
+def lens_behavior_checklist(content_def: str) -> str:
+    """Return the behavior-gate constraints as a self-audit checklist.
+
+    Grey-goo principle: the producing agent must know its acceptance criteria
+    BEFORE it writes (like a skill handoff), not only after the gate rejects.
+    Empty string when no checklist is shipped for that content branch.
+    """
+
+    items = _BEHAVIOR_CHECKLISTS.get(content_def)
+    if not items:
+        return ""
+    return (
+        "\n## Behavior contract - self-audit BEFORE you emit (MANDATORY)\n"
+        "Your output will be deterministically rejected unless EVERY line holds. "
+        "Verify your content object against each line, then emit:\n"
+        + "\n".join(f"- [ ] {item}" for item in items)
+    )
+
+
 def lens_output_contract(
     *,
     lens_type: str,
@@ -578,6 +709,7 @@ def lens_output_contract(
     content_def: str,
     content_schema: str = "",
     content_example: str = "",
+    behavior_checklist: str = "",
 ) -> str:
     """The shared output contract every lens user message must carry.
 
@@ -647,6 +779,7 @@ def lens_output_contract(
         + json.dumps(sorted(FORBIDDEN_SERVER_OWNED_FIELDS), ensure_ascii=False)
         + ", markdown fences, hidden reasoning, or success probabilities.\n"
         + example_line
+        + behavior_checklist
     )
 
 

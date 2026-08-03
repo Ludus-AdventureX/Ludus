@@ -17,6 +17,7 @@ from app.agents.lenses import (
     LensPromptInputs,
     LensRequest,
     StrategicLensStageOutput,
+    lens_behavior_checklist,
     lens_content_example,
     lens_output_contract,
     load_lens_content_schema,
@@ -90,6 +91,7 @@ class PreMortemLensAdapter:
                 content_def=self._content_def,
                 content_schema=load_lens_content_schema(self._content_def),
                 content_example=lens_content_example(self._content_def),
+                behavior_checklist=lens_behavior_checklist(self._content_def),
             ),
             schema_content_def=self._content_def,
         )
@@ -127,6 +129,7 @@ class MeadowsLensAdapter:
                 content_def=self._content_def,
                 content_schema=load_lens_content_schema(self._content_def),
                 content_example=lens_content_example(self._content_def),
+                behavior_checklist=lens_behavior_checklist(self._content_def),
             ),
             schema_content_def=self._content_def,
         )

@@ -351,3 +351,20 @@ def test_sandbox_consumption_exposes_levers_and_ordered_sequence() -> None:
     assert [step.order for step in consumption.intervention_sequence] == [1, 2, 3]
     assert consumption.intervention_sequence[-1].intervention_id == "MI-3-goal"
     assert consumption.intervention_sequence[-1].purpose == "system_change"
+
+def test_shipped_content_example_passes_meadows_gate() -> None:
+    """B3: the prompt-carried meadows example must itself satisfy the gate.
+
+    Guards against a gate-passing example that the gate itself rejects (the
+    regression class behind the flash run 979c98f7 meadows failure). The
+    example is loaded from the shared seam so a broken example fails here
+    instead of in a live full run.
+    """
+    from app.agents.lenses import lens_content_example
+
+    example = json.loads(lens_content_example("meadowsContent"))
+    payload = spherical_robot_meadows_payload()
+    payload["content"] = example
+    output = validate_meadows_stage_output(payload)
+    violations = check_meadows_behavior(output)
+    assert not violations, [v.message for v in violations]

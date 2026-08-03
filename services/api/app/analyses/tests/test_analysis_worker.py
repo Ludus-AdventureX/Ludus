@@ -1102,3 +1102,47 @@ def test_narrative_divergence_scores_independence_and_echo() -> None:
     assert low < 4.0
     # Empty side -> neutral, never auto-flagged.
     assert worker_module._narrative_divergence("", "anything at all") == 5.0
+
+# --- C: LENS_REPAIR_MAX budget + B4: schema-fragment repair hints ------------
+
+def test_repairable_reason_codes_filters_only_deterministic_codes() -> None:
+    """C: deterministic mistakes consume no repair budget; everything else does."""
+    assert worker_module._repairable_reason_codes(("forces_missing",)) == ("forces_missing",)
+    assert worker_module._repairable_reason_codes(
+        ("schema:content.currentInterventions.2",)
+    ) == ("schema:content.currentInterventions.2",)
+    assert worker_module._repairable_reason_codes(
+        ("meadows_level_band_mismatch", "one_to_two_key_actors")
+    ) == ("meadows_level_band_mismatch", "one_to_two_key_actors")
+    assert worker_module._repairable_reason_codes(("lens_type_mismatch",)) == ()
+    assert worker_module._repairable_reason_codes(
+        ("phase_must_be_adversarial_stress", "source_skill_version_mismatch")
+    ) == ()
+
+
+def test_env_lens_repair_max_clamped(monkeypatch) -> None:
+    """C: LENS_REPAIR_MAX is read from env and clamped to 0..2."""
+    monkeypatch.setenv("LENS_REPAIR_MAX", "3")
+    assert worker_module._env_lens_repair_max() == 2
+    monkeypatch.setenv("LENS_REPAIR_MAX", "-1")
+    assert worker_module._env_lens_repair_max() == 0
+    monkeypatch.setenv("LENS_REPAIR_MAX", "not-a-number")
+    assert worker_module._env_lens_repair_max() == 1
+    monkeypatch.delenv("LENS_REPAIR_MAX", raising=False)
+    assert worker_module._env_lens_repair_max() == 1
+
+
+def test_schema_fragments_for_quotes_violated_field_shape() -> None:
+    """B4: repair hints carry the violated schema branch, not just the path."""
+    from app.agents.lenses import load_lens_content_schema
+
+    branch = load_lens_content_schema("counterpartyContent")
+    if not branch:
+        pytest.skip("method-pack schema not installed in this environment")
+    hint = worker_module._schema_fragments_for(
+        ("schema:content.ourActions.1",), "counterpartyContent"
+    )
+    assert "ourActions.1" in hint
+    assert "coreAssumptionIds" in hint or "actionType" in hint
+    # No match -> no fragment, no crash.
+    assert worker_module._schema_fragments_for(("forces_missing",), "counterpartyContent") == ""
