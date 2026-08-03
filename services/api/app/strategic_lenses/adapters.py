@@ -51,11 +51,28 @@ def _deterministic_user_prompt(request: LensRequest) -> str:
     Grey-goo 原则⑭ (P2-1): upstream lens findings travel as compressed digests
     (name -> summary), so pre-mortem/meadows deepen against REAL validated
     outputs instead of stale assumptions.
+
+    Wave F1 topic anchor: the confirmed decision question leads the prompt and
+    is restated as a hard constraint - a lens whose reasoning drifts to topics
+    the evidence happens to mention (instead of THIS decision) produces chains
+    the validator must reject, so anchoring happens at construction time.
     """
 
+    question = (request.decision_question or "").strip()
+    anchor = (
+        "## Topic anchor (MANDATORY)\n"
+        f"The decision under analysis is: {question or '(unconfirmed question)'}\n"
+        f"Decision options: {', '.join(sorted(request.option_ids)) or '(none)'}\n"
+        "Every chain link you produce MUST reason about THIS decision and these "
+        "options. Retrieved evidence about other products/markets is context "
+        "only - never let it replace the decision topic.\n\n"
+        if question
+        else ""
+    )
     body = {
         "workspaceId": request.workspace_id,
         "analysisRunId": request.analysis_run_id,
+        "decisionQuestion": question,
         "optionIds": sorted(request.option_ids),
         "researchPacketRefs": sorted(request.research_packet_refs),
         "evidenceRefs": sorted(request.evidence_refs),
@@ -69,7 +86,7 @@ def _deterministic_user_prompt(request: LensRequest) -> str:
             )
         },
     }
-    return json.dumps(body, ensure_ascii=False, sort_keys=True)
+    return anchor + json.dumps(body, ensure_ascii=False, sort_keys=True)
 
 
 class PreMortemLensAdapter:

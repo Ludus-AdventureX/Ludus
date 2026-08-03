@@ -1406,3 +1406,102 @@ def test_audit_lens_chain_fragment_rejects_non_sequences() -> None:
     assert worker_module._audit_lens_chain_fragment(None, "x", frozenset()) == []
     assert worker_module._audit_lens_chain_fragment("nope", "x", frozenset()) == []
     assert worker_module._audit_lens_chain_fragment({"a": 1}, "x", frozenset()) == []
+
+
+# --- Wave F1/F2: topic anchor + drift detection ------------------------------
+
+def test_topic_drift_flags_fragment_with_no_on_topic_links() -> None:
+    """Wave F2: a fragment whose links discuss NOTHING from the confirmed
+    decision question is flagged (the E2E run 641569f1 failure mode)."""
+    off_topic = [
+        {"linkId": "l1", "kind": "inference", "text": "救援机器人政府采购周期延长", "citesEvidenceIds": []},
+        {"linkId": "l2", "kind": "evidence", "text": "应急管理基金拨款流程变更", "citesEvidenceIds": []},
+    ]
+    assert worker_module._fragment_topic_drift(off_topic, "戒指闹钟预售方案是否启动") is True
+
+
+def test_topic_drift_keeps_fragment_with_any_on_topic_link() -> None:
+    """Wave F2: conservative judgment - ONE on-topic link keeps the fragment."""
+    fragment = [
+        {"linkId": "l1", "kind": "inference", "text": "救援机器人政府采购周期延长", "citesEvidenceIds": []},
+        {"linkId": "l2", "kind": "premise", "text": "戒指闹钟预售需求未经验证", "citesEvidenceIds": []},
+    ]
+    assert worker_module._fragment_topic_drift(fragment, "戒指闹钟预售方案是否启动") is False
+
+
+def test_topic_drift_never_flags_short_anchor_or_small_fragment() -> None:
+    """Wave F2: unmeasurable cases (short question, <2 links) never flag."""
+    fragment = [
+        {"linkId": "l1", "kind": "inference", "text": "完全无关的主题讨论", "citesEvidenceIds": []},
+        {"linkId": "l2", "kind": "evidence", "text": "另一段无关内容", "citesEvidenceIds": []},
+    ]
+    assert worker_module._fragment_topic_drift(fragment, "") is False
+    assert worker_module._fragment_topic_drift(fragment, "x") is False
+    single = [{"linkId": "l1", "kind": "inference", "text": "无关内容", "citesEvidenceIds": []}]
+    assert worker_module._fragment_topic_drift(single, "戒指闹钟预售方案是否启动") is False
+
+
+# --- Wave F3: blocked remediation guide --------------------------------------
+
+def test_remediation_guide_maps_structured_findings_to_actions() -> None:
+    """Wave F3: validator finding types map to actionable dossier guidance."""
+    findings = [
+        {"type": "broken-link", "linkId": "porter:p1", "message": "缺少支撑"},
+        {"type": "topic-drift", "linkId": "scenario:c3", "message": "主题漂移"},
+        {"type": "mismatched-premise", "linkId": "pre_mortem:pm-1", "message": "转述错误"},
+    ]
+    guide = worker_module._remediation_guide(findings)
+    kinds = [a["kind"] for a in guide["actions"]]
+    assert kinds == ["supplement_evidence", "correct_topic", "correct_dossier"]
+    assert guide["actions"][0]["linkId"] == "porter:p1"
+
+
+def test_remediation_guide_collects_open_questions() -> None:
+    """Wave F3: validator_rejected openQuestions become answer_question actions."""
+    findings = [
+        {
+            "code": "validator_rejected",
+            "source": "model_validator",
+            "headline": "决策链断裂",
+            "keyFindings": ["k1"],
+            "openQuestions": ["1000单门槛的来源是什么？", "为何降级为可退款预售？"],
+        }
+    ]
+    guide = worker_module._remediation_guide(findings)
+    assert guide["openQuestions"] == ["1000单门槛的来源是什么？", "为何降级为可退款预售？"]
+    assert [a["kind"] for a in guide["actions"]] == ["answer_question", "answer_question"]
+
+
+def test_remediation_guide_lens_incomplete_maps_to_rerun_and_dedupes() -> None:
+    """Wave F3: lens audit codes map to ONE rerun action (deduplicated)."""
+    findings = [
+        {"code": "strategic_lens_incomplete", "source": "lens_set_audit"},
+        {"code": "strategic_lens_reference_mismatch", "source": "lens_set_audit"},
+    ]
+    guide = worker_module._remediation_guide(findings)
+    reruns = [a for a in guide["actions"] if a["kind"] == "rerun"]
+    assert len(reruns) == 1
+
+
+def test_remediation_guide_failed_gate_maps_to_supplement() -> None:
+    """Wave F3: a failed deterministic gate points to evidence supplementation."""
+    findings = [
+        {
+            "code": "deterministic_gate",
+            "dims": {"evidence": 0.3, "adversarial": 1.0, "consistency": 0.9},
+            "passed": False,
+        }
+    ]
+    guide = worker_module._remediation_guide(findings)
+    assert [a["kind"] for a in guide["actions"]] == ["supplement_evidence"]
+    assert "evidence" in guide["actions"][0]["guidance"]
+
+
+def test_remediation_guide_empty_and_unknown_degrade_honestly() -> None:
+    """Wave F3: no findings -> honest empty guide; unknown shapes stay visible."""
+    empty = worker_module._remediation_guide([])
+    assert empty["actions"] == []
+    unknown = worker_module._remediation_guide(
+        [{"type": "some-new-type", "linkId": "x:1", "message": "m"}]
+    )
+    assert [a["kind"] for a in unknown["actions"]] == ["review_finding"]
