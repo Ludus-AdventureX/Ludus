@@ -2060,9 +2060,21 @@ class AnalysisWorker:
                 request_model="",
             )
             content = completion.content
+            # Wave D fix: chainLinks is the sub-agent's chain handoff, NOT a
+            # schema field - separate it before payload validation and
+            # reattach afterwards, so _run_lens_stages can audit the fragment
+            # and strip it before artifact persistence.
+            chain_links = (
+                content.get("chainLinks") if isinstance(content, Mapping) else None
+            )
+            if isinstance(content, Mapping) and "chainLinks" in content:
+                content = {k: v for k, v in content.items() if k != "chainLinks"}
             # Validate it parses as a valid StrategicLensStageOutput.
             StrategicLensStageOutput.from_payload(content)
-            return dict(content)
+            payload = dict(content)
+            if chain_links is not None:
+                payload["chainLinks"] = chain_links
+            return payload
         except Exception:
             # Diagnosis aid: the raw model reply is otherwise discarded, which
             # turned every lens failure into a blind spot (the schema KeyError
