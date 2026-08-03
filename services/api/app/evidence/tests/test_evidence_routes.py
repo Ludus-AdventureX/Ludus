@@ -148,6 +148,48 @@ async def test_run_evidence_list_and_conflicts(session, worlds_client) -> None:
     assert conflicts.json()["data"]["conflicts"] == []
 
 
+async def test_run_evidence_list_projects_admitted_packets(session, worlds_client) -> None:
+    """Gap-fix wave A: the E page's real evidence set is the funnel-admitted
+    research packets; they must be projected even when the ingest chain
+    (evidence_items rows) has not run."""
+    from app.analyses.models import ResearchPacket
+
+    client, world, _ = worlds_client
+    session.add(
+        ResearchPacket(
+            workspace_id=world.workspace_id,
+            decision_case_id=world.case_id,
+            analysis_run_id=world.analysis_run_id,
+            role="research",
+            factor="预售转化率的行业基准",
+            direction="opposing",
+            conclusion="行业均值低于方案假设的 10% 门槛",
+            claim_support_score=0.62,
+            evidence_ids=["ev-retrieving-001 [L2] gov.uk", "ev-retrieving-002 [L6] blog"],
+        )
+    )
+    await session.flush()
+
+    listed = await client.get(
+        f"/api/workspaces/{world.workspace_id}/analyses/{world.analysis_run_id}/evidence"
+    )
+    assert listed.status_code == 200
+    body = listed.json()["data"]
+    # Ingest-chain items stay empty (chain not seeded); the packet projection
+    # carries the honest evidence set.
+    assert body["items"] == []
+    packets = body["packetEvidence"]
+    assert len(packets) == 1
+    entry = packets[0]
+    assert entry["direction"] == "opposing"
+    assert entry["claimSupportScore"] == 0.62
+    assert entry["evidenceIds"] == [
+        "ev-retrieving-001 [L2] gov.uk",
+        "ev-retrieving-002 [L6] blog",
+    ]
+    assert entry["role"] == "research"
+
+
 async def test_cross_workspace_and_missing_ids_are_byte_identical_404(
     session, worlds_client
 ) -> None:

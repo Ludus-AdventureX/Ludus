@@ -28,6 +28,7 @@ import type {
   EvidenceRunAnchors,
   EvidenceEventSourceFactory,
   LensArtifactSummaryView,
+  PacketEvidenceView,
   QualityDimensionsView,
   RunEvidenceListView,
   SameSourceGroupView
@@ -117,6 +118,7 @@ type LedgerState =
       items: EvidenceItemView[];
       conflicts: ConflictRelationView[];
       funnelAudit: RunEvidenceListView["funnelAudit"];
+      packetEvidence: PacketEvidenceView[];
     };
 
 type DetailData = {
@@ -237,6 +239,34 @@ function FunnelDiscardAudit({
 }
 
 /**
+ * Gap-fix wave A (CCR-20260803-GAPFIX): the run's honest evidence set when
+ * the ingest chain (evidence_items) has not run - the funnel-admitted
+ * research packets themselves, with the minted tier-annotated ids intact.
+ */
+function PacketEvidenceLedger({ packets }: { packets: PacketEvidenceView[] }) {
+  if (packets.length === 0) return null;
+  return (
+    <section className="packet-evidence-ledger" data-packet-evidence-ledger>
+      <span>本轮证据集（{packets.length} 条 · 源自研究 packet 投影）</span>
+      <ul>
+        {packets.map((packet) => (
+          <li key={packet.packetId} data-packet-evidence={packet.packetId}>
+            <b>{packet.factor ?? "未命名因素"}</b>
+            <small>{packet.conclusion}</small>
+            <small
+              data-packet-direction={packet.direction ?? "unlabeled"}
+            >{`方向：${packet.direction ?? "未标注"} · 角色：${packet.role}`}</small>
+            <small className="packet-evidence-ids">
+              {packet.evidenceIds.join("、")}
+            </small>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
  * P1: evidence -> lens support chain ("which lens artifacts cite this item").
  * Honest phases mirror the ledger discipline: loading, unavailable (lens read
  * failed — never fabricated), none (ready but nothing cites this item), and
@@ -337,7 +367,10 @@ export function EvidenceDrawer({
           phase: "ready",
           items: Array.isArray(runEvidence.items) ? runEvidence.items : [],
           conflicts: Array.isArray(runConflicts.conflicts) ? runConflicts.conflicts : [],
-          funnelAudit: runEvidence.funnelAudit ?? null
+          funnelAudit: runEvidence.funnelAudit ?? null,
+          packetEvidence: Array.isArray(runEvidence.packetEvidence)
+            ? runEvidence.packetEvidence
+            : []
         });
       } catch (error) {
         if (ledgerRequestSeq.current !== requestId) return;
@@ -541,8 +574,14 @@ export function EvidenceDrawer({
             </>
           )}
 
-          {ledger.phase === "ready" && ledger.items.length === 0 && (
-            <p className="draft-notice" role="status">该 Run 尚无证据条目；系统不填充示例证据。</p>
+          {ledger.phase === "ready" &&
+            ledger.items.length === 0 &&
+            ledger.packetEvidence.length === 0 && (
+              <p className="draft-notice" role="status">该 Run 尚无证据条目；系统不填充示例证据。</p>
+            )}
+
+          {ledger.phase === "ready" && (
+            <PacketEvidenceLedger packets={ledger.packetEvidence} />
           )}
 
           {ledger.phase === "ready" && ledger.items.length > 0 && (
