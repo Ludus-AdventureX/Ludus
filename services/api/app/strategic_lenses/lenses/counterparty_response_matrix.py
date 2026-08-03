@@ -378,8 +378,22 @@ class CounterpartyResponseMatrixLens:
             "\n\n## Upstream lens findings (already validated in this run)\n"
             + (upstream_lines or "(none yet)")
         )
+        # Wave F1 topic anchor: the confirmed decision question leads the
+        # prompt so the response matrix reasons about THIS decision instead of
+        # drifting toward whatever the retrieved evidence happens to discuss.
+        question = (getattr(request, "decision_question", "") or "").strip()
+        anchor_section = (
+            "## Topic anchor (MANDATORY)\n"
+            f"The decision under analysis is: {question}\n"
+            "Every counterpart, action and matrix row MUST reason about THIS "
+            "decision. Evidence about other products/markets is context only - "
+            "never let it replace the decision topic.\n\n"
+            if question
+            else ""
+        )
         user = (
-            "## Frozen decision options\n"
+            anchor_section
+            + "## Frozen decision options\n"
             + "\n".join(f"- {option_id}" for option_id in option_ids)
             + "\n\n## Run-scoped reference IDs (cite only these)\n"
             + reference_lines
