@@ -1146,3 +1146,96 @@ def test_schema_fragments_for_quotes_violated_field_shape() -> None:
     assert "coreAssumptionIds" in hint or "actionType" in hint
     # No match -> no fragment, no crash.
     assert worker_module._schema_fragments_for(("forces_missing",), "counterpartyContent") == ""
+
+async def test_reference_resolution_failure_triggers_structured_repair(
+    session, world, noop_lens_verdict
+) -> None:
+    """Gap-fix wave B: a hallucinated frozen reference (LensReferenceResolutionError)
+    is structural and repairable - the worker re-invokes the lens with the
+    missing ids summarized as an unresolved_reference repair instruction, and
+    the repaired payload persists (the flash meadows E2E failure mode)."""
+
+    from app.strategic_lenses.repository import LensReferenceResolutionError
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    repair_requests: list[tuple[str, tuple[str, ...]]] = []
+    first_attempt_done = {"done": False}
+
+    async def writer(session, **kwargs) -> UUID:
+        lens_type = kwargs["payload"]["lensType"]
+        if lens_type == "meadows_leverage_points" and not first_attempt_done["done"]:
+            first_attempt_done["done"] = True
+            raise LensReferenceResolutionError(
+                {"sourcePacketIds": ["fff18fc5-fc5d-4183-a4b3-d94ceccf6fac"]}
+            )
+        return uuid4()
+
+    async def fake_dedicated(
+        run_row, stage, lens_type, parent_result, repair_context=None
+    ):
+        repair_requests.append((lens_type, repair_context or ()))
+        return {
+            "lensType": lens_type,
+            "sourceSkillVersion": "1.0.0",
+            "phase": "synthesizing",
+            "references": {},
+            "researchRequests": [],
+            "content": {"repaired": True},
+        }
+
+    audit, _ = _stub_lens_audit(ok=True)
+    worker = AnalysisWorker(
+        session, executors=executors, lens_writer=writer, lens_audit=audit
+    )
+    worker._execute_dedicated_lens = fake_dedicated  # type: ignore[method-assign]
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    # One structured repair with the missing id summarized; run lands ready.
+    repaired = [ctx for lens, ctx in repair_requests if lens == "meadows_leverage_points"]
+    assert len(repaired) == 1
+    assert any("unresolved_reference" in code for code in repaired[0])
+    assert any("fff18fc5" in code for code in repaired[0])
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert AnalysisRunStatus(refreshed.status) == S.READY
+
+
+async def test_reference_resolution_failure_exhausts_budget_fail_closed(
+    session, world, noop_lens_verdict
+) -> None:
+    """Gap-fix wave B: when every repair pass still cites unresolvable ids, the
+    budget is spent and the fail-closed posture holds (lens audit blocks)."""
+
+    from app.strategic_lenses.repository import LensReferenceResolutionError
+
+    _, run = await make_queued_run(session, world, level=FormalAnalysisLevel.FULL)
+    executors, _ = _stub_executors()
+    repair_calls: list[str] = []
+
+    async def writer(session, **kwargs) -> UUID:
+        lens_type = kwargs["payload"]["lensType"]
+        if lens_type == "meadows_leverage_points":
+            raise LensReferenceResolutionError(
+                {"sourcePacketIds": ["ghost-id-0001"]}
+            )
+        return uuid4()
+
+    async def fake_dedicated(
+        run_row, stage, lens_type, parent_result, repair_context=None
+    ):
+        repair_calls.append(lens_type)
+        # The repaired payload still cites ghost ids on the second attempt.
+        return {"lensType": lens_type, "content": {"stub": True}}
+
+    worker = AnalysisWorker(session, executors=executors, lens_writer=writer)
+    worker._execute_dedicated_lens = fake_dedicated  # type: ignore[method-assign]
+
+    await worker.run_once(workspace_id=world.workspace_id)
+
+    # Exactly ONE budgeted repair pass, then fail-closed via the lens audit.
+    assert repair_calls == ["meadows_leverage_points"]
+    repo = AnalysisRuntimeRepository(session)
+    refreshed = await repo.get_run(world.workspace_id, run.analysis_run_id)
+    assert AnalysisRunStatus(refreshed.status) == S.BLOCKED
