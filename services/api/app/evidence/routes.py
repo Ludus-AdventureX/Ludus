@@ -31,6 +31,7 @@ from .schemas_api import (
     EvidenceDirectionView,
     EvidenceItemView,
     EvidenceProvenanceView,
+    PacketEvidenceView,
     QualityDimensionsView,
     RawArtifactView,
     RunEvidenceListView,
@@ -257,9 +258,38 @@ async def list_run_evidence(
     if not await repo.run_exists(context.workspace_id, analysis_run_id):
         raise case_not_found()
     items = await repo.list_run_evidence(context.workspace_id, analysis_run_id)
+    # Grey-goo 原则⑩ read-model projection: the run's real evidence set is
+    # the funnel-admitted research packets (persisted by the worker). Project
+    # them so the E page is honest even before the ingest chain exists.
+    from sqlalchemy import select as _select
+
+    from app.analyses.models import ResearchPacket as _PacketRow
+
+    packet_rows = (
+        await db.execute(
+            _select(_PacketRow)
+            .where(
+                _PacketRow.workspace_id == context.workspace_id,
+                _PacketRow.analysis_run_id == analysis_run_id,
+            )
+            .order_by(_PacketRow.created_at, _PacketRow.id)
+        )
+    ).scalars().all()
     view = RunEvidenceListView(
         analysis_run_id=str(analysis_run_id),
         items=[_item_view(item) for item in items],
+        packet_evidence=[
+            PacketEvidenceView(
+                packet_id=str(row.id),
+                factor=row.factor,
+                direction=row.direction,
+                conclusion=row.conclusion,
+                claim_support_score=float(row.claim_support_score),
+                evidence_ids=list(row.evidence_ids or []),
+                role=str(row.role),
+            )
+            for row in packet_rows
+        ],
     )
     # Grey-goo 原则⑩ (CCR-20260802-P2W2): the persisted TDD funnel audit
     # (discards with factor/reason/check, warnings, tier mix) rides the same

@@ -127,9 +127,32 @@ class ConflictRelationView(CanonicalModel):
     rationale: str | None = None
 
 
+class PacketEvidenceView(CanonicalModel):
+    """Read-model projection of one funnel-admitted research packet.
+
+    The E page's evidence list used to be empty whenever the Task 11 ingest
+    chain (RetrievalTask→RawArtifact→QualityAssessment→SourceRecord→
+    EvidenceItem) had not run: the analysis worker persists admitted packets
+    but never that chain. This projection makes the honest evidence set (the
+    packets that actually fed the run) visible without fabricating ingest
+    rows - ids carry the funnel-minted tier annotation verbatim.
+    """
+
+    packet_id: Identifier
+    factor: str | None = None
+    direction: str | None = None
+    conclusion: NonEmptyText
+    claim_support_score: float
+    evidence_ids: list[str]
+    role: NonEmptyText
+
+
 class RunEvidenceListView(CanonicalModel):
     analysis_run_id: Identifier
     items: list[EvidenceItemView]
+    # Additive: packet projection rides alongside the ingest-chain items so the
+    # E page shows the run's real evidence set even before ingest rows exist.
+    packet_evidence: list[PacketEvidenceView] = []
 
 
 class ConflictListView(CanonicalModel):
