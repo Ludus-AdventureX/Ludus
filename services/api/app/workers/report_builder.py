@@ -92,6 +92,35 @@ def _funnel_audit(stage_outputs: Mapping[str, Any]) -> Mapping[str, Any]:
     return {}
 
 
+def _decision_chain_audit(stage_outputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Wave C: decision chain audit block for the report.
+
+    Extracts the accumulated decisionChain from the validating stage output
+    (the last stage to carry it). The chain's integrity (confirmed vs refuted
+    vs broken links) is the validator's primary audit target.
+    """
+
+    output = stage_outputs.get(AnalysisRunStatus.VALIDATING.value)
+    if not isinstance(output, Mapping):
+        return {"links": [], "confirmedIds": [], "refutedIds": [], "integrity": "unknown"}
+    chain = output.get("decisionChain")
+    if not isinstance(chain, Mapping):
+        return {"links": [], "confirmedIds": [], "refutedIds": [], "integrity": "unknown"}
+    links = list(chain.get("links") or [])
+    confirmed = [str(c) for c in (chain.get("confirmedIds") or [])]
+    refuted = [str(r) for r in (chain.get("refutedIds") or [])]
+    link_ids = {str(link.get("linkId")) for link in links if isinstance(link, Mapping)}
+    broken = [cid for cid in confirmed if cid not in link_ids]
+    integrity = "intact" if not refuted and not broken else "weakened"
+    return {
+        "links": links[:20],
+        "confirmedIds": confirmed,
+        "refutedIds": refuted,
+        "brokenLinkIds": broken,
+        "integrity": integrity,
+    }
+
+
 def _funnel_quality_findings(stage_outputs: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Funnel quality warnings as STRUCTURED entries (never bare strings).
 
@@ -289,6 +318,7 @@ def build_focused_document(
             "freshnessWarnings": [],
             "reconciliationFindings": _funnel_quality_findings(stage_outputs),
         },
+        "decisionChainAudit": _decision_chain_audit(stage_outputs),
         "counterArguments": counter_arguments,
         "residualUncertainty": residual_uncertainty,
         "qualityGate": _deterministic_quality_gate(anchor),
