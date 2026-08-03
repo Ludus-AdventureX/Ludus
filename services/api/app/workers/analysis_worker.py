@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -435,6 +436,7 @@ class AnalysisWorker:
         origin_mode: OriginMode = OriginMode.FIXTURE,
         checkpoint: Callable[[], Awaitable[None]] | None = None,
         provider: "ModelProvider | None" = None,
+        lens_repair_max: int | None = None,
     ) -> None:
         self._session = session
         self._repo = AnalysisRuntimeRepository(session)
@@ -449,6 +451,11 @@ class AnalysisWorker:
         # Provider reference for dedicated lens calls (A5 fix). When None the
         # lens fallback is skipped gracefully (fixture mode).
         self._provider = provider
+        # Grey-goo 原则⑬ repair budget: how many repair re-invocations a lens
+        # gets after a behavior-gate rejection (default 1 = current behaviour).
+        # Configurable via LENS_REPAIR_MAX (cap 2) so light models (flash) can
+        # be given one extra structured repair pass without unbounded cost.
+        self._lens_repair_max = min(max(int(lens_repair_max or _env_lens_repair_max()), 0), 2)
         # The run this worker actually claimed, so the runner can park exactly
         # that run after a failure instead of guessing at the queue head.
         self.claimed: tuple[UUID, UUID] | None = None
@@ -1663,17 +1670,21 @@ class AnalysisWorker:
         payload: Mapping[str, Any],
         ledger: FrozenReferenceLedger,
     ) -> UUID | None:
-        """Persist one lens payload; repair ONCE on behavior-gate rejection.
+        """Persist one lens payload; repair on behavior-gate rejection.
 
         Grey-goo principle 13 (adversarial feedback loop): a behavior-gate
         rejection is a structured finding that MUST return into the producing
         lens model - the reason codes are handed back as a repair instruction
-        and the lens is re-invoked instead of blind-retrying. A second failure
-        keeps the established fail-closed posture: log and return None (the
-        lens audit at the validating gate will catch the absence and block).
+        and the lens is re-invoked instead of blind-retrying. The repair
+        budget is ``self._lens_repair_max`` (default 1); only structural
+        ``schema:*`` codes consume a budgeted repair - deterministic mistakes
+        (lens_type/phase/skill-version mismatches) are not re-invoked. After
+        the budget is spent the established fail-closed posture holds: log and
+        return None (the lens audit at the validating gate blocks the run).
         """
 
-        for attempt in range(2):
+        attempts = self._lens_repair_max + 1
+        for attempt in range(attempts):
             try:
                 return await self._lens_writer(
                     self._session,
@@ -1685,13 +1696,17 @@ class AnalysisWorker:
                     origin_modes=(self._origin_mode,),
                 )
             except LensBehaviorRejected as rejected:
-                if attempt == 1:
+                if attempt == attempts - 1:
+                    break
+                # Only structural gaps deserve a budgeted repair re-invocation.
+                repairable = _repairable_reason_codes(rejected.reason_codes)
+                if not repairable:
                     break
                 # External-call boundary before the repair model call.
                 await self._check_cancelled(run)
                 payload = await self._execute_dedicated_lens(
                     run, stage, lens_type, result,
-                    repair_context=rejected.reason_codes,
+                    repair_context=repairable,
                 )
                 if payload is None:
                     break
@@ -1817,13 +1832,17 @@ class AnalysisWorker:
             if repair_context:
                 # Grey-goo principle 13: the behavior gate's rejection is a
                 # structured finding that must CHANGE the produced artifact -
-                # append the exact reason codes as a repair instruction.
+                # append the exact reason codes as a repair instruction. The
+                # schema snippet for each violated field is attached so the
+                # model repairs the SHAPE, not just the names (B4).
                 user_message = (
                     f"{inputs.user}\n\n"
                     "Your previous lens output was rejected by the behavior "
                     "contract with these findings: "
                     + "; ".join(repair_context)
-                    + ". Respond again with ONLY a corrected full lens JSON "
+                    + ".\n"
+                    + _schema_fragments_for(repair_context, inputs.schema_content_def)
+                    + "Respond again with ONLY a corrected full lens JSON "
                     "object that satisfies every rejected behavior field."
                 )
             completion = await complete_structured_checked(
@@ -1853,6 +1872,80 @@ class AnalysisWorker:
             )
             return None
 
+
+def _env_lens_repair_max() -> int:
+    """Read LENS_REPAIR_MAX (default 1, clamp 0..2) for the repair budget.
+
+    The worker may be constructed with an explicit value (tests), otherwise
+    the environment variable is the single deployment knob.
+    """
+    raw = os.environ.get("LENS_REPAIR_MAX", "1")
+    try:
+        return min(max(int(raw), 0), 2)
+    except ValueError:
+        return 1
+
+
+def _repairable_reason_codes(reason_codes: tuple[str, ...]) -> tuple[str, ...]:
+    """Keep the reason codes worth a budgeted repair re-invocation.
+
+    Grey-goo ⑬ with a budget: deterministic mistakes will not be fixed by
+    another model call, so they consume no repair budget. Everything else -
+    structural gaps (schema:*) AND content-behavior violations (forces_missing,
+    meadows_*, one_to_two_key_actors, ...) - is the class a second structured
+    repair pass can actually fix.
+    """
+    deterministic = frozenset(
+        {
+            "lens_type_mismatch",
+            "phase_must_be_adversarial_stress",
+            "phase_must_be_strategic_synthesis",
+            "source_skill_version_mismatch",
+        }
+    )
+    return tuple(code for code in reason_codes if str(code) not in deterministic)
+
+
+def _schema_fragments_for(
+    reason_codes: tuple[str, ...],
+    content_def: str,
+) -> str:
+    """Extract the violated schema branches as a compact repair hint.
+
+    Reason codes carry JSON paths like ``schema:content.currentInterventions.2``;
+    the model sees the path but not the required shape. This walks the
+    published content branch and quotes the schema of the violated element so
+    the repair pass fixes the SHAPE, not just the name (B4).
+    """
+
+    from app.agents.lenses import load_lens_content_schema
+
+    branch_text = load_lens_content_schema(content_def)
+    if not branch_text:
+        return ""
+    try:
+        branch = json.loads(branch_text)
+    except ValueError:
+        return ""
+    fragments: list[str] = []
+    for code in reason_codes:
+        path = str(code).removeprefix("schema:content.")
+        node: Any = branch
+        for part in path.split("."):
+            if part.isdigit():
+                # array index - descend into the item schema
+                node = node.get("items", {}) if isinstance(node, dict) else {}
+            else:
+                node = node.get("properties", {}).get(part, {}) if isinstance(node, dict) else {}
+        if node:
+            fragments.append(f"- {path}: {json.dumps(node, ensure_ascii=False)[:400]}")
+    if not fragments:
+        return ""
+    return (
+        "Rejected fields must satisfy these schemas:\n"
+        + "\n".join(fragments)
+        + "\n"
+    )
 
 
 _STAGE_RESULT_SCHEMA: Mapping[str, Any] = {

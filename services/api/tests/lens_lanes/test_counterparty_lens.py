@@ -302,3 +302,35 @@ class TestPromptAssembly:
     def test_missing_run_pinning_rejected(self):
         with pytest.raises(lane.CounterpartyLensError, match="workspace_id"):
             lane.LENS.build_prompt_inputs(RequestStub(analysis_run_id=""))
+
+    def test_prompt_carries_content_example(self):
+        """B1: the gate-passing content example must reach the model prompt."""
+        inputs = lane.LENS.build_prompt_inputs(RequestStub())
+        assert "Example content (follow this structure EXACTLY" in inputs.user
+        assert '"maxResponseDepth": 1' in inputs.user
+        assert '"actionType": "no_action"' in inputs.user
+
+    def test_prompt_carries_behavior_checklist(self):
+        """B5: the behavior-gate constraints are front-loaded as a self-audit.
+
+        Grey-goo skill-handoff style: the producing agent knows its acceptance
+        criteria BEFORE it writes, not only after the gate rejects.
+        """
+        inputs = lane.LENS.build_prompt_inputs(RequestStub())
+        assert "Behavior contract - self-audit BEFORE you emit" in inputs.user
+        assert "EXACTLY ONE actionType='no_action'" in inputs.user
+        assert "responseMatrix: one row per (counterpartyId x actionId) pair" in inputs.user
+
+    def test_content_example_passes_behavior_gate(self):
+        """B3: the shipped example must itself satisfy the behavior contract.
+
+        Guards against a gate-passing example that the gate itself would
+        reject (the regression class that let flash/pro fail with a prompt
+        that was internally inconsistent).
+        """
+        example = json.loads(lane.lens_content_example("counterpartyContent"))
+        references = {"assumptionIds": ["asm-sample-1", "asm-sample-2"]}
+        codes, findings = lane.validate_counterparty_content(
+            example, registered_assumption_ids=frozenset(references["assumptionIds"])
+        )
+        assert codes == (), (codes, findings)

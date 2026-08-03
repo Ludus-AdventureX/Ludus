@@ -67,6 +67,8 @@ try:  # pragma: no cover - taken once the coordinator seam is merged
         FORBIDDEN_SERVER_OWNED_FIELDS,
         LensBehaviorReport,
         LensPromptInputs,
+        lens_behavior_checklist,
+        lens_content_example,
         lens_output_contract,
         load_lens_content_schema,
     )
@@ -389,6 +391,8 @@ class CounterpartyResponseMatrixLens:
                 source_skill_version=SOURCE_SKILL_VERSION,
                 content_def=CONTENT_DEF,
                 content_schema=load_lens_content_schema(CONTENT_DEF),
+                content_example=lens_content_example(CONTENT_DEF),
+                behavior_checklist=lens_behavior_checklist(CONTENT_DEF),
             )
         )
         return LensPromptInputs(system=prompt_text, user=user, schema_content_def=CONTENT_DEF)
