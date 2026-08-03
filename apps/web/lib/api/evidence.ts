@@ -170,6 +170,16 @@ export type ConflictRelationView = {
 };
 
 /** schemas_api.RunEvidenceListView (+ additive funnelAudit, CCR-20260802-P2W2). */
+export type PacketEvidenceView = {
+  packetId: string;
+  factor?: string | null;
+  direction?: string | null;
+  conclusion: string;
+  claimSupportScore: number;
+  evidenceIds: string[];
+  role: string;
+};
+
 export type RunEvidenceListView = {
   analysisRunId: string;
   items: EvidenceItemView[];
@@ -183,6 +193,9 @@ export type RunEvidenceListView = {
     opposingCount: number;
     lowTierShare: number | null;
   } | null;
+  /** Gap-fix wave A (CCR-20260803-GAPFIX): funnel-admitted packets projected
+   * for the E page even before the ingest chain (evidence_items) exists. */
+  packetEvidence?: PacketEvidenceView[];
 };
 
 /** schemas_api.ConflictListView. */
