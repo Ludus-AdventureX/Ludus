@@ -406,6 +406,17 @@ P0 的默认压力测试继续只显示当前结论最脆弱的最多 3 个业�
 
 图、Strategy、Scenario、ScoreDefinition、SimulationRun 与错误响应的 wire type 由 Pydantic/OpenAPI 生成 TypeScript；Web 图组件不得维护平行 DTO。Simulation Engine 与 Simulation UI 分别由 manifest 的 Simulation/Graph owner 写入，QA 只提交确定性、翻转、可访问性和响应式缺陷 handoff。任何评分字段或图枚举变化必须通过 CCR。
 
+## 推演议会编排（CCR-20260804-DELIB-01）
+
+议会是因子沙盘之上的长程推演层，不改变确定性引擎本身：
+
+- 参与者：每个因子一个持证人智能体（客观因子持证据与来源，主观因子持 Human 署名声明），一个主持智能体组织轮次；编排器是 worker 侧新 job kind，复用 `FOR UPDATE SKIP LOCKED` 队列、heartbeat 与 attempt，不是第五类正式分析 Worker。
+- 轮次协议：R0 opening（持证人并行 structured output：立场/主张影响/依据/对他者质疑，引擎同时算基线投影）→ R1..n challenge（回应质疑、产出提议，主持过滤后挂账待用户采纳）→ verdict（主持合成 outcome）。轮间检查介入队列与用户决策；主持提名使 run 进 `awaiting_user`。
+- **引擎裁决铁律**：一切数值（强度、投影、翻转点）只能由 `simulate()` 计算；被采纳提议落 override 后重算并产出 delta。智能体输出经 Pydantic schema 校验，失败至多一次修复重试，仍失败则丢弃并留痕；智能体不得自报数值结果。
+- 预算硬上限：maxRounds ≤ 5、每轮发言数上限、单 run token 预算；超限即推进 verdict 并在 outcome 诚实注记。
+- FIXTURE_MODE 提供确定性夹具证人/主持，全套编排无 Key 可跑；originModes 诚实记录，不得冒充实时结果。
+- 产出为条件化预估（采纳提议集 → 引擎投影 + 翻转条件 + 异议留档），禁止任何概率化断言；议会结果不进入 DecisionRecord 或正式报告，只作为推演域留档与候选输入的素材。
+
 ## 限制说明
 
 - 不使用沙盘输出表达未来确定结果。

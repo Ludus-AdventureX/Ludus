@@ -167,6 +167,7 @@ AnalysisRun:     queued | planning | retrieving | analyzing | criticizing |
 - 不展示、记录或声称访问模型隐藏思维链。只保存用户可见命题、证据、假设、判断、方法版本、工具摘要、状态、因果边、模拟输入和建议。
 - 正式 Agent Engine 输入 MUST 是 confirmed Case Charter + 冻结 Case/Dossier/Material Snapshot + analysis depth + method/budget/tool envelope；输出 MUST 是结构化 JudgmentSet + DissentRecord + DraftRecommendation + ValidatorResults。不得用 chat `messages[]` 作为正式分析主合同。
 - 不把模型自评分、质量门分数或沙盘结果包装为“结论正确概率”或“成功概率”。分别展示证据可用性、命题支撑、假设稳定性、因果关系可信度、战略稳健性和流程质量。
+- 推演议会（CCR-20260804-DELIB-01）的持证人/主持智能体输出是草稿候选，一切数值（强度、投影、翻转点）只能由确定性引擎 `simulate()` 计算，智能体不得自报数值；议会产出是条件化预估 + 翻转条件 + 异议留档，禁止任何概率化断言；每条发言携带 ResponsibilityStamp，主观因子只能以 assumed/unknown + Human 署名进图，主持提名永不自动生效。
 
 ## 8. 模型、连接器与来源模式
 
@@ -190,7 +191,7 @@ AnalysisRun:     queued | planning | retrieving | analyzing | criticizing |
 
 - API 必须使用统一成功/错误信封和稳定错误码；用户消息可操作且不泄露内部数据、资源存在性或密钥。
 - 正式授权在 API、service 和 Worker 边界重复校验；不能依赖禁用按钮保证安全。
-- SSE 的 `event:` 使用固定 category：`agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`；`data:` 是完整 `AnalysisEvent` 信封。
+- SSE 的 `event:` 使用固定 category：`agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`；`data:` 是完整 `AnalysisEvent` 信封。推演议会是独立领域事件流（CCR-20260804-DELIB-01）：`DeliberationEvent` 信封镜像 `AnalysisEvent`，category 固定为 `deliberation.round`、`deliberation.message`、`deliberation.proposal`、`deliberation.nomination`、`deliberation.outcome`；两套流不互相混用。
 - 事件必须持久化并按 Run/消息作用域隔离。重连从 `Last-Event-ID` 对应的 sequence 继续，不重复、不倒退、不串到其他 Case。
 - `focused` ready 只能生成 focused 合同产物；请求 PDF 或 `simulations/from-report` 必须返回明确的不允许错误。
 - `full` 只有在 ready 且质量门通过后才能生成 `StructuredReport`、PDF 和正式沙盘。
@@ -218,6 +219,7 @@ AnalysisRun:     queued | planning | retrieving | analyzing | criticizing |
 - draft 图只允许 `experimental` 推演，并且结果不得进入 PDF、正式推荐或最终决定的系统建议；`formal` 推演只接受 confirmed `GraphVersion` 和不可变 `ScenarioVersion`。
 - 用户可从任意历史版本创建命名分支、比较两个版本，并通过“从历史版本创建新的当前版本”完成非破坏性回滚；任何操作都不得删除历史。
 - 正式 SimulationRun 必须固定引用 graph、strategy、scenario、ScoreDefinition ID/version、DecisionMakerProfile ID/version、实际 riskTolerance、engineVersion、epsilon、maxSteps 和 inputHash。
+- 推演议会（CCR-20260804-DELIB-01）是因子沙盘之上的长程推演层：每因子一个持证人智能体，主持智能体组织开场/质证/裁决轮次，用户可分类介入；一切数值由 `simulate()` 裁决，主观因子以 assumed/unknown + Human 署名进图且永不冒充 supported，主持提名必须用户确认后才生效；议会产出为条件化预估、翻转条件与异议留档，不进入 DecisionRecord 或正式报告；轮次、发言、token 预算硬上限，超限即推进裁决并诚实注记。
 - 球形机器人 fixture 至少验证 8 个节点、10 条边、三个情景、敏感性排序，以及采购周期变化触发可解释的推荐翻转。
 
 ## 11. 前端与交互约束
