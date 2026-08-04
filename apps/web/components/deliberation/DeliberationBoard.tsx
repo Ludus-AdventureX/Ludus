@@ -369,6 +369,7 @@ export function DeliberationBoard({
               step={0.05}
               value={draftStrength}
               onChange={(event) => setDraftStrength(Number(event.target.value))}
+              name="declaration-strength"
               aria-label="主观因子强度"
             />
           </label>
@@ -496,6 +497,7 @@ export function DeliberationBoard({
                       step={0.05}
                       value={nominationStrength}
                       onChange={(event) => setNominationStrength(Number(event.target.value))}
+                      name="nomination-strength"
                       aria-label="提名声明强度"
                     />
                   </label>
