@@ -253,7 +253,13 @@ describe("ProjectDrawer + Session B shell completion (Task 11 Phase 0)", () => {
     expect(shellSlotContract["project-drawer"].status).toBe("filled");
     expect(shellSlotContract["decision-health-bar"].status).toBe("filled");
     expect(shellSlotContract["sandbox-workspace"].status).toBe("filled");
-    for (const name of ["analysis-charter-form", "analysis-progress", "quality-gate-panel", "evidence-drawer-trigger", "decision-signoff", "review-dialog-trigger"] as const) {
+    // Session B/C fills: progress, gate, evidence drawer and signoff are
+    // production-mounted; only the charter form and the review dialog remain
+    // as honest reserved placeholders (2026-08-05 audit M4 sync).
+    for (const name of ["analysis-progress", "quality-gate-panel", "evidence-drawer-trigger", "decision-signoff"] as const) {
+      expect(shellSlotContract[name].status).toBe("filled");
+    }
+    for (const name of ["analysis-charter-form", "review-dialog-trigger"] as const) {
       expect(shellSlotContract[name].status).toBe("reserved");
     }
   });
