@@ -42,6 +42,16 @@ const SPEAKER_LABELS: Record<DeliberationMessageView["speaker"], string> = {
   user: "你"
 };
 
+const KIND_LABELS: Record<DeliberationMessageView["kind"], string> = {
+  statement: "陈述",
+  challenge: "质询",
+  rebuttal: "反驳",
+  proposal: "提议",
+  intervention: "介入",
+  nomination: "提名",
+  verdict_summary: "裁决摘要"
+};
+
 const STATUS_LABELS: Record<DeliberationRunDetailView["status"], string> = {
   preparing: "准备中",
   running: "推演中",
@@ -49,6 +59,12 @@ const STATUS_LABELS: Record<DeliberationRunDetailView["status"], string> = {
   complete: "已裁决",
   cancelled: "已取消"
 };
+
+function formatTranscriptTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
 
 function graphCapable(): boolean {
   // ReactFlow needs ResizeObserver; jsdom keeps the ledger list fallback.
@@ -311,7 +327,7 @@ export function DeliberationBoard({
     return (
       <section className="deliberation-board" data-deliberation-board="create" aria-label="推演棋盘">
         <header>
-          <span className="eyebrow">推演议会 · 因子持证人 · 引擎裁决</span>
+          <span className="eyebrow">Deliberation council / G-05 · 因子持证人 · 引擎裁决</span>
           <h3>开一场议会：每个因子一个持证人，主观判断可署名入场</h3>
           <p className="phase-slot-note">
             客观因子自动取自分析基线；你的主观判断（直觉/内部数据/对手反应）以 assumed 身份 + Human
@@ -398,15 +414,34 @@ export function DeliberationBoard({
   return (
     <section className="deliberation-board" data-deliberation-board="run" data-deliberation-status={run.status} aria-label="推演棋盘">
       <header>
-        <span className="eyebrow">推演议会 · 因子持证人 · 引擎裁决{fixtureMark ? " · fixture" : ""}</span>
+        <span className="eyebrow">Deliberation council / G-05 · 因子持证人 · 引擎裁决{fixtureMark ? " · fixture" : ""}</span>
         <h3>
-          {STATUS_LABELS[run.status]} · 第 {run.currentRoundSeq} / {run.maxRounds} 轮
+          {STATUS_LABELS[run.status]}
           {busy && <em> · 处理中…</em>}
         </h3>
         <p className="phase-slot-note">
           主持智能体组织轮次，持证人为各自因子辩护；一切数值由确定性引擎裁决。议会不代表精确预测。
         </p>
       </header>
+
+      <div className="deliberation-status-bar" data-deliberation-status={run.status}>
+        <span className="deliberation-status-dot" aria-hidden="true" />
+        <dl>
+          <div>
+            <dt>轮次</dt>
+            <dd>{run.currentRoundSeq} / {run.maxRounds}</dd>
+          </div>
+          <div>
+            <dt>因子</dt>
+            <dd>{run.factors.length}</dd>
+          </div>
+          <div>
+            <dt>消息</dt>
+            <dd>{messages.length}</dd>
+          </div>
+        </dl>
+        <em>{closed ? "已闭合" : run.status === "awaiting_user" ? "需要你的决策" : "引擎运行中"}</em>
+      </div>
 
       {errorMessage && <p role="alert" className="phase-slot-note">{errorMessage}</p>}
 
@@ -550,15 +585,22 @@ export function DeliberationBoard({
 
       <div className="deliberation-transcript" aria-label="议会实况转录">
         <h4>实况转录（{messages.length} 条）</h4>
-        <ol>
+        <ol className="deliberation-timeline">
           {messages.map((message) => (
             <li key={message.id} data-message-kind={message.kind} data-speaker={message.speaker}>
-              <span className="deliberation-speaker">
-                {SPEAKER_LABELS[message.speaker]}
-                {message.stampActor === "human" ? " · Human" : ""}
-                {message.originMode === "fixture" ? " · fixture" : ""}
-              </span>
-              <p>{message.content}</p>
+              <span className="deliberation-timeline-marker" aria-hidden="true" />
+              <div className="deliberation-timeline-body">
+                <header>
+                  <span className="deliberation-speaker">
+                    {SPEAKER_LABELS[message.speaker]}
+                    {message.stampActor === "human" ? " · Human" : ""}
+                    {message.originMode === "fixture" ? " · fixture" : ""}
+                  </span>
+                  <span className="deliberation-kind">{KIND_LABELS[message.kind]}</span>
+                  <time>{formatTranscriptTime(message.createdAt)}</time>
+                </header>
+                <p>{message.content}</p>
+              </div>
             </li>
           ))}
         </ol>
