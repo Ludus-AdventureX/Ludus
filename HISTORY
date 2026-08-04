@@ -5189,3 +5189,26 @@ fail-closed on the blocked case, by design). Both routes render correctly at
 all three viewports; no overlaps. Verification artifacts cleaned up afterwards.
 Fresh re-verification same session: pnpm --dir apps/web test 27 files / 175
 tests passed; pnpm --dir apps/web build clean.
+
+---
+
+## Archived work 2026-08-04T17:20:00+08:00 — deliberation council (完全体推演议会) Waves 1–4
+
+- Branch: codex/deliberation-ccr-r1。提交链：14e039d (Wave 1 契约) →
+  4b24a71 + f276a29 (Wave 2 实体层 + 后端) → d3f5d76 (Wave 3 前端棋盘) →
+  Wave 4 收口提交（实机联调 + 金路径 + 视觉 + 归档）。
+- 交付：deliberation 域（7 表 + 编排器 + routes/SSE + worker 集成）；G 页推演
+  棋盘（转录/介入/提名/提议账本/结果面板）；CCR-20260804-DELIB-01 与七份
+  计划文档同步；红线（概率禁令 schema 断言、提名不自动生效、主观因子
+  assumed + Human 署名、预算硬上限）全部入契约与电池。
+- Wave 4 证据：ludus-alpha 栈镜像重建 + 迁移成功；Playwright 金路径
+  （创建→声明→插话/质询→采纳/驳回→确认提名→裁决）30s 级全闭环；
+  三视口 1440×900 / 1024×768 / 390×844 无水平溢出，≤620px 转录折叠生效；
+  live 及时性：开场→首轮发言 3.6s、单轮 ≤6.1s、全程 19.6s（达标）。
+- 联调修复：direction 字段 422（前端改 statement 前缀编码，零契约扰动）；
+  fixture 全 0.5 对称退化（打破对称，topDrivers/提名/翻转恢复）；棋盘 UI
+  增 3s 轮询兜底（SSE 代理缓冲防御）；e2e 适配现行 UI 并删除已废弃的
+  guest-demo golden-path；qa_gate.ps1 纳入 deliberation 电池。
+- 遗留观察（基线既有，非本支引入）：main 上 alembic check 漂移
+  （case_profiles raw-SQL 表无 ORM 模型等）。
+- Secret policy: do not record credentials here.

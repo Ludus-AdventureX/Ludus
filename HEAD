@@ -1,9 +1,38 @@
-# Status: idle
+# Work Log: deliberation council (完全体推演议会) — Wave 4 收口
 
-- Last archived: causal graph A+B — factor sandbox graph + true spatial
-  causal canvas (2026-08-04, branch codex/causal-graph-ab-r1, 未提交，
-  待用户指示)。
-- Prior archived: evidence drawer visual styles + responsive layout repair
-  (2026-08-04, codex/evidence-drawer-layout-r1, 未提交)。
-- See HISTORY for full records.
+- Date: 2026-08-04 (Asia/Shanghai). Status: COMPLETE（四波次全部落地）。
+- Branch: codex/deliberation-ccr-r1（Wave 1–4 同支累积，§20 每波独立提交）。
+- 提交链：14e039d (Wave 1) → 4b24a71 / f276a29 (Wave 2) → d3f5d76 (Wave 3) → 本波收口提交。
+
+## Wave 4 已完成
+- ludus-alpha 栈 API/web/worker 镜像重建（compose.prototype.yaml -p ludus-alpha），
+  迁移 a9f1e2d3c4b5 在既有卷上应用成功，四服务全部健康。
+- FIXTURE_MODE 全场闭环：Playwright 金路径新 spec（创建议会→声明主观因子→
+  插话/质询→采纳+驳回提议→确认提名→条件化预估裁决，30s 级跑通）；
+  三视口视觉 spec（1440×900 / 1024×768 / 390×844，DOM 度量无水平溢出 +
+  ≤620px 转录折叠规则断言 + 截图证据）。
+- live 及时性验证（worker 同款 advance 路径 + .env.prototype 的 deepseek）：
+  开场到首轮发言 3.6s、单轮 ≤6.1s、含用户决策全程 19.6s —— 达标
+  （目标：单轮 ≤30s、开场到首轮发言 ≤15s）。
+- 联调发现并修复三处真 bug：
+  1) 前端声明携带 direction 而冻结契约无此字段 → 422；改为 statement 前缀
+     编码（与服务端 _directional_statement / 引擎解析同构），零契约扰动；
+  2) fixture 基线全 0.5 对称 → 引擎贡献全零、topDrivers 空 → 提名/翻转逻辑
+     饿死；打破对称（supporting 0.7 / opposing 0.65）并保持确定性；
+  3) 棋盘 UI 只依赖 SSE，代理缓冲时冻结在旧快照；加 3s 轮询兜底
+     （decision-loop 同款双保险）。
+- e2e 维护：analysis-golden-path 适配现行 UI（发起面板在 E 视图、按钮文案
+  "发起分析"）；guest-demo golden-path 随 guest 门关闭而废弃（删除）；
+  qa_gate.ps1 电池纳入 app/deliberation/tests。
+
+## 验收记录
+- 后端：1089 passed（含 deliberation 电池）-W error；ruff clean；契约重建
+  与提交物零漂移；998 条 fixture 改动后复验零回归。
+- 前端：vitest 28 文件 179 通过；lint/typecheck/build 全绿。
+- e2e：analysis-golden-path ×2 + deliberation 金路径 + 三视口视觉，全通过。
+- 已知基线问题（非本支引入）：main 既有 alembic check 漂移（case_profiles
+  为 raw-SQL 表无 ORM 模型、evidence_funnel_audits/retrieval_coverage 类型/外键
+  与模型不一致）；deliberation 迁移与模型完全一致，未新增任何漂移项。
+
+## 约束
 - Secret policy: do not record credentials here.

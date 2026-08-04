@@ -38,6 +38,10 @@ _TAG = "[fixture]"
 # Three facts: two supporting/neutral and one OPPOSING. The funnel discards a
 # fact whose conclusion is thin or filler, and warns when nothing opposes, so a
 # fixture fact base that cannot survive its own funnel would be pointless.
+# Support scores are deliberately ASYMMETRIC: an all-0.5 basis makes every
+# factor sit exactly at the engine's neutral point (value == 0.5), which zeros
+# every contribution and leaves topDrivers empty — that degeneracy starved the
+# deliberation council's nomination/flip logic of any driver to work with.
 _PACKETS: tuple[Mapping[str, Any], ...] = (
     {
         "factor": f"{_TAG} 目标市场规模",
@@ -47,7 +51,7 @@ _PACKETS: tuple[Mapping[str, Any], ...] = (
             "本次运行没有任何外部检索作为支撑。"
         ),
         "direction": "supporting",
-        "claim_support_score": 0.5,
+        "claim_support_score": 0.7,
         "sources": [{"name": f"{_TAG} 确定性占位来源（非检索结果）", "tier": "L6"}],
         "disclaimer": "fixture 占位内容，不可作为真实市场判断。",
     },
@@ -71,7 +75,7 @@ _PACKETS: tuple[Mapping[str, Any], ...] = (
             "会推迟首次收入，这一条与优先进入救援市场的方向相反。"
         ),
         "direction": "opposing",
-        "claim_support_score": 0.5,
+        "claim_support_score": 0.65,
         "sources": [{"name": f"{_TAG} 确定性占位来源（非检索结果）", "tier": "L6"}],
         "disclaimer": "fixture 占位内容，不可作为真实合规判断。",
     },

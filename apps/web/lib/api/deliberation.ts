@@ -273,6 +273,35 @@ export async function getDeliberationOutcome(
 
 // --- writes -------------------------------------------------------------------
 
+/**
+ * Wire adaptation for a subjective declaration. The frozen contract
+ * (SubjectiveFactorDeclaration in schemas_api.py) carries label/statement/
+ * strength/dossierAssumptionId only — the declared DIRECTION travels as the
+ * statement prefix ([opposing] / [neutral]), which is exactly the seam the
+ * backend service and engine already parse (service._directional_statement /
+ * orchestrator.subjective_factor_node). Never send fields the schema does
+ * not declare: CanonicalModel rejects unknown keys with a 422.
+ */
+export function toWireDeclaration(declaration: SubjectiveFactorDeclaration): {
+  label: string;
+  statement: string;
+  strength: number;
+  dossierAssumptionId?: string;
+} {
+  const direction = (declaration.direction ?? "supporting").toLowerCase();
+  const prefix =
+    direction === "opposing" ? "[opposing] " : direction === "neutral" ? "[neutral] " : "";
+  const statement = declaration.statement.startsWith("[")
+    ? declaration.statement
+    : `${prefix}${declaration.statement}`;
+  return {
+    label: declaration.label,
+    statement,
+    strength: declaration.strength,
+    ...(declaration.dossierAssumptionId ? { dossierAssumptionId: declaration.dossierAssumptionId } : {})
+  };
+}
+
 export async function createDeliberation(
   workspaceId: string,
   decisionCaseId: string,
@@ -286,7 +315,10 @@ export async function createDeliberation(
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        subjectiveFactors: body.subjectiveFactors.map(toWireDeclaration),
+        maxRounds: body.maxRounds
+      })
     })
   );
   return data as unknown as DeliberationAnchorView;
@@ -304,12 +336,16 @@ export async function postDeliberationIntervention(
 ): Promise<Record<string, unknown>> {
   const token = await csrfToken(fetchImpl);
   const path = `/api/workspaces/${encodeURIComponent(workspaceId)}/deliberations/${encodeURIComponent(deliberationRunId)}/interventions`;
+  const wireBody =
+    body.kind === "declare_subjective_factor"
+      ? { kind: body.kind, subjectiveFactor: toWireDeclaration(body.subjectiveFactor) }
+      : body;
   const data = await readData(
     await fetchImpl(path, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
-      body: JSON.stringify(body)
+      body: JSON.stringify(wireBody)
     })
   );
   return data ?? {};
@@ -351,7 +387,7 @@ export async function decideNomination(
       credentials: "include",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
       body: JSON.stringify(
-        subjectiveFactor ? { decision, subjectiveFactor } : { decision }
+        subjectiveFactor ? { decision, subjectiveFactor: toWireDeclaration(subjectiveFactor) } : { decision }
       )
     })
   );

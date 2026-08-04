@@ -8,7 +8,7 @@
   volume, its own random host port), migrates it, and runs the full release
   battery against it:
 
-    - backend suite (tests + simulations + evidence + analyses), -W error
+    - backend suite (tests + simulations + evidence + analyses + deliberation), -W error
     - web: lint, typecheck, unit tests, production build
     - contract neutrality: rebuild openapi.json + types.gen.ts and diff the
       committed artefacts
@@ -136,7 +136,7 @@ try {
   Invoke-Stage 'backend-suite' {
     Push-Location $ApiRoot
     try {
-      & $Python -m pytest tests app/simulations/tests app/evidence/tests app/analyses/tests -q -W error -rxX
+      & $Python -m pytest tests app/simulations/tests app/evidence/tests app/analyses/tests app/deliberation/tests -q -W error -rxX
     }
     finally { Pop-Location }
   }

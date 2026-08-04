@@ -73,8 +73,12 @@ test("analysis golden path: launch a run and watch the stages advance", async ({
     create.click(),
   ]);
 
-  // 2. Launch the formal run.
-  const launch = page.getByRole("button", { name: /发起聚焦深度分析/ });
+  // 2. Launch the formal run. The launch panel lives in the E (证据)
+  //    workspace, not the default Q view, so navigate there first. The
+  //    button text is the level-agnostic 发起分析 (聚焦研究 is preselected).
+  const spine = page.getByRole("navigation", { name: "决策生命周期" });
+  await spine.getByRole("button", { name: /证据/ }).click();
+  const launch = page.getByRole("button", { name: "发起分析" });
   await expect(launch).toBeEnabled({ timeout: 30_000 });
   await launch.click();
 
@@ -111,10 +115,13 @@ test("analysis golden path: launch a run and watch the stages advance", async ({
 
 test("without a workspace anchor the panel refuses to fabricate a run", async ({ page }) => {
   // Honest gap state: no ?ws= means no launch affordance at all. This holds
-  // whether or not a session exists, so it does not authenticate first.
+  // whether or not a session exists, so it does not authenticate first. The
+  // launch panel renders inside the E view, so open it before asserting.
   await page.goto("/cases/00000000-0000-4000-8000-000000000000");
+  const spine = page.getByRole("navigation", { name: "决策生命周期" });
+  await spine.getByRole("button", { name: /证据/ }).click();
   await expect(page.locator('[data-analysis-launch="gap"]').first()).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByRole("button", { name: /发起聚焦深度分析/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "发起分析" })).toHaveCount(0);
 });
