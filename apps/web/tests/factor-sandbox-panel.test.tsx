@@ -84,4 +84,19 @@ describe("FactorSandboxPanel", () => {
     await waitFor(() => expect(previewCalls).toBeGreaterThan(0));
     await waitFor(() => expect(document.querySelector("[data-factor-sandbox='hold']")).toBeInTheDocument());
   });
+
+  test("runtimes without ResizeObserver keep the full list view (graph fallback contract)", async () => {
+    // jsdom has no ResizeObserver -> the panel must render the accessible
+    // list form with every slider, never an empty/broken graph canvas.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(200, { ok: true, data: BASELINE })),
+    );
+    render(createElement(FactorSandboxPanel, { workspaceId: WS, decisionCaseId: CASE }));
+    await waitFor(() => expect(document.querySelector("[data-factor-sandbox='proceed']")).toBeInTheDocument());
+    expect(document.querySelector(".sandbox-factors")).toBeInTheDocument();
+    expect(screen.getAllByRole("slider", { name: /因子强度/ })).toHaveLength(BASELINE.factors.length);
+    // The view switch only exists where the graph is actually available.
+    expect(screen.queryByRole("group", { name: "沙盘视图切换" })).not.toBeInTheDocument();
+  });
 });

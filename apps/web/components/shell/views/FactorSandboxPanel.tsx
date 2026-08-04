@@ -6,20 +6,37 @@ import {
   SandboxError,
   loadSandboxBaseline,
   previewSandbox,
+  type SandboxFactor,
   type SandboxState,
 } from "@/lib/shell/factorSandbox";
 import { launchAnalysisForCase } from "@/lib/shell/decisionLoop";
+import { FactorGraphCanvas } from "@/components/shell/views/FactorGraphCanvas";
 
 // Report factor sandbox (three-layer what-if). Layer 1: edit factor strengths
 // -> instant deterministic re-propagation (server calculator, reproducible).
 // Layer 3: one-click deep re-analysis (a real new focused run). No fabricated
 // verdicts; the outcome bar is a transparent weighted propagation, and the
 // panel self-hides until the case has analysed factors.
+//
+// Route A: the same wire data also renders as a spatial graph (outcome node
+// fed by factor nodes + influence edges). Graph view is the default where the
+// runtime supports it (ResizeObserver); the list view stays as the accessible
+// fallback and the jsdom test path — both drive the identical preview chain.
 
 export type FactorSandboxPanelProps = {
   workspaceId?: string | null;
   decisionCaseId?: string;
 };
+
+function directionTag(direction: string): string {
+  return direction === "opposing" ? "反向" : direction === "neutral" ? "中性" : "支撑";
+}
+
+function graphCapable(): boolean {
+  // ReactFlow measures through ResizeObserver; runtimes without it (jsdom)
+  // keep the list view — the honest fallback, never a broken canvas.
+  return typeof window !== "undefined" && typeof window.ResizeObserver === "function";
+}
 
 export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: FactorSandboxPanelProps) {
   const [state, setState] = useState<SandboxState | null>(null);
@@ -27,6 +44,9 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [deepStatus, setDeepStatus] = useState("");
+  const [canGraph] = useState<boolean>(() => graphCapable());
+  const [viewMode, setViewMode] = useState<"graph" | "list">("graph");
+  const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -128,6 +148,33 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
 
   const percent = Math.round(state.outcomeScore * 100);
   const dirty = Object.keys(overrides).length > 0;
+  const showGraph = canGraph && viewMode === "graph";
+  const selectedFactor: SandboxFactor | null =
+    state.factors.find((factor) => factor.id === selectedFactorId) ?? state.factors[0] ?? null;
+
+  const factorRows = state.factors.map((factor) => (
+    <li key={factor.id} data-factor-direction={factor.direction}>
+      <div className="sandbox-factor-head">
+        <b>{factor.label}</b>
+        <span className="sandbox-factor-tag">
+          {directionTag(factor.direction)} · 权重 {factor.weight.toFixed(2)}
+        </span>
+        <button type="button" className="sandbox-remove" onClick={() => onRemove(factor.id)} aria-label={`移除因子 ${factor.label}`}>
+          移除
+        </button>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.05}
+        value={factor.value}
+        onChange={(e) => onSlide(factor.id, Number(e.target.value))}
+        aria-label={`因子强度 ${factor.label}`}
+      />
+      <p className="sandbox-factor-source">{factor.source}</p>
+    </li>
+  ));
 
   return (
     <section className="factor-sandbox" data-factor-sandbox={state.verdict} aria-label="报告因子沙盘">
@@ -152,49 +199,89 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
 
       {error && <p role="alert">{error}</p>}
 
-      <ol className="sandbox-factors">
-        {state.factors.map((factor) => (
-          <li key={factor.id} data-factor-direction={factor.direction}>
-            <div className="sandbox-factor-head">
-              <b>{factor.label}</b>
-              <span className="sandbox-factor-tag">
-                {factor.direction === "opposing" ? "反向" : factor.direction === "neutral" ? "中性" : "支撑"} · 权重 {factor.weight.toFixed(2)}
-              </span>
-              <button type="button" className="sandbox-remove" onClick={() => onRemove(factor.id)} aria-label={`移除因子 ${factor.label}`}>
-                移除
-              </button>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={factor.value}
-              onChange={(e) => onSlide(factor.id, Number(e.target.value))}
-              aria-label={`因子强度 ${factor.label}`}
-            />
-            <p className="sandbox-factor-source">{factor.source}</p>
-          </li>
-        ))}
-      </ol>
-
-      {state.influences.length > 0 && (
-        <div className="sandbox-influences">
-          <h4>因子间因果链（来自分析检索，确定性收编——非编造）</h4>
-          <ul>
-            {state.influences.map((edge) => (
-              <li key={`${edge.from}-${edge.to}`} data-influence-polarity={edge.polarity}>
-                <b>{edge.fromLabel}</b>
-                <span className="sandbox-edge-arrow">{edge.polarity === "-" ? "→（抑制）" : "→（助推）"}</span>
-                <b>{edge.toLabel}</b>
-                {edge.note && <em>：{edge.note}</em>}
-              </li>
-            ))}
-          </ul>
-          <p className="phase-slot-note">
-            拖动上游因子时，偏离会沿因果链传导到下游因子（多级传播，有界迭代）。
-          </p>
+      {canGraph && (
+        <div className="sandbox-view-switch" role="group" aria-label="沙盘视图切换">
+          <button
+            type="button"
+            className="text-action"
+            aria-pressed={showGraph}
+            onClick={() => setViewMode("graph")}
+          >
+            图视图<span aria-hidden="true">◇</span>
+          </button>
+          <button
+            type="button"
+            className="text-action"
+            aria-pressed={!showGraph}
+            onClick={() => setViewMode("list")}
+          >
+            列表视图<span aria-hidden="true">≡</span>
+          </button>
         </div>
+      )}
+
+      {showGraph ? (
+        <>
+          <FactorGraphCanvas
+            state={state}
+            selectedFactorId={selectedFactor?.id ?? null}
+            onSelectFactor={setSelectedFactorId}
+            busy={busy}
+          />
+          {selectedFactor ? (
+            <div className="factor-graph-inspector" data-factor-inspector={selectedFactor.id}>
+              <div className="sandbox-factor-head">
+                <b>{selectedFactor.label}</b>
+                <span className="sandbox-factor-tag">
+                  {directionTag(selectedFactor.direction)} · 权重 {selectedFactor.weight.toFixed(2)}
+                </span>
+                <button
+                  type="button"
+                  className="sandbox-remove"
+                  onClick={() => onRemove(selectedFactor.id)}
+                  aria-label={`移除因子 ${selectedFactor.label}`}
+                >
+                  移除
+                </button>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={selectedFactor.value}
+                onChange={(e) => onSlide(selectedFactor.id, Number(e.target.value))}
+                aria-label={`因子强度 ${selectedFactor.label}`}
+              />
+              <p className="sandbox-factor-source">{selectedFactor.source}</p>
+            </div>
+          ) : (
+            <p className="phase-slot-note">点击图中任一因子节点以调节其强度。</p>
+          )}
+        </>
+      ) : (
+        <>
+          <ol className="sandbox-factors">{factorRows}</ol>
+
+          {state.influences.length > 0 && (
+            <div className="sandbox-influences">
+              <h4>因子间因果链（来自分析检索，确定性收编——非编造）</h4>
+              <ul>
+                {state.influences.map((edge) => (
+                  <li key={`${edge.from}-${edge.to}`} data-influence-polarity={edge.polarity}>
+                    <b>{edge.fromLabel}</b>
+                    <span className="sandbox-edge-arrow">{edge.polarity === "-" ? "→（抑制）" : "→（助推）"}</span>
+                    <b>{edge.toLabel}</b>
+                    {edge.note && <em>：{edge.note}</em>}
+                  </li>
+                ))}
+              </ul>
+              <p className="phase-slot-note">
+                拖动上游因子时，偏离会沿因果链传导到下游因子（多级传播，有界迭代）。
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {state.topDrivers.length > 0 && (
