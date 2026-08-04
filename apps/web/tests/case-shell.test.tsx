@@ -58,7 +58,7 @@ const workspaceHeadings: Record<string, RegExp> = {
   workspace: /决策项目 LX-2407/,
   analysis: /研究尚未开始/,
   report: /报告尚未生成/,
-  sandbox: /推演尚未开放/,
+  sandbox: /压力测试尚未开放/,
   decision: /还没有可以冻结的判断/
 };
 

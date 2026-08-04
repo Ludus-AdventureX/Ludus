@@ -547,7 +547,7 @@ describe("Task 13 sandbox: honest empty state and slot contract", () => {
       createElement(SandboxWorkspace, { decisionCaseId: "LX-2407", data: null }),
     );
 
-    expect(screen.getByRole("heading", { level: 1, name: "推演尚未开放" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "压力测试尚未开放" })).toBeVisible();
     expect(screen.getByText("脆弱条件待生成")).toBeInTheDocument();
     expect(container.querySelector('[data-sandbox-state="empty"]')).toBeInTheDocument();
     expect(container.querySelector(".causal-canvas")).not.toBeInTheDocument();
