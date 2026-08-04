@@ -38,6 +38,10 @@ export function SandboxView({ workspaceId = null, decisionCaseId, fetchImpl }: S
 
   return (
     <section className="view is-active" id="view-sandbox" data-view-panel="sandbox" aria-labelledby="sandbox-view-title">
+      {/* Look V7 composition: the pressure workspace carries the G-01 intro
+          and stays the decision-user-first surface; the factor sandbox and the
+          deliberation council follow as clearly separated sections. */}
+      <SandboxWorkspace decisionCaseId={decisionCaseId} data={data} />
       <FactorSandboxPanel
         {...(workspaceId ? { workspaceId } : {})}
         {...(decisionCaseId ? { decisionCaseId } : {})}
@@ -46,7 +50,6 @@ export function SandboxView({ workspaceId = null, decisionCaseId, fetchImpl }: S
         {...(workspaceId ? { workspaceId } : {})}
         {...(decisionCaseId ? { decisionCaseId } : {})}
       />
-      <SandboxWorkspace decisionCaseId={decisionCaseId} data={data} />
     </section>
   );
 }
