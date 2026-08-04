@@ -412,6 +412,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   .workspace-grid { grid-template-columns: minmax(0,1fr) 220px; gap: 35px; }
   .ledger-sheet::before { left: 78px; }
   .sheet-heading { padding-left: 99px; }
+  .remediation-card { margin-left: 99px; }
   .ledger-note, .margin-challenge { grid-template-columns: 78px minmax(0,1fr); }
   .candidate-redline { grid-template-columns: 1fr 24px 1.2fr; }
   .redline-actions { grid-column: 1 / -1; grid-template-columns: repeat(3,auto); justify-content: end; }
@@ -483,6 +484,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   .workspace-grid { gap: 28px; }
   .ledger-sheet::before { left: 56px; }
   .sheet-heading { min-height: 82px; padding: 20px 17px 18px 72px; }
+  .remediation-card { margin-left: 72px; margin-right: 14px; }
   .sheet-heading h2 { font-size: 21px; }
   .sheet-heading > p { display: none; }
   .ledger-body { padding-right: 14px; }
@@ -1164,7 +1166,7 @@ li[data-portfolio-lane="ready"] .portfolio-lane-badge { color: #7fc98f; }
 .portfolio-review-date { opacity: 0.75; font-size: 0.72rem; }
 
 /* Blocked-run remediation card (Q workspace). */
-.remediation-card { border: 1px solid rgb(var(--accent-unknown-rgb) / .25); border-left: 3px solid var(--accent-unknown); border-radius: 6px; padding: 12px 14px; margin: 12px 0 16px; background: rgb(var(--accent-unknown-rgb) / .04); }
+.remediation-card { border: 1px solid rgb(var(--accent-unknown-rgb) / .25); border-left: 3px solid var(--accent-unknown); border-radius: 6px; padding: 12px 14px; margin: 12px 28px 16px 116px; background: rgb(var(--accent-unknown-rgb) / .04); }
 .remediation-head .remediation-kicker { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--text-muted); margin-bottom: 4px; }
 .remediation-head h3 { margin: 0 0 6px; font-size: 15px; }
 .remediation-head p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
