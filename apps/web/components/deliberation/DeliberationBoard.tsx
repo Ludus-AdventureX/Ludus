@@ -150,6 +150,18 @@ export function DeliberationBoard({
     return unsubscribe;
   }, [workspaceId, run?.id, run?.status, refreshRun]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Polling fallback while the run is open: SSE through the web proxy can
+  // buffer or drop, and a silent stream must never freeze the board on a
+  // stale snapshot (the decision loop uses the same belt-and-braces pattern).
+  useEffect(() => {
+    if (!workspaceId || !run) return;
+    if (run.status === "complete" || run.status === "cancelled") return;
+    const timer = setInterval(() => {
+      void refreshRun(run.id);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [workspaceId, run?.id, run?.status, refreshRun]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!workspaceId || !decisionCaseId) return null;
 
   const createCouncil = async () => {
