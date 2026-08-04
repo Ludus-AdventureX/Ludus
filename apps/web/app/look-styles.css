@@ -929,7 +929,15 @@ body.empty-case .source-mode.is-empty i {
 .sandbox-factor-tag { color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .06em; }
 .sandbox-remove { min-height: 26px; padding: 2px 9px; color: var(--text-muted); background: none; border: 1px solid var(--border-subtle); font-size: 9px; cursor: pointer; }
 .sandbox-remove:hover { color: var(--accent-human); border-color: var(--accent-human); }
-.sandbox-factors input[type="range"] { width: 100%; margin: 10px 0 6px; }
+/* Instrument-grade range sliders (Look V7 slider-wrap idiom): hairline
+   gradient track + semantic accent thumb, shared by sandbox and council
+   strength controls. Webkit + Firefox engines both styled. */
+.sandbox-factors input[type="range"], .deliberation-declare input[type="range"], .deliberation-nomination input[type="range"] { width: 100%; height: 26px; margin: 6px 0 2px; appearance: none; background: transparent; cursor: pointer; }
+.sandbox-factors input[type="range"]::-webkit-slider-runnable-track, .deliberation-declare input[type="range"]::-webkit-slider-runnable-track, .deliberation-nomination input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(90deg, var(--accent-analysis), var(--accent-unknown), var(--accent-human)); }
+.sandbox-factors input[type="range"]::-moz-range-track, .deliberation-declare input[type="range"]::-moz-range-track, .deliberation-nomination input[type="range"]::-moz-range-track { height: 2px; background: linear-gradient(90deg, var(--accent-analysis), var(--accent-unknown), var(--accent-human)); }
+.sandbox-factors input[type="range"]::-webkit-slider-thumb, .deliberation-declare input[type="range"]::-webkit-slider-thumb, .deliberation-nomination input[type="range"]::-webkit-slider-thumb { width: 15px; height: 15px; margin-top: -6.5px; appearance: none; border: 2px solid var(--accent-unknown); border-radius: 50%; background: var(--surface-sheet); box-shadow: 0 0 0 1px var(--accent-unknown); }
+.sandbox-factors input[type="range"]::-moz-range-thumb, .deliberation-declare input[type="range"]::-moz-range-thumb, .deliberation-nomination input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; border: 2px solid var(--accent-unknown); border-radius: 50%; background: var(--surface-sheet); box-shadow: 0 0 0 1px var(--accent-unknown); }
+.sandbox-factors input[type="range"]:focus-visible, .deliberation-declare input[type="range"]:focus-visible, .deliberation-nomination input[type="range"]:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
 .sandbox-factor-source { margin: 0; color: var(--text-muted); font-size: 9px; line-height: 1.6; }
 .sandbox-drivers { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--border-strong); }
 .sandbox-drivers h4 { margin: 0 0 12px; color: var(--accent-analysis); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; font-weight: 400; }
@@ -1358,7 +1366,7 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
    Desk inset inside the paper panel; node kinds stay distinguishable by
    label + border style, never color alone (§11). */
 .sandbox-view-switch { display: flex; gap: 18px; margin: 6px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle); }
-.factor-graph-canvas { position: relative; height: 560px; background: var(--surface-night); border: 1px solid var(--border-night); }
+.factor-graph-canvas { position: relative; height: 560px; background-color: var(--surface-night); background-image: radial-gradient(rgb(var(--night-rule-rgb) / .4) 1px, transparent 1px); background-size: 22px 22px; border: 1px solid var(--border-night); }
 .factor-graph-canvas .react-flow__background circle { fill: var(--border-night); }
 .factor-graph-canvas .react-flow__attribution, .causal-graph-viewport .react-flow__attribution { background: transparent; color: var(--text-night-muted); }
 .factor-graph-node { width: 200px; display: grid; gap: 4px; padding: 12px 14px; text-align: left; color: var(--text-night-primary); background: var(--surface-night-card); border: 1px solid var(--border-night-strong); cursor: pointer; transition: border-color 160ms ease, box-shadow 160ms ease; }
@@ -1389,7 +1397,7 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
    relation-quality edge styles). Overrides the legacy absolute-positioning
    rule so node cards flow inside the xyflow wrappers. */
 .causal-canvas--flow { display: grid; gap: 14px; min-height: 0; }
-.causal-graph-viewport { position: relative; height: clamp(520px, calc(100vh - 300px), 840px); background: var(--surface-night); border: 1px solid var(--border-night); }
+.causal-graph-viewport { position: relative; height: clamp(520px, calc(100vh - 300px), 840px); background-color: var(--surface-night); background-image: radial-gradient(rgb(var(--night-rule-rgb) / .4) 1px, transparent 1px); background-size: 22px 22px; border: 1px solid var(--border-night); }
 .causal-graph-viewport .react-flow__background circle { fill: var(--border-night); }
 .causal-canvas--flow .causal-node { position: relative; left: auto; top: auto; width: 190px; min-height: 105px; cursor: pointer; }
 .causal-canvas--flow .causal-node.is-selected { border-color: var(--text-night-primary); box-shadow: 0 0 0 4px rgb(222 214 200 / .14), 0 16px 34px rgb(0 0 0 / .26); }
@@ -1420,6 +1428,12 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
 .deliberation-board > header h3 em { color: var(--text-muted); font-size: 12px; font-style: normal; }
 .deliberation-board > header .phase-slot-note { margin-top: 4px; max-width: 760px; }
 .deliberation-declare, .deliberation-intervene { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+/* Intervention console as a control-bar strip: wash background sets it apart
+   from the timeline cards above, inputs stay on the sheet surface. */
+.deliberation-intervene { border: 1px solid var(--border-strong); background: var(--surface-wash); }
+.deliberation-intervene textarea, .deliberation-intervene select { background: var(--surface-sheet); }
+.deliberation-intervene-actions select { min-height: 34px; padding: 6px 9px; border: 1px solid var(--border-strong); color: var(--text-primary); font-size: 11px; }
+.deliberation-intervene-actions .secondary-action { min-height: 34px; padding-block: 6px; font-size: 11px; }
 .deliberation-declare h4, .deliberation-intervene h4, .deliberation-nominations h4, .deliberation-proposals h4, .deliberation-transcript h4, .deliberation-outcome h4 { margin: 0; font-family: var(--serif); font-size: 15px; font-weight: 500; }
 .deliberation-declare-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; }
 .deliberation-declare input, .deliberation-declare select, .deliberation-declare textarea, .deliberation-intervene textarea, .deliberation-intervene select, .deliberation-nomination input, .deliberation-nomination textarea { padding: 8px 10px; border: 1px solid var(--border-strong); background: var(--surface-sheet); color: var(--text-primary); font-size: 12px; }
@@ -1432,7 +1446,7 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
 .deliberation-create-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .deliberation-create-row label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 11px; }
 .deliberation-create-row select { padding: 7px 9px; border: 1px solid var(--border-strong); background: var(--surface-sheet); font-size: 12px; }
-.deliberation-board-canvas { position: relative; height: 480px; background: var(--surface-night); border: 1px solid var(--border-night); }
+.deliberation-board-canvas { position: relative; height: 480px; background-color: var(--surface-night); background-image: radial-gradient(rgb(var(--night-rule-rgb) / .4) 1px, transparent 1px); background-size: 22px 22px; border: 1px solid var(--border-night); }
 .deliberation-board-canvas .react-flow__background circle { fill: var(--border-night); }
 .deliberation-board-canvas .react-flow__attribution { background: transparent; color: var(--text-night-muted); }
 .deliberation-board-node { width: 200px; display: grid; gap: 4px; padding: 12px 14px; color: var(--text-night-primary); background: var(--surface-night-card); border: 1px solid var(--border-night-strong); }
@@ -1459,10 +1473,41 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
 .deliberation-proposals li { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
 .deliberation-proposals small { color: var(--text-secondary); font-size: 11px; }
 .deliberation-transcript ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; max-height: 420px; overflow-y: auto; }
-.deliberation-transcript li { padding: 9px 11px; border: 1px solid var(--border-subtle); display: grid; gap: 4px; }
-.deliberation-transcript li[data-speaker="moderator"] { border-left: 3px solid var(--accent-analysis); }
-.deliberation-transcript li[data-speaker="user"] { border-left: 3px solid var(--accent-human); }
-.deliberation-transcript li[data-message-kind="nomination"] { border-left: 3px solid var(--accent-unknown); }
+/* Live transcript as a timeline (MiroFish-style card feed, Look V7 tokens):
+   marker dot per speaker + hairline card with mono eyebrow / kind badge /
+   timestamp. Colour is never the only signal: speaker + kind are text. */
+.deliberation-transcript ol.deliberation-timeline { position: relative; gap: 0; padding-left: 22px; }
+.deliberation-transcript ol.deliberation-timeline::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: 5px; width: 1px; background: var(--border-subtle); }
+.deliberation-transcript li { position: relative; padding: 10px 0 12px; border: 0; border-bottom: 1px solid var(--border-subtle); display: grid; gap: 4px; }
+.deliberation-transcript ol.deliberation-timeline li { grid-template-columns: 14px minmax(0, 1fr); gap: 12px; }
+.deliberation-timeline-marker { width: 11px; height: 11px; margin-top: 4px; border: 1px solid var(--accent-analysis); border-radius: 50%; background: var(--surface-sheet); }
+.deliberation-timeline li[data-speaker="user"] .deliberation-timeline-marker { border-color: var(--accent-human); background: var(--accent-human-wash); }
+.deliberation-timeline li[data-message-kind="nomination"] .deliberation-timeline-marker { border-color: var(--accent-unknown); background: var(--accent-unknown-wash); }
+.deliberation-timeline-body { min-width: 0; display: grid; gap: 5px; }
+.deliberation-timeline-body > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.deliberation-kind { padding: 1px 7px; border: 1px solid var(--border-subtle); color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .08em; }
+.deliberation-timeline-body time { margin-left: auto; color: var(--text-muted); font-family: var(--mono); font-size: 8px; font-variant-numeric: tabular-nums; }
+.deliberation-transcript li[data-speaker="moderator"] { border-left: 0; }
+.deliberation-transcript li[data-speaker="user"] { border-left: 0; }
+.deliberation-transcript li[data-message-kind="nomination"] { border-left: 0; }
+.deliberation-timeline li[data-speaker="moderator"] .deliberation-kind { border-color: var(--accent-analysis); color: var(--accent-analysis); }
+.deliberation-timeline li[data-speaker="user"] .deliberation-kind { border-color: var(--accent-human); color: var(--accent-human); }
+.deliberation-timeline li[data-message-kind="nomination"] .deliberation-kind { border-color: var(--accent-unknown); color: var(--accent-unknown); }
+/* Council status bar (MiroFish control-bar idiom): status dot + mono stats. */
+.deliberation-status-bar { display: flex; align-items: center; gap: 26px; padding: 12px 16px; border: 1px solid var(--border-subtle); background: rgb(var(--surface-sheet-rgb) / .6); }
+.deliberation-status-bar > em { margin-left: auto; color: var(--text-muted); font-style: normal; font-size: 10px; }
+.deliberation-status-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--accent-analysis); box-shadow: 0 0 0 4px rgb(var(--accent-analysis-rgb) / .12); animation: status-breathe 1.6s ease-in-out infinite; }
+@keyframes status-breathe { 50% { opacity: .45; } }
+.deliberation-status-bar[data-deliberation-status="awaiting_user"] .deliberation-status-dot { background: var(--accent-unknown); box-shadow: 0 0 0 4px rgb(var(--accent-unknown-rgb) / .12); }
+.deliberation-status-bar[data-deliberation-status="complete"] .deliberation-status-dot { background: var(--accent-human); box-shadow: 0 0 0 4px rgb(var(--accent-human-rgb) / .12); animation: none; }
+.deliberation-status-bar[data-deliberation-status="cancelled"] .deliberation-status-dot { background: var(--border-strong); box-shadow: none; animation: none; }
+.deliberation-status-bar dl { margin: 0; display: flex; gap: 22px; }
+.deliberation-status-bar dl div { display: grid; gap: 2px; }
+.deliberation-status-bar dt { color: var(--text-muted); font-family: var(--mono); font-size: 7px; letter-spacing: .14em; text-transform: uppercase; }
+.deliberation-status-bar dd { margin: 0; color: var(--text-primary); font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .deliberation-status-dot { animation: none; }
+}
 .deliberation-speaker { color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
 .deliberation-transcript p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; word-break: break-word; }
 .deliberation-outcome { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--border-strong); background: var(--surface-sheet); }
@@ -1480,6 +1525,10 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
   .deliberation-board-outcome { width: 176px; }
   .deliberation-declare-row { grid-template-columns: 1fr; }
   .deliberation-transcript ol { max-height: 300px; }
+  .deliberation-status-bar { flex-wrap: wrap; gap: 14px 20px; }
+  .deliberation-status-bar > em { margin-left: 0; width: 100%; }
+  .deliberation-status-bar dl { gap: 16px; }
+  .deliberation-timeline-body time { margin-left: 0; }
 }
 
 /* G-page Task-13 sandbox surface completion (g-page-visual-rework): the
