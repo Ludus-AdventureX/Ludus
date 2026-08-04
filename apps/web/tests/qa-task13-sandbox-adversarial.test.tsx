@@ -361,7 +361,7 @@ describe("QA-A5 sandboxCaseDataRouteAvailable flip safety", () => {
     const { SandboxView } = await import("../components/shell/views/SandboxView");
     const { container } = render(createElement(SandboxView, { decisionCaseId: "LX-2407" }));
 
-    expect(screen.getByRole("heading", { level: 1, name: "推演尚未开放" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "压力测试尚未开放" })).toBeVisible();
     expect(container.querySelector('[data-sandbox-state="empty"]')).toBeInTheDocument();
     expect(container.querySelector(".causal-canvas")).not.toBeInTheDocument();
   });

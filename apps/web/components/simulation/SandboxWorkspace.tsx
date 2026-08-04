@@ -106,7 +106,7 @@ export function SandboxWorkspace({ decisionCaseId, data }: SandboxWorkspaceProps
           <div className="intro-grid">
             <div>
               <p className="eyebrow">沙盘不预测未来，它暴露建议在何处失效</p>
-              <h1 id="sandbox-view-title">推演尚未开放</h1>
+              <h1 id="sandbox-view-title">压力测试尚未开放</h1>
             </div>
             <div className="intro-actions" />
           </div>
@@ -128,7 +128,11 @@ export function SandboxWorkspace({ decisionCaseId, data }: SandboxWorkspaceProps
               <small>等待真实因果图</small>
             </header>
             <p className="pressure-question">
-              推演尚未开放——完成一次深度分析并确认因果图后，这里将展示脆弱条件与压力测试。
+              压力测试尚未开放——需要一份已确认的正式因果图。完成深度分析后，在完整模型中审阅并确认全部节点与边，脆弱条件与压力测试即在此开放。
+            </p>
+            <p className="formal-gate-note" role="note">
+              下一步：完成深度分析 → 展开完整模型 → 审阅确认全部节点与边 → 保存正式图版本。
+              正式模拟始终由 API 校验图版本，前端不会伪造可用状态。
             </p>
           </article>
         </div>
