@@ -417,6 +417,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   .redline-actions { grid-column: 1 / -1; grid-template-columns: repeat(3,auto); justify-content: end; }
   .report-spread { grid-template-columns: minmax(0,1.3fr) minmax(270px,.7fr); }
   .report-spread::before { left: 65%; }
+  /* 900-1180px convergence: the three fixed-min masthead columns overflow and
+     overlap once the viewport drops below their combined minimum. */
+  .masthead { grid-template-columns: auto minmax(0,1fr) auto; gap: 18px; padding: 0 20px; }
 }
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; grid-template-rows: 66px 60px minmax(0,1fr); grid-template-areas: "mast" "spine" "stage"; }
@@ -445,6 +448,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   .decision-signature { grid-template-columns: 1fr 1fr; gap: 24px 0; }
   .custody-strip { grid-template-columns: minmax(100px,1fr) auto minmax(100px,1fr) auto minmax(100px,1fr) auto minmax(100px,1fr); overflow-x: auto; }
   .custody-title { display: none; }
+  /* Two-column workbenches collapse to one column here; without this the
+     fixed right rails squeeze their main column on tablet/narrow windows. */
+  .workspace-grid { grid-template-columns: 1fr; gap: 28px; }
+  .intro-grid { grid-template-columns: 1fr; gap: 28px; }
+  .analysis-layout { grid-template-columns: 1fr; gap: 32px; }
 }
 @media (max-width: 620px) {
   body { font-size: 13px; }
@@ -540,6 +548,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
   .review-grid section { min-height: 130px; }
   .toast-region { left: 12px; right: 12px; bottom: 12px; }
   .toast { max-width: none; }
+  /* Evidence drawer on narrow screens: tighter ledger padding, single-column
+     item rows, 2-up quality dimensions. */
+  .evidence-ledger { padding: 16px 18px 20px; gap: 14px; }
+  .evidence-detail > .draft-notice { margin-inline: 18px; }
+  .evidence-detail > .secondary-action { margin: 12px 18px 22px; }
+  .evidence-detail-body { padding: 16px 18px 24px; }
+  .evidence-item-row { grid-template-columns: minmax(0,1fr); }
+  .evidence-item-row .source-grade-badge { grid-row: auto; justify-self: start; }
+  .quality-dimension-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -1165,3 +1182,215 @@ li[data-portfolio-lane="ready"] .portfolio-lane-badge { color: #7fc98f; }
 .run-parked-note { border: 1px solid rgb(var(--accent-unknown-rgb) / .25); border-radius: 6px; padding: 12px 14px; margin: 12px 0 16px; background: rgb(var(--accent-unknown-rgb) / .04); }
 .run-parked-note p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
 .run-parked-note .remediation-notice { color: var(--accent-key); font-size: 12.5px; }
+
+/* Evidence provenance drawer (Task 11 B2 quality components). The whole
+   component family shipped without any CSS backing, so the ledger, packet
+   evidence set, L1-L6 badges, orthogonal quality dimensions, verdict blocks,
+   provenance chain and conflict list rendered as raw browser defaults.
+   Look V7 contract: square corners, hairline borders, semantic tokens only. */
+.evidence-sheet { width: min(600px, 96vw); }
+.evidence-sheet > header > div { display: grid; min-width: 0; }
+.evidence-sheet > header p { margin: 8px 0 0; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
+.draft-notice { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; word-break: break-word; }
+.evidence-ledger { display: grid; gap: 18px; padding: 20px 34px 26px; }
+.evidence-gap-note { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-unknown); background: var(--surface-wash); }
+.evidence-gap-note > span { color: var(--accent-unknown); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; }
+.evidence-gap-note p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+
+/* Run evidence set projected from research packets (gap-fix wave A). */
+.packet-evidence-ledger { border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.packet-evidence-ledger > span { display: block; padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); color: var(--accent-analysis); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; }
+.packet-evidence-ledger ul { margin: 0; padding: 0; list-style: none; }
+.packet-evidence-ledger li { display: grid; gap: 4px; padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); }
+.packet-evidence-ledger li:last-child { border-bottom: 0; }
+.packet-evidence-ledger b { font-family: var(--serif); font-size: 14px; font-weight: 500; word-break: break-word; }
+.packet-evidence-ledger small { color: var(--text-secondary); font-size: 11px; line-height: 1.6; word-break: break-word; }
+.packet-evidence-ledger small[data-packet-direction] { color: var(--text-muted); font-size: 10px; }
+.packet-evidence-ids { color: var(--text-muted); font-family: var(--mono); font-size: 9px; word-break: break-all; }
+
+/* Ledger-level discipline warnings (single-narrative / low-trust share /
+   rejected verdicts). Unknown-accent treatment, never a numeric score. */
+.evidence-set-warnings { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid rgb(var(--accent-unknown-rgb) / .3); border-left: 3px solid var(--accent-unknown); background: rgb(var(--accent-unknown-rgb) / .05); }
+.evidence-set-warnings p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+
+/* Funnel discard audit: what was filtered out and why. */
+.funnel-discard-audit { display: grid; gap: 8px; padding: 12px 16px; border: 1px solid var(--border-subtle); }
+.funnel-discard-audit > span { color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; }
+.funnel-discard-audit ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.funnel-discard-audit li { display: grid; gap: 2px; padding: 8px 10px; border: 1px dashed var(--border-strong); }
+.funnel-discard-audit b { font-size: 12px; font-weight: 600; }
+.funnel-discard-audit small { color: var(--text-muted); font-size: 10px; word-break: break-word; }
+
+/* Ledger item rows: grade badge | title, meta wraps underneath. */
+.evidence-item-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border-strong); }
+.evidence-item-row { width: 100%; display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 13px; padding: 14px 10px; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--border-subtle); transition: background 160ms ease; }
+.evidence-item-row:hover { background: var(--surface-wash); }
+.evidence-item-row[aria-expanded="true"] { background: var(--surface-wash); box-shadow: inset 2px 0 0 var(--accent-human); }
+.evidence-item-row .source-grade-badge { grid-row: 1 / span 2; align-self: start; }
+.evidence-item-row b { font-family: var(--serif); font-size: 14px; font-weight: 500; word-break: break-word; }
+.evidence-item-row small { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; color: var(--text-muted); font-size: 10px; }
+.evidence-stance { padding: 0 6px; border: 1px solid var(--border-strong); font-size: 9px; }
+.evidence-stance--supporting { color: var(--accent-analysis); border-color: var(--accent-analysis); }
+.evidence-stance--opposing { color: var(--accent-human); border-color: var(--accent-human); }
+.evidence-lens-refs { color: var(--accent-analysis); }
+
+/* L1-L6 source CATEGORY badge: a kind label, never a credibility score.
+   Trusted tiers take the analysis accent, weak tiers the unknown accent. */
+.source-grade-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--border-strong); color: var(--text-secondary); font-size: 10px; white-space: nowrap; }
+.source-grade-badge b { color: var(--text-primary); font-family: var(--mono); font-size: 10px; }
+.source-grade-badge[data-source-grade="L1_primary"], .source-grade-badge[data-source-grade="L2_reputable"] { border-color: var(--accent-analysis); }
+.source-grade-badge[data-source-grade="L1_primary"] b, .source-grade-badge[data-source-grade="L2_reputable"] b { color: var(--accent-analysis); }
+.source-grade-badge[data-source-grade="L5_opinion"], .source-grade-badge[data-source-grade="L6_unverified"] { border-style: dashed; border-color: var(--accent-unknown); }
+.source-grade-badge[data-source-grade="L5_opinion"] b, .source-grade-badge[data-source-grade="L6_unverified"] b { color: var(--accent-unknown); }
+
+/* Per-item chain of custody pane. */
+.evidence-detail { border-top: 1px solid var(--border-strong); background: var(--surface-wash); }
+.evidence-detail > .draft-notice { margin: 22px 34px 0; }
+.evidence-detail > .secondary-action { margin: 12px 34px 22px; }
+.evidence-detail-body { display: grid; gap: 18px; padding: 22px 34px 30px; }
+.evidence-detail-head { display: grid; justify-items: start; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); }
+.evidence-detail-head h3 { margin: 0; font-family: var(--serif); font-size: 19px; font-weight: 500; word-break: break-word; }
+.evidence-detail-head small { color: var(--text-muted); font-size: 10px; word-break: break-all; }
+.evidence-detail-head blockquote { margin: 0; padding: 10px 14px; border-left: 2px solid var(--accent-human); background: var(--surface-sheet); color: var(--text-secondary); font-size: 12px; line-height: 1.7; word-break: break-word; }
+.evidence-bias { margin: 0; color: var(--accent-unknown); font-size: 11px; }
+
+/* Four-tier verdict block; the left rule carries the verdict tone. */
+.verdict-block { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--border-subtle); border-left-width: 3px; background: var(--surface-sheet); }
+.verdict-block[data-evidence-verdict="accepted"] { border-left-color: var(--accent-analysis); }
+.verdict-block[data-evidence-verdict="conditional"] { border-left-color: var(--accent-human); }
+.verdict-block[data-evidence-verdict="lead_only"] { border-left-color: var(--border-strong); }
+.verdict-block[data-evidence-verdict="rejected"] { border-left-color: var(--accent-unknown); }
+.verdict-block > p { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.verdict-block b { font-size: 12px; }
+.verdict-block > p > span { color: var(--text-muted); font-size: 10px; }
+.verdict-reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.verdict-reasons code { display: inline-block; padding: 1px 7px; border: 1px solid var(--border-strong); color: var(--text-secondary); font-family: var(--mono); font-size: 9px; word-break: break-all; }
+.verdict-reasons-empty { margin: 0; color: var(--text-muted); font-size: 10px; }
+.verdict-limits { display: grid; gap: 4px; }
+.verdict-limits > span { color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.verdict-limits ul { margin: 0; padding-left: 16px; color: var(--text-secondary); font-size: 11px; line-height: 1.7; }
+.verdict-limits-missing { margin: 0; color: var(--accent-unknown); font-size: 11px; }
+
+/* Orthogonal quality dimensions: seven independent numbers, no rollup. */
+.evidence-quality-panel { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.evidence-quality-panel header h3 { margin: 0; font-family: var(--serif); font-size: 14px; font-weight: 500; }
+.evidence-quality-panel header p { margin: 4px 0 0; color: var(--text-muted); font-size: 10px; }
+.quality-dimension-list { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 1px; background: var(--border-subtle); border: 1px solid var(--border-subtle); }
+.quality-dimension { display: grid; gap: 3px; padding: 9px 11px; background: var(--surface-sheet); }
+.quality-dimension dt { color: var(--text-muted); font-size: 9px; }
+.quality-dimension dd { margin: 0; color: var(--accent-analysis); font-family: var(--mono); font-size: 13px; }
+.quality-flags { display: grid; gap: 5px; }
+.quality-flags > span { color: var(--accent-unknown); font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.quality-flags ul { margin: 0; padding-left: 16px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
+.quality-assessed-at { margin: 0; color: var(--text-muted); font-size: 10px; }
+
+/* Chain of custody steps: raw artifact → frozen source record. Reuses the
+   shared .provenance-chain dl grid; the step shells are drawer-scoped. */
+section.provenance-chain { gap: 12px; }
+section.provenance-chain > header h3 { margin: 0; font-family: var(--serif); font-size: 14px; font-weight: 500; }
+section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted); font-size: 10px; }
+.provenance-step { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.provenance-step > span { color: var(--accent-human); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; }
+.provenance-step > p { margin: 0; display: grid; gap: 2px; }
+.provenance-step b { font-family: var(--serif); font-size: 13px; font-weight: 500; word-break: break-word; }
+.provenance-step small { color: var(--text-muted); font-size: 10px; }
+.provenance-uri { margin: 0; color: var(--text-secondary); font-size: 11px; word-break: break-all; }
+.provenance-hash { margin: 0; }
+.provenance-hash code { font-family: var(--mono); font-size: 9px; color: var(--text-muted); word-break: break-all; }
+.provenance-spans { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.provenance-spans li { display: grid; gap: 4px; padding: 9px 11px; border-left: 2px solid var(--accent-analysis); background: var(--surface-wash); }
+.provenance-spans blockquote { margin: 0; color: var(--text-secondary); font-size: 11px; line-height: 1.65; word-break: break-word; }
+.provenance-spans code { font-family: var(--mono); font-size: 8px; color: var(--text-muted); word-break: break-all; }
+.provenance-spans-empty { margin: 0; color: var(--text-muted); font-size: 11px; }
+
+/* Same-source group: N citations from one origin count as ONE independent
+   source. Support/oppose directions stay as separate columns, never netted. */
+.same-source-group { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.same-source-group h3 { margin: 0; font-family: var(--serif); font-size: 14px; font-weight: 500; }
+.same-source-group p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.same-source-group ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.same-source-group code { font-family: var(--mono); font-size: 9px; color: var(--text-muted); word-break: break-all; }
+.evidence-direction { display: grid; gap: 10px; }
+.evidence-direction h3 { margin: 0; font-family: var(--serif); font-size: 14px; font-weight: 500; }
+.direction-column { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.direction-column > span { font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.direction-column[data-direction="supports"] > span { color: var(--accent-analysis); }
+.direction-column[data-direction="contradicts"] > span { color: var(--accent-human); }
+.direction-column ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.direction-column code { font-family: var(--mono); font-size: 9px; color: var(--text-secondary); word-break: break-all; }
+.direction-column p { margin: 0; color: var(--text-muted); font-size: 11px; }
+
+/* Conflict list: explicit from/to pairs; unresolved conflicts stay visible. */
+.evidence-conflicts { display: grid; gap: 10px; }
+.evidence-conflicts header h3 { margin: 0; font-family: var(--serif); font-size: 14px; font-weight: 500; }
+.evidence-conflicts header p { margin: 4px 0 0; color: var(--text-muted); font-size: 10px; }
+.conflicts-empty { margin: 0; color: var(--text-muted); font-size: 11px; }
+.conflict-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.conflict-entry { display: grid; gap: 5px; padding: 11px 13px; border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-human); background: var(--surface-sheet); }
+.conflict-entry > p { margin: 0; font-size: 12px; word-break: break-word; }
+.conflict-entry b { font-family: var(--serif); font-size: 12px; font-weight: 500; }
+.conflict-entry > small { color: var(--text-muted); font-family: var(--mono); font-size: 9px; }
+.conflict-rationale { margin: 0; color: var(--text-secondary); font-size: 11px; line-height: 1.65; }
+.conflict-rationale-missing { margin: 0; color: var(--accent-unknown); font-size: 11px; }
+
+/* Lens consumers: which accepted lens artifacts cite this evidence item. */
+.evidence-lens-consumers { display: grid; gap: 6px; }
+.evidence-lens-consumers > span { color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.evidence-lens-consumers ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.evidence-lens-consumers li { padding: 2px 8px; border: 1px solid var(--accent-analysis); color: var(--accent-analysis); font-size: 9px; }
+
+/* Route A: factor sandbox spatial graph (one decision-event node fed by the
+   factor nodes + factor->factor influence edges). The graph sits as a Night
+   Desk inset inside the paper panel; node kinds stay distinguishable by
+   label + border style, never color alone (§11). */
+.sandbox-view-switch { display: flex; gap: 18px; margin: 6px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle); }
+.factor-graph-canvas { position: relative; height: 560px; background: var(--surface-night); border: 1px solid var(--border-night); }
+.factor-graph-canvas .react-flow__background circle { fill: var(--border-night); }
+.factor-graph-canvas .react-flow__attribution, .causal-graph-viewport .react-flow__attribution { background: transparent; color: var(--text-night-muted); }
+.factor-graph-node { width: 200px; display: grid; gap: 4px; padding: 12px 14px; text-align: left; color: var(--text-night-primary); background: var(--surface-night-card); border: 1px solid var(--border-night-strong); cursor: pointer; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.factor-graph-node span { color: var(--text-night-muted); font-family: var(--mono); font-size: 7px; letter-spacing: .08em; text-transform: uppercase; }
+.factor-graph-node b { font-family: var(--serif); font-size: 14px; font-weight: 500; line-height: 1.4; word-break: break-word; }
+.factor-graph-node small { color: var(--text-night-secondary); font-size: 9px; }
+.factor-graph-node[data-factor-direction="supporting"] { border-left: 3px solid var(--line-night-analysis); }
+.factor-graph-node[data-factor-direction="opposing"] { border-left: 3px dashed var(--line-night-human); }
+.factor-graph-node.is-selected { border-color: var(--text-night-primary); box-shadow: 0 0 0 4px rgb(222 214 200 / .14); }
+.factor-graph-outcome { width: 210px; display: grid; gap: 4px; padding: 14px; color: var(--text-night-primary); background: var(--surface-night-sheet); border: 1px solid var(--line-night-human); }
+.factor-graph-outcome span { color: var(--line-night-human); font-family: var(--mono); font-size: 7px; letter-spacing: .12em; text-transform: uppercase; }
+.factor-graph-outcome b { font-family: var(--serif); font-size: 17px; font-weight: 500; }
+.factor-graph-outcome small { color: var(--text-night-secondary); font-size: 9px; }
+.factor-graph-outcome[data-sandbox-verdict="proceed"] b { color: var(--line-night-analysis); }
+.factor-graph-canvas .react-flow__handle { width: 7px; height: 7px; border-radius: 0; background: var(--surface-night-sheet); border: 1px solid var(--text-night-muted); }
+.factor-graph-canvas .react-flow__edge-path { stroke-opacity: .85; }
+.fg-edge-supporting .react-flow__edge-path { stroke: var(--line-night-analysis); }
+.fg-edge-opposing .react-flow__edge-path { stroke: var(--line-night-human); }
+.fg-edge-neutral .react-flow__edge-path { stroke: var(--border-night-strong); }
+.fg-edge-boost .react-flow__edge-path { stroke: var(--line-night-analysis); }
+.fg-edge-suppress .react-flow__edge-path { stroke: var(--line-night-unknown); }
+.fg-edge-dashed .react-flow__edge-path { stroke-dasharray: 6 5; }
+.factor-graph-canvas .react-flow__edge-text { fill: var(--text-night-secondary); font-size: 9px; font-family: var(--mono); }
+.factor-graph-canvas .react-flow__edge-textbg { fill: var(--surface-night); }
+.factor-graph-inspector { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-analysis); background: var(--surface-wash); display: grid; gap: 8px; }
+
+/* Route B: formal causal sandbox spatial graph (three-layer node columns,
+   relation-quality edge styles). Overrides the legacy absolute-positioning
+   rule so node cards flow inside the xyflow wrappers. */
+.causal-canvas--flow { display: grid; gap: 14px; min-height: 0; }
+.causal-graph-viewport { position: relative; height: clamp(520px, calc(100vh - 300px), 840px); background: var(--surface-night); border: 1px solid var(--border-night); }
+.causal-graph-viewport .react-flow__background circle { fill: var(--border-night); }
+.causal-canvas--flow .causal-node { position: relative; left: auto; top: auto; width: 190px; min-height: 105px; cursor: pointer; }
+.causal-canvas--flow .causal-node.is-selected { border-color: var(--text-night-primary); box-shadow: 0 0 0 4px rgb(222 214 200 / .14), 0 16px 34px rgb(0 0 0 / .26); }
+.causal-canvas--flow .react-flow__handle { width: 7px; height: 7px; border-radius: 0; background: var(--surface-night-sheet); border: 1px solid var(--text-night-muted); }
+.cg-edge-evidence .react-flow__edge-path { stroke: var(--line-night-analysis); }
+.cg-edge-human .react-flow__edge-path { stroke: var(--line-night-human); }
+.cg-edge-assumed .react-flow__edge-path { stroke: var(--line-night-unknown); }
+.cg-edge-dashed .react-flow__edge-path { stroke-dasharray: 7 5; }
+.causal-graph-viewport .react-flow__edge.is-selected .react-flow__edge-path { stroke-opacity: 1; filter: drop-shadow(0 0 3px rgb(222 214 200 / .5)); }
+.causal-graph-viewport .react-flow__edge-text { fill: var(--text-night-secondary); font-size: 9px; font-family: var(--mono); }
+.causal-graph-viewport .react-flow__edge-textbg { fill: var(--surface-night); }
+.causal-canvas--flow .canvas-note { position: static; width: min(430px, 100%); }
+@media (max-width: 620px) {
+  .factor-graph-canvas { height: 340px; }
+  .causal-graph-viewport { height: 420px; }
+  .factor-graph-node { width: 168px; }
+  .factor-graph-outcome { width: 176px; }
+}

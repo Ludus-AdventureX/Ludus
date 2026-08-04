@@ -4616,3 +4616,576 @@ fail-closed 工作正常，坏在透镜写路径参数未接通 + 假设引用�
 - Remaining: remote visibility/branch-level review is product-owner action.
 - No credentials recorded.
 
+
+
+---
+
+## Archive lens behavior-gate repair retry + E-page maturity (grey-goo alignment) - 2026-08-02T23:35:30+08:00
+
+# Work Log: lens behavior-gate repair retry + E-page maturity (grey-goo alignment)
+
+- Started: 2026-08-02 (Asia/Shanghai).
+- Status: implementation COMPLETE, local commits done; remote push COMPLETE (both branches live-verified).
+- Branch/worktree: codex/lens-behavior-closed-loop @ 9d9e2cf baseline (AGENTS.md byte-identical), worktree at decision-lab-worktrees/lens-behavior-closed-loop.
+- Commits:
+  - codex/fix-qa-baseline-drift 70db0f7 fix(qa): sync main QA baselines with merged migrations and harden connector status enum (6 files, backend 598 passed). Pushed; main merge pending integration owner (pre-push hook blocks direct main push).
+  - codex/lens-behavior-closed-loop 433e38b feat(lens): behavior-gate repair retry (grey-goo principle 13) + E-page maturity (6 files, web 154 passed, tsc clean, backend lens suite 12 passed). Pushed.
+- P0 (implemented): _persist_lens_with_repair catches LensBehaviorRejected -> re-invokes dedicated lens WITH reason codes (one repair pass) -> fail-closed on second rejection; _execute_dedicated_lens accepts repair_context.
+- P1 (implemented, pure frontend): evidence stance derivation, ledger warnings (zero-opposing / L5-L6-heavy / rejected), evidence->lens support chain via mounted strategic-lenses API; no contract change.
+- P2 (recorded, not implemented): docs/plans/lens-greygoo-p2-implementation-plan.md (principles 14/15, multi-round, self-anchor, logic spot-check, retrieval discipline, TDD discard persistence, narrative echo prevention).
+- Baseline drift fixed: 6 failed + 1 error -> 598 passed (migration/table assertion sync + workspace_connectors.status enum migration a4b5c6d7e8f9 + fire-and-forget task drain in tests/conftest).
+- Main worktree uncommitted user files (18) LEFT UNTOUCHED: analysis-launch-panel frontend tests 4 failed (unfinished work), not committed per product-owner decision.
+- Live verification: origin main 9d9e2cf (unchanged), codex/fix-qa-baseline-drift 70db0f7, codex/lens-behavior-closed-loop 433e38b - all match local SHAs.
+- Verification: backend full pytest 598 passed (-W error), ruff clean, alembic up/down/up clean; web vitest 154 passed, tsc --noEmit clean.
+- Remaining: integration owner merges both branches to main per AGENTS section 19; user's 18 uncommitted files need their own completion pass (4 frontend test failures).
+- Secret policy: do not record credentials here.
+
+
+---
+
+## Archive lens behavior-gate repair retry + E-page maturity (grey-goo alignment) - 2026-08-02T23:35:59+08:00
+
+# Work Log: lens behavior-gate repair retry + E-page maturity (grey-goo alignment)
+
+- Started: 2026-08-02 (Asia/Shanghai).
+- Status: implementation COMPLETE, local commits done; remote push COMPLETE (both branches live-verified).
+- Branch/worktree: codex/lens-behavior-closed-loop @ 9d9e2cf baseline (AGENTS.md byte-identical), worktree at decision-lab-worktrees/lens-behavior-closed-loop.
+- Commits:
+  - codex/fix-qa-baseline-drift 70db0f7 fix(qa): sync main QA baselines with merged migrations and harden connector status enum (6 files, backend 598 passed). Pushed; main merge pending integration owner (pre-push hook blocks direct main push).
+  - codex/lens-behavior-closed-loop 433e38b feat(lens): behavior-gate repair retry (grey-goo principle 13) + E-page maturity (6 files, web 154 passed, tsc clean, backend lens suite 12 passed). Pushed.
+- P0 (implemented): _persist_lens_with_repair catches LensBehaviorRejected -> re-invokes dedicated lens WITH reason codes (one repair pass) -> fail-closed on second rejection; _execute_dedicated_lens accepts repair_context.
+- P1 (implemented, pure frontend): evidence stance derivation, ledger warnings (zero-opposing / L5-L6-heavy / rejected), evidence->lens support chain via mounted strategic-lenses API; no contract change.
+- P2 (recorded, not implemented): docs/plans/lens-greygoo-p2-implementation-plan.md (principles 14/15, multi-round, self-anchor, logic spot-check, retrieval discipline, TDD discard persistence, narrative echo prevention).
+- Baseline drift fixed: 6 failed + 1 error -> 598 passed (migration/table assertion sync + workspace_connectors.status enum migration a4b5c6d7e8f9 + fire-and-forget task drain in tests/conftest).
+- Main worktree uncommitted user files (18) LEFT UNTOUCHED: analysis-launch-panel frontend tests 4 failed (unfinished work), not committed per product-owner decision.
+- Live verification: origin main 9d9e2cf (unchanged), codex/fix-qa-baseline-drift 70db0f7, codex/lens-behavior-closed-loop 433e38b - all match local SHAs.
+- Verification: backend full pytest 598 passed (-W error), ruff clean, alembic up/down/up clean; web vitest 154 passed, tsc --noEmit clean.
+- Remaining: integration owner merges both branches to main per AGENTS section 19; user's 18 uncommitted files need their own completion pass (4 frontend test failures).
+- Secret policy: do not record credentials here.
+
+
+---
+
+## Archive P2 grey-goo 九项全部落地（依据 Gray 白皮书第 15 章 + P2 方案文档） - 2026-08-03T00:37:25+08:00
+
+# Work Log: P2 grey-goo 九项全部落地（依据 Gray 白皮书第 15 章 + P2 方案文档）
+
+- Started: 2026-08-02 (Asia/Shanghai).
+- Status: IN_PROGRESS. 用户确认九项全部实现，按 A→B→C 三波次稳步推进。
+- 依据文档:
+  - P2 方案: docs/plans/lens-greygoo-p2-implementation-plan.md（本 worktree 分支）
+  - Gray 白皮书: 探讨/Gray系统架构白皮书.md 第 15 章（M2 服务化落地技术方案）
+  - 框架技能: 探讨/skills/research/（framework-selector v6.12.x / v6-analysis-agent / analysis-quality-gate / v6-safety-anchor 等）
+- 工作位置: worktree decision-lab-worktrees/lens-behavior-closed-loop（分支 codex/lens-behavior-closed-loop，基线 9d9e2cf，AGENTS.md 字节一致）
+- 主工作树: 用户 18 个未提交文件保留不动；基线修复已在 codex/fix-qa-baseline-drift (70db0f7) 推送，main 合并待集成 owner。
+
+## 波次计划
+
+### 波次 1（A 级·无 CCR·纯 worker 内）—— 先做
+- P2-4 Self-Anchor 自锚定验证（v6-analysis-agent §8）：prompt 追加 + _sanitize_packet 后确定性校验（两条全冲突→claim_support_score 压 0.5）；事件 payload 追加 selfAnchorPassed
+- P2-5 逻辑抽查回应协议（§13）：_logic_spot_check 纯函数（循环论证/预设偷换/事实矛盾）；命中→roleOverride 修正轮；原 packet 进 discarded_claims；consistency 维乘 0.7
+- P2-9 安全锚降级前置检查（v6.9.5）：判定函数（safety_anchor keyFindings >= 2 → 阻止降级）
+
+### 波次 2（B 级·一次 CCR 波次 + migration）—— A 后
+- P2-2 复杂度自适应（原则⑮）：AnalysisRun 加降级字段 + migration；CRITICIZING 后降级检查；事件 payload 标注 downgrade
+- P2-6 检索纪律与覆盖索引（§3）：retrieval_coverage 表 + migration；_retrieve_once 收口 + 幂等 + 搜索上限（focused≤3/full≤5）
+- P2-7 TDD 丢弃记录持久化（原则⑩）：evidence_funnel_audits 表（或选型）+ migration + E 页"被过滤的事实"分区（API 变更 + 合同重生成）
+
+### 波次 3（C 级·依赖 A+B）—— A+B 落地后稳步进行
+- P2-1 透镜中期交叉阅读（原则⑭）：先降级方案（crossReadNotes 走 content 字段，不新增顶层契约）；method-pack 升版为增强项
+- P2-3 多轮迭代（§7 Think-First/Search-Later）：executor round 循环 + 知识缺口→检索闭环（依赖 P2-6）
+- P2-8 叙事回音预防（v6.12.8）：五项检查（planning 阶段 echoChecklist）+ 偏离度评分（fixture 关键词重叠先做）
+
+## 完成定义（每波次）
+- 后端一次性 PG16 容器全量 pytest -q -W error -rxX 零回归
+- ruff / compileall / diff-check 干净
+- 前端 vitest / tsc / build 零错误（如涉及）
+- 触合同项：CCR 文档 → generate_contracts.ps1 生成 → -Check = CONTRACT_DRIFT_OK
+- handoff 落 docs/handoffs/；QA 电池随候选提交；HEAD/HISTORY 按第 18 节维护
+
+- Secret policy: do not record credentials here.
+
+--- archived 2026-08-03 (Asia/Shanghai): flash/pro full-flow E2E verification + E-page audit ---
+# Work Log: flash/pro 全流程质量门 E2E 验证 + E 页功能核对（016f657）
+
+- Date: 2026-08-03 (Asia/Shanghai). Status: COMPLETE（验证完成，两处新缺口已定位）。
+
+## 执行
+- 合并 75ee0ca 到本地 main（016f657）→ 重建 alpha 栈（新镜像）。
+- flash run c2193683：4/5 透镜 ready，meadows 因 LensReferenceResolutionError
+  （引用不存在的 sourcePacketId）失败 → blocked。
+- pro run e1d95dd1：**5/5 透镜全部 ready**（wave1+2 的 B1/B2/B5 修复生效，
+  pro 原失败点 counterparty 与 flash 原失败点 meadows 均已解决）；乘法门通过
+  （evidence 0.7 / adversarial 1.0 / consistency 1.0）；validator 内容审查拒绝
+  （4 条实质发现：证据无来源、门槛缺计算依据、应急方案自相矛盾、验证目标
+  无理由降级）→ blocked（fail-closed 设计内行为）。
+
+## E 页功能核对（对照 Gray 白皮书）
+- ✅ 漏斗审计（原则⑩/P2-7）：funnelAudit 完整（admitted 6、warnings 低信任警告、
+  tierCounts、opposingCount 2、lowTierShare 1.0）。
+- ✅ 冲突检测：evidence-conflicts 端点诚实返回空集。
+- ✅ 透镜支撑链：/strategic-lenses 返回 5 个 ready 产物。
+- ⚠️ 缺口 1：证据项从未持久化（evidence_items 表全库 0 行；ev-retrieving-*
+  是阶段占位符）→ E 页证据列表恒空、E5 详情端点（quality/direction/
+  provenance/same-source-group）无数据可查。白皮书证据门槛对称性要求证据
+  可溯源，此处管线未闭环。
+- ⚠️ 缺口 2：LensReferenceResolutionError 落入 generic except 不走结构化修复
+  （prompt 中已有合法 ID 清单，本可修复）。
+
+## 结论（能否生成报告）
+- 系统全链路可跑（planning→retrieving→analyzing 双轮→criticizing→
+  synthesizing 五透镜→validating），质量门机制全部生效。
+- 戒指闹钟案例当前**不能**生成最终报告：pro 被 validator 内容审查拒绝
+  （决策链真实漏洞，非系统故障）；flash 被证据引用解析拒绝。
+- 解锁路径：① Q 区补档案（为决策断言补真实证据来源）；② 修两个缺口
+  （证据项持久化 + 引用解析失败纳入修复）。
+- 模型已恢复 flash；临时脚本已清理。
+
+## Remaining
+- 缺口 1：检索证据持久化到 evidence_items（E 页列表/详情/方向徽标的数据源）。
+- 缺口 2：LensReferenceResolutionError 纳入 repair 路径（带合法 ID 清单重试）。
+- 集成 owner 合并 main（016f657）到远端（第 19 节）。
+- Secret policy: do not record credentials here.
+
+
+--- archived 2026-08-03 (Asia/Shanghai): gap-fix plan (wave A+B) COMPLETED, see completion record below in this archive ---
+# Work Log: 证据持久化闭环 + 引用解析修复 —— 详细落实方案
+
+- Started: 2026-08-03 (Asia/Shanghai). Status: PLANNED (待实施).
+- 触发: flash/pro 全流程验证发现两处缺口（详见 HISTORY 归档）。
+- 基线: main = 016f657（含 wave1+2 透镜修复）。
+
+## 缺口 1：检索证据持久化到 evidence_items（E 页数据源）
+
+### 现状
+- EvidenceItem 模型完整（app/evidence/models.py，含 source_grade/freshness/
+  relevance/verdict/direction 检查约束），但全库 0 行——无任何写入路径。
+- worker retrieving 阶段只持久化 EvidenceFunnelAudit 与 research_packets；
+  ev-retrieving-NNN 仅是 packet 上的注释 ID（"ev-retrieving-001 [L2] name"）。
+- E 页 list_run_evidence 查 evidence_items.analysis_run_id → 恒空；
+  quality/direction/provenance/same-source-group 四个详情端点无数据。
+
+### 实施步骤（波次 A：持久化线）
+1. 新增 app/evidence/persist.py::persist_funnel_evidence(session, run,
+   packets, funnel)：把 funnel.admitted 的每个 packet 映射为一行
+   EvidenceItem——evidence_id 取裸 ID（去 " [..]" 注释）、title/snippet 取
+   factor+source name、source_grade 取漏斗 tier（L0-L6 映射 SOURCE_GRADES）、
+   freshness_status 默认 current、relevance 取 packet 置信（缺省 0.5）、
+   verdict 从 packet 方向标注派生（opposing→counterevidence 语义）、
+   direction 字段按正反证据对称原则填 opposing/confirming。
+2. FK 处理：source_record_id/raw_artifact_id/quality_assessment_id 为
+   RESTRICT 外键——检索证据无上游记录时置 NULL（模型允许 nullable 才可；
+   先核对列 nullable，若 NOT NULL 则需 CCR 调整或 ingest 线补记录）。
+3. 接线：analysis_worker.py retrieving 分支（L704 附近，funnel audit 持久化
+   之后）调用 persist_funnel_evidence；best-effort（try/except + log，失败
+   不阻塞 run，与 funnel audit 同策略）。
+4. 幂等：同一 run 重复执行（resume）不得重复插入——以 (workspace_id,
+   decision_case_id, id) 唯一约束兜底 + 先查后插。
+5. 迁移：无 DDL 变更（表已存在）→ 无新 migration。
+
+### 验收（波次 A）
+- pytest：新增 test_persist_funnel_evidence（admitted 3 条→3 行，字段映射
+  正确，重复执行幂等，opposing 方向标注正确）。
+- 实机：重跑戒指闹钟 full → GET /analyses/{run}/evidence items>0；
+  E 页详情端点（quality/direction/provenance/same-source-group）返回真实数据。
+
+## 缺口 2：LensReferenceResolutionError 纳入结构化修复
+
+### 现状
+- repository.persist_lens_stage_output 对未解析引用抛
+  LensReferenceResolutionError（带 missing mapping），worker
+  _persist_lens_with_repair 落入 generic except → 直接 fail-closed。
+- 修复 prompt 本就携带合法 ID 清单（Run-scoped reference IDs），模型引用
+  幻觉 ID（flash 的 fff18fc5...）本可通过一次带清单的重试挽救。
+
+### 实施步骤（波次 B：引用修复）
+1. _persist_lens_with_repair 增加 except LensReferenceResolutionError 分支
+   （置于 generic except 之前）：构造 repair_context=("unresolved_reference:"
+   + 缺失 ID 摘要, )，走与行为门相同的 _execute_dedicated_lens 修复调用，
+   消耗同一 lens_repair_max 预算（共享 attempts 计数）。
+2. _execute_dedicated_lens 的修复消息增强：repair_context 含
+   unresolved_reference 时，在 repair 消息里**重列全部合法 ID 清单**（从
+   _frozen_reference_sets 读取），并明确指令"仅可引用清单内的 ID"。
+3. 预算语义：引用幻觉属结构性错误（可修复）——计入 repair 预算；预算耗尽
+   仍失败保持 fail-closed（透镜审计在 validating 门拦截）。
+4. 测试：构造 writer 第一次抛 LensReferenceResolutionError、fake_dedicated
+   返回修正 payload → 断言一次修复调用且 repair_context 含缺失 ID；
+   第二次仍失败 → fail-closed。
+
+### 验收（波次 B）
+- pytest：test_reference_resolution_failure_triggers_structured_repair +
+  test_reference_failure_exhausts_budget_fail_closed。
+- 实机：flash 重跑戒指闹钟 → meadows 不再因引用幻觉丢失（或修复后通过）。
+
+## 实施顺序与纪律
+1. 波次 A → 波次 B（B 依赖 A 的证据 ID 成为真实可解析行——A 落地后
+   ev-retrieving-* 在 ledger 中的解析语义需核对：ledger 目前从 packet
+   evidence_ids 构建，A 不改变该来源，仅补 E 页读模型，二者独立）。
+2. 分支：继续在 codex/lens-behavior-closed-loop worktree 实施 → 全量
+   pytest + ruff + 合同 -Check（无契约变更则 CONTRACT_DRIFT_OK；
+   EvidenceItemView 若新增字段需 CCR）。
+3. 每波次独立提交 + 实机重验（flash 优先，pro 复核）。
+4. 完成后：HEAD 归档 HISTORY，集成分支推送待集成 owner 合并 main。
+
+## Remaining（本轮之后）
+- 集成 owner 合并 main（016f657 + 本方案提交）到远端（第 19 节）。
+- validator 内容拒绝属案例档案质量问题（用户侧 Q 区补证据后重跑）。
+- Secret policy: do not record credentials here.
+
+## 实施结果（完成记录）
+- 波次 A（读模型投影，替代原 evidence_items 写入方案）: list_run_evidence
+  新增 packetEvidence additive wire 字段（PacketEvidenceView），从已持久化
+  research_packets 投影；前端 EvidenceDrawer 渲染方向/角色徽标。零 DDL。
+  CCR-20260803-GAPFIX + 契约重生成（CONTRACT_DRIFT_OK）。
+- 波次 B: LensReferenceResolutionError 纳入结构化修复（与行为门共享
+  LENS_REPAIR_MAX 预算），修复消息重列全部合法引用清单。
+- 提交: 波次 A + 波次 B（db95759），已推送 codex/lens-behavior-closed-loop；
+  合并本地 main = 1dcd9e1。
+- 验证: 后端 600 passed、前端 157 passed、ruff clean、CONTRACT_DRIFT_OK。
+- 实机重验（flash，run d73394ae）: **5/5 透镜全部 ready**（flash 首次全过，
+  meadows 历史失败点消除）；乘法门通过（0.56）；validator 内容审查拒绝
+  （4 条实质发现均引用证据 ID）→ blocked 属设计内行为（决策链真实漏洞）。
+- E 页实机: packetEvidence 6 条（含 2 条 opposing）、funnelAudit 正常、
+  透镜支撑链 5/5——缺口 1/缺口 2 均已闭环。
+
+
+--- archived 2026-08-03 (Asia/Shanghai): idle after gap-fix wave A+B completion ---
+# Work Log: idle after gap-fix wave A+B completion
+
+- Date: 2026-08-03 (Asia/Shanghai). Status: COMPLETE + VERIFIED LIVE.
+- Commits: wave A + wave B = db95759 on codex/lens-behavior-closed-loop
+  (pushed); merged into local main = 1dcd9e1.
+- Live result: flash ring-alarm full run d73394ae = 5/5 lenses ready,
+  multiplicative gate passed, blocked only by validator content review
+  (design-intended; case decision chain has real gaps). E page now
+  shows packetEvidence (6 items incl. 2 opposing) + funnelAudit + lens
+  support chain.
+
+## Remaining
+- 集成 owner 合并 main（1dcd9e1，含 wave1+2 + gap-fix A/B）到远端（第 19 节）。
+- 案例侧：按 validator openQuestions 在 Q 区补档案后重跑，可望生成报告。
+- Task 11 ingest 线（evidence_items 全链路写入）为后续增强——当前读模型
+  投影已满足 E 页诚实展示。
+- Secret policy: do not record credentials here.
+
+
+--- archived 2026-08-03 (Asia/Shanghai): four-task assessment plan COMPLETED (wave C + wave E + doc annotation) ---
+# Work Log: 四项架构评估与落实方案（决策链标注 / 多智能体 / 检索工具 / 计划文档标注）
+
+- Started: 2026-08-03 (Asia/Shanghai). Status: ASSESSED + PLANNED（待实施）。
+- 基线: main = 1dcd9e1（含 wave1+2 + gap-fix A/B）。
+
+## 任务 1：validator 决策链标注
+
+### 现状（调研结论）
+- validating 阶段 ask 已要求"say which link broke in validatorFindings"，
+  实测 findings 带 link/evidenceId 标注（run d73394ae 已体现）。
+- 但决策链是 validator 从 digest 文本**事后重建**的：阶段交接只传上一阶段
+  output + charter（analysis_worker.py stage_inputs 交接），没有结构化链。
+- 初始 prompt（planning/retrieving/analyzing）没有"构建决策链环节"的要求。
+
+### 落实方案（波次 C：决策链前置构建）
+1. 定义 chainLink 结构：{linkId, kind(premise|evidence|inference|decision),
+   text, cites(evidenceIds/packetIds), supports(linkIds)}。
+2. planning 阶段 prompt 注入"决策链构建要求"：输出 decisionChain 初稿
+   （决策问题→关键前提→所需证据清单）——**是的，应在初始 prompt 注入**。
+3. retrieving/analyzing/criticizing/synthesizing 各阶段输出携带
+   chainLinkUpdates（新增/确认/推翻哪些环节），随 stage output 持久化。
+4. validating 输入注入**累积的完整 decisionChain**（替代仅上一阶段 output），
+   validator 按链路逐环节审计，findings 的 link 字段引用 linkId（结构化）。
+5. 报告（report_builder）按 decisionChain 渲染"决策链审计"区块。
+6. 测试：链路传递测试 + validator linkId 引用完整性测试 + 实机重验。
+
+## 任务 2：多智能体协同架构（对照 hermes-agent）
+
+### 现状评估（三问回答）
+| 目标 | hermes 实现 | Ludus 现状 | 结论 |
+|---|---|---|---|
+| 1. 主智能体核心控制器 | 主 agent 循环 + delegate_tool | AnalysisWorker 固定阶段管线编排（planning→validating）| **部分**：编排器存在但是**固定管线**，非自主任务分解 |
+| 2. 派发任务给子智能体 | delegate_task（MAX_DEPTH=2/并发 3/工具黑名单）| 4 角色 executor（Research/Critic/Synthesis/Validation）+ 5 透镜 specialist lane + safety_anchor 子阶段 | **部分**：角色隔离 + 对抗模型分离已实现，但派发是**静态调度**非动态委托 |
+| 3. 子智能体带团队 | 嵌套 delegation（depth 2）+ toolsets 组合 | 无嵌套；透镜 lane 是最接近的"专家"单元 | **未做到** |
+
+### 落实方案（波次 D：委托层，可选增强）
+1. 新增 OrchestratorAgent 层：在 worker 之上做**预算内动态派发**（阶段序列
+   保持确定性，但透镜/检索/验证子任务可并行委托）——不推翻固定管线（决策
+   系统需要可审计性，hermes 式自由 delegation 不适合质量门体系）。
+2. 透镜 lane 升级为 LensSubagent（独立 prompt/预算/repair 循环，现已雏形）。
+3. 并行化：counterparty+pre_mortem（criticizing）、scenario+meadows
+   （synthesizing）可并行委托（当前串行）——受模型速率限制约束。
+4. 明确**不引入**递归 delegation（depth>1）：决策审计要求每环节可溯源。
+
+## 任务 3：检索工具实现方式
+
+### 现状（调研结论）
+- **已实现**：exa 搜索 + firecrawl 全文抓取（web_retrieval.py）；
+  **BYOK 已接入**（_load_byok_keys 优先工作区密钥，WorkspaceConnector
+  密文存储，connector kinds = exa/tavily/firecrawl）；检索纪律（查询上限、
+  retrieval_coverage 去重冻结）。
+- **未实现**：用户自定义 MCP 工具接入（19-mcp-data-sources 计划仍是缺口）。
+
+### 落实方案（波次 E：MCP 工具层）
+1. 参考 hermes tools/mcp_tool.py：workspace 级 mcp_servers 配置（command/
+   args/env/timeout），mcp Python 包可选（未装则 no-op）。
+2. 参考 open-webui utils/tools.py：pydantic 模型 → OpenAI function-calling
+   spec 自动转换，实现工具声明式注册。
+3. Ludus 落点：WorkspaceConnector 扩展 kind="mcp"（密文存 env/secrets），
+   worker 检索阶段在 exa/firecrawl 之外可调用工作区 MCP 工具（工具调用结果
+   进入同一证据漏斗——**MCP 结果必须过 TDD 三重过滤，不许旁路**）。
+4. 安全：MCP 工具白名单 + 结果体积上限 + 密钥仅内存存在（§12 BYOK 纪律）。
+
+## 任务 4：decision-lab-product-plan 文档标注
+
+### ✅ 已实现（文档为历史蓝图，系统已落地或超越）
+- 05 系统架构 / 06 数据模型 / 07 Agent 工作流 / 08 深度研究流水线（含 P2
+  九项增强）/ 10 API 与事件（MOUNT-01/02 挂载完成）/ 13 测试与验收（QA
+  电池体系）/ 22 合同生成与安全（generate_contracts.ps1 + CCR 流程）/
+  26 不变量与 Agent Engine 合同（fail-closed/乘法门/行为门已落地）/
+  28 合同修复审计（已完成）。
+
+### ⚠️ 滞后需更新
+- 04 决策方法论：Grey-Goo v5.1 已深度落地（15 原则大部分实现），文档未回写。
+- 09 模拟引擎：沙盘已实现（Task 13），文档版本滞后。
+- 11 前端规格：被 look/ LUDUS 主题 v7+ 与 Q/E/A 页实现大幅超越。
+- 17 产品设计 v2 / 18 详细开发计划：多波次实施后已偏离，建议标注"历史基线"。
+- 23 多智能体产能计划：现状是角色编排，主智能体动态派发未实现（见任务 2）。
+- 24 前端视觉主题：被 LUDUS-V7-TEN-THEMES 超越。
+
+### 📌 未实现（仍是规划缺口）
+- 19 MCP 数据源与上线约束：MCP 接入未实现（见任务 3 波次 E）。
+- 20 对话驱动方法路由：当前是 charter 驱动，对话路由未实现。
+- 21 资产复用转换合同：部分完成（method-pack），MiroFish 资产未转换。
+
+### 🗄️ 历史快照（归档性质，不需更新）
+- 01 愿景 / 02 PRD / 03 资产评估 / 12 72 小时计划 / 14 演示剧本 /
+  15 开源参考 / 16 路线图 / 25 开工审计 / 27 MVP 审计。
+
+## 实施顺序建议
+波次 C（决策链标注，直接提升 validator 审查质量）→ 波次 E（MCP 工具层）→
+波次 D（委托层并行化，可选）→ 文档回写（04/09/11/23 标注或更新）。
+
+## Remaining
+- 波次 C/D/E 待实施批准；文档标注可先以 annotation 头形式回写。
+- 集成 owner 合并 main（1dcd9e1）到远端（第 19 节）。
+- Secret policy: do not record credentials here.
+
+## 实施结果（完成记录）
+- 波次 C（决策链标注）：commit 6309b81 — chainLink/ChainLinkUpdates/DecisionChain 模型；planning prompt 注入决策链构建；各阶段 chainLinkUpdates 累积；validating 按 linkId 结构化审计；report decisionChainAudit 区块；6 个新测试。
+- 波次 E（MCP 工具层）：commit 1685852 — mcp_retrieval.py 新模块（mcp 包可选导入）；_retrieve_mcp 读取 workspace MCP connectors；MCP 结果与 exa/firecrawl 合并后过同一证据漏斗（TDD 三重过滤，无旁路）；bounded 结果（10 条/2000 字符）。
+- 文档标注：04/09/11/17/18/23/24 七份 product-plan 文档添加 ANNOTATION 头。
+- 波次 D（委托并行化）：明确不实施（决策审计要求与 hermes 式自由 delegation 冲突）。
+- 验证：后端全量 600 passed，ruff clean。
+- 推送：codex/lens-behavior-closed-loop db95759..1685852。
+
+
+--- archived 2026-08-03 (Asia/Shanghai): wave C + wave E completion state (superseded by wave D below) ---
+# Work Log: idle after wave C + wave E + doc annotation completion
+
+- Date: 2026-08-03 (Asia/Shanghai). Status: COMPLETE + PUSHED.
+- Commits: wave C (6309b81) + wave E (1685852) on codex/lens-behavior-closed-loop (pushed db95759..1685852).
+- Doc annotation: 7 product-plan documents annotated (04/09/11/17/18/23/24).
+- Backend suite: 600 passed, ruff clean.
+
+## Remaining
+- 集成 owner 合并 codex/lens-behavior-closed-loop（含 wave C/E）到远端 main（第 19 节）。
+- 波次 D（委托并行化）：明确不实施（决策审计要求与自由 delegation 冲突）。
+- 实机重验：可选（需重建 alpha 栈 + flash/pro 重跑戒指闹钟验证决策链标注效果）。
+- Secret policy: do not record credentials here.
+
+
+--- archived 2026-08-03 (Asia/Shanghai): wave D completion state (superseded by causal-graph E2E below) ---
+# Work Log: idle after wave D (structured parallel lens delegation)
+
+- Date: 2026-08-03 (Asia/Shanghai). Status: COMPLETE + PUSHED.
+- Commit: fd21e90 on codex/lens-behavior-closed-loop (pushed 1685852..fd21e90).
+
+## 波次 D 设计修正（用户质疑后）
+原结论'决策审计与 delegation 冲突'过于保守——用户指出：主 Agent 可以做
+收束审计，只要子 Agent 交出决策链 + 证据链。波次 C 的 chainLink 机制恰好
+补上可审计性前提，故修正实施：
+- 模型调用并行（asyncio.gather + Semaphore(2)），DB 读取预加载移出并行区
+  （_prepare_lens_context），持久化保持串行（AsyncSession 非并发安全）。
+- 透镜子 Agent 交回 chainLinks（2-5 环节），收束审计门逐环节校验：
+  linkId/text 非空、kind 合法、citesEvidenceIds 对冻结 ledger 可解析
+  （幻觉引用丢弃该环节）、命名空间前缀 lens_type:linkId 防碰撞/伪造。
+- 审计通过的片段合并进 run 累积 decisionChain；chainLinks 在持久化前剥离
+  （artifact schema 不变）。
+- 顺带修复波次 C 跨阶段链累积 bug（prior_chain 在 stage_inputs 重建前捕获）。
+- 4 个新测试；全量 600 passed，ruff clean。
+
+## Remaining
+- 集成 owner 合并 codex/lens-behavior-closed-loop（含 wave C/D/E）到远端
+  main（第 19 节）。
+- 实机重验可选：重建 alpha 栈 + flash/pro 重跑戒指闹钟，验证并行透镜 +
+  决策链合并效果（预期 full run 时长缩短约 30-40%，链含子 Agent 片段）。
+- Secret policy: do not record credentials here.
+
+
+--- archived 2026-08-03 (Asia/Shanghai): causal-graph E2E state (superseded by wave F completion below) ---
+# Work Log: 戒指闹钟全流程 + 因果图推演 E2E 验证（b47c470/349cea1）
+
+- Date: 2026-08-03 (Asia/Shanghai). Status: VERIFIED.
+
+## 全流程结果（run 641569f1，flash，含 wave C/D/E + c5353f9 修复）
+- 5/5 透镜全部 ready（并行委托生效）；乘法门通过（0.56）。
+- validator 按结构化 linkId 审计决策链（wave C+D 实机生效）：发现透镜
+  子 Agent 主题漂移（porter/scenario 链围绕救援机器人而非 RingBell 预售）、
+  pm-4 付费试点与最终可退款预售矛盾、counterparty link-3 失效推理缺失
+  （strategyInvalidated=true 但 refutedIds 为空）→ blocked 属设计内拦截。
+- E2E 暴露并修复: chainLinks 曾被 from_payload 判为未知字段导致 0 透镜
+  （c5353f9: 校验前分离、校验后重挂）。
+
+## 因果图与推演验证（对照 MiroFish 需求）
+用 run 641569f1 的真实 packets 直调 factor_sandbox 全链路：
+- 因果图生成: 6 packets → 6 因子节点（带符号权重/方向/证据支撑分）。
+- 修改因子数据: override f01→0.95 → outcome 0.5583→0.6069。
+- 引入新因子: 注入'供应链成本突破' → outcome→0.574。
+- 推演输出: verdict(proceed/hold) + topDrivers 排名 + 每因子 flipValue。
+- 引擎: report-factor-sandbox/2.0（确定性多级传播）。
+
+## 对照 MiroFish 的差距结论
+- MiroFish = 多智能体群体社会模拟（涌现式预测，上帝视角注入变量）；
+  Ludus = 确定性因子因果图 + 证据支撑的 what-if 沙盘。
+- 用户要的四项能力（因果图/改因子/引新因子/推演）Ludus 已全部具备。
+- 缺口: ① sandbox API 已实现但未挂载（reports router 未进 main，需 CCR）；
+  ② blocked run 不产报告（fail-closed 设计，案例档案补齐后可生成）；
+  ③ 无群体涌现式模拟（与 MiroFish 的本质差异，非当前路线图）。
+
+## Remaining
+- sandbox API 挂载 CCR（GET/POST /cases/{id}/sandbox[...]/preview）。
+- 集成 owner 合并 main（349cea1）到远端（第 19 节）。
+- 案例侧按 validator openQuestions 补齐档案后重跑，可望生成完整报告。
+- Secret policy: do not record credentials here.
+
+
+---
+
+## Archive wave F: topic anchor + drift repair + blocked remediation guide - 2026-08-04T00:29:59+08:00
+
+# Work Log: idle after wave F completion (topic anchor + drift repair + remediation guide)
+
+- Date: 2026-08-03 (Asia/Shanghai). Status: COMPLETE + VERIFIED LIVE.
+- Commit: 1feabcb on codex/lens-behavior-closed-loop (pushed);
+  merged into local main = f381030.
+
+## 解决的三个问题（用户指出的 E2E run 641569f1 缺口）
+1. 子 Agent 主题漂移 → F1 主题锚定（透镜 prompt 首部注入已确认决策问题
+   + options，MANDATORY 段）+ F2 漂移检测纠偏（≥2 链节零主题重叠 → 一次
+   结构化纠偏修复）。实机证实：porter 漂移被检出并修复后成功持久化。
+2. 自相矛盾无引导 → F3 remediationGuide：blocked run 携带结构化补救指南，
+   finding 类型映射到档案动作（补证据/纠主题/改前提/答问题/重跑）。
+   实机证实：c73b0ad2 blocked 时生成 4 条 actions（unrelated_content/
+   unrecorded_refutation/unquantified_threshold/rerun）。
+3. sandbox API '未挂载' → F4 核实：其实早已经 workspace_router 挂载
+   （tenancy/routes.py），初始判断遗漏子 include；重复挂载已回滚，零契约
+   变更（CCR-20260803-MOUNT-REPORTS 记录核实）。
+
+## 验证
+- 12 新测试（漂移检测 x3 / 补救指南 x5 / 既有 x4）；全量 600 passed，ruff clean。
+- 实机重验 run c73b0ad2（flash）：4/5 透镜 ready，F1/F2/F3 三机制全部生效。
+
+## Remaining
+- 集成 owner 合并 codex/lens-behavior-closed-loop（含 wave C/D/E/F）到远端
+  main（第 19 节）。
+- meadows 透镜对 flash 模型仍不稳（引用 assumption 但 sourcePacketIds 空）；
+  remediationGuide 已诚实给出 rerun 指引。
+- 案例档案需按 remediationGuide 的 openQuestions/actions 补齐后重跑方可出报告。
+- Secret policy: do not record credentials here.
+
+---
+
+## Archive evidence drawer visual styles + responsive layout repair - 2026-08-04T00:39:58+08:00
+
+# Work Log: evidence drawer visual styles + responsive layout repair
+
+- Date: 2026-08-04 (Asia/Shanghai). Status: COMPLETE（待用户指示提交）。
+- Baseline: local main f381030. Branch: codex/evidence-drawer-layout-r1
+  (main worktree). Remote untouched; no contract/schema/API change.
+- Prior record archived: wave F (1feabcb / f381030) → HISTORY.
+
+## 修复内容
+1. 证据溯源抽屉整族组件 CSS 缺失（根因：Task 11 B2 交付的
+   components/quality/* 全部类名在 look-styles.css 中零定义，裸 HTML
+   渲染）→ look-styles.css 末尾新增约 150 行证据抽屉样式段，覆盖：
+   packet 证据集账本、纪律警告、漏斗弃置审计、L1-L6 来源类别徽章、
+   证据条目行、四级结论块、正交质量维度、溯源链、同源组、方向投影、
+   冲突列表、透镜引用。全部消费 Look V7 语义 token，保持"不合成总分"
+   纪律（无任何百分比/总分呈现）。
+2. 响应式盲区补强：masthead 三列固定最小宽在 900-1180px 溢出重叠 →
+   ≤1180px 收敛为 auto/1fr/auto；workspace-grid / intro-grid /
+   analysis-layout ≤900px 塌单列；证据抽屉 ≤620px 收紧 padding、
+   条目行单列、质量维度 2 列。
+
+## 验证
+- pnpm --dir apps/web test：25 files / 162 tests 全过（零回归）。
+- pnpm --dir apps/web build：通过，产物尺寸正常。
+- 静态还原页 + 真实样式表三视口截图：1440x900 / 1024x768 / ~390x844
+  布局均正常；脚本扫描全页无水平溢出元素。验证页已清理。
+
+## Remaining / Next
+- 变更未提交（等用户指示）；提交建议落在 codex/evidence-drawer-layout-r1。
+- 金路径实机（真实 Run 证据账本）视觉复查可在下次 E2E 时顺带完成。
+- Secret policy: do not record credentials here.
+
+---
+
+## Archive causal graph A+B: factor sandbox graph + true spatial causal canvas - 2026-08-04T02:03:00+08:00
+
+# Work Log: causal graph A+B — factor sandbox graph + true spatial causal canvas
+
+- Date: 2026-08-04 (Asia/Shanghai). Status: COMPLETE（待用户指示提交）。
+- Baseline: codex/evidence-drawer-layout-r1。Branch: codex/causal-graph-ab-r1。
+
+## 交付
+路线 A（因子沙盘图化，零契约变更）：
+- components/shell/views/factorGraphLayout.ts — 确定性布局纯函数
+  （因素左列 + 决策事件节点右侧居中；factor→outcome 边宽=1+3|weight|，
+  opposing 虚线；influence 边助推实线/抑制虚线，孤儿边丢弃）。
+- components/shell/views/FactorGraphCanvas.tsx — @xyflow/react 首次实装
+  （锁定技术栈此前零使用）；自定义因素/事件节点卡片，键盘可聚焦。
+- FactorSandboxPanel.tsx — 图/列表双视图切换（图默认）；图下节点检查器
+  复用既有滑杆→previewSandbox 确定性重算链路；jsdom 无 ResizeObserver
+  自动落列表视图（既有测试零改动）。
+路线 B（正式沙盘真图）：
+- components/simulation/causalGraphLayout.ts — 八类节点三列分层
+  （external/lever/constraint/unknown → intermediate/indicator →
+  outcome/decision），边按 evidence/human_constraint/assumed 分实/实/虚。
+- CausalCanvas.tsx 重写 — props 签名不变（SandboxWorkspace 零改动）；
+  保留图例/关系说明/测试节点与路径高亮语义；jsdom 回退旧列表形态
+  （qa-task13 断言零改动）；≤620px 只读概览（禁 pan/zoom）。
+CSS：look-styles.css 新增 .factor-graph-* / .causal-graph-* 两段
+  （Night Desk inset 皮肤，语义 token）。
+
+## 越界披露（计划写域之外，均为合规必需）
+- apps/web/app/xyflow.css：vendored @xyflow/react@12.11.2 dist/style.css
+  （node_modules CSS 路径破坏 vitest PostCSS 链），layout.tsx 单点引入。
+- THIRD_PARTY_NOTICES.md §4.1：按该文件 §5 强制要求登记 vendored 资产。
+
+## 验证
+- pnpm --dir apps/web test：27 files / 175 tests 全过（基线 162 + 新增 13）。
+- pnpm --dir apps/web build：0 error（case 页 109 kB，xyflow 按需）。
+- ludus-alpha web 镜像重建 + 容器 healthy；真实案例页 DOM 度量三视口：
+  1440×900 / 1024×768 / 390×844 均 7 节点、0 重叠、0 水平溢出，
+  边语义（实/虚线、线宽随权重）逐类核验通过。截图通道在该页超时，
+  以 DOM 度量为验证记录。
+- 路线 B 画布受 fail-closed 门禁保护（需 ready full 报告），当前 blocked
+  案例不开放为设计内行为；布局语义由单测锁定。
+
+## Remaining / Next
+- 变更未提交（等用户指示）；建议提交落在 codex/causal-graph-ab-r1。
+- A+B 之后的"多智能体持因子预测"方向：用户已确认另行讨论。
+- Secret policy: do not record credentials here.
+
+---
+
+## Addendum (causal graph A+B): visual evidence upgraded - 2026-08-04T02:19:00+08:00
+
+Supersedes the note 'screenshots timed out; DOM metrics used as record' in the
+causal-graph-A+B archive above. Browser screenshot evidence now captured at
+1440x900 / 1024x768 / 390x844 via a verification page that loads the REAL
+stylesheets: Route A section = DOM exported verbatim from the RUNNING app
+(inline transforms preserved); Route B section = faithful DOM/class replica of
+CausalCanvas flow mode with causalGraphLayout coordinates (formal canvas stays
+fail-closed on the blocked case, by design). Both routes render correctly at
+all three viewports; no overlaps. Verification artifacts cleaned up afterwards.
+Fresh re-verification same session: pnpm --dir apps/web test 27 files / 175
+tests passed; pnpm --dir apps/web build clean.
