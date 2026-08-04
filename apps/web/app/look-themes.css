@@ -13,7 +13,7 @@ html[data-theme="ink"] {
   --paper-sheet-rgb: 252 251 248;
   --ink: #202321;
   --ink-2: #4f5753;
-  --ink-3: #7b817d;
+  --ink-3: #696e6a;
   --ink-rgb: 32 35 33;
   --human: #2b2d2c;
   --human-deep: #171918;
@@ -63,7 +63,7 @@ html[data-theme="ledger"] {
   --paper-sheet-rgb: 251 248 241;
   --ink: #242a28;
   --ink-2: #515e5b;
-  --ink-3: #7e8782;
+  --ink-3: #6b736f;
   --ink-rgb: 36 42 40;
   --human: #783b49;
   --human-deep: #5e2d38;
@@ -110,7 +110,7 @@ html[data-theme="vermilion"] {
   --paper-sheet-rgb: 255 253 248;
   --ink: #2a2823;
   --ink-2: #5a5650;
-  --ink-3: #746f66;
+  --ink-3: #635e57;
   --ink-rgb: 42 40 35;
   --human: #a54030;
   --human-deep: #7b2d24;
@@ -176,7 +176,7 @@ html[data-theme="red"] {
   --paper-sheet-rgb: 252 248 246;
   --ink: #2d292a;
   --ink-2: #5d5456;
-  --ink-3: #897d7f;
+  --ink-3: #746a6c;
   --ink-rgb: 45 41 42;
   --human: #84515b;
   --human-deep: #683f48;
@@ -223,7 +223,7 @@ html[data-theme="orange"] {
   --paper-sheet-rgb: 252 248 242;
   --ink: #302a27;
   --ink-2: #615650;
-  --ink-3: #8b7f78;
+  --ink-3: #766c66;
   --ink-rgb: 48 42 39;
   --human: #8f5746;
   --human-deep: #704134;
@@ -270,7 +270,7 @@ html[data-theme="yellow"] {
   --paper-sheet-rgb: 252 250 242;
   --ink: #302e26;
   --ink-2: #605d50;
-  --ink-3: #898577;
+  --ink-3: #747165;
   --ink-rgb: 48 46 38;
   --human: #78693e;
   --human-deep: #5b4f2d;
@@ -317,7 +317,7 @@ html[data-theme="green"] {
   --paper-sheet-rgb: 248 250 246;
   --ink: #283029;
   --ink-2: #536056;
-  --ink-3: #7d887f;
+  --ink-3: #6a746c;
   --ink-rgb: 40 48 41;
   --human: #5a705e;
   --human-deep: #425546;
@@ -364,7 +364,7 @@ html[data-theme="cyan"] {
   --paper-sheet-rgb: 247 250 250;
   --ink: #263132;
   --ink-2: #4d6061;
-  --ink-3: #74888a;
+  --ink-3: #637475;
   --ink-rgb: 38 49 50;
   --human: #4d7272;
   --human-deep: #355757;
@@ -411,7 +411,7 @@ html[data-theme="blue"] {
   --paper-sheet-rgb: 248 250 252;
   --ink: #292f38;
   --ink-2: #505c6a;
-  --ink-3: #788596;
+  --ink-3: #667180;
   --ink-rgb: 41 47 56;
   --human: #5b6d88;
   --human-deep: #42546f;
@@ -458,7 +458,7 @@ html[data-theme="purple"] {
   --paper-sheet-rgb: 250 248 251;
   --ink: #312b34;
   --ink-2: #605565;
-  --ink-3: #887d8c;
+  --ink-3: #746a77;
   --ink-rgb: 49 43 52;
   --human: #75617d;
   --human-deep: #594762;

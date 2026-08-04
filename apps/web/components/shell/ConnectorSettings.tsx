@@ -244,6 +244,7 @@ export function ConnectorSettings({ workspaceId, onClose }: ConnectorSettingsPro
                           <input
                             type="password"
                             placeholder="粘贴 API Key"
+                            aria-label="API Key"
                             value={inputKey}
                             onChange={(e) => setInputKey(e.target.value)}
                             disabled={busy}

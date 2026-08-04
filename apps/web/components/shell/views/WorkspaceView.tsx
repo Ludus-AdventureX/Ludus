@@ -88,11 +88,13 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
   }, [workspaceId, decisionCaseId]);
 
   useEffect(() => {
+    let cancelled = false;
     void refreshCase();
     void refreshCandidates();
     // Load persisted conversation history so notes survive page navigation.
     if (workspaceId) {
       void fetchMessages(workspaceId, decisionCaseId).then((messages) => {
+        if (cancelled) return;
         const restored: LedgerNote[] = [];
         for (let i = 0; i < messages.length; i++) {
           const msg = messages[i]!;
@@ -108,6 +110,7 @@ export function WorkspaceView({ decisionCaseId, workspaceId = null }: WorkspaceV
         setNotes(restored);
       }).catch(() => { /* graceful: notes stay empty if fetch fails */ });
     }
+    return () => { cancelled = true; };
   }, [refreshCase, refreshCandidates, workspaceId, decisionCaseId]);
 
   // Remediation checklist from the latest blocked run's validator reasons.
@@ -471,6 +474,7 @@ function RemediationItem({ id, kind, text, open, onToggle, customDraft, onCustom
             value={customDraft}
             onChange={(event) => onCustomDraft(event.target.value)}
             placeholder="上面选项都不是？在这里写下你自己的补充…"
+            aria-label="自定义补充内容"
           />
           <button type="button" className="secondary-action" onClick={() => onAdopt(customDraft)}>填入推演台</button>
         </div>

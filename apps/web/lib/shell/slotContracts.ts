@@ -78,21 +78,21 @@ export const shellSlotContract: Record<PhaseSlotName, SlotContractEntry> = {
     mount: "replace-phase-slot-node"
   },
   "analysis-progress": {
-    host: "views/AnalysisView analysis-trace",
+    host: "views/AnalysisView analysis-trace（经 AnalysisLaunchPanel 挂载）",
     owner: "AnalysisProgress（Task 11 Step 3）",
-    status: "reserved",
+    status: "filled",
     mount: "replace-phase-slot-node"
   },
   "quality-gate-panel": {
     host: "views/AnalysisView quality-margin",
     owner: "QualityGatePanel（Task 11 Step 5）",
-    status: "reserved",
+    status: "filled",
     mount: "replace-phase-slot-node"
   },
   "evidence-drawer-trigger": {
     host: "views/AnalysisView custody-strip；views/ReportView dissent-page",
     owner: "EvidenceDrawer（Task 11 Step 4）",
-    status: "reserved",
+    status: "filled",
     mount: "replace-phase-slot-node"
   },
   "decision-health-bar": {
@@ -103,8 +103,8 @@ export const shellSlotContract: Record<PhaseSlotName, SlotContractEntry> = {
   },
   "decision-signoff": {
     host: "views/DecisionView intro-actions",
-    owner: "Task 14W Decision signoff",
-    status: "reserved",
+    owner: "Task 14W Decision signoff（SignoffPanel 已挂载）",
+    status: "filled",
     mount: "replace-phase-slot-node"
   },
   "review-dialog-trigger": {
