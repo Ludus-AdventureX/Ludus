@@ -120,7 +120,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:fo
 .note-margin time { color: var(--text-muted); font-family: var(--mono); font-size: 7px; }
 .note-content { align-self: start; margin-left: 23px; padding: 4px 0 0 18px; border-left: 2px solid var(--accent-human); }
 .note-kind { color: var(--accent-human); font-family: var(--mono); font-size: 8px; letter-spacing: .1em; }
-.note-content p { max-width: 690px; margin: 13px 0 16px; font-family: var(--serif); font-size: 18px; line-height: 1.75; }
+.note-content p { max-width: 690px; margin: 13px 0 16px; font-family: var(--serif); font-size: 18px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
 .note-actions { display: flex; gap: 16px; align-items: center; }
 .note-actions span { color: var(--text-muted); font-size: 9px; }
 .inline-action { min-height: 24px; color: var(--accent-human); font-size: 9px; }
@@ -1167,11 +1167,11 @@ li[data-portfolio-lane="ready"] .portfolio-lane-badge { color: #7fc98f; }
 .remediation-card { border: 1px solid rgb(var(--accent-unknown-rgb) / .25); border-left: 3px solid var(--accent-unknown); border-radius: 6px; padding: 12px 14px; margin: 12px 0 16px; background: rgb(var(--accent-unknown-rgb) / .04); }
 .remediation-head .remediation-kicker { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--text-muted); margin-bottom: 4px; }
 .remediation-head h3 { margin: 0 0 6px; font-size: 15px; }
-.remediation-head p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
+.remediation-head p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
 .remediation-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
 .remediation-item { border-top: 1px solid rgb(var(--accent-unknown-rgb) / .15); padding-top: 10px; }
 .remediation-kind { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--accent-unknown); margin-bottom: 4px; }
-.remediation-item p { margin: 0 0 8px; font-size: 13px; line-height: 1.6; }
+.remediation-item p { margin: 0 0 8px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .remediation-actions { display: flex; gap: 10px; align-items: center; }
 .remediation-custom { margin-top: 8px; display: grid; gap: 8px; }
 .remediation-custom textarea { width: 100%; resize: vertical; }
