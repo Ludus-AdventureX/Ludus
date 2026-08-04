@@ -1556,6 +1556,124 @@ export interface SimulationRun {
 
 `ExperimentPreview` 是基于某一工作副本修订生成的短生命周期实验结果，不是 `SimulationRun`，不得被 DecisionRecord、PDF、正式推荐或审计导出引用。任何后续工作副本修改都会使旧预览 `stale == true`。要获得正式结果，用户必须先把工作副本保存为新的不可变 `GraphVersion`，完成所需审阅并确认该版本，再主动创建 `formal` `SimulationRun`。
 
+## 推演议会（CCR-20260804-DELIB-01）
+
+推演议会是因子沙盘之上的长程推演层：每个因子一个持证人智能体，主持智能体组织轮次，用户可介入；一切数值由确定性引擎 `simulate()` 计算。议会对象属于沙盘域，不属于 AnalysisRun 状态机。
+
+```ts
+export type DeliberationRunStatus = "preparing" | "running" | "awaiting_user" | "complete" | "cancelled";
+
+export interface DeliberationRun {
+  id: string;
+  workspaceId: string;
+  decisionCaseId: string;
+  status: DeliberationRunStatus;
+  currentRoundSeq: number;
+  maxRounds: number;              // 硬上限 5；超限即推进 verdict 并诚实注记
+  factorSnapshotHash: string;     // 创建时刻因子基线冻结哈希
+  originModes: OriginMode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeliberationFactor {
+  id: string;
+  workspaceId: string;
+  deliberationRunId: string;
+  provenance: "objective" | "subjective";
+  label: string;
+  strength: number;               // 0-1；只能由用户介入或已采纳提议改变
+  sourceFactorId?: string;        // objective 必填：引用 factor sandbox 基线因子
+  statement?: string;             // subjective 必填：声明文本
+  authorUserId?: string;          // subjective 必填：Human 署名（ResponsibilityStamp）
+  dossierAssumptionId?: string;   // subjective 可选：引用档案假设
+  evidenceStatus: "assumed" | "unknown"; // subjective 永不 supported/conditional
+}
+
+export interface DeliberationRound {
+  id: string;
+  deliberationRunId: string;
+  seq: number;                    // run 内严格单调
+  kind: "opening" | "challenge" | "verdict";
+  status: "active" | "complete";
+  startedAt: string;
+  endedAt?: string;
+}
+
+export interface DeliberationMessage {
+  id: string;
+  workspaceId: string;
+  deliberationRunId: string;
+  roundId: string;
+  speaker: "witness" | "moderator" | "user";
+  speakerFactorId?: string;       // witness 必填
+  kind: "statement" | "challenge" | "rebuttal" | "proposal" | "intervention" | "nomination" | "verdict_summary";
+  content: string;
+  structuredPayload?: Record<string, unknown>; // 经 schema 校验；禁止自报数值结果
+  stamp: ResponsibilityStamp;     // Human/Analysis/Unknown（§7）
+  originMode: OriginMode;
+  sourceOriginModes: OriginMode[];
+  createdAt: string;
+}
+
+export interface DeliberationProposal {
+  id: string;
+  workspaceId: string;
+  deliberationRunId: string;
+  proposerFactorId: string;
+  kind: "factor_strength" | "edge_validity" | "new_factor";
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  status: "pending" | "accepted" | "rejected"; // 只有用户可决策
+  enginePreview?: FactorSandboxState;          // simulate() 预览，非模型输出
+  decidedAt?: string;
+}
+
+export interface DeliberationNomination {
+  id: string;
+  workspaceId: string;
+  deliberationRunId: string;
+  rationale: string;              // 主持基于 topDrivers/证据薄弱因子的提名理由
+  targetDescription: string;
+  status: "pending" | "confirmed" | "rejected"; // 永不自动生效
+  confirmedFactorId?: string;     // confirmed 后才存在
+}
+
+export interface DeliberationOutcome {
+  id: string;
+  workspaceId: string;
+  deliberationRunId: string;      // 一个 run 至多一条；verdict 轮产出，留档 append-only
+  conditionProjections: ConditionProjection[]; // 每项 = 采纳提议集 + simulate() 投影 + 条件描述
+  flipConditions: FlipCondition[];             // 引擎 topDrivers/flipValue 派生
+  dissentLog: DissentEntry[];                  // 立场被推翻的持证人留档
+  assumptionLedger: AssumptionLedgerEntry[];   // 全部因子 provenance/evidenceStatus/最终强度
+  disclaimer: string;             // 固定文案：沙盘与议会不代表精确预测
+  createdAt: string;
+}
+
+export interface ConditionProjection {
+  acceptedProposalIds: string[];
+  projection: { outcomeScore: number; verdict: "proceed" | "hold"; flipThreshold: number };
+  condition: string;              // 条件描述；禁止概率化断言
+}
+
+export interface DeliberationEvent {
+  id: string;
+  sequence: number;               // 单个 deliberationRunId 流内严格单调
+  workspaceId: string;
+  decisionCaseId: string;
+  deliberationRunId: string;
+  category: "deliberation.round" | "deliberation.message" | "deliberation.proposal" | "deliberation.nomination" | "deliberation.outcome";
+  type: string;
+  originMode: OriginMode;
+  sourceOriginModes: OriginMode[];
+  createdAt: string;
+  payload: Record<string, unknown>;
+}
+```
+
+不变量：`DeliberationFactor` 的 subjective 条目必须以 `assumed | unknown` + Human 署名进图，禁止冒充 `supported`；`DeliberationNomination` 在 `confirmed` 前不得产生任何因子或数值效果；`DeliberationProposal` 的 `enginePreview` 与一切投影数值只能来自 `simulate()`，智能体输出不得自报数值；`DeliberationOutcome` 与事件 payload 不得携带“成功概率/结论正确概率”或任何 0-1 概率化断言；跨 Workspace 访问统一 `CASE_NOT_FOUND` 404。
+
 ## 决策记录
 
 ```ts

@@ -106,6 +106,15 @@ Idempotency-Key: charter_001_v1_full
 | `GET` | `/api/workspaces/{workspaceId}/simulations/{graphId}/compare` | 比较两个图版本、结果和推荐 |
 | `POST` | `/api/workspaces/{workspaceId}/simulations/{graphId}/rollback` | 从历史版本创建新的当前版本 |
 | `POST` | `/api/workspaces/{workspaceId}/simulations/{graphId}/adoptions` | 将沙盘结论提交为候选档案更新 |
+| `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/deliberations` | 创建推演议会 run（主观因子声明[]、maxRounds≤5；冻结因子快照，CCR-20260804-DELIB-01） |
+| `GET` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/deliberations` | 按创建时间倒序列出该 Case 的议会锚点（CCR-20260804-DELIB-01） |
+| `GET` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}` | 读取议会 run 详情（因子、轮次、状态） |
+| `GET` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/messages` | 分页读取议会转录 |
+| `GET` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/events` | 议会 SSE 事件流（DeliberationEvent 信封 + Last-Event-ID 重放） |
+| `POST` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/interventions` | 分类优先的用户介入（interject/challenge_witness/declare_subjective_factor/reopen_round） |
+| `POST` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/proposals/{proposalId}/decision` | 用户采纳/驳回持证人提议；accepted 落引擎 override 并重算 |
+| `POST` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/nominations/{nominationId}/decision` | 用户确认/拒绝主持提名；confirm 创建主观因子并恢复 run |
+| `GET` | `/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/outcome` | 读取条件化预估；未 complete 时诚实 404 |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/scope-confirmations` | 人类确认问题边界并进入 scoped |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/readiness-checks` | 执行输入、Cynefin 与运行前门，满足时进入 ready |
 | `POST` | `/api/workspaces/{workspaceId}/cases/{decisionCaseId}/signoff-requests` | 人类从 review 创建待签署请求并进入 pending_signoff |
@@ -433,6 +442,8 @@ data: {"id":"evt_045","sequence":45,"workspaceId":"ws_demo","decisionCaseId":"ca
 ```
 
 事件只使用 `06-data-model.md` 的一套合同：`category` 固定为 `agent.status`、`agent.task`、`tool.call`、`citation.added`、`user.confirmation.required`，用于前端分发；`type` 使用同一合同中更具体的领域枚举，例如 `analysis.stage.progressed`、`research.packet.completed` 或 `tool.call.completed`。SSE 的 `event:` 等于 `category`，`data:` 始终是完整 `AnalysisEvent` 信封。SSE 支持 `Last-Event-ID`，浏览器重连后按持久化 `sequence` 从数据库历史继续。`sequence` 在单个 `analysisRunId` 事件流内严格单调递增：由服务端在持久化时分配，禁止回退，允许缺口（CCR-20260725-ANALYSIS-01）。
+
+推演议会是独立的领域事件流（CCR-20260804-DELIB-01）：事件表 `DeliberationEvent` 的信封逐字段镜像 `AnalysisEvent`（`analysisRunId` 换为 `deliberationRunId`），`category` 固定为 `deliberation.round`、`deliberation.message`、`deliberation.proposal`、`deliberation.nomination`、`deliberation.outcome`；`sequence` 在单个 `deliberationRunId` 流内严格单调，支持 `Last-Event-ID` 重放；`originMode`/`sourceOriginModes` 诚实记录 live/fixture。议会事件不混入 analysis 五类，analysis 五类也不承载议会语义。
 
 DeepSeek V4 Pro 的 `reasoning_content` 是 Provider 内部 transient 协议字段，不是 API 或事件字段。thinking mode 默认启用；同一 assistant turn 发起 tool call 时，Provider 后续回传工具结果必须在内存中原样带回该字段。它不得出现在响应、SSE、数据库、日志、tool trace、报告或 UI；无 tool call 时立即丢弃，中断后也不恢复。strict tool calls 可在 thinking/non-thinking 使用；JSON Output 空 `content` 视为结构失败并至多执行一次既有修复/重试。
 
@@ -1041,6 +1052,20 @@ Idempotency-Key: run_research_001_cancel_01
 - `GET /evidence/{evidenceItemId}/same-source-group` → `{ ok, data: SameSourceGroupView }`：`independentSourceGroupId` + `memberEvidenceItemIds[]` + `independentSourceCountContribution`（同源多篇引用计为一个独立来源）。
 - `GET /analyses/{analysisRunId}/evidence` → `{ ok, data: RunEvidenceListView }`：`analysisRunId` + `items: EvidenceItemView[]`（该 Run 工作区内的证据条目）。
 - `GET /analyses/{analysisRunId}/evidence-conflicts` → `{ ok, data: ConflictListView }`：`analysisRunId` + `conflicts: ConflictRelationView[]`（`fromEvidenceItemId`/`toEvidenceItemId`/`groupId`/`rationale`）。
+
+## 推演议会 API
+
+推演议会（Deliberation Council）是因子沙盘之上的长程推演层（CCR-20260804-DELIB-01）：每个因子一个持证人智能体（客观因子持证据，主观因子持 Human 署名声明），主持智能体组织开场/质证/裁决轮次；一切数值由确定性引擎 `simulate()` 计算，智能体不得自报数值。workspace-scoped、统一信封；读面（GET）不涉及 CSRF 或 `Idempotency-Key`，写面（POST）必须携带 CSRF + `Idempotency-Key`；缺失、外部或跨租户 id 一律返回逐字节一致的 `CASE_NOT_FOUND` 404（反枚举）。
+
+- `POST /cases/{decisionCaseId}/deliberations` → `{ ok, data: DeliberationRunView }`：创建议会 run；body 携带主观因子声明[]（声明文本/初始强度/可选 dossierAssumptionId）与 `maxRounds`（≤5）；服务端冻结因子快照（客观因子引用 factor sandbox 基线 + 主观因子列表）并计算 `factorSnapshotHash`。
+- `GET /cases/{decisionCaseId}/deliberations` → `{ ok, data: { items: DeliberationAnchorView[] } }`：锚点投影（runId/status/currentRound/maxRounds/时间戳）。
+- `GET /deliberations/{deliberationRunId}` → `{ ok, data: DeliberationRunDetailView }`：run + `factors: DeliberationFactorView[]`（provenance/label/strength/evidenceStatus/署名投影，主观因子永不 supported）+ `rounds[]` + 待决提名/提议计数。
+- `GET /deliberations/{deliberationRunId}/messages` → `{ ok, data: { items: DeliberationMessageView[], nextCursor } }`：分页转录（speaker/speakerRef/kind/content/责任戳/originMode）。
+- `GET /deliberations/{deliberationRunId}/events`：SSE；`event:` = `DeliberationEvent.category`（deliberation.round/.message/.proposal/.nomination/.outcome），`data:` 为完整信封，支持 `Last-Event-ID`。
+- `POST /deliberations/{deliberationRunId}/interventions` → `{ ok, data: DeliberationInterventionView }`：分类优先（仿 RunResolution fail-closed）：`interject`（附文本）/ `challenge_witness`（指定 factorId + 质询）/ `declare_subjective_factor`（完整声明）/ `reopen_round`（仅当预算未耗尽）；非法分类或越预算返回结构化拒绝，不产生副作用。
+- `POST /deliberations/{deliberationRunId}/proposals/{proposalId}/decision` → `{ ok, data: DeliberationProposalView }`：body `{ decision: accepted | rejected }`；accepted 时服务端落引擎 override、调 `simulate()` 重算并产出 delta 事件；非 pending 状态重复决策幂等返回既有结果。
+- `POST /deliberations/{deliberationRunId}/nominations/{nominationId}/decision` → `{ ok, data: DeliberationNominationView }`：body `{ decision: confirmed | rejected }`；confirmed 必须随附完整主观因子声明（署名当前用户），创建 DeliberationFactor 并恢复 run；rejected 即弃，不静默。
+- `GET /deliberations/{deliberationRunId}/outcome` → `{ ok, data: DeliberationOutcomeView }`：`conditionProjections[]`（采纳提议集 + 引擎投影 outcomeScore/verdict/flipThreshold + 条件描述）/ `flipConditions[]` / `dissentLog[]` / `assumptionLedger[]` / `disclaimer`；run 未 complete 时诚实 404。任何字段不得携带概率化断言（§7，schema 级断言 + QA 电池扫描）。
 
 ## 决策生命周期事件与不可调用能力
 

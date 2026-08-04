@@ -18,6 +18,7 @@ canonical_contracts:
   accepted_ccrs:
   - docs/contract-changes/CCR-20260719-002.md
   - docs/contract-changes/CCR-20260721-003.md
+  - docs/contract-changes/CCR-20260804-DELIB-01.md
   runtime_rules: AGENTS.md
 global_rules:
 - one_write_owner_per_path
@@ -129,6 +130,7 @@ owners:
   simulation_graph:
     write_scope:
     - services/api/app/simulations/**
+    - services/api/app/deliberation/**
     - apps/web/components/simulation/**
     exclusions:
     - services/api/app/**/schemas.py
@@ -723,6 +725,91 @@ tasks:
     services/api/tests/test_signoff.py -q
   handoff_artifacts:
   - decision_os_hardening_gate_report
+- id: task-delib-contract
+  title: Deliberation council CCR plan sync and contract skeleton
+  owner: contract_lead
+  depends_on:
+  - task-12
+  - task-13
+  plan_section: CCR-20260804-DELIB-01
+  write_scope:
+  - docs/product-plan/docs/contract-changes/CCR-20260804-DELIB-01.md
+  - docs/product-plan/06-data-model.md
+  - docs/product-plan/09-simulation-engine.md
+  - docs/product-plan/10-api-and-events.md
+  - docs/product-plan/11-frontend-spec.md
+  - docs/product-plan/17-product-design-v2.md
+  - docs/product-plan/agent-work-manifest.yaml
+  - AGENTS.md
+  - services/api/app/deliberation/schemas_api.py
+  acceptance:
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  handoff_artifacts:
+  - ccr_delib_01
+  - plan_sync_report
+- id: task-delib-backend
+  title: Deliberation domain orchestrator routes and SSE
+  owner: simulation_graph
+  secondary_owner: case_api_data
+  depends_on:
+  - task-delib-contract
+  plan_section: CCR-20260804-DELIB-01
+  write_scope:
+  - services/api/app/deliberation/**
+  - services/api/app/workers/deliberation_orchestrator.py
+  - services/api/migrations/**
+  secondary_write_scope:
+  - services/api/app/main.py
+  forbidden_scope:
+  - services/api/app/**/schemas.py
+  acceptance:
+  - uv run --project services/api pytest services/api/app/deliberation services/api/tests -q
+  - uv run --project services/api ruff check services/api
+  - powershell -ExecutionPolicy Bypass -File scripts/generate_contracts.ps1 -Check
+  handoff_artifacts:
+  - deliberation_migration_revision
+  - cross_tenant_404_report
+  - nomination_no_auto_activation_report
+  - probability_scan_report
+  - fixture_determinism_report
+- id: task-delib-frontend
+  title: Deliberation board frontend with council live stream
+  owner: web_ux
+  depends_on:
+  - task-delib-backend
+  plan_section: CCR-20260804-DELIB-01
+  write_scope:
+  - apps/web/components/shell/views/**
+  - apps/web/components/deliberation/**
+  - apps/web/lib/api/deliberation.ts
+  - apps/web/app/look-styles.css
+  forbidden_scope:
+  - packages/contracts/src/types.gen.ts
+  - services/api/app/**
+  acceptance:
+  - pnpm --dir apps/web test
+  - pnpm --dir apps/web build
+  handoff_artifacts:
+  - board_state_matrix
+  - sse_reconnect_report
+  - three_viewport_metrics
+- id: task-delib-qa
+  title: Deliberation golden path E2E and visual acceptance
+  owner: qa_release
+  depends_on:
+  - task-delib-frontend
+  write_scope:
+  - e2e/**
+  - docs/handoffs/**
+  forbidden_scope:
+  - apps/web/components/**
+  - services/api/app/**
+  source_fix_policy: defect_handoff_to_original_owner
+  acceptance:
+  - pnpm --dir apps/web exec playwright test e2e/deliberation-board.spec.ts
+  handoff_artifacts:
+  - deliberation_e2e_trace
+  - fixture_and_live_timeliness_report
 scheduler_rules:
   max_one_in_progress_per_owner: true
   allow_parallel_when_write_scopes_disjoint: true

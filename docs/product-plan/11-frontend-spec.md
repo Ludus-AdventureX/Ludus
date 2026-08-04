@@ -142,6 +142,15 @@ Project Drawer 必须提供：
 
 `relationshipQualityScore` 只表现关系证据与解释质量，不作为边影响强度的视觉替代；界面分别编辑 strength 与 relationship quality。
 
+推演棋盘（CCR-20260804-DELIB-01）与因子沙盘、正式沙盘并列：
+
+- 棋盘图：客观/主观因子同盘，主观因子 = 虚线边框 + human 色 + Human 署名角标；议会运行中事件节点带轮次状态环；
+- 议会实况转录（SSE + Last-Event-ID 续读）：持证人/主持/用户三类发言卡 + 轮次时间线；
+- 介入控制台：插话、质询指定持证人、声明主观因子（可引用 Dossier assumption）、要求重开一轮；
+- 提名确认卡与提议账本：主持提名逐条确认/拒绝（拒绝即弃，不静默）；提议逐条采纳/驳回，采纳即时引擎重算并在棋盘图上移动；
+- 结果面板：条件化预估 + 翻转条件 + 异议留档 + 固定“不代表精确预测”标注；
+- 状态全覆盖：loading / empty / preparing / running / awaiting_user / complete / error / fixture 标识；≤620px 实况面板折叠为只读流。
+
 ## 工作区五：决定 `decision`
 
 决定页是责任与冻结面，不是“接受 AI 建议”按钮。必须提供：
