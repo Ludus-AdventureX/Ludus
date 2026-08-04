@@ -1059,7 +1059,7 @@ Idempotency-Key: run_research_001_cancel_01
 
 - `POST /cases/{decisionCaseId}/deliberations` → `{ ok, data: DeliberationRunView }`：创建议会 run；body 携带主观因子声明[]（声明文本/初始强度/可选 dossierAssumptionId）与 `maxRounds`（≤5）；服务端冻结因子快照（客观因子引用 factor sandbox 基线 + 主观因子列表）并计算 `factorSnapshotHash`。
 - `GET /cases/{decisionCaseId}/deliberations` → `{ ok, data: { items: DeliberationAnchorView[] } }`：锚点投影（runId/status/currentRound/maxRounds/时间戳）。
-- `GET /deliberations/{deliberationRunId}` → `{ ok, data: DeliberationRunDetailView }`：run + `factors: DeliberationFactorView[]`（provenance/label/strength/evidenceStatus/署名投影，主观因子永不 supported）+ `rounds[]` + 待决提名/提议计数。
+- `GET /deliberations/{deliberationRunId}` → `{ ok, data: DeliberationRunDetailView }`：run + `factors: DeliberationFactorView[]`（provenance/label/strength/evidenceStatus/署名投影，主观因子永不 supported）+ `rounds[]` + 待决提名/提议计数，并携带完整的 `pendingProposals[]` / `pendingNominations[]` 视图（additive，供棋盘渲染账本，无需额外端点）。
 - `GET /deliberations/{deliberationRunId}/messages` → `{ ok, data: { items: DeliberationMessageView[], nextCursor } }`：分页转录（speaker/speakerRef/kind/content/责任戳/originMode）。
 - `GET /deliberations/{deliberationRunId}/events`：SSE；`event:` = `DeliberationEvent.category`（deliberation.round/.message/.proposal/.nomination/.outcome），`data:` 为完整信封，支持 `Last-Event-ID`。
 - `POST /deliberations/{deliberationRunId}/interventions` → `{ ok, data: DeliberationInterventionView }`：分类优先（仿 RunResolution fail-closed）：`interject`（附文本）/ `challenge_witness`（指定 factorId + 质询）/ `declare_subjective_factor`（完整声明）/ `reopen_round`（仅当预算未耗尽）；非法分类或越预算返回结构化拒绝，不产生副作用。
