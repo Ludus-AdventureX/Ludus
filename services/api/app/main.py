@@ -8,6 +8,7 @@ from app.analyses.routes import router as analyses_router
 from app.a2a.mount import mount_a2a
 from app.auth.guest import router as guest_alpha_router
 from app.auth.routes import router as auth_router
+from app.deliberation.routes import router as deliberation_router
 from app.evidence.routes import router as evidence_router
 from app.security.envelope import register_error_handlers
 from app.security.headers import SecurityHeadersMiddleware
@@ -48,6 +49,9 @@ app.include_router(analyses_router)
 # list/read. Same absolute-prefix + per-route guard pattern as the analyses
 # router above (§M7 precedent).
 app.include_router(case_reads_router)
+# Deliberation council (CCR-20260804-DELIB-01): same absolute-prefix +
+# per-route require_workspace_context pattern as the analyses router (§M7).
+app.include_router(deliberation_router)
 # PROTOTYPE (guest alpha): hidden from OpenAPI and hard-gated by
 # ENABLE_GUEST_ALPHA (uniform 404 when disabled); no product contract.
 app.include_router(guest_alpha_router)

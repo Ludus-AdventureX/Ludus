@@ -33,6 +33,7 @@ from uuid import UUID
 from app.db import async_session_factory
 from app.types import AnalysisRunStatus
 from app.workers.analysis_worker import AnalysisWorker, build_role_executors_from_env
+from app.workers.deliberation_worker import advance_one_deliberation
 from app.agents.model_provider import build_model_provider_from_env
 
 log = logging.getLogger("app.workers.run")
@@ -153,6 +154,18 @@ async def main() -> None:
             if claimed is not None:
                 log.info("processed analysis run %s", claimed)
                 continue  # drain the queue without sleeping
+            # Idle for analysis: advance at most one deliberation council run
+            # (worker-side job kind, CCR-20260804-DELIB-01). One step per
+            # iteration keeps SSE progress visible and interventions possible
+            # between rounds. Failures roll back only the step; the run keeps
+            # its previous honest status and retries on the next poll.
+            try:
+                async with async_session_factory() as deliberation_session:
+                    deliberated = await advance_one_deliberation(deliberation_session)
+                if deliberated is not None:
+                    continue  # drain the deliberation queue too
+            except Exception:
+                log.exception("deliberation advance failed; run keeps its prior state")
             # Idle: the queue is empty, so this is the cheap moment to reclaim
             # anything a dead worker left mid-stage.
             await _recover_stale_runs()
