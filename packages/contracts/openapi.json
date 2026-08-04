@@ -346,6 +346,27 @@
         "title": "ConnectorUpsertRequest",
         "type": "object"
       },
+      "CreateDeliberationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "maxRounds": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Maxrounds",
+            "type": "integer"
+          },
+          "subjectiveFactors": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectiveFactorDeclaration"
+            },
+            "title": "Subjectivefactors",
+            "type": "array"
+          }
+        },
+        "title": "CreateDeliberationRequest",
+        "type": "object"
+      },
       "CsrfEnvelope": {
         "additionalProperties": false,
         "properties": {
@@ -586,6 +607,58 @@
           "provenanceHash"
         ],
         "title": "DeepAnalysisResult",
+        "type": "object"
+      },
+      "DeliberationInterventionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "interject",
+              "challenge_witness",
+              "declare_subjective_factor",
+              "reopen_round"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "subjectiveFactor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubjectiveFactorDeclaration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "targetFactorId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetfactorid"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "DeliberationInterventionRequest",
         "type": "object"
       },
       "DossierStatementType": {
@@ -913,6 +986,34 @@
         "title": "MethodVersionRef",
         "type": "object"
       },
+      "NominationDecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "confirmed",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "subjectiveFactor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubjectiveFactorDeclaration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "NominationDecisionRequest",
+        "type": "object"
+      },
       "OptionSystemRecommendation": {
         "additionalProperties": false,
         "properties": {
@@ -1120,6 +1221,24 @@
           "sourceScope"
         ],
         "title": "PreRunSourceSpan",
+        "type": "object"
+      },
+      "ProposalDecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "accepted",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ProposalDecisionRequest",
         "type": "object"
       },
       "PurgeRequest": {
@@ -2857,6 +2976,45 @@
           "name"
         ],
         "title": "SubjectCreateRequest",
+        "type": "object"
+      },
+      "SubjectiveFactorDeclaration": {
+        "additionalProperties": false,
+        "properties": {
+          "dossierAssumptionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dossierassumptionid"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          },
+          "strength": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "statement",
+          "strength"
+        ],
+        "title": "SubjectiveFactorDeclaration",
         "type": "object"
       },
       "SystemRecommendation": {
@@ -4931,6 +5089,118 @@
         ]
       }
     },
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/deliberations": {
+      "get": {
+        "operationId": "list_deliberations_api_workspaces__workspaceId__cases__decisionCaseId__deliberations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Deliberations Api Workspaces  Workspaceid  Cases  Decisioncaseid  Deliberations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Deliberations"
+      },
+      "post": {
+        "operationId": "create_deliberation_api_workspaces__workspaceId__cases__decisionCaseId__deliberations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decisionCaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decisioncaseid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeliberationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Deliberation Api Workspaces  Workspaceid  Cases  Decisioncaseid  Deliberations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Deliberation"
+      }
+    },
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/mentor-reviews": {
       "get": {
         "operationId": "list_mentor_reviews_api_workspaces__workspaceId__cases__decisionCaseId__mentor_reviews_get",
@@ -6491,6 +6761,461 @@
           "workspaces",
           "decisions"
         ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}": {
+      "get": {
+        "operationId": "get_deliberation_api_workspaces__workspaceId__deliberations__deliberationRunId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Deliberation Api Workspaces  Workspaceid  Deliberations  Deliberationrunid  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Deliberation"
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/events": {
+      "get": {
+        "operationId": "stream_deliberation_events_api_workspaces__workspaceId__deliberations__deliberationRunId__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Deliberation Events"
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/interventions": {
+      "post": {
+        "operationId": "post_deliberation_intervention_api_workspaces__workspaceId__deliberations__deliberationRunId__interventions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliberationInterventionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Deliberation Intervention Api Workspaces  Workspaceid  Deliberations  Deliberationrunid  Interventions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Deliberation Intervention"
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/messages": {
+      "get": {
+        "operationId": "list_deliberation_messages_api_workspaces__workspaceId__deliberations__deliberationRunId__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Deliberation Messages Api Workspaces  Workspaceid  Deliberations  Deliberationrunid  Messages Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Deliberation Messages"
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/nominations/{nominationId}/decision": {
+      "post": {
+        "operationId": "post_nomination_decision_api_workspaces__workspaceId__deliberations__deliberationRunId__nominations__nominationId__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "nominationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Nominationid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NominationDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Nomination Decision Api Workspaces  Workspaceid  Deliberations  Deliberationrunid  Nominations  Nominationid  Decision Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Nomination Decision"
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/outcome": {
+      "get": {
+        "operationId": "get_deliberation_outcome_api_workspaces__workspaceId__deliberations__deliberationRunId__outcome_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Deliberation Outcome Api Workspaces  Workspaceid  Deliberations  Deliberationrunid  Outcome Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Deliberation Outcome"
+      }
+    },
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/proposals/{proposalId}/decision": {
+      "post": {
+        "operationId": "post_proposal_decision_api_workspaces__workspaceId__deliberations__deliberationRunId__proposals__proposalId__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deliberationRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deliberationrunid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proposalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposalid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Proposal Decision Api Workspaces  Workspaceid  Deliberations  Deliberationrunid  Proposals  Proposalid  Decision Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Proposal Decision"
       }
     },
     "/api/workspaces/{workspaceId}/evidence/{evidenceItemId}": {

@@ -505,6 +505,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/deliberations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Deliberations */
+        get: operations["list_deliberations_api_workspaces__workspaceId__cases__decisionCaseId__deliberations_get"];
+        put?: never;
+        /** Create Deliberation */
+        post: operations["create_deliberation_api_workspaces__workspaceId__cases__decisionCaseId__deliberations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspaceId}/cases/{decisionCaseId}/mentor-reviews": {
         parameters: {
             query?: never;
@@ -909,6 +927,125 @@ export interface paths {
         get: operations["read_decision_review_api_workspaces__workspaceId__decisions__decisionId__reviews__reviewId__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Deliberation */
+        get: operations["get_deliberation_api_workspaces__workspaceId__deliberations__deliberationRunId__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream Deliberation Events */
+        get: operations["stream_deliberation_events_api_workspaces__workspaceId__deliberations__deliberationRunId__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/interventions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Deliberation Intervention */
+        post: operations["post_deliberation_intervention_api_workspaces__workspaceId__deliberations__deliberationRunId__interventions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Deliberation Messages */
+        get: operations["list_deliberation_messages_api_workspaces__workspaceId__deliberations__deliberationRunId__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/nominations/{nominationId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Nomination Decision */
+        post: operations["post_nomination_decision_api_workspaces__workspaceId__deliberations__deliberationRunId__nominations__nominationId__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Deliberation Outcome */
+        get: operations["get_deliberation_outcome_api_workspaces__workspaceId__deliberations__deliberationRunId__outcome_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspaceId}/deliberations/{deliberationRunId}/proposals/{proposalId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Proposal Decision */
+        post: operations["post_proposal_decision_api_workspaces__workspaceId__deliberations__deliberationRunId__proposals__proposalId__decision_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1459,6 +1596,16 @@ export interface components {
             /** Serverurl */
             serverUrl?: string | null;
         };
+        /** CreateDeliberationRequest */
+        CreateDeliberationRequest: {
+            /**
+             * Maxrounds
+             * @default 3
+             */
+            maxRounds: number;
+            /** Subjectivefactors */
+            subjectiveFactors?: components["schemas"]["SubjectiveFactorDeclaration"][];
+        };
         /** CsrfEnvelope */
         CsrfEnvelope: {
             data: components["schemas"]["CsrfTokenData"];
@@ -1532,6 +1679,19 @@ export interface components {
             unresolvedUnknownIds: string[];
             /** Validatorresults */
             validatorResults: components["schemas"]["ValidatorResult"][];
+        };
+        /** DeliberationInterventionRequest */
+        DeliberationInterventionRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "interject" | "challenge_witness" | "declare_subjective_factor" | "reopen_round";
+            subjectiveFactor?: components["schemas"]["SubjectiveFactorDeclaration"] | null;
+            /** Targetfactorid */
+            targetFactorId?: string | null;
+            /** Text */
+            text?: string | null;
         };
         /**
          * DossierStatementType
@@ -1664,6 +1824,15 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** NominationDecisionRequest */
+        NominationDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "confirmed" | "rejected";
+            subjectiveFactor?: components["schemas"]["SubjectiveFactorDeclaration"] | null;
+        };
         /** OptionSystemRecommendation */
         OptionSystemRecommendation: {
             /**
@@ -1739,6 +1908,14 @@ export interface components {
             sourceScope: "pre_run";
             /** Workspaceid */
             workspaceId: string;
+        };
+        /** ProposalDecisionRequest */
+        ProposalDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accepted" | "rejected";
         };
         /** PurgeRequest */
         PurgeRequest: {
@@ -2324,6 +2501,17 @@ export interface components {
             description?: string | null;
             /** Name */
             name: string;
+        };
+        /** SubjectiveFactorDeclaration */
+        SubjectiveFactorDeclaration: {
+            /** Dossierassumptionid */
+            dossierAssumptionId?: string | null;
+            /** Label */
+            label: string;
+            /** Statement */
+            statement: string;
+            /** Strength */
+            strength: number;
         };
         /**
          * SystemRecommendation
@@ -3465,6 +3653,78 @@ export interface operations {
             };
         };
     };
+    list_deliberations_api_workspaces__workspaceId__cases__decisionCaseId__deliberations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionCaseId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deliberation_api_workspaces__workspaceId__cases__decisionCaseId__deliberations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionCaseId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDeliberationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_mentor_reviews_api_workspaces__workspaceId__cases__decisionCaseId__mentor_reviews_get: {
         parameters: {
             query?: never;
@@ -4334,6 +4594,261 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_deliberation_api_workspaces__workspaceId__deliberations__deliberationRunId__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliberationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_deliberation_events_api_workspaces__workspaceId__deliberations__deliberationRunId__events_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Last-Event-ID"?: string | null;
+            };
+            path: {
+                deliberationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_deliberation_intervention_api_workspaces__workspaceId__deliberations__deliberationRunId__interventions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliberationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeliberationInterventionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deliberation_messages_api_workspaces__workspaceId__deliberations__deliberationRunId__messages_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path: {
+                deliberationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_nomination_decision_api_workspaces__workspaceId__deliberations__deliberationRunId__nominations__nominationId__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliberationRunId: string;
+                nominationId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NominationDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_deliberation_outcome_api_workspaces__workspaceId__deliberations__deliberationRunId__outcome_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliberationRunId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_proposal_decision_api_workspaces__workspaceId__deliberations__deliberationRunId__proposals__proposalId__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliberationRunId: string;
+                proposalId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalDecisionRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

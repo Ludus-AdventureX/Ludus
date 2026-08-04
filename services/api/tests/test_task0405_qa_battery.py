@@ -440,6 +440,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "a3f8c2d47e19_add_canonical_simulation_graph_contract.py",
         "a4b5c6d7e8f9_harden_connector_status_enum.py",
         "a7c3e9f1b5d8_add_dossier_version_snapshots.py",
+        "a9f1e2d3c4b5_add_deliberation_council.py",
         "b2c3d4e5f6a7_add_workspace_connectors.py",
         "b2c7e9d4a1f6_add_decision_maker_profiles_and_idempotency_records.py",
         "b3c5d7e9f1a2_add_workspace_invites.py",
@@ -480,7 +481,7 @@ def test_qa7_lane_migration_chained_to_task10_revision() -> None:
         "mentor reviews migration must chain after workspace invites"
     )
     heads = set(revisions) - {parent for parent in revisions.values() if parent}
-    assert heads == {"2b2d34dacee0"}, f"unexpected integrated Alembic heads: {heads}"
+    assert heads == {"a9f1e2d3c4b5"}, f"unexpected integrated Alembic heads: {heads}"
 
 
 def test_qa7_lane_tables_materialise_from_metadata() -> None:

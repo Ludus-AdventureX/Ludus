@@ -166,6 +166,15 @@ def test_core_table_set_and_workspace_scope() -> None:
         # Grey-goo wave-2 (migration 2b2d34dacee0 / CCR-20260802-P2W2).
         "retrieval_coverage",
         "evidence_funnel_audits",
+        # Deliberation council (migration a9f1e2d3c4b5 / CCR-20260804-DELIB-01).
+        "deliberation_runs",
+        "deliberation_factors",
+        "deliberation_rounds",
+        "deliberation_messages",
+        "deliberation_proposals",
+        "deliberation_nominations",
+        "deliberation_outcomes",
+        "deliberation_events",
     }
     assert set(Base.metadata.tables) == expected
 
