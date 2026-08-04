@@ -1,11 +1,9 @@
-# Work Log: idle
+# Status: idle
 
-- Status: idle after quality-gate end-to-end repair and verification.
-- Last archived: 2026-08-01 (Asia/Shanghai).
-- Last archive entry: `Archive 质量门端到端修复与验证（透镜链路）- 2026-08-01 (Asia/Shanghai)`.
-- Delivered: 质量门机制端到端打通——validator_rejected 理由透出、透镜输出契约/content schema/content 示例/裸 ID/枚举规则、draft→ready 链路（apply_validation_verdict）、前端展示修正；第 12/13 轮真实 full 均 5/5 透镜 ready + deterministic gate passed，拦截均为模型 validator 对决策内容的真实审查（设计内行为）；后端 365+ passed、前端 149 passed。
-- Remaining: 探针脚本清理（output/*.py）；后续如需 full 达 ready 需补充验证期可行性等决策证据。
-- Push: origin/main 已推送（2026-08-01，8fb738b→ce925b1 两次 fast-forward，live SHA 验证一致；记录见 HISTORY "Remote push record 2026-08-01" 与 "Remote push record 2026-08-01 - THIRD_PARTY_NOTICES + AGPL branch deletion"）。
-- Deleted: 远端 codex/adopt-agpl-dual-license 分支（0054a8d，AGPL 双许可历史分支，产品方授权）与本地同名分支。
-- Added: THIRD_PARTY_NOTICES.md（LICENSING.md Gate 2 收口）。
+- Last archived: causal graph A+B — factor sandbox graph + true spatial
+  causal canvas (2026-08-04, branch codex/causal-graph-ab-r1, 未提交，
+  待用户指示)。
+- Prior archived: evidence drawer visual styles + responsive layout repair
+  (2026-08-04, codex/evidence-drawer-layout-r1, 未提交)。
+- See HISTORY for full records.
 - Secret policy: do not record credentials here.
