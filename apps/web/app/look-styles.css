@@ -1394,3 +1394,74 @@ section.provenance-chain > header p { margin: 4px 0 0; color: var(--text-muted);
   .factor-graph-node { width: 168px; }
   .factor-graph-outcome { width: 176px; }
 }
+
+/* Deliberation council board (CCR-20260804-DELIB-01, Wave 3). Look V7:
+   square corners, hairline borders, semantic tokens. Subjective factors are
+   dashed + human-accent with a signature badge — assumed identity stays
+   visible, never impersonating evidence. */
+.deliberation-board { margin-top: 42px; padding: 26px 0 30px; border-top: 1px solid var(--border-strong); display: grid; gap: 16px; }
+.deliberation-board > header { display: grid; gap: 6px; }
+.deliberation-board > header h3 { margin: 0; font-family: var(--serif); font-size: 21px; font-weight: 500; }
+.deliberation-board > header h3 em { color: var(--text-muted); font-size: 12px; font-style: normal; }
+.deliberation-declare, .deliberation-intervene { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.deliberation-declare h4, .deliberation-intervene h4, .deliberation-nominations h4, .deliberation-proposals h4, .deliberation-transcript h4, .deliberation-outcome h4 { margin: 0; font-family: var(--serif); font-size: 15px; font-weight: 500; }
+.deliberation-declare-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; }
+.deliberation-declare input, .deliberation-declare select, .deliberation-declare textarea, .deliberation-intervene textarea, .deliberation-intervene select, .deliberation-nomination input, .deliberation-nomination textarea { padding: 8px 10px; border: 1px solid var(--border-strong); background: var(--surface-sheet); color: var(--text-primary); font-size: 12px; }
+.deliberation-declare textarea, .deliberation-intervene textarea, .deliberation-nomination textarea { min-height: 56px; resize: vertical; }
+.deliberation-strength { display: grid; gap: 4px; color: var(--text-secondary); font-size: 11px; }
+.deliberation-declared { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.deliberation-declared li { padding: 8px 10px; border: 1px dashed var(--accent-human); display: grid; gap: 2px; }
+.deliberation-declared b { font-size: 12px; }
+.deliberation-declared small { color: var(--text-muted); font-size: 10px; }
+.deliberation-create-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.deliberation-create-row label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 11px; }
+.deliberation-create-row select { padding: 7px 9px; border: 1px solid var(--border-strong); background: var(--surface-sheet); font-size: 12px; }
+.deliberation-board-canvas { position: relative; height: 480px; background: var(--surface-night); border: 1px solid var(--border-night); }
+.deliberation-board-canvas .react-flow__background circle { fill: var(--border-night); }
+.deliberation-board-canvas .react-flow__attribution { background: transparent; color: var(--text-night-muted); }
+.deliberation-board-node { width: 200px; display: grid; gap: 4px; padding: 12px 14px; color: var(--text-night-primary); background: var(--surface-night-card); border: 1px solid var(--border-night-strong); }
+.deliberation-board-node span { color: var(--text-night-muted); font-family: var(--mono); font-size: 7px; letter-spacing: .08em; text-transform: uppercase; }
+.deliberation-board-node b { font-family: var(--serif); font-size: 14px; font-weight: 500; line-height: 1.4; word-break: break-word; }
+.deliberation-board-node small { color: var(--text-night-secondary); font-size: 9px; }
+.deliberation-board-node[data-provenance="subjective"] { border-style: dashed; border-color: var(--line-night-human); box-shadow: inset 0 0 0 1px rgb(var(--accent-human-rgb) / .25); }
+.deliberation-board-node[data-provenance="subjective"] span { color: var(--line-night-human); }
+.deliberation-board-outcome { width: 210px; display: grid; gap: 4px; padding: 14px; color: var(--text-night-primary); background: var(--surface-night-sheet); border: 1px solid var(--line-night-analysis); }
+.deliberation-board-outcome span { color: var(--line-night-analysis); font-family: var(--mono); font-size: 7px; letter-spacing: .12em; text-transform: uppercase; }
+.deliberation-board-outcome b { font-family: var(--serif); font-size: 17px; font-weight: 500; }
+.deliberation-board-outcome small { color: var(--text-night-secondary); font-size: 9px; }
+.deliberation-board-outcome[data-board-settled="false"] { border-style: dashed; }
+.deliberation-factor-ledger { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.deliberation-factor-ledger li { padding: 9px 11px; border: 1px solid var(--border-subtle); display: grid; gap: 2px; }
+.deliberation-factor-ledger li[data-provenance="subjective"] { border-style: dashed; border-color: var(--accent-human); }
+.deliberation-factor-ledger b { font-size: 12px; }
+.deliberation-factor-ledger small { color: var(--text-muted); font-size: 10px; }
+.deliberation-nominations, .deliberation-proposals { display: grid; gap: 10px; }
+.deliberation-nomination { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid rgb(var(--accent-unknown-rgb) / .35); border-left: 3px solid var(--accent-unknown); background: rgb(var(--accent-unknown-rgb) / .04); }
+.deliberation-nomination p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.deliberation-nomination-actions, .deliberation-proposal-actions, .deliberation-intervene-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.deliberation-proposals ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.deliberation-proposals li { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-subtle); background: var(--surface-sheet); }
+.deliberation-proposals small { color: var(--text-secondary); font-size: 11px; }
+.deliberation-transcript ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; max-height: 420px; overflow-y: auto; }
+.deliberation-transcript li { padding: 9px 11px; border: 1px solid var(--border-subtle); display: grid; gap: 4px; }
+.deliberation-transcript li[data-speaker="moderator"] { border-left: 3px solid var(--accent-analysis); }
+.deliberation-transcript li[data-speaker="user"] { border-left: 3px solid var(--accent-human); }
+.deliberation-transcript li[data-message-kind="nomination"] { border-left: 3px solid var(--accent-unknown); }
+.deliberation-speaker { color: var(--text-muted); font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+.deliberation-transcript p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.7; word-break: break-word; }
+.deliberation-outcome { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--border-strong); background: var(--surface-sheet); }
+.deliberation-projections { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.deliberation-projections li { padding: 10px 12px; border: 1px solid var(--border-subtle); display: grid; gap: 3px; }
+.deliberation-projections b { font-size: 13px; }
+.deliberation-projections small { color: var(--text-muted); font-size: 10px; line-height: 1.6; }
+.deliberation-flips h5, .deliberation-dissent h5 { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
+.deliberation-flips ul, .deliberation-dissent ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
+.deliberation-dissent b { font-size: 11px; }
+.deliberation-dissent small { display: block; color: var(--text-muted); font-size: 10px; }
+@media (max-width: 620px) {
+  .deliberation-board-canvas { height: 340px; }
+  .deliberation-board-node { width: 168px; }
+  .deliberation-board-outcome { width: 176px; }
+  .deliberation-declare-row { grid-template-columns: 1fr; }
+  .deliberation-transcript ol { max-height: 300px; }
+}

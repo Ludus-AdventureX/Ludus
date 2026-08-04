@@ -250,6 +250,8 @@ async def get_deliberation(
     ).scalars().all()
     proposals = await repo.list_proposals(context.workspace_id, deliberation_run_id)
     nominations = await repo.list_nominations(context.workspace_id, deliberation_run_id)
+    pending_proposals = [p for p in proposals if p.status.value == "pending"]
+    pending_nominations = [n for n in nominations if n.status.value == "pending"]
     view = DeliberationRunDetailView(
         id=str(run.id),
         workspace_id=str(run.workspace_id),
@@ -261,12 +263,14 @@ async def get_deliberation(
         origin_modes=[m.value for m in run.origin_modes],
         factors=[DeliberationFactorView(**_factor_view(f)) for f in factors],
         rounds=[DeliberationRoundView(**_round_view(r)) for r in rounds],
-        pending_proposal_count=sum(
-            1 for p in proposals if p.status.value == "pending"
-        ),
-        pending_nomination_count=sum(
-            1 for n in nominations if n.status.value == "pending"
-        ),
+        pending_proposal_count=len(pending_proposals),
+        pending_nomination_count=len(pending_nominations),
+        pending_proposals=[
+            DeliberationProposalView(**_proposal_view(p)) for p in pending_proposals
+        ],
+        pending_nominations=[
+            DeliberationNominationView(**_nomination_view(n)) for n in pending_nominations
+        ],
         created_at=run.created_at,
         updated_at=run.updated_at,
     )

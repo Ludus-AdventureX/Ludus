@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 
+import { DeliberationBoard } from "@/components/deliberation/DeliberationBoard";
 import { SandboxWorkspace } from "@/components/simulation/SandboxWorkspace";
 import { FactorSandboxPanel } from "@/components/shell/views/FactorSandboxPanel";
 import { loadSandboxCaseData } from "@/components/simulation/sandboxData";
@@ -38,6 +39,10 @@ export function SandboxView({ workspaceId = null, decisionCaseId, fetchImpl }: S
   return (
     <section className="view is-active" id="view-sandbox" data-view-panel="sandbox" aria-labelledby="sandbox-view-title">
       <FactorSandboxPanel
+        {...(workspaceId ? { workspaceId } : {})}
+        {...(decisionCaseId ? { decisionCaseId } : {})}
+      />
+      <DeliberationBoard
         {...(workspaceId ? { workspaceId } : {})}
         {...(decisionCaseId ? { decisionCaseId } : {})}
       />

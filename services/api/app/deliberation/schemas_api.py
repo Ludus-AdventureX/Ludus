@@ -267,6 +267,10 @@ class DeliberationRunDetailView(CanonicalModel):
     rounds: list[DeliberationRoundView]
     pending_proposal_count: int = Field(ge=0)
     pending_nomination_count: int = Field(ge=0)
+    # Full pending views ride the run detail so the board can render the
+    # proposal/nomination ledgers without extra endpoints (additive).
+    pending_proposals: list[DeliberationProposalView] = Field(default_factory=list)
+    pending_nominations: list[DeliberationNominationView] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
