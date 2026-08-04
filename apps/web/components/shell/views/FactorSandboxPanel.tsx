@@ -178,13 +178,16 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
 
   return (
     <section className="factor-sandbox" data-factor-sandbox={state.verdict} aria-label="报告因子沙盘">
-      <header>
-        <span className="eyebrow">因子沙盘 · 确定性推演 · 可复现</span>
-        <h3>调节影响因子，实时看结论如何移动</h3>
-        <p className="phase-slot-note">
-          每个因子的权重来自分析的支撑度；拖动强度即时重算（Layer 1 确定性传播，非伪模拟）。要真正重跑推理，用下方的深度重分析。
-        </p>
+      <header className="section-line-heading">
+        <div>
+          <span>Factor sandbox / G-04 · 确定性推演 · 可复现</span>
+          <h2>调节影响因子，实时看结论如何移动</h2>
+        </div>
+        <small>权重来自分析支撑度 · 拖动即时重算</small>
       </header>
+      <p className="phase-slot-note">
+        每个因子的权重来自分析的支撑度；拖动强度即时重算（Layer 1 确定性传播，非伪模拟）。要真正重跑推理，用下方的深度重分析。
+      </p>
 
       <div className="sandbox-outcome" data-sandbox-verdict={state.verdict}>
         <div className="sandbox-meter" role="meter" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
@@ -197,7 +200,7 @@ export function FactorSandboxPanel({ workspaceId = null, decisionCaseId }: Facto
         </p>
       </div>
 
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert" className="sandbox-error-note">{error}</p>}
 
       {canGraph && (
         <div className="sandbox-view-switch" role="group" aria-label="沙盘视图切换">
