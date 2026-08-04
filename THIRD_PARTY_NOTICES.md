@@ -54,6 +54,10 @@
 
 运行时依赖（Python：`services/api/pyproject.toml`；Node：`package.json`、`apps/web/package.json`、`packages/contracts/package.json`）各自的许可证以各包发布元数据为准，随包管理器锁文件分发。本清单不逐包复制许可证文本。
 
+### 4.1 Vendored 运行时资产
+
+- `apps/web/app/xyflow.css` — 逐字节 vendored 自 `@xyflow/react@12.11.2`（MIT License，xyflow GmbH）的 `dist/style.css`。用途：因果沙盘/因子沙盘图形画布的基础样式，由 `apps/web/app/layout.tsx` 单点引入；组件不直接 import node_modules CSS 路径（该路径破坏 vitest 的 PostCSS 链）。锁定版本与 `pnpm-lock.yaml` 中 `@xyflow/react` 一致；升级该依赖时必须同步替换本文件并更新此条目。
+
 ## 5. CI 与发布扫描要求
 
 - CI 应扫描镜像和产物，确保不存在 `open-webui-0.10.2/`、`hermes-agent-hermes-hermes-a8a19433/`、`探讨/.env`、`探讨/auth.json` 或参考目录源码。
