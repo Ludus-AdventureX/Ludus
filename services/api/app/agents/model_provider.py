@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+from app.connectors.providers.ssrf import UnsafeRemoteUrlError, validate_outbound_url
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -545,7 +546,18 @@ def build_model_provider_from_connector(
 
     Uses the same DeepSeekModelProvider which is OpenAI-compatible and works
     with any compliant endpoint (Kimi, Qwen, GPT, etc.).
+
+    Raises :class:`ModelProviderConfigError` when the endpoint fails the SSRF
+    guard — a connector endpoint is user-supplied, so it must be a public
+    HTTPS/HTTP target before any conversation payload can leave the tenant.
     """
+
+    try:
+        validate_outbound_url(base_url)
+    except UnsafeRemoteUrlError:
+        raise ModelProviderConfigError(
+            "connector base_url is not a safe public endpoint; refusing to build"
+        ) from None
 
     return DeepSeekModelProvider(
         base_url=base_url,

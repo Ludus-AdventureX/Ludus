@@ -7,15 +7,31 @@ owner suites. This directory is deliberately not a package.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import os
+from collections.abc import AsyncIterator, Iterator
 from uuid import uuid4
 
+import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.db import get_database_url
 
 from runtime_world import RuntimeWorld, seed_runtime_world
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _qa_auth_jwt_secret() -> Iterator[None]:
+    """AUTH_JWT_SECRET for the suite (AuthSettings fails closed without it)."""
+    previous = os.environ.get("AUTH_JWT_SECRET")
+    os.environ["AUTH_JWT_SECRET"] = "qa-test-jwt-secret-not-for-production"
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("AUTH_JWT_SECRET", None)
+        else:
+            os.environ["AUTH_JWT_SECRET"] = previous
 
 
 @pytest_asyncio.fixture

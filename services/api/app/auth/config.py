@@ -11,13 +11,18 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Public, well-known default. Running with it means anyone can forge session
+# tokens for any user, so startup fails closed instead of silently carrying it.
+_INSECURE_DEFAULT_JWT_SECRET = "dev-insecure-jwt-secret-change-me"
 
 
 class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="AUTH_", extra="ignore")
 
-    jwt_secret: str = "dev-insecure-jwt-secret-change-me"
+    jwt_secret: str = _INSECURE_DEFAULT_JWT_SECRET
     jwt_algorithm: Literal["HS256"] = "HS256"
     session_ttl_minutes: int = 720
     session_cookie_name: str = "decision_lab_session"
@@ -33,6 +38,15 @@ class AuthSettings(BaseSettings):
     login_rate_window_minutes: int = 15
     login_rate_ip_max_attempts: int = 20
     login_rate_account_max_attempts: int = 5
+
+    @model_validator(mode="after")
+    def _reject_insecure_jwt_default(self) -> "AuthSettings":
+        if self.jwt_secret == _INSECURE_DEFAULT_JWT_SECRET:
+            raise ValueError(
+                "AUTH_JWT_SECRET must be configured; refusing to start with the "
+                "public development default secret (forged-session risk)."
+            )
+        return self
 
 
 @lru_cache(maxsize=1)

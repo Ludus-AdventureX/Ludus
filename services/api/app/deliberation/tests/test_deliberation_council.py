@@ -334,3 +334,56 @@ async def test_rejected_nomination_creates_no_factor_and_resumes(session, world)
     assert len(await repo.list_factors(world.workspace_id, run.id)) == before_count
     refreshed = await repo.get_run(world.workspace_id, run.id)
     assert refreshed.status is DeliberationRunStatus.RUNNING
+
+async def test_list_messages_pagination_no_dup_no_gap(session, world) -> None:
+    """Regression for P1-1: cursor pagination must not 500 and must not
+    duplicate or skip messages, including same-timestamp batches."""
+    repo = DeliberationRepository(session)
+    service = DeliberationService(repo, origin_mode=OriginMode.FIXTURE)
+    packets, influences = await load_case_basis(session, world.workspace_id, world.case_id)
+    run = await service.create_run(
+        workspace_id=world.workspace_id,
+        decision_case_id=world.case_id,
+        user_id=world.user_id,
+        packets=packets,
+        influences=influences,
+        subjective_declarations=[],
+        max_rounds=3,
+    )
+    await _advance_to_stable(session, world, run.id, max_steps=1)
+
+    all_messages = await repo.list_messages(world.workspace_id, run.id, limit=500, before_id=None)
+    assert len(all_messages) >= 3
+    # Force every message onto the exact same timestamp so the
+    # (created_at, id) tuple cursor is exercised, not a naive <= comparison.
+    same_ts = all_messages[0].created_at
+    for message in all_messages:
+        message.created_at = same_ts
+    await session.flush()
+
+    page_size = 2
+    seen: list[UUID] = []
+    cursor: UUID | None = None
+    while True:
+        page = await repo.list_messages(
+            world.workspace_id, run.id, limit=page_size, before_id=cursor
+        )
+        if not page:
+            break
+        for message in page:
+            assert message.id not in seen, f"duplicate message {message.id}"
+            seen.append(message.id)
+        assert len(page) <= page_size
+        # Each page is internally oldest -> newest.
+        assert [m.id for m in page] == sorted(m.id for m in page)
+        cursor = page[0].id
+    assert sorted(seen) == sorted(m.id for m in all_messages), (
+        "pagination must cover exactly the full set, no duplicates, no gaps"
+    )
+
+    # A cursor that is not a member of this run is ignored (tenancy guard),
+    # never applied, and never errors.
+    foreign_cursor = uuid4()
+    safe = await repo.list_messages(world.workspace_id, run.id, limit=5, before_id=foreign_cursor)
+    assert len(safe) <= 5
+    assert sorted(m.id for m in safe) == sorted(m.id for m in all_messages)
