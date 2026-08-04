@@ -28,6 +28,7 @@ from app.connectors.crypto import (
     encrypt_secret,
 )
 from app.connectors.providers.base import ProviderFailure
+from app.connectors.providers.ssrf import UnsafeRemoteUrlError, validate_outbound_url
 from app.contracts.schemas import CanonicalModel
 from app.db import get_session
 from app.models import WorkspaceConnector
@@ -151,12 +152,30 @@ async def upsert_connector(
                 "自定义模型需要填写 base_url 和 model_name。",
                 http_status=422, retryable=False,
             )
+        try:
+            # Save-time SSRF gate: refuse non-public endpoints up front instead
+            # of discovering them on the first probe/request.
+            validate_outbound_url(body.base_url)
+        except UnsafeRemoteUrlError:
+            raise ApiFailure(
+                "CONNECTOR_URL_UNSAFE",
+                "base_url 必须是公网 HTTPS/HTTP 地址，不能指向内网、回环或云元数据。",
+                http_status=422, retryable=False,
+            )
         config_payload = {"base_url": body.base_url.strip(), "model_name": body.model_name.strip()}
     elif provider == "mcp":
         if not body.server_url:
             raise ApiFailure(
                 "CONNECTOR_MCP_URL_REQUIRED",
                 "MCP 服务器需要填写 server_url。",
+                http_status=422, retryable=False,
+            )
+        try:
+            validate_outbound_url(body.server_url)
+        except UnsafeRemoteUrlError:
+            raise ApiFailure(
+                "CONNECTOR_URL_UNSAFE",
+                "server_url 必须是公网 HTTPS/HTTP 地址，不能指向内网、回环或云元数据。",
                 http_status=422, retryable=False,
             )
         auth = (body.auth_type or "none").strip().lower()
@@ -306,6 +325,9 @@ async def _probe_model(api_key: str, config: dict) -> ConnectorStatus:
     if not base_url:
         return ConnectorStatus.INVALID_CREDENTIALS
     try:
+        # SSRF guard: base_url is user-supplied; refuse non-public targets
+        # (loopback/private/link-local/metadata) before any request is made.
+        validate_outbound_url(base_url)
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(
                 f"{base_url}/models",
@@ -319,6 +341,8 @@ async def _probe_model(api_key: str, config: dict) -> ConnectorStatus:
                 return ConnectorStatus.AVAILABLE
             return ConnectorStatus.PROVIDER_ERROR
     except Exception:
+        # SSRF rejection and network failures share one opaque status: the
+        # probe answer never reveals whether a target exists or why it failed.
         return ConnectorStatus.PROVIDER_ERROR
 
 
@@ -330,6 +354,7 @@ async def _probe_mcp(config: dict) -> ConnectorStatus:
     if not url:
         return ConnectorStatus.INVALID_CREDENTIALS
     try:
+        validate_outbound_url(url)
         async with httpx.AsyncClient(timeout=15) as client:
             # Try standard MCP initialize or health check
             resp = await client.get(url, headers={"Accept": "application/json"})
@@ -389,6 +414,9 @@ async def list_connector_tools(
             pass
 
     try:
+        # SSRF guard: the MCP server URL is user-supplied; refuse non-public
+        # targets (loopback/private/link-local/metadata) before any request.
+        validate_outbound_url(url)
         async with httpx.AsyncClient(timeout=15) as client:
             # Attempt to list tools from the MCP server via a GET to a tools endpoint
             resp = await client.get(f"{url}/tools", headers=headers)
@@ -411,6 +439,8 @@ async def list_connector_tools(
                     if isinstance(t, dict)
                 ]
                 return {"ok": True, "data": {"items": items}}
-            return {"ok": True, "data": {"items": [], "error": f"HTTP {resp.status_code}"}}
-    except Exception as exc:
-        return {"ok": True, "data": {"items": [], "error": str(exc)}}
+            # Opaque status only: the caller never learns host details, TLS
+            # quirks or internal error text from the provider.
+            return {"ok": True, "data": {"items": [], "error": f"provider_error_{resp.status_code}"}}
+    except Exception:
+        return {"ok": True, "data": {"items": [], "error": "provider_unreachable"}}

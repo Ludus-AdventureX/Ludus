@@ -8,7 +8,8 @@ sandbox. This directory is deliberately not a package.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import os
+from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -39,6 +40,20 @@ from app.types import (
 from evidence_world import EvidenceWorld
 
 NOW = datetime(2026, 7, 25, 12, 0, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _qa_auth_jwt_secret() -> Iterator[None]:
+    """AUTH_JWT_SECRET for the suite (AuthSettings fails closed without it)."""
+    previous = os.environ.get("AUTH_JWT_SECRET")
+    os.environ["AUTH_JWT_SECRET"] = "qa-test-jwt-secret-not-for-production"
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("AUTH_JWT_SECRET", None)
+        else:
+            os.environ["AUTH_JWT_SECRET"] = previous
 
 
 @pytest_asyncio.fixture

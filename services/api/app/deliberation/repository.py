@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Any, Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -209,9 +209,26 @@ class DeliberationRepository:
             .limit(limit)
         )
         if before_id is not None:
-            anchor = await self._db.get(DeliberationMessage, (workspace_id, before_id))
-            if anchor is not None and anchor.deliberation_run_id == run_id:
-                query = query.where(DeliberationMessage.created_at <= anchor.created_at)
+            # DeliberationMessage has a single-column PK (id); the cursor is the
+            # oldest message id of the previous page. Validate tenancy/run
+            # membership before applying the cursor, then compare as a tuple
+            # (created_at, id) so same-timestamp batches paginate without
+            # skipping or duplicating the anchor row itself.
+            anchor = await self._db.get(DeliberationMessage, before_id)
+            if (
+                anchor is not None
+                and anchor.workspace_id == workspace_id
+                and anchor.deliberation_run_id == run_id
+            ):
+                query = query.where(
+                    or_(
+                        DeliberationMessage.created_at < anchor.created_at,
+                        and_(
+                            DeliberationMessage.created_at == anchor.created_at,
+                            DeliberationMessage.id < anchor.id,
+                        ),
+                    )
+                )
         result = await self._db.execute(query)
         return list(reversed(result.scalars().all()))
 

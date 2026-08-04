@@ -65,6 +65,20 @@ def _qa_signup_invite_code() -> Iterator[None]:
             os.environ[SIGNUP_INVITE_HASHES_ENV] = previous
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _qa_auth_jwt_secret() -> Iterator[None]:
+    """AUTH_JWT_SECRET for the suite (AuthSettings fails closed without it)."""
+    previous = os.environ.get("AUTH_JWT_SECRET")
+    os.environ["AUTH_JWT_SECRET"] = "qa-test-jwt-secret-not-for-production"
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("AUTH_JWT_SECRET", None)
+        else:
+            os.environ["AUTH_JWT_SECRET"] = previous
+
+
 @pytest.fixture(autouse=True)
 def _qa_null_pool_module_factory(monkeypatch) -> None:
     """Replace the module-level async_session_factory with a NullPool variant.
