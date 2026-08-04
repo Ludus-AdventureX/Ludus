@@ -33,6 +33,15 @@ from app.types import (
     ConnectorStatus,
     DecisionLifecycleStage,
     DecisionType,
+    DeliberationEventCategory,
+    DeliberationFactorProvenance,
+    DeliberationMessageKind,
+    DeliberationNominationStatus,
+    DeliberationProposalKind,
+    DeliberationProposalStatus,
+    DeliberationRoundKind,
+    DeliberationRunStatus,
+    DeliberationSpeaker,
     DomainEventActor,
     DossierScope,
     DossierSourceType,
@@ -50,6 +59,7 @@ from app.types import (
     MessageRole,
     OriginMode,
     QuickAnalysisFormality,
+    ResponsibilityActor,
     SignoffRequestStatus,
     SimulationConvergenceStatus,
     SimulationMode,
@@ -2236,4 +2246,300 @@ class EvidenceFunnelAudit(Base):
     tier_counts: Mapped[dict[str, int]] = json_object_column()
     opposing_count: Mapped[int] = mapped_column(Integer, nullable=False)
     low_tier_share: Mapped[float | None] = mapped_column(Float)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+# --- Deliberation council (CCR-20260804-DELIB-01) -------------------------
+#
+# Long-horizon deliberation layer over the factor sandbox: one witness agent
+# per factor, one moderator, user interventions between rounds. Every number
+# is adjudicated by the deterministic engine (simulate()); agents never
+# self-report numeric results. Subjective factors enter only as
+# assumed/unknown with a Human signature; nominations never auto-activate.
+
+
+class DeliberationRun(Base):
+    __tablename__ = "deliberation_runs"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "id",
+            name="uq_deliberation_runs_workspace_id",
+        ),
+        Index("ix_deliberation_runs_workspace_case", "workspace_id", "decision_case_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "decision_case_id"],
+            ["decision_cases.workspace_id", "decision_cases.decision_case_id"],
+            name="fk_deliberation_runs_workspace_case",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "max_rounds >= 1 AND max_rounds <= 5",
+            name="ck_deliberation_runs_max_rounds_budget",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    status: Mapped[DeliberationRunStatus] = mapped_column(
+        enum_type(DeliberationRunStatus, "deliberation_run_status"),
+        nullable=False,
+        default=DeliberationRunStatus.PREPARING,
+        server_default=DeliberationRunStatus.PREPARING.value,
+    )
+    current_round_seq: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
+    max_rounds: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default=text("3"))
+    factor_snapshot_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM), nullable=False, default=list, server_default=text("'{}'::origin_mode[]")
+    )
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+
+class DeliberationFactor(Base):
+    __tablename__ = "deliberation_factors"
+    __table_args__ = (
+        Index("ix_deliberation_factors_workspace_run", "workspace_id", "deliberation_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_factors_run",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "provenance <> 'objective' OR source_factor_id IS NOT NULL",
+            name="ck_deliberation_factors_objective_requires_source",
+        ),
+        CheckConstraint(
+            "provenance <> 'subjective' OR (statement IS NOT NULL AND author_user_id IS NOT NULL AND evidence_status IS NOT NULL)",
+            name="ck_deliberation_factors_subjective_requires_human_stamp",
+        ),
+        CheckConstraint(
+            "strength >= 0 AND strength <= 1",
+            name="ck_deliberation_factors_strength_range",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    provenance: Mapped[DeliberationFactorProvenance] = mapped_column(
+        enum_type(DeliberationFactorProvenance, "deliberation_factor_provenance"), nullable=False
+    )
+    label: Mapped[str] = mapped_column(String(240), nullable=False)
+    strength: Mapped[float] = mapped_column(Float, nullable=False)
+    source_factor_id: Mapped[str | None] = mapped_column(String(240))
+    statement: Mapped[str | None] = mapped_column(Text)
+    author_user_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    dossier_assumption_id: Mapped[str | None] = mapped_column(String(240))
+    evidence_status: Mapped[FactorEvidenceStatus | None] = mapped_column(
+        enum_type(FactorEvidenceStatus, "factor_evidence_status")
+    )
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DeliberationRound(Base):
+    __tablename__ = "deliberation_rounds"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "deliberation_run_id", "seq", name="uq_deliberation_rounds_run_seq"),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_rounds_run",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[DeliberationRoundKind] = mapped_column(
+        enum_type(DeliberationRoundKind, "deliberation_round_kind"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        SAEnum("active", "complete", name="deliberation_round_status"),
+        nullable=False,
+        default="active",
+        server_default="active",
+    )
+    started_at: Mapped[datetime] = created_at_column()
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DeliberationMessage(Base):
+    __tablename__ = "deliberation_messages"
+    __table_args__ = (
+        Index("ix_deliberation_messages_workspace_run", "workspace_id", "deliberation_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_messages_run",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "speaker <> 'witness' OR speaker_factor_id IS NOT NULL",
+            name="ck_deliberation_messages_witness_requires_factor",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    round_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    speaker: Mapped[DeliberationSpeaker] = mapped_column(
+        enum_type(DeliberationSpeaker, "deliberation_speaker"), nullable=False
+    )
+    speaker_factor_id: Mapped[str | None] = mapped_column(String(240))
+    kind: Mapped[DeliberationMessageKind] = mapped_column(
+        enum_type(DeliberationMessageKind, "deliberation_message_kind"), nullable=False
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    structured_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB(astext_type=Text))
+    stamp_actor: Mapped[ResponsibilityActor] = mapped_column(
+        enum_type(ResponsibilityActor, "responsibility_actor"), nullable=False
+    )
+    stamp_note: Mapped[str | None] = mapped_column(Text)
+    origin_mode: Mapped[OriginMode] = mapped_column(
+        ORIGIN_MODE_ENUM, nullable=False, default=OriginMode.FIXTURE, server_default=OriginMode.FIXTURE.value
+    )
+    source_origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM), nullable=False, default=list, server_default=text("'{}'::origin_mode[]")
+    )
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DeliberationProposal(Base):
+    __tablename__ = "deliberation_proposals"
+    __table_args__ = (
+        Index("ix_deliberation_proposals_workspace_run", "workspace_id", "deliberation_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_proposals_run",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "status <> 'accepted' OR decided_at IS NOT NULL",
+            name="ck_deliberation_proposals_decided_requires_timestamp",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    proposer_factor_id: Mapped[str] = mapped_column(String(240), nullable=False)
+    kind: Mapped[DeliberationProposalKind] = mapped_column(
+        enum_type(DeliberationProposalKind, "deliberation_proposal_kind"), nullable=False
+    )
+    before: Mapped[dict[str, Any]] = json_object_column()
+    after: Mapped[dict[str, Any]] = json_object_column()
+    status: Mapped[DeliberationProposalStatus] = mapped_column(
+        enum_type(DeliberationProposalStatus, "deliberation_proposal_status"),
+        nullable=False,
+        default=DeliberationProposalStatus.PENDING,
+        server_default=DeliberationProposalStatus.PENDING.value,
+    )
+    engine_preview: Mapped[dict[str, Any] | None] = mapped_column(JSONB(astext_type=Text))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DeliberationNomination(Base):
+    __tablename__ = "deliberation_nominations"
+    __table_args__ = (
+        Index("ix_deliberation_nominations_workspace_run", "workspace_id", "deliberation_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_nominations_run",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            "status <> 'confirmed' OR confirmed_factor_id IS NOT NULL",
+            name="ck_deliberation_nominations_confirmed_requires_factor",
+        ),
+        CheckConstraint(
+            "status = 'confirmed' OR confirmed_factor_id IS NULL",
+            name="ck_deliberation_nominations_no_factor_before_confirmation",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    target_description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[DeliberationNominationStatus] = mapped_column(
+        enum_type(DeliberationNominationStatus, "deliberation_nomination_status"),
+        nullable=False,
+        default=DeliberationNominationStatus.PENDING,
+        server_default=DeliberationNominationStatus.PENDING.value,
+    )
+    confirmed_factor_id: Mapped[str | None] = mapped_column(String(240))
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DeliberationOutcome(Base):
+    __tablename__ = "deliberation_outcomes"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "deliberation_run_id", name="uq_deliberation_outcomes_one_per_run"
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_outcomes_run",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    condition_projections: Mapped[list[dict[str, Any]]] = json_list_column()
+    flip_conditions: Mapped[list[dict[str, Any]]] = json_list_column()
+    dissent_log: Mapped[list[dict[str, Any]]] = json_list_column()
+    assumption_ledger: Mapped[list[dict[str, Any]]] = json_list_column()
+    disclaimer: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class DeliberationEvent(Base):
+    """Persisted SSE stream (envelope mirrors AnalysisEvent; Last-Event-ID
+    replay reads this table by per-run monotonic sequence)."""
+
+    __tablename__ = "deliberation_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "deliberation_run_id", "sequence",
+            name="uq_deliberation_events_run_sequence",
+        ),
+        Index("ix_deliberation_events_workspace_run", "workspace_id", "deliberation_run_id"),
+        ForeignKeyConstraint(
+            ["workspace_id", "deliberation_run_id"],
+            ["deliberation_runs.workspace_id", "deliberation_runs.id"],
+            name="fk_deliberation_events_run",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    deliberation_run_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    category: Mapped[DeliberationEventCategory] = mapped_column(
+        enum_type(DeliberationEventCategory, "deliberation_event_category"), nullable=False
+    )
+    type: Mapped[str] = mapped_column(String(120), nullable=False)
+    origin_mode: Mapped[OriginMode] = mapped_column(
+        ORIGIN_MODE_ENUM, nullable=False, default=OriginMode.FIXTURE, server_default=OriginMode.FIXTURE.value
+    )
+    source_origin_modes: Mapped[list[OriginMode]] = mapped_column(
+        ARRAY(ORIGIN_MODE_ENUM), nullable=False, default=list, server_default=text("'{}'::origin_mode[]")
+    )
+    payload: Mapped[dict[str, Any]] = json_object_column()
     created_at: Mapped[datetime] = created_at_column()

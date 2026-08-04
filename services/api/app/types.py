@@ -346,3 +346,80 @@ class DomainEventActor(StrEnum):
     USER = "user"
     SYSTEM = "system"
     WORKER = "worker"
+
+
+# --- Deliberation council (CCR-20260804-DELIB-01) -------------------------
+
+
+class DeliberationRunStatus(StrEnum):
+    PREPARING = "preparing"
+    RUNNING = "running"
+    AWAITING_USER = "awaiting_user"
+    COMPLETE = "complete"
+    CANCELLED = "cancelled"
+
+
+class DeliberationFactorProvenance(StrEnum):
+    OBJECTIVE = "objective"
+    SUBJECTIVE = "subjective"
+
+
+class DeliberationRoundKind(StrEnum):
+    OPENING = "opening"
+    CHALLENGE = "challenge"
+    VERDICT = "verdict"
+
+
+class DeliberationSpeaker(StrEnum):
+    WITNESS = "witness"
+    MODERATOR = "moderator"
+    USER = "user"
+
+
+class DeliberationMessageKind(StrEnum):
+    STATEMENT = "statement"
+    CHALLENGE = "challenge"
+    REBUTTAL = "rebuttal"
+    PROPOSAL = "proposal"
+    INTERVENTION = "intervention"
+    NOMINATION = "nomination"
+    VERDICT_SUMMARY = "verdict_summary"
+
+
+class DeliberationProposalKind(StrEnum):
+    FACTOR_STRENGTH = "factor_strength"
+    EDGE_VALIDITY = "edge_validity"
+    NEW_FACTOR = "new_factor"
+
+
+class DeliberationProposalStatus(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class DeliberationNominationStatus(StrEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class DeliberationInterventionKind(StrEnum):
+    INTERJECT = "interject"
+    CHALLENGE_WITNESS = "challenge_witness"
+    DECLARE_SUBJECTIVE_FACTOR = "declare_subjective_factor"
+    REOPEN_ROUND = "reopen_round"
+
+
+class ResponsibilityActor(StrEnum):
+    HUMAN = "human"
+    ANALYSIS = "analysis"
+    UNKNOWN = "unknown"
+
+
+class DeliberationEventCategory(StrEnum):
+    ROUND = "deliberation.round"
+    MESSAGE = "deliberation.message"
+    PROPOSAL = "deliberation.proposal"
+    NOMINATION = "deliberation.nomination"
+    OUTCOME = "deliberation.outcome"
