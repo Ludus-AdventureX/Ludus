@@ -161,6 +161,9 @@ def test_core_table_set_and_workspace_scope() -> None:
         "export_artifacts",
         # Task 4/5: immutable dossier snapshot companion (migration a7c3e9f1b5d8).
         "dossier_version_snapshots",
+        # Per-(case, profile_type) profile snapshots (migration a1b2c3d4e5f6;
+        # ORM model restored in 2026-08-05 drift fix).
+        "case_profiles",
         # BYOK connectors (migration b2c3d4e5f6a7 / c3d4e5f6a7b8).
         "workspace_connectors",
         # Grey-goo wave-2 (migration 2b2d34dacee0 / CCR-20260802-P2W2).
