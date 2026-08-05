@@ -2,7 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { createElement, type ReactElement } from "react";
+import { createElement } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -22,8 +22,9 @@ const CONDITION: FragileCondition = {
   max: 18,
   step: 1,
   controllability: "external",
-  evidenceStatus: "supported",
+  evidenceStatus: "confirmed",
   impactNote: "采购周期越长，现金窗口越紧",
+  businessDomain: "现金窗口",
 };
 
 const SCENARIO: ScenarioFrame = {
@@ -38,19 +39,29 @@ const SCENARIO: ScenarioFrame = {
   conditionAdjustments: { "c-procurement": 14 },
 };
 
-function renderControl(props: Record<string, unknown> = {}): void {
-  const element = createElement(StressTestControl, {
-    condition: CONDITION,
-    value: 12,
-    onChange: vi.fn(),
-    onReset: vi.fn(),
-    onRun: vi.fn(),
-    running: false,
-    confirmedScenarios: [],
-    onApplyScenario: vi.fn(),
-    ...props,
-  } as Record<string, unknown>);
-  render(element as ReactElement);
+type RenderOverrides = {
+  onChange?: (value: number) => void;
+  onReset?: () => void;
+  onRun?: () => void;
+  running?: boolean;
+  confirmedScenarios?: ScenarioFrame[];
+  onApplyScenario?: (frame: ScenarioFrame) => void;
+};
+
+function renderControl(overrides: RenderOverrides = {}): void {
+  render(
+    createElement(StressTestControl, {
+      condition: CONDITION,
+      value: 12,
+      onChange: vi.fn(),
+      onReset: vi.fn(),
+      onRun: vi.fn(),
+      running: false,
+      confirmedScenarios: [],
+      onApplyScenario: vi.fn(),
+      ...overrides,
+    }),
+  );
 }
 
 describe("StressTestControl", () => {

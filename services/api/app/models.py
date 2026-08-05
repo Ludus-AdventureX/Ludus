@@ -453,6 +453,47 @@ class DecisionCase(Base):
     updated_at: Mapped[datetime] = updated_at_column()
 
 
+class CaseProfile(Base):
+    """Per-(case, profile_type) decision-maker profile snapshot.
+
+    Written and read via raw SQL in the conversations lane (routes.py) and
+    consumed by the analysis worker; the ORM model mirrors that schema so
+    Alembic autogenerate stays in sync with the running code (the migration
+    drift surfaced in the 2026-08-05 audit was a missing model, not an orphan
+    table).
+    """
+
+    __tablename__ = "case_profiles"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "decision_case_id",
+            "profile_type",
+            name="uq_case_profiles_workspace_case_type",
+        ),
+        Index("ix_case_profiles_workspace_case", "workspace_id", "decision_case_id"),
+        ForeignKeyConstraint(
+            ["workspace_id"],
+            ["workspaces.id"],
+            name="fk_case_profiles_workspace",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[UUID] = uuid_primary_key()
+    workspace_id: Mapped[UUID] = workspace_column()
+    decision_case_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    profile_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(
+        JSONB(astext_type=Text()),
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class AnalysisRun(Base):
     __tablename__ = "analysis_runs"
     __table_args__ = (
